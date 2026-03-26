@@ -31,13 +31,16 @@ namespace ASMLite
         public int PreprocessOrder => 0;
 
         /// <summary>
-        /// Called by the VRChat SDK before avatar upload. S01 stub — S02 fills in
-        /// the real asset-generation logic via ASMLiteBuilder.
+        /// Called by the VRChat SDK before avatar upload. Delegates to ASMLiteBuilder
+        /// to generate FX layers and populate expression parameters at build time.
         /// </summary>
         public void Preprocess(VRC.SDKBase.VRC_AvatarDescriptor avatarDescriptor)
         {
-            // S01 stub: no-op. S02 replaces this with real logic.
-            Debug.Log($"[ASM-Lite] Preprocess called on {gameObject.name} (slot count: {slotCount}) — stub, no action taken.");
+#if UNITY_EDITOR
+            ASMLite.Editor.ASMLiteBuilder.Build(this);
+#else
+            // Build-time only; this code path should never execute at runtime.
+#endif
         }
     }
 }
