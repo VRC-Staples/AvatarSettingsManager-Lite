@@ -27,6 +27,7 @@ namespace ASMLite.Editor
 
         private const string FXControllerPath = "Assets/ASM-Lite/GeneratedAssets/ASMLite_FX.controller";
         private const string ParamsAssetPath  = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Params.asset";
+        private const string MenuAssetPath    = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Menu.asset";
 
         // ─── Public API ───────────────────────────────────────────────────────
 
@@ -79,11 +80,12 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 6–7. Generate assets
+            // 6–8. Generate assets
             PopulateFXController(discoveredParams, component.slotCount);
             PopulateExpressionParams(component.slotCount);
+            PopulateExpressionMenu(component.slotCount);
 
-            // 8. Log completion
+            // 9. Log completion
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
         }
 
@@ -327,6 +329,111 @@ namespace ASMLite.Editor
 
             EditorUtility.SetDirty(paramsAsset);
             AssetDatabase.SaveAssets();
+        }
+
+        /// <summary>
+        /// Generates the nested VRCExpressionsMenu tree at build time.
+        /// Creates 7 menu assets total:
+        ///   1 root (mutated in-place to preserve stable GUID) +
+        ///   slotCount slot sub-menus +
+        ///   slotCount confirm sub-menus (Save confirmation).
+        ///
+        /// Menu hierarchy:
+        ///   ASM-Lite (root)
+        ///     └─ Slot N  (SubMenu → slotMenu)
+        ///          ├─ Save  (SubMenu → confirmMenu)  — shows confirmation before acting
+        ///          │    └─ Confirm Save  (Button, param ASMLite_SN = 1)
+        ///          ├─ Load  (Button, param ASMLite_SN = 2)
+        ///          └─ Reset (Button, param ASMLite_SN = 3)
+        /// </summary>
+        private static void PopulateExpressionMenu(int slotCount)
+        {
+            // ── Load root menu in-place to preserve its stable GUID ───────────
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(MenuAssetPath);
+            if (rootMenu == null)
+            {
+                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionsMenu at '{MenuAssetPath}'.");
+                return;
+            }
+
+            string generatedDir = System.IO.Path.GetDirectoryName(MenuAssetPath);
+
+            // ── Delete and recreate sub-menu assets ───────────────────────────
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
+                string confirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
+
+                // Delete any stale assets from a previous build
+                if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath) != null)
+                    AssetDatabase.DeleteAsset(slotPath);
+                if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(confirmPath) != null)
+                    AssetDatabase.DeleteAsset(confirmPath);
+
+                // ── Build confirm sub-menu (Slot N → Save confirmation) ───────
+                var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
+                {
+                    new VRCExpressionsMenu.Control
+                    {
+                        name      = "Confirm Save",
+                        type      = VRCExpressionsMenu.Control.ControlType.Button,
+                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                        value     = 1f,
+                    }
+                };
+                AssetDatabase.CreateAsset(confirmMenu, confirmPath);
+
+                // ── Build slot sub-menu (Save/Load/Reset) ─────────────────────
+                var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
+                {
+                    // Save → confirmation submenu
+                    new VRCExpressionsMenu.Control
+                    {
+                        name    = "Save",
+                        type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                        subMenu = confirmMenu,
+                    },
+                    // Load → direct button
+                    new VRCExpressionsMenu.Control
+                    {
+                        name      = "Load",
+                        type      = VRCExpressionsMenu.Control.ControlType.Button,
+                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                        value     = 2f,
+                    },
+                    // Reset → direct button
+                    new VRCExpressionsMenu.Control
+                    {
+                        name      = "Reset",
+                        type      = VRCExpressionsMenu.Control.ControlType.Button,
+                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                        value     = 3f,
+                    },
+                };
+                AssetDatabase.CreateAsset(slotMenu, slotPath);
+            }
+
+            // ── Rebuild root menu entries in-place ────────────────────────────
+            rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                string slotPath = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
+                var slotMenu    = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath);
+
+                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name    = $"Slot {slot}",
+                    type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = slotMenu,
+                });
+            }
+
+            EditorUtility.SetDirty(rootMenu);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + {slotCount} slot menus + {slotCount} confirm menus.");
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
