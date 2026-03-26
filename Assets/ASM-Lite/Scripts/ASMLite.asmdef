@@ -1,0 +1,17 @@
+{
+    "name": "ASMLite",
+    "rootNamespace": "ASMLite",
+    "references": [
+        "VRC.SDKBase",
+        "VF.Model"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
