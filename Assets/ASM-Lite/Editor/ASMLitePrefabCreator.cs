@@ -38,7 +38,10 @@ namespace ASMLite.Editor
         private const long AnimatorControllerFileID = 9100000L;
         private const long MonoBehaviourFileID      = 11400000L;
 
-        [MenuItem("Tools/.Staples./ASM-Lite/Create Prefab")]
+        /// <summary>
+        /// Builds (or rebuilds) the ASM-Lite prefab asset.
+        /// Called by <see cref="ASMLiteWindow"/> when the user clicks "Add ASM-Lite Prefab".
+        /// </summary>
         public static void CreatePrefab()
         {
             // ── Ensure Prefabs directory exists ──────────────────────────────
@@ -175,12 +178,6 @@ namespace ASMLite.Editor
             {
                 AssetDatabase.Refresh();
                 Debug.Log($"[ASM-Lite] Prefab created at {PrefabPath}");
-                EditorUtility.DisplayDialog(
-                    "ASM-Lite: Prefab Created",
-                    $"ASM-Lite prefab saved to:\n{PrefabPath}\n\n" +
-                    "Drag it onto your avatar root in the Hierarchy to start using ASM-Lite.",
-                    "OK");
-                Selection.activeObject = prefab;
             }
             else
             {
