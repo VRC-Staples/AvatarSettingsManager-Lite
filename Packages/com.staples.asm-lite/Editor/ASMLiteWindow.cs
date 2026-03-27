@@ -10,7 +10,7 @@ namespace ASMLite.Editor
     ///
     /// Provides:
     ///   • Avatar hierarchy picker
-    ///   • Slot count configuration
+    ///   • Slot count configuration (before and after prefab is added)
     ///   • Status / diagnostics panel
     ///   • "Add ASM-Lite Prefab" button
     /// </summary>
@@ -21,10 +21,13 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
+        // Pending slot count — shown before the prefab is added, applied on add.
+        private int _pendingSlotCount = 3;
+
         // Cached serialized object for the component — rebuilt when component changes.
-        private ASMLiteComponent    _cachedComponent;
-        private SerializedObject    _serializedComponent;
-        private SerializedProperty  _slotCountProp;
+        private ASMLiteComponent   _cachedComponent;
+        private SerializedObject   _serializedComponent;
+        private SerializedProperty _slotCountProp;
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -32,7 +35,7 @@ namespace ASMLite.Editor
         public static void Open()
         {
             var win = GetWindow<ASMLiteWindow>(title: "ASM-Lite");
-            win.minSize = new Vector2(380, 340);
+            win.minSize = new Vector2(380, 360);
             win.Show();
         }
 
@@ -46,14 +49,18 @@ namespace ASMLite.Editor
             EditorGUILayout.Space(8);
 
             DrawAvatarPicker();
+
+            if (_selectedAvatar != null)
+            {
+                EditorGUILayout.Space(8);
+                DrawSettings();
+                EditorGUILayout.Space(8);
+                DrawStatus();
+                EditorGUILayout.Space(12);
+                DrawAddButton();
+            }
+
             EditorGUILayout.Space(8);
-
-            DrawStatus();
-            EditorGUILayout.Space(12);
-
-            DrawAddButton();
-            EditorGUILayout.Space(8);
-
             EditorGUILayout.EndScrollView();
         }
 
@@ -70,6 +77,7 @@ namespace ASMLite.Editor
 
         private void DrawAvatarPicker()
         {
+            EditorGUILayout.Space(4);
             EditorGUILayout.LabelField("Avatar", EditorStyles.boldLabel);
 
             var newAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(
@@ -82,6 +90,15 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar = newAvatar;
                 InvalidateComponentCache();
+
+                // Pre-populate pending slot count from existing component if present.
+                if (_selectedAvatar != null)
+                {
+                    var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+                    if (existing != null)
+                        _pendingSlotCount = existing.slotCount;
+                }
+
                 Repaint();
             }
 
@@ -93,11 +110,41 @@ namespace ASMLite.Editor
             }
         }
 
+        private void DrawSettings()
+        {
+            EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+
+            var component = GetOrRefreshComponent();
+
+            if (component != null)
+            {
+                // Prefab already on avatar — edit via SerializedObject for Undo support.
+                _serializedComponent.Update();
+                EditorGUILayout.PropertyField(
+                    _slotCountProp,
+                    new GUIContent(
+                        "Slot Count",
+                        "Number of expression parameter slots ASM-Lite manages on this avatar."));
+                _serializedComponent.ApplyModifiedProperties();
+
+                // Keep pending in sync so if the component is removed and re-added
+                // the last used value is preserved as the default.
+                _pendingSlotCount = component.slotCount;
+            }
+            else
+            {
+                // No prefab yet — show the pending value the user can configure
+                // before clicking Add.
+                _pendingSlotCount = EditorGUILayout.IntSlider(
+                    new GUIContent(
+                        "Slot Count",
+                        "Number of expression parameter slots ASM-Lite will manage on this avatar."),
+                    _pendingSlotCount, 1, 10);
+            }
+        }
+
         private void DrawStatus()
         {
-            if (_selectedAvatar == null)
-                return;
-
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
 
             var component = GetOrRefreshComponent();
@@ -108,20 +155,6 @@ namespace ASMLite.Editor
                     "✓ ASM-Lite prefab is present on this avatar.",
                     MessageType.Info);
 
-                // ── Slot count (editable) ─────────────────────────────────────
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
-
-                _serializedComponent.Update();
-                EditorGUILayout.PropertyField(
-                    _slotCountProp,
-                    new GUIContent(
-                        "Slot Count",
-                        "Number of expression parameter slots ASM-Lite manages on this avatar."));
-                _serializedComponent.ApplyModifiedProperties();
-
-                // ── Expression parameters ─────────────────────────────────────
-                EditorGUILayout.Space(4);
                 var exprParams = _selectedAvatar.expressionParameters;
                 if (exprParams != null && exprParams.parameters != null)
                 {
@@ -144,25 +177,15 @@ namespace ASMLite.Editor
             {
                 EditorGUILayout.HelpBox(
                     "ASM-Lite prefab has not been added to this avatar yet.\n" +
-                    "Click \"Add ASM-Lite Prefab\" below.",
+                    "Configure settings above, then click \"Add ASM-Lite Prefab\".",
                     MessageType.Warning);
             }
         }
 
         private void DrawAddButton()
         {
-            using (new EditorGUI.DisabledScope(_selectedAvatar == null))
-            {
-                if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
-                    AddPrefabToAvatar();
-            }
-
-            if (_selectedAvatar == null)
-            {
-                EditorGUILayout.HelpBox(
-                    "Select an avatar above to enable this button.",
-                    MessageType.None);
-            }
+            if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                AddPrefabToAvatar();
         }
 
         // ── Logic ─────────────────────────────────────────────────────────────
@@ -231,6 +254,11 @@ namespace ASMLite.Editor
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(
                 prefabAsset, _selectedAvatar.transform);
 
+            // Apply the pending slot count the user configured before adding.
+            var component = instance.GetComponent<ASMLiteComponent>();
+            if (component != null)
+                component.slotCount = _pendingSlotCount;
+
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
@@ -238,7 +266,7 @@ namespace ASMLite.Editor
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 
-            Debug.Log($"[ASM-Lite] Prefab added to '{_selectedAvatar.gameObject.name}'.");
+            Debug.Log($"[ASM-Lite] Prefab added to '{_selectedAvatar.gameObject.name}' with {_pendingSlotCount} slot(s).");
             Repaint();
         }
 
@@ -257,6 +285,12 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar = descriptor;
                 InvalidateComponentCache();
+
+                // Pre-populate from existing component if present.
+                var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+                if (existing != null)
+                    _pendingSlotCount = existing.slotCount;
+
                 Repaint();
             }
         }
