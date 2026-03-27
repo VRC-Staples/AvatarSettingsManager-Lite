@@ -25,16 +25,16 @@ namespace ASMLite.Editor
     {
         // ─── Asset paths ──────────────────────────────────────────────────────
 
-        private const string FXControllerPath = "Assets/ASM-Lite/GeneratedAssets/ASMLite_FX.controller";
-        private const string ParamsAssetPath  = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Params.asset";
-        private const string MenuAssetPath    = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Menu.asset";
+        private const string FXControllerPath = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_FX.controller";
+        private const string ParamsAssetPath  = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Params.asset";
+        private const string MenuAssetPath    = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Menu.asset";
 
         // ─── Icon paths ───────────────────────────────────────────────────────
 
-        private const string IconSavePath    = "Assets/ASM-Lite/Icons/Save.png";
-        private const string IconLoadPath    = "Assets/ASM-Lite/Icons/Load.png";
-        private const string IconResetPath   = "Assets/ASM-Lite/Icons/Reset.png";
-        private const string IconPresetsPath = "Assets/ASM-Lite/Icons/Presets.png";
+        private const string IconSavePath    = "Packages/com.staples.asm-lite/Icons/Save.png";
+        private const string IconLoadPath    = "Packages/com.staples.asm-lite/Icons/Load.png";
+        private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
+        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Presets.png";
 
         // ─── Public API ───────────────────────────────────────────────────────
 
