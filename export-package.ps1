@@ -76,6 +76,53 @@ elseif (-not (Test-Path $UnityExe)) {
 
 New-Item -ItemType Directory -Force -Path "Dist" | Out-Null
 
+# ── VCC lockfile guard ────────────────────────────────────────────────────────
+# packages.vrchat.com requires VCC-injected auth tokens. Unity batch mode cannot
+# authenticate against it on its own. The lockfile is written by VCC when it
+# opens and resolves the project — if it's missing or lacks the VRChat entries,
+# the export will fail with "Access denied" before any code runs.
+
+$LockFile         = Join-Path $ProjectPath "Packages\packages-lock.json"
+$RequiredPackages = @("com.vrchat.avatars", "com.vrchat.base")
+$lockOk           = $false
+
+if (Test-Path $LockFile) {
+    try {
+        $lock = Get-Content $LockFile -Raw | ConvertFrom-Json
+        $lockOk = $true
+        foreach ($pkg in $RequiredPackages) {
+            if (-not $lock.dependencies.PSObject.Properties[$pkg]) {
+                $lockOk = $false
+                Write-Warning ("packages-lock.json is missing '{0}'." -f $pkg)
+            }
+        }
+    }
+    catch {
+        $lockOk = $false
+        Write-Warning "packages-lock.json could not be parsed."
+    }
+}
+
+if (-not $lockOk) {
+    Write-Host ""
+    Write-Host "┌─────────────────────────────────────────────────────────────┐" -ForegroundColor Yellow
+    Write-Host "│  VCC prerequisite check failed                              │" -ForegroundColor Yellow
+    Write-Host "├─────────────────────────────────────────────────────────────┤" -ForegroundColor Yellow
+    Write-Host "│  Packages/packages-lock.json is missing or does not contain │" -ForegroundColor Yellow
+    Write-Host "│  resolved entries for the VRChat SDK packages.              │" -ForegroundColor Yellow
+    Write-Host "│                                                             │" -ForegroundColor Yellow
+    Write-Host "│  packages.vrchat.com requires auth tokens that only VCC     │" -ForegroundColor Yellow
+    Write-Host "│  can inject. Unity batch mode cannot authenticate on its    │" -ForegroundColor Yellow
+    Write-Host "│  own and will fail with 'Access denied'.                    │" -ForegroundColor Yellow
+    Write-Host "│                                                             │" -ForegroundColor Yellow
+    Write-Host "│  Fix: open this project in the VRChat Creator Companion     │" -ForegroundColor Yellow
+    Write-Host "│  (VCC) and let it fully resolve packages, then re-run this  │" -ForegroundColor Yellow
+    Write-Host "│  script.                                                    │" -ForegroundColor Yellow
+    Write-Host "└─────────────────────────────────────────────────────────────┘" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
 Write-Host "Unity:      $UnityExe"
 Write-Host "Project:    $ProjectPath"
 Write-Host "Output:     $OutputPkg"
