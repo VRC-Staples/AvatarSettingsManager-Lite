@@ -1,12 +1,26 @@
 {
+  "scopedRegistries": [
+    {
+      "name": "VRChat",
+      "url": "https://packages.vrchat.com/public",
+      "scopes": ["com.vrchat"]
+    },
+    {
+      "name": "OpenUPM",
+      "url": "https://package.openupm.com",
+      "scopes": ["com.vrcfury"]
+    }
+  ],
   "dependencies": {
     "com.vrchat.avatars": "3.7.0",
     "com.vrchat.base": "3.7.0",
+    "com.vrcfury.vrcfury": "1.999.0",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.7.6",
+    "com.unity.test-framework": "1.1.29",
     "com.unity.ugui": "1.0.0",
     "com.unity.modules.animation": "1.0.0",
-    "com.unity.modules.animatorcontroller": "1.0.0",
+    "com.unity.modules.androidjni": "1.0.0",
     "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.cloth": "1.0.0",
@@ -34,23 +48,6 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0",
-    "com.vrcfury.vrcfury": "1.999.0"
-  },
-  "scopedRegistries": [
-    {
-      "name": "VRChat",
-      "url": "https://packages.vrchat.com/public",
-      "scopes": [
-        "com.vrchat"
-      ]
-    },
-    {
-      "name": "OpenUPM",
-      "url": "https://package.openupm.com",
-      "scopes": [
-        "com.vrcfury"
-      ]
-    }
-  ]
+    "com.unity.modules.xr": "1.0.0"
+  }
 }

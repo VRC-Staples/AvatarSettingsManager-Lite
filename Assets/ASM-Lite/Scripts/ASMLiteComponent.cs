@@ -34,13 +34,15 @@ namespace ASMLite
         /// Called by the VRChat SDK before avatar upload. Delegates to ASMLiteBuilder
         /// to generate FX layers and populate expression parameters at build time.
         /// </summary>
-        public void Preprocess(VRC.SDKBase.VRC_AvatarDescriptor avatarDescriptor)
+        public bool OnPreprocess()
         {
 #if UNITY_EDITOR
-            ASMLite.Editor.ASMLiteBuilder.Build(this);
-#else
-            // Build-time only; this code path should never execute at runtime.
+            // Call ASMLiteBuilder.Build via the type name to avoid a hard compile-time
+            // dependency from the runtime assembly onto the editor assembly.
+            var builderType = System.Type.GetType("ASMLite.Editor.ASMLiteBuilder, ASMLite.Editor");
+            builderType?.GetMethod("Build")?.Invoke(null, new object[] { this });
 #endif
+            return true;
         }
     }
 }
