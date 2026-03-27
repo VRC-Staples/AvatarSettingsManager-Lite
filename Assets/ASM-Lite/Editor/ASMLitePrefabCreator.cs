@@ -38,7 +38,7 @@ namespace ASMLite.Editor
         private const long AnimatorControllerFileID = 9100000L;
         private const long MonoBehaviourFileID      = 11400000L;
 
-        [MenuItem("ASM-Lite/Create Prefab")]
+        [MenuItem("Tools/.Staples./ASM-Lite/Create Prefab")]
         public static void CreatePrefab()
         {
             // ── Ensure Prefabs directory exists ──────────────────────────────
