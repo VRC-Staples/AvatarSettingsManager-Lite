@@ -116,19 +116,23 @@ namespace ASMLite.Editor
 
             if (component != null)
             {
-                // Prefab is present — slot count is locked (changing it requires
-                // removing and re-adding the prefab, or using Rebuild).
-                using (new EditorGUI.DisabledScope(true))
+                // Prefab is present — slot count still editable, but a rebuild
+                // is needed to apply changes to the generated assets.
+                int newSlot = EditorGUILayout.IntSlider(
+                    new GUIContent(
+                        "Slot Count",
+                        "Number of expression parameter slots ASM-Lite manages on this avatar."),
+                    component.slotCount, 1, 10);
+
+                if (newSlot != component.slotCount)
                 {
-                    EditorGUILayout.IntField(
-                        new GUIContent(
-                            "Slot Count",
-                            "Slot count is locked while ASM-Lite is on this avatar. " +
-                            "Remove the prefab and re-add to change it."),
-                        component.slotCount);
+                    Undo.RecordObject(component, "Change ASM-Lite Slot Count");
+                    component.slotCount = newSlot;
+                    EditorUtility.SetDirty(component);
                 }
+
                 EditorGUILayout.HelpBox(
-                    "Slot count is locked. Remove the prefab and re-add to change it.",
+                    "Click \"Rebuild ASM-Lite\" to apply slot count changes.",
                     MessageType.None);
             }
             else
