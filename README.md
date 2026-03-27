@@ -1,6 +1,6 @@
 # ASM-Lite — Avatar Settings Manager Lite
 
-A lightweight, drop-in VRCFury prefab for Save/Load/Reset parameter preset management on VRChat avatars.
+A lightweight VRCFury prefab for Save/Load/Reset expression parameter preset management on VRChat avatars.
 
 ---
 
@@ -14,22 +14,28 @@ It works entirely at build time: ASM-Lite discovers all expression parameters on
 
 ## Prerequisites
 
-Install the following via the **VRChat Creator Companion (VCC)** before importing ASM-Lite:
-
-- **VRChat SDK** (Avatar SDK 3) — required for avatar uploading and expression parameter support
-- **VRCFury** — required for build-time component execution and FX layer injection
+- **VRChat Creator Companion (VCC)** — used to manage your avatar project
+- **VRChat SDK** (Avatar SDK 3) — installed via VCC
+- **VRCFury** — installed via VCC
 
 ---
 
 ## Installation
 
-1. Download the latest `ASM-Lite.unitypackage` from the Releases page.
-2. In your Unity project, go to **Assets → Import Package → Custom Package…** and select the downloaded `.unitypackage`.
-3. Import all assets.
-4. In the **Project** window, navigate to `Assets/ASM-Lite/Prefabs/`.
-5. Drag the **ASM-Lite** prefab onto your **avatar root** GameObject (the same object that has the VRC Avatar Descriptor).
+### Via VCC (Recommended)
 
-That's it — VRCFury handles the rest at build time.
+1. Open the **VRChat Creator Companion**.
+2. Go to **Settings → Packages → Add Repository**.
+3. Paste the listing URL: *(coming soon — repo not yet public)*
+4. Open your avatar project in VCC and add **ASM-Lite** from the package list.
+5. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, and click **Add ASM-Lite Prefab**.
+
+### Local Install (Testing / Dev)
+
+1. Clone or download this repository.
+2. In VCC, go to **Settings → User Packages → Add** and select the `Packages/com.staples.asm-lite` folder.
+3. Open your avatar project in VCC and add **ASM-Lite** from the package list.
+4. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, and click **Add ASM-Lite Prefab**.
 
 ---
 
@@ -59,36 +65,12 @@ At avatar build time, ASM-Lite:
 
 ## Building from Source
 
-### Prerequisites
+This repository is itself a Unity project used for development. The distributable package lives in `Packages/com.staples.asm-lite/`.
 
-The project resolves VRChat SDK and VRCFury packages from public scoped registries (`packages.vrchat.com` and `package.openupm.com`). These registries require auth tokens injected by the **VRChat Creator Companion (VCC)**:
-
-1. Add this repository as a project in VCC (or open it via **File → Open Project**).
-2. Let VCC fully resolve and load the project — this writes `Packages/packages-lock.json` with the VRChat SDK entries.
-3. Close Unity (the editor window VCC opened).
-
-> **The export script checks for this lockfile before running.** If it's missing or incomplete it will print a clear error and exit rather than failing inside Unity with a cryptic "Access denied" message.
-
-> **Do not open the project directly in Unity Hub** before VCC has resolved the packages. Unity Hub cannot authenticate against `packages.vrchat.com` on its own.
-
-### Export
-
-With VCC prerequisites satisfied, run the PowerShell export script from the project root:
-
-```powershell
-.\export-package.ps1
-```
-
-This invokes Unity in headless batch mode and writes `Dist/ASM-Lite.unitypackage`. Unity is discovered automatically from `ProjectSettings/ProjectVersion.txt` and the Unity Hub install directory. If Unity is installed to a non-standard location, pass it explicitly:
-
-```powershell
-.\export-package.ps1 -UnityExe "D:\MyUnityInstalls\2022.3.22f1\Editor\Unity.exe"
-```
-
-Alternatively, with the project open in the Unity Editor, use **Tools → .Staples. → ASM-Lite Dev → Export Package**.
+Open the project through VCC (add it as an existing project) to ensure the VRChat SDK and VRCFury dependencies resolve correctly.
 
 ---
 
 ## License
 
-*(Placeholder — license to be determined)*
+MIT License — see [LICENSE](LICENSE) for details.

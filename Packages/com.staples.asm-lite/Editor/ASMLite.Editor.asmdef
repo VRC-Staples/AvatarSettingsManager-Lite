@@ -1,0 +1,20 @@
+{
+    "name": "ASMLite.Editor",
+    "rootNamespace": "ASMLite.Editor",
+    "references": [
+        "ASMLite",
+        "VRC.SDKBase",
+        "VRC.SDK3.Avatars"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

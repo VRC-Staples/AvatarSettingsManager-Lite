@@ -79,3 +79,12 @@ AssetImportWorker*.log
 
 # Unity package lock (embeds machine-local resolved paths)
 Packages/packages-lock.json
+
+# Dist artifacts
+Dist/
+
+# Dev scripts not needed by package consumers
+unity-export.log
+
+# Explicitly keep the VPM package
+!Packages/com.staples.asm-lite/
