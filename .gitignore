@@ -76,3 +76,6 @@ crashlytics-build.properties
 # Asset import worker process
 AssetImportWorker*.log
 
+
+# Unity package lock (embeds machine-local resolved paths)
+Packages/packages-lock.json

@@ -29,6 +29,13 @@ namespace ASMLite.Editor
         private const string ParamsAssetPath  = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Params.asset";
         private const string MenuAssetPath    = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Menu.asset";
 
+        // ─── Icon paths ───────────────────────────────────────────────────────
+
+        private const string IconSavePath    = "Assets/ASM-Lite/Icons/Save.png";
+        private const string IconLoadPath    = "Assets/ASM-Lite/Icons/Load.png";
+        private const string IconResetPath   = "Assets/ASM-Lite/Icons/Reset.png";
+        private const string IconPresetsPath = "Assets/ASM-Lite/Icons/Presets.png";
+
         // ─── Public API ───────────────────────────────────────────────────────
 
         /// <summary>
@@ -339,15 +346,24 @@ namespace ASMLite.Editor
         ///   slotCount confirm sub-menus (Save confirmation).
         ///
         /// Menu hierarchy:
-        ///   ASM-Lite (root)
-        ///     └─ Slot N  (SubMenu → slotMenu)
-        ///          ├─ Save  (SubMenu → confirmMenu)  — shows confirmation before acting
-        ///          │    └─ Confirm Save  (Button, param ASMLite_SN = 1)
+        ///   Presets (root)
+        ///     └─ Preset N  (SubMenu → slotMenu)
+        ///          ├─ Save  (SubMenu → confirmMenu)
+        ///          │    └─ Confirm  (Button, param ASMLite_SN = 1)
         ///          ├─ Load  (Button, param ASMLite_SN = 2)
         ///          └─ Reset (Button, param ASMLite_SN = 3)
         /// </summary>
         private static void PopulateExpressionMenu(int slotCount)
         {
+            // ── Load icons (null-safe — icons are optional) ───────────────────
+            var iconSave    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
+            var iconLoad    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
+            var iconReset   = AssetDatabase.LoadAssetAtPath<Texture2D>(IconResetPath);
+            var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPresetsPath);
+
+            if (iconSave == null)
+                Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
+
             // ── Load root menu in-place to preserve its stable GUID ───────────
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(MenuAssetPath);
             if (rootMenu == null)
@@ -364,52 +380,52 @@ namespace ASMLite.Editor
                 string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
                 string confirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
 
-                // Delete any stale assets from a previous build
                 if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath) != null)
                     AssetDatabase.DeleteAsset(slotPath);
                 if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(confirmPath) != null)
                     AssetDatabase.DeleteAsset(confirmPath);
 
-                // ── Build confirm sub-menu (Slot N → Save confirmation) ───────
+                // ── Confirm sub-menu ──────────────────────────────────────────
                 var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                 confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                 {
                     new VRCExpressionsMenu.Control
                     {
-                        name      = "Confirm Save",
+                        name      = "Confirm",
                         type      = VRCExpressionsMenu.Control.ControlType.Button,
                         parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
                         value     = 1f,
+                        icon      = iconSave,
                     }
                 };
                 AssetDatabase.CreateAsset(confirmMenu, confirmPath);
 
-                // ── Build slot sub-menu (Save/Load/Reset) ─────────────────────
+                // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
                 var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                 slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                 {
-                    // Save → confirmation submenu
                     new VRCExpressionsMenu.Control
                     {
                         name    = "Save",
                         type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                         subMenu = confirmMenu,
+                        icon    = iconSave,
                     },
-                    // Load → direct button
                     new VRCExpressionsMenu.Control
                     {
                         name      = "Load",
                         type      = VRCExpressionsMenu.Control.ControlType.Button,
                         parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
                         value     = 2f,
+                        icon      = iconLoad,
                     },
-                    // Reset → direct button
                     new VRCExpressionsMenu.Control
                     {
                         name      = "Reset",
                         type      = VRCExpressionsMenu.Control.ControlType.Button,
                         parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
                         value     = 3f,
+                        icon      = iconReset,
                     },
                 };
                 AssetDatabase.CreateAsset(slotMenu, slotPath);
@@ -424,9 +440,10 @@ namespace ASMLite.Editor
 
                 rootMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name    = $"Slot {slot}",
+                    name    = $"Preset {slot}",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = slotMenu,
+                    icon    = iconPresets,
                 });
             }
 
