@@ -18,3 +18,26 @@ unity-export.log
 
 # VPM package — never ignore
 !Packages/com.staples.asm-lite/
+
+# ── GSD baseline (auto-generated) ──
+.gsd
+*.swp
+*.swo
+*~
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+target/
+vendor/
+*.log
+coverage/
+.cache/
+tmp/

@@ -44,23 +44,36 @@ namespace ASMLite.Editor
         {
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
-            DrawHeader();
-            EditorGUILayout.Space(8);
-
-            DrawAvatarPicker();
-
-            if (_selectedAvatar != null)
+            try
             {
+                DrawHeader();
                 EditorGUILayout.Space(8);
-                DrawSettings();
-                EditorGUILayout.Space(8);
-                DrawStatus();
-                EditorGUILayout.Space(12);
-                DrawActionButton();
-            }
 
-            EditorGUILayout.Space(8);
-            EditorGUILayout.EndScrollView();
+                DrawAvatarPicker();
+
+                if (_selectedAvatar != null)
+                {
+                    EditorGUILayout.Space(8);
+                    DrawSettings();
+                    EditorGUILayout.Space(8);
+                    DrawStatus();
+                    EditorGUILayout.Space(12);
+                    DrawActionButton();
+                }
+
+                EditorGUILayout.Space(8);
+            }
+            catch (System.Exception ex)
+            {
+                // Swallow mid-draw exceptions so EndScrollView always runs.
+                // The exception is logged so it's not silently lost.
+                if (Event.current.type != EventType.Layout)
+                    Debug.LogException(ex);
+            }
+            finally
+            {
+                EditorGUILayout.EndScrollView();
+            }
         }
 
         // ── Sections ──────────────────────────────────────────────────────────
@@ -114,7 +127,9 @@ namespace ASMLite.Editor
 
             var component = GetOrRefreshComponent();
 
-            if (component != null)
+            // Use the Unity-aware null check (operator bool) — a C# != null check
+            // passes for destroyed UnityEngine.Objects, which would throw on field access.
+            if (component)
             {
                 // Prefab is present — slot count still editable, but a rebuild
                 // is needed to apply changes to the generated assets.
@@ -152,28 +167,42 @@ namespace ASMLite.Editor
 
             var component = GetOrRefreshComponent();
 
-            if (component != null)
+            if (component)
             {
                 EditorGUILayout.HelpBox(
                     "✓ ASM-Lite prefab is present on this avatar.",
                     MessageType.Info);
 
-                var exprParams = _selectedAvatar.expressionParameters;
-                if (exprParams != null && exprParams.parameters != null)
+                // Guard against mid-reimport state: expressionParameters or its
+                // parameters array can be transiently null while Unity is importing.
+                try
                 {
-                    int customCount = exprParams.parameters
-                        .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
+                    var exprParams = _selectedAvatar.expressionParameters;
+                    if (exprParams != null && exprParams.parameters != null)
+                    {
+                        int customCount = exprParams.parameters
+                            .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
 
-                    EditorGUILayout.HelpBox(
-                        $"✓ {customCount} custom parameter(s) will be backed up across " +
-                        $"{component.slotCount} slot(s).",
-                        MessageType.Info);
+                        EditorGUILayout.HelpBox(
+                            $"✓ {customCount} custom parameter(s) will be backed up across " +
+                            $"{component.slotCount} slot(s).",
+                            MessageType.Info);
+                    }
+                    else
+                    {
+                        EditorGUILayout.HelpBox(
+                            "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
+                            MessageType.Warning);
+                    }
                 }
-                else
+                catch
                 {
+                    // Asset is mid-reimport — show a neutral message and wait for
+                    // the next repaint when it will be stable again.
                     EditorGUILayout.HelpBox(
-                        "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
+                        "⚠ Expression parameters are currently being imported. Please wait.",
                         MessageType.Warning);
+                    Repaint();
                 }
             }
             else
@@ -189,30 +218,51 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            if (component != null)
+            if (component)
             {
                 if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36)))
-                    BakeAssets(component);
+                {
+                    // Defer past the current OnGUI pass so AssetDatabase operations
+                    // don't corrupt the layout group stack mid-frame.
+                    var captured = component;
+                    EditorApplication.delayCall += () => BakeAssets(captured);
+                }
             }
             else
             {
                 if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
-                    AddPrefabToAvatar();
+                {
+                    // Defer past the current OnGUI pass — CreatePrefab calls
+                    // AssetDatabase.Refresh() which can trigger re-entrant layout
+                    // events and leave BeginScrollView unmatched.
+                    EditorApplication.delayCall += AddPrefabToAvatar;
+                }
             }
         }
 
         // ── Logic ─────────────────────────────────────────────────────────────
 
+        // Per-frame component cache — refreshed once per OnGUI call, not once per draw section.
+        private int _lastRefreshFrame = -1;
+
         private ASMLiteComponent GetOrRefreshComponent()
         {
-            if (_selectedAvatar == null)
+            if (!_selectedAvatar)
             {
                 _cachedComponent = null;
                 return null;
             }
 
-            // Re-check every frame in case the prefab was added/removed externally.
-            _cachedComponent = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            // Refresh once per editor frame. Multiple Draw* calls in the same OnGUI
+            // invocation reuse the cached result — avoids 3× GetComponentInChildren
+            // per repaint and ensures consistent state within a single frame.
+            int frame = Time.frameCount;
+            if (frame != _lastRefreshFrame)
+            {
+                _cachedComponent   = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+                _lastRefreshFrame  = frame;
+            }
+
             return _cachedComponent;
         }
 
@@ -260,7 +310,8 @@ namespace ASMLite.Editor
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent = null;
+            _cachedComponent  = null;
+            _lastRefreshFrame = -1;   // force cache refresh on next draw
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 

@@ -28,7 +28,7 @@ namespace ASMLite
         /// PreprocessOrder 0 ensures this runs before VRCFury (which uses order 0 as
         /// well but is registered later). Lower values run first.
         /// </summary>
-        public int PreprocessOrder => 0;
+        public int PreprocessOrder => -10;
 
         /// <summary>
         /// Called by the VRChat SDK before avatar upload. Delegates to ASMLiteBuilder

@@ -89,7 +89,7 @@ namespace ASMLite.Editor
 
             // 6–8. Generate assets
             PopulateFXController(discoveredParams, component.slotCount);
-            PopulateExpressionParams(component.slotCount);
+            PopulateExpressionParams(component.slotCount, discoveredParams);
             PopulateExpressionMenu(component.slotCount);
 
             // 9. Log completion
@@ -306,12 +306,15 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Writes exactly <paramref name="slotCount"/> synced Int control parameters
-        /// (ASMLite_S1 … ASMLite_SN) into the managed VRCExpressionParameters asset.
-        /// Backup and default parameters are NOT written here — they are local-only
-        /// AnimatorController parameters with zero sync cost (R008).
+        /// Writes the following into the managed VRCExpressionParameters asset:
+        ///   • slotCount synced Int control params (ASMLite_S1 … ASMLite_SN)
+        ///     saved: false, networkSynced: true  — momentary triggers, no persistence needed
+        ///   • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
+        ///     saved: true, networkSynced: false  — persisted across world changes via
+        ///     VRChat local storage; VRCFury Unlimited Parameters handles sync compression
+        ///     so the raw bit cost is irrelevant.
         /// </summary>
-        private static void PopulateExpressionParams(int slotCount)
+        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
         {
             var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ParamsAssetPath);
             if (paramsAsset == null)
@@ -321,17 +324,39 @@ namespace ASMLite.Editor
             }
 
             var paramList = new List<VRCExpressionParameters.Parameter>();
+
+            // Control params — synced triggers, not saved
             for (int i = 1; i <= slotCount; i++)
             {
                 paramList.Add(new VRCExpressionParameters.Parameter
                 {
-                    name         = $"ASMLite_S{i}",
-                    valueType    = VRCExpressionParameters.ValueType.Int,
-                    defaultValue = 0f,
-                    saved        = false,
+                    name          = $"ASMLite_S{i}",
+                    valueType     = VRCExpressionParameters.ValueType.Int,
+                    defaultValue  = 0f,
+                    saved         = false,
                     networkSynced = true,
                 });
             }
+
+            // Backup params — saved locally, not synced
+            // saved: true persists values across world changes via VRChat local storage.
+            // networkSynced: false keeps them off the sync budget entirely;
+            // VRCFury Unlimited Parameters handles any compression needed.
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                foreach (var p in avatarParams)
+                {
+                    paramList.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_Bak_S{slot}_{p.name}",
+                        valueType     = p.valueType,
+                        defaultValue  = p.defaultValue,
+                        saved         = true,
+                        networkSynced = false,
+                    });
+                }
+            }
+
             paramsAsset.parameters = paramList.ToArray();
 
             EditorUtility.SetDirty(paramsAsset);
@@ -340,18 +365,20 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Generates the nested VRCExpressionsMenu tree at build time.
-        /// Creates 7 menu assets total:
+        /// Creates 2 + (slotCount * 2) menu assets total:
         ///   1 root (mutated in-place to preserve stable GUID) +
+        ///   1 ASM-Lite wrapper menu +
         ///   slotCount slot sub-menus +
         ///   slotCount confirm sub-menus (Save confirmation).
         ///
         /// Menu hierarchy:
-        ///   Presets (root)
-        ///     └─ Preset N  (SubMenu → slotMenu)
-        ///          ├─ Save  (SubMenu → confirmMenu)
-        ///          │    └─ Confirm  (Button, param ASMLite_SN = 1)
-        ///          ├─ Load  (Button, param ASMLite_SN = 2)
-        ///          └─ Reset (Button, param ASMLite_SN = 3)
+        ///   root
+        ///     └─ ASM-Lite  (SubMenu → presetsMenu)
+        ///          └─ Preset N  (SubMenu → slotMenu)
+        ///               ├─ Save  (SubMenu → confirmMenu)
+        ///               │    └─ Confirm  (Button, param ASMLite_SN = 1)
+        ///               ├─ Load  (Button, param ASMLite_SN = 2)
+        ///               └─ Reset (Button, param ASMLite_SN = 3)
         /// </summary>
         private static void PopulateExpressionMenu(int slotCount)
         {
@@ -374,7 +401,11 @@ namespace ASMLite.Editor
 
             string generatedDir = System.IO.Path.GetDirectoryName(MenuAssetPath);
 
-            // ── Delete and recreate sub-menu assets ───────────────────────────
+            // ── Delete and recreate the wrapper + slot/confirm assets ─────────
+            string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
+            if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath) != null)
+                AssetDatabase.DeleteAsset(presetsMenuPath);
+
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
@@ -438,14 +469,15 @@ namespace ASMLite.Editor
             // on the first build.
             AssetDatabase.Refresh();
 
-            // ── Rebuild root menu entries in-place ────────────────────────────
-            rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
+            // ── Build the ASM-Lite wrapper menu (Preset 1 … Preset N) ─────────
+            var presetsMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            presetsMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 string slotPath = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
                 var slotMenu    = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath);
 
-                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                presetsMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
                     name    = $"Preset {slot}",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
@@ -453,11 +485,27 @@ namespace ASMLite.Editor
                     icon    = iconPresets,
                 });
             }
+            AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
+
+            // ── Point root at the ASM-Lite wrapper (single entry) ────────────
+            // Root is mutated in-place so its stable GUID (referenced by VRCFury)
+            // is never broken.
+            presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
+            rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
+            {
+                new VRCExpressionsMenu.Control
+                {
+                    name    = "ASM-Lite",
+                    type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = presetsMenu,
+                    icon    = iconPresets,
+                }
+            };
 
             EditorUtility.SetDirty(rootMenu);
             AssetDatabase.SaveAssets();
 
-            Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + {slotCount} slot menus + {slotCount} confirm menus.");
+            Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + ASM-Lite wrapper + {slotCount} slot menus + {slotCount} confirm menus.");
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
