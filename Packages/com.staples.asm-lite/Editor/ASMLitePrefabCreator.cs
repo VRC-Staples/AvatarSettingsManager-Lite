@@ -24,10 +24,10 @@ namespace ASMLite.Editor
     /// </summary>
     public static class ASMLitePrefabCreator
     {
-        private const string PrefabPath      = "Assets/ASM-Lite/Prefabs/ASM-Lite.prefab";
-        private const string ControllerPath  = "Assets/ASM-Lite/GeneratedAssets/ASMLite_FX.controller";
-        private const string MenuPath        = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Menu.asset";
-        private const string ParamsPath      = "Assets/ASM-Lite/GeneratedAssets/ASMLite_Params.asset";
+        private const string PrefabPath      = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
+        private const string ControllerPath  = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_FX.controller";
+        private const string MenuPath        = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Menu.asset";
+        private const string ParamsPath      = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Params.asset";
 
         // Stable GUIDs from the .meta files written in T03.
         private const string ControllerGuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301";
@@ -45,8 +45,8 @@ namespace ASMLite.Editor
         public static void CreatePrefab()
         {
             // ── Ensure Prefabs directory exists ──────────────────────────────
-            if (!System.IO.Directory.Exists("Assets/ASM-Lite/Prefabs"))
-                System.IO.Directory.CreateDirectory("Assets/ASM-Lite/Prefabs");
+            if (!System.IO.Directory.Exists("Packages/com.staples.asm-lite/Prefabs"))
+                System.IO.Directory.CreateDirectory("Packages/com.staples.asm-lite/Prefabs");
 
             // ── Load stub assets ─────────────────────────────────────────────
             var fxController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
