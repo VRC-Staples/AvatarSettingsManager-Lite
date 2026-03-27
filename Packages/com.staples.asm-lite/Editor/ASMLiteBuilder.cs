@@ -431,6 +431,13 @@ namespace ASMLite.Editor
                 AssetDatabase.CreateAsset(slotMenu, slotPath);
             }
 
+            // Force Unity to import the newly created sub-menu assets before
+            // LoadAssetAtPath is called. Without this, the files exist on disk but
+            // are not yet registered in the asset database, causing LoadAssetAtPath
+            // to return null and leaving the root menu with null subMenu references
+            // on the first build.
+            AssetDatabase.Refresh();
+
             // ── Rebuild root menu entries in-place ────────────────────────────
             rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int slot = 1; slot <= slotCount; slot++)
