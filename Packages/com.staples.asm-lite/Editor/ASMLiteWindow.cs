@@ -10,6 +10,7 @@ namespace ASMLite.Editor
     ///
     /// Provides:
     ///   • Avatar hierarchy picker
+    ///   • Slot count configuration
     ///   • Status / diagnostics panel
     ///   • "Add ASM-Lite Prefab" button
     /// </summary>
@@ -20,13 +21,18 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
+        // Cached serialized object for the component — rebuilt when component changes.
+        private ASMLiteComponent    _cachedComponent;
+        private SerializedObject    _serializedComponent;
+        private SerializedProperty  _slotCountProp;
+
         // ── Open ──────────────────────────────────────────────────────────────
 
         [MenuItem("Tools/.Staples./ASM-Lite")]
         public static void Open()
         {
             var win = GetWindow<ASMLiteWindow>(title: "ASM-Lite");
-            win.minSize = new Vector2(380, 320);
+            win.minSize = new Vector2(380, 340);
             win.Show();
         }
 
@@ -67,14 +73,15 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField("Avatar", EditorStyles.boldLabel);
 
             var newAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(
-                label:       "Avatar Root",
-                obj:         _selectedAvatar,
-                objType:     typeof(VRCAvatarDescriptor),
+                label:             "Avatar Root",
+                obj:               _selectedAvatar,
+                objType:           typeof(VRCAvatarDescriptor),
                 allowSceneObjects: true);
 
             if (newAvatar != _selectedAvatar)
             {
                 _selectedAvatar = newAvatar;
+                InvalidateComponentCache();
                 Repaint();
             }
 
@@ -93,8 +100,7 @@ namespace ASMLite.Editor
 
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
 
-            // ── ASM-Lite component presence ───────────────────────────────────
-            var component = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            var component = GetOrRefreshComponent();
 
             if (component != null)
             {
@@ -102,12 +108,20 @@ namespace ASMLite.Editor
                     "✓ ASM-Lite prefab is present on this avatar.",
                     MessageType.Info);
 
-                // Slot count
-                EditorGUILayout.LabelField(
-                    $"Slot count: {component.slotCount}",
-                    EditorStyles.miniLabel);
+                // ── Slot count (editable) ─────────────────────────────────────
+                EditorGUILayout.Space(4);
+                EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
 
-                // Expression parameters
+                _serializedComponent.Update();
+                EditorGUILayout.PropertyField(
+                    _slotCountProp,
+                    new GUIContent(
+                        "Slot Count",
+                        "Number of expression parameter slots ASM-Lite manages on this avatar."));
+                _serializedComponent.ApplyModifiedProperties();
+
+                // ── Expression parameters ─────────────────────────────────────
+                EditorGUILayout.Space(4);
                 var exprParams = _selectedAvatar.expressionParameters;
                 if (exprParams != null && exprParams.parameters != null)
                 {
@@ -153,12 +167,38 @@ namespace ASMLite.Editor
 
         // ── Logic ─────────────────────────────────────────────────────────────
 
+        private ASMLiteComponent GetOrRefreshComponent()
+        {
+            if (_selectedAvatar == null)
+            {
+                InvalidateComponentCache();
+                return null;
+            }
+
+            var component = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+
+            if (component != _cachedComponent)
+            {
+                _cachedComponent     = component;
+                _serializedComponent = component != null ? new SerializedObject(component) : null;
+                _slotCountProp       = _serializedComponent?.FindProperty("slotCount");
+            }
+
+            return _cachedComponent;
+        }
+
+        private void InvalidateComponentCache()
+        {
+            _cachedComponent     = null;
+            _serializedComponent = null;
+            _slotCountProp       = null;
+        }
+
         private void AddPrefabToAvatar()
         {
             if (_selectedAvatar == null)
                 return;
 
-            // Check for existing ASM-Lite component to avoid duplicates.
             var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
             if (existing != null)
             {
@@ -171,11 +211,9 @@ namespace ASMLite.Editor
                     return;
             }
 
-            // Ensure the prefab exists first.
             ASMLitePrefabCreator.CreatePrefab();
 
-            // Load the saved prefab and instantiate it under the avatar root.
-            const string PrefabPath = "Assets/ASM-Lite/Prefabs/ASM-Lite.prefab";
+            const string PrefabPath = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
             var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
 
             if (prefabAsset == null)
@@ -196,6 +234,7 @@ namespace ASMLite.Editor
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
+            InvalidateComponentCache();
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 
@@ -207,7 +246,6 @@ namespace ASMLite.Editor
 
         private void OnSelectionChange()
         {
-            // Auto-populate avatar picker when user selects something in the hierarchy.
             if (Selection.activeGameObject == null)
                 return;
 
@@ -218,6 +256,7 @@ namespace ASMLite.Editor
             if (descriptor != null && descriptor != _selectedAvatar)
             {
                 _selectedAvatar = descriptor;
+                InvalidateComponentCache();
                 Repaint();
             }
         }
