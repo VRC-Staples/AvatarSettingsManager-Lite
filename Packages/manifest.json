@@ -1,20 +1,8 @@
 {
-  "scopedRegistries": [
-    {
-      "name": "VRChat",
-      "url": "https://packages.vrchat.com/public",
-      "scopes": ["com.vrchat"]
-    },
-    {
-      "name": "OpenUPM",
-      "url": "https://package.openupm.com",
-      "scopes": ["com.vrcfury"]
-    }
-  ],
   "dependencies": {
-    "com.vrchat.avatars": "3.7.0",
-    "com.vrchat.base": "3.7.0",
-    "com.vrcfury.vrcfury": "1.999.0",
+    "com.vrchat.avatars": "file:F:\\Users\\REDACTED\\OneDrive\\Desktop\\Unity Projects\\Anza\\Packages\\com.vrchat.avatars",
+    "com.vrchat.base": "file:F:\\Users\\REDACTED\\OneDrive\\Desktop\\Unity Projects\\Anza\\Packages\\com.vrchat.base",
+    "com.vrcfury.vrcfury": "file:F:\\Users\\REDACTED\\OneDrive\\Desktop\\Unity Projects\\Anza\\Packages\\com.vrcfury.vrcfury",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.7.6",
     "com.unity.test-framework": "1.1.29",
