@@ -10,9 +10,10 @@ namespace ASMLite.Editor
     ///
     /// Provides:
     ///   • Avatar hierarchy picker
-    ///   • Slot count configuration (before and after prefab is added)
+    ///   • Slot count configuration (editable before add; locked after)
     ///   • Status / diagnostics panel
-    ///   • "Add ASM-Lite Prefab" button
+    ///   • "Add ASM-Lite Prefab" button — adds prefab and immediately bakes assets
+    ///   • "Rebuild ASM-Lite" button — re-bakes when prefab already present
     /// </summary>
     public class ASMLiteWindow : EditorWindow
     {
@@ -24,10 +25,8 @@ namespace ASMLite.Editor
         // Pending slot count — shown before the prefab is added, applied on add.
         private int _pendingSlotCount = 3;
 
-        // Cached serialized object for the component — rebuilt when component changes.
-        private ASMLiteComponent   _cachedComponent;
-        private SerializedObject   _serializedComponent;
-        private SerializedProperty _slotCountProp;
+        // Cached component reference — rebuilt when avatar or scene changes.
+        private ASMLiteComponent _cachedComponent;
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -57,7 +56,7 @@ namespace ASMLite.Editor
                 EditorGUILayout.Space(8);
                 DrawStatus();
                 EditorGUILayout.Space(12);
-                DrawAddButton();
+                DrawActionButton();
             }
 
             EditorGUILayout.Space(8);
@@ -89,9 +88,8 @@ namespace ASMLite.Editor
             if (newAvatar != _selectedAvatar)
             {
                 _selectedAvatar = newAvatar;
-                InvalidateComponentCache();
+                _cachedComponent = null;
 
-                // Pre-populate pending slot count from existing component if present.
                 if (_selectedAvatar != null)
                 {
                     var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
@@ -118,23 +116,24 @@ namespace ASMLite.Editor
 
             if (component != null)
             {
-                // Prefab already on avatar — edit via SerializedObject for Undo support.
-                _serializedComponent.Update();
-                EditorGUILayout.PropertyField(
-                    _slotCountProp,
-                    new GUIContent(
-                        "Slot Count",
-                        "Number of expression parameter slots ASM-Lite manages on this avatar."));
-                _serializedComponent.ApplyModifiedProperties();
-
-                // Keep pending in sync so if the component is removed and re-added
-                // the last used value is preserved as the default.
-                _pendingSlotCount = component.slotCount;
+                // Prefab is present — slot count is locked (changing it requires
+                // removing and re-adding the prefab, or using Rebuild).
+                using (new EditorGUI.DisabledScope(true))
+                {
+                    EditorGUILayout.IntField(
+                        new GUIContent(
+                            "Slot Count",
+                            "Slot count is locked while ASM-Lite is on this avatar. " +
+                            "Remove the prefab and re-add to change it."),
+                        component.slotCount);
+                }
+                EditorGUILayout.HelpBox(
+                    "Slot count is locked. Remove the prefab and re-add to change it.",
+                    MessageType.None);
             }
             else
             {
-                // No prefab yet — show the pending value the user can configure
-                // before clicking Add.
+                // No prefab yet — user can configure before adding.
                 _pendingSlotCount = EditorGUILayout.IntSlider(
                     new GUIContent(
                         "Slot Count",
@@ -182,10 +181,20 @@ namespace ASMLite.Editor
             }
         }
 
-        private void DrawAddButton()
+        private void DrawActionButton()
         {
-            if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
-                AddPrefabToAvatar();
+            var component = GetOrRefreshComponent();
+
+            if (component != null)
+            {
+                if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36)))
+                    BakeAssets(component);
+            }
+            else
+            {
+                if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                    AddPrefabToAvatar();
+            }
         }
 
         // ── Logic ─────────────────────────────────────────────────────────────
@@ -194,27 +203,13 @@ namespace ASMLite.Editor
         {
             if (_selectedAvatar == null)
             {
-                InvalidateComponentCache();
+                _cachedComponent = null;
                 return null;
             }
 
-            var component = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
-
-            if (component != _cachedComponent)
-            {
-                _cachedComponent     = component;
-                _serializedComponent = component != null ? new SerializedObject(component) : null;
-                _slotCountProp       = _serializedComponent?.FindProperty("slotCount");
-            }
-
+            // Re-check every frame in case the prefab was added/removed externally.
+            _cachedComponent = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
             return _cachedComponent;
-        }
-
-        private void InvalidateComponentCache()
-        {
-            _cachedComponent     = null;
-            _serializedComponent = null;
-            _slotCountProp       = null;
         }
 
         private void AddPrefabToAvatar()
@@ -254,7 +249,6 @@ namespace ASMLite.Editor
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(
                 prefabAsset, _selectedAvatar.transform);
 
-            // Apply the pending slot count the user configured before adding.
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
                 component.slotCount = _pendingSlotCount;
@@ -262,11 +256,40 @@ namespace ASMLite.Editor
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
-            InvalidateComponentCache();
+            _cachedComponent = null;
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 
-            Debug.Log($"[ASM-Lite] Prefab added to '{_selectedAvatar.gameObject.name}' with {_pendingSlotCount} slot(s).");
+            Debug.Log($"[ASM-Lite] Prefab added to '{_selectedAvatar.gameObject.name}' with {_pendingSlotCount} slot(s). Baking assets...");
+
+            // Immediately bake so assets are populated before the user hits Play.
+            component = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            if (component != null)
+                BakeAssets(component);
+
+            Repaint();
+        }
+
+        private void BakeAssets(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            try
+            {
+                ASMLiteBuilder.Build(component);
+                AssetDatabase.Refresh();
+                Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}'.");
+            }
+            catch (System.Exception ex)
+            {
+                EditorUtility.DisplayDialog(
+                    "ASM-Lite: Build Error",
+                    $"An error occurred while baking assets:\n\n{ex.Message}\n\nCheck the Console for details.",
+                    "OK");
+                Debug.LogException(ex);
+            }
+
             Repaint();
         }
 
@@ -283,10 +306,9 @@ namespace ASMLite.Editor
 
             if (descriptor != null && descriptor != _selectedAvatar)
             {
-                _selectedAvatar = descriptor;
-                InvalidateComponentCache();
+                _selectedAvatar  = descriptor;
+                _cachedComponent = null;
 
-                // Pre-populate from existing component if present.
                 var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
                 if (existing != null)
                     _pendingSlotCount = existing.slotCount;
