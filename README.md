@@ -59,18 +59,30 @@ At avatar build time, ASM-Lite:
 
 ## Building from Source
 
-To produce the `.unitypackage` from the source repository:
+### Prerequisites
 
-1. Open the project in **Unity 2022.3.22f1**.
-2. Run the provided PowerShell export script from the project root:
+The project resolves VRChat SDK and VRCFury packages from public scoped registries (`packages.vrchat.com` and `package.openupm.com`). These registries require auth tokens injected by the **VRChat Creator Companion (VCC)**:
 
-   ```powershell
-   .\export-package.ps1
-   ```
+1. Add this repository as a project in VCC (or open it via **File → Open Project**).
+2. Let VCC resolve and cache the packages at least once — this writes the auth tokens Unity needs for headless builds.
 
-   This invokes Unity in headless batch mode and writes `Dist/ASM-Lite.unitypackage`.
+> **Do not open the project directly in Unity Hub** before VCC has resolved the packages. Unity Hub cannot authenticate against `packages.vrchat.com` on its own and will fail with "access denied" errors.
 
-Alternatively, with the project open in the Unity Editor, use the menu item **ASM-Lite → Export Package**.
+### Export
+
+With VCC prerequisites satisfied, run the PowerShell export script from the project root:
+
+```powershell
+.\export-package.ps1
+```
+
+This invokes Unity in headless batch mode and writes `Dist/ASM-Lite.unitypackage`. Unity is discovered automatically from `ProjectSettings/ProjectVersion.txt` and the Unity Hub install directory. If Unity is installed to a non-standard location, pass it explicitly:
+
+```powershell
+.\export-package.ps1 -UnityExe "D:\MyUnityInstalls\2022.3.22f1\Editor\Unity.exe"
+```
+
+Alternatively, with the project open in the Unity Editor, use **Tools → .Staples. → ASM-Lite Dev → Export Package**.
 
 ---
 
