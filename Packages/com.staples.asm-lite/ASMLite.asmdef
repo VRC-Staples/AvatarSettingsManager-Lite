@@ -2,16 +2,21 @@
     "name": "ASMLite",
     "rootNamespace": "ASMLite",
     "references": [
-        "VRC.SDKBase",
-        "VF.Model"
+        "VRC.SDKBase"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
-    "autoReferenced": true,
+    "autoReferenced": false,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.vrcfury.vrcfury",
+            "expression": "",
+            "define": "ASM_LITE_VRCFURY"
+        }
+    ],
     "noEngineReferences": false
 }
