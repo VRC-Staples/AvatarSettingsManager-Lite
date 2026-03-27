@@ -64,9 +64,12 @@ At avatar build time, ASM-Lite:
 The project resolves VRChat SDK and VRCFury packages from public scoped registries (`packages.vrchat.com` and `package.openupm.com`). These registries require auth tokens injected by the **VRChat Creator Companion (VCC)**:
 
 1. Add this repository as a project in VCC (or open it via **File → Open Project**).
-2. Let VCC resolve and cache the packages at least once — this writes the auth tokens Unity needs for headless builds.
+2. Let VCC fully resolve and load the project — this writes `Packages/packages-lock.json` with the VRChat SDK entries.
+3. Close Unity (the editor window VCC opened).
 
-> **Do not open the project directly in Unity Hub** before VCC has resolved the packages. Unity Hub cannot authenticate against `packages.vrchat.com` on its own and will fail with "access denied" errors.
+> **The export script checks for this lockfile before running.** If it's missing or incomplete it will print a clear error and exit rather than failing inside Unity with a cryptic "Access denied" message.
+
+> **Do not open the project directly in Unity Hub** before VCC has resolved the packages. Unity Hub cannot authenticate against `packages.vrchat.com` on its own.
 
 ### Export
 
