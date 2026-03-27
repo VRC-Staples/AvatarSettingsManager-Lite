@@ -8,7 +8,7 @@ namespace ASMLite.Editor
         private const string ExportPath = "Dist/ASM-Lite.unitypackage";
         private const string ExportRoot = "Assets/ASM-Lite";
 
-        [MenuItem("ASM-Lite/Export Package")]
+        [MenuItem("Tools/.Staples./ASM-Lite/Export Package")]
         public static void Export()
         {
             System.IO.Directory.CreateDirectory("Dist");
