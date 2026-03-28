@@ -377,20 +377,22 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Generates the nested VRCExpressionsMenu tree at build time.
-        /// Creates 2 + (slotCount * 2) menu assets total:
+        /// Creates 2 + (slotCount * 3) menu assets total:
         ///   1 root (mutated in-place to preserve stable GUID) +
         ///   1 ASM-Lite wrapper menu +
         ///   slotCount slot sub-menus +
-        ///   slotCount confirm sub-menus (Save confirmation).
+        ///   slotCount confirm sub-menus (Save confirmation) +
+        ///   slotCount reset-confirm sub-menus (Reset confirmation).
         ///
         /// Menu hierarchy:
         ///   root
         ///     └─ ASM-Lite  (SubMenu → presetsMenu)
         ///          └─ Preset N  (SubMenu → slotMenu)
-        ///               ├─ Save  (SubMenu → confirmMenu)
+        ///               ├─ Save   (SubMenu → confirmMenu)
         ///               │    └─ Confirm  (Button, param ASMLite_SN = 1)
-        ///               ├─ Load  (Button, param ASMLite_SN = 2)
-        ///               └─ Reset (Button, param ASMLite_SN = 3)
+        ///               ├─ Load   (Button, param ASMLite_SN = 2)
+        ///               └─ Reset  (SubMenu → resetConfirmMenu)
+        ///                    └─ Confirm  (Button, param ASMLite_SN = 3)
         ///
         /// Asset operations are batched with StartAssetEditing/StopAssetEditing (in a
         /// try/finally) so Unity imports all created assets in one pass rather than
@@ -421,8 +423,9 @@ namespace ASMLite.Editor
             string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
 
             // In-memory arrays for references used outside the batch block.
-            var confirmMenus = new VRCExpressionsMenu[slotCount];
-            var slotMenus    = new VRCExpressionsMenu[slotCount];
+            var confirmMenus      = new VRCExpressionsMenu[slotCount];
+            var resetConfirmMenus = new VRCExpressionsMenu[slotCount];
+            var slotMenus         = new VRCExpressionsMenu[slotCount];
 
             // ── Batch all delete/create operations to avoid per-asset import cycles ──
             try
@@ -434,15 +437,17 @@ namespace ASMLite.Editor
 
                 for (int slot = 1; slot <= slotCount; slot++)
                 {
-                    string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
-                    string confirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
+                    string slotPath         = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
+                    string confirmPath      = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
+                    string resetConfirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ResetConfirmMenu.asset";
 
                     // Unconditional deletes — AssetDatabase.DeleteAsset is a safe no-op
                     // on paths that don't exist, so no existence check is needed.
                     AssetDatabase.DeleteAsset(slotPath);
                     AssetDatabase.DeleteAsset(confirmPath);
+                    AssetDatabase.DeleteAsset(resetConfirmPath);
 
-                    // ── Confirm sub-menu ──────────────────────────────────────────
+                    // ── Save confirm sub-menu ─────────────────────────────────────
                     var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                     {
@@ -456,7 +461,23 @@ namespace ASMLite.Editor
                         }
                     };
                     AssetDatabase.CreateAsset(confirmMenu, confirmPath);
-                    confirmMenus[slot - 1] = confirmMenu; // keep in-memory reference
+                    confirmMenus[slot - 1] = confirmMenu;
+
+                    // ── Reset confirm sub-menu ────────────────────────────────────
+                    var resetConfirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    resetConfirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
+                    {
+                        new VRCExpressionsMenu.Control
+                        {
+                            name      = "Confirm",
+                            type      = VRCExpressionsMenu.Control.ControlType.Button,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                            value     = 3f,
+                            icon      = iconReset,
+                        }
+                    };
+                    AssetDatabase.CreateAsset(resetConfirmMenu, resetConfirmPath);
+                    resetConfirmMenus[slot - 1] = resetConfirmMenu;
 
                     // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
                     var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
@@ -479,15 +500,14 @@ namespace ASMLite.Editor
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Reset",
-                            type      = VRCExpressionsMenu.Control.ControlType.Button,
-                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                            value     = 3f,
-                            icon      = iconReset,
+                            name    = "Reset",
+                            type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                            subMenu = resetConfirmMenu,
+                            icon    = iconReset,
                         },
                     };
                     AssetDatabase.CreateAsset(slotMenu, slotPath);
-                    slotMenus[slot - 1] = slotMenu; // keep in-memory reference
+                    slotMenus[slot - 1] = slotMenu;
                 }
             }
             finally
