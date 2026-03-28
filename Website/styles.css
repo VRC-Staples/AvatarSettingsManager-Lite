@@ -134,6 +134,7 @@ h1 {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background-image: url(banner.svg) !important;
   margin-bottom: 0.25rem;
 }
 
