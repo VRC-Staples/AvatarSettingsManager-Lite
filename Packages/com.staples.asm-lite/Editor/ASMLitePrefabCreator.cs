@@ -26,14 +26,49 @@ namespace ASMLite.Editor
     {
         // Asset paths — see ASMLiteAssetPaths for centralized constants.
 
-        // Stable GUIDs from the .meta files written in T03.
-        private const string ControllerGuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301";
-        private const string MenuGuid       = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302";
-        private const string ParamsGuid     = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303";
-
         // Unity fileID for the primary object in each asset type.
         private const long AnimatorControllerFileID = 9100000L;
         private const long MonoBehaviourFileID      = 11400000L;
+
+        // ── Reflection cache (R025) ───────────────────────────────────────────
+        private static readonly Dictionary<string, Type> s_typeCache = new Dictionary<string, Type>();
+        private static bool      s_reflInitialized;
+        private static Type      s_fullControllerType;
+        private static Type      s_controllerEntryType;
+        private static Type      s_menuEntryType;
+        private static Type      s_paramsEntryType;
+        private static FieldInfo s_controllerField;
+        private static FieldInfo s_menuField;
+        private static FieldInfo s_paramsField;
+        private static FieldInfo s_contentField;
+
+        // ── EnsureReflectionCache (R025, R024) ────────────────────────────────
+        private static void EnsureReflectionCache()
+        {
+            if (s_reflInitialized) return;
+            s_reflInitialized = true;
+
+            s_fullControllerType = FindType("VF.Model.Feature.FullController");
+            if (s_fullControllerType == null) return;
+
+            s_controllerEntryType = s_fullControllerType.GetNestedType(
+                "ControllerEntry", BindingFlags.Public | BindingFlags.NonPublic);
+            s_menuEntryType       = s_fullControllerType.GetNestedType(
+                "MenuEntry",        BindingFlags.Public | BindingFlags.NonPublic);
+            s_paramsEntryType     = s_fullControllerType.GetNestedType(
+                "ParamsEntry",      BindingFlags.Public | BindingFlags.NonPublic);
+
+            s_controllerField = s_controllerEntryType?.GetField(
+                "controller", BindingFlags.Public | BindingFlags.Instance);
+            s_menuField       = s_menuEntryType?.GetField(
+                "menu",        BindingFlags.Public | BindingFlags.Instance);
+            s_paramsField     = s_paramsEntryType?.GetField(
+                "parameters",  BindingFlags.Public | BindingFlags.Instance);
+
+            Type vrcfuryType = FindType("VF.Model.VRCFury");
+            s_contentField   = vrcfuryType?.GetField(
+                "content", BindingFlags.Public | BindingFlags.Instance);
+        }
 
         /// <summary>
         /// Builds (or rebuilds) the ASM-Lite prefab asset.
@@ -41,9 +76,12 @@ namespace ASMLite.Editor
         /// </summary>
         public static void CreatePrefab()
         {
-            // ── Ensure Prefabs directory exists ──────────────────────────────
-            if (!System.IO.Directory.Exists("Packages/com.staples.asm-lite/Prefabs"))
-                System.IO.Directory.CreateDirectory("Packages/com.staples.asm-lite/Prefabs");
+            // ── Ensure Prefabs directory exists (HIGH-3) ──────────────────────
+            if (!AssetDatabase.IsValidFolder("Packages/com.staples.asm-lite/Prefabs"))
+                AssetDatabase.CreateFolder("Packages/com.staples.asm-lite", "Prefabs");
+
+            // ── Prime reflection cache ────────────────────────────────────────
+            EnsureReflectionCache();
 
             // ── Load stub assets ─────────────────────────────────────────────
             var fxController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ASMLiteAssetPaths.FXController);
@@ -59,7 +97,6 @@ namespace ASMLite.Editor
 
             // ── Locate VRCFury types via reflection ──────────────────────────
             Type vrcfuryType        = FindType("VF.Model.VRCFury");
-            Type fullControllerType = FindType("VF.Model.Feature.FullController");
             Type guidControllerType = FindType("VF.Model.GuidController");
             Type guidMenuType       = FindType("VF.Model.GuidMenu");
             Type guidParamsType     = FindType("VF.Model.GuidParams");
@@ -75,7 +112,7 @@ namespace ASMLite.Editor
                 return;
             }
 
-            if (fullControllerType == null)
+            if (s_fullControllerType == null)
             {
                 Debug.LogError("[ASM-Lite] VF.Model.Feature.FullController not found — VRCFury may be an unexpected version.");
                 return;
@@ -87,85 +124,77 @@ namespace ASMLite.Editor
             // Add ASMLiteComponent
             go.AddComponent<ASMLiteComponent>();
 
-            // Add VRCFury component and set its 'content' to a FullController
+            // Add VRCFury component and guard against failure (HIGH-4)
             var vrcfuryComp = go.AddComponent(vrcfuryType);
-
-            if (fullControllerType != null)
+            if (vrcfuryComp == null)
             {
-                object fullController = Activator.CreateInstance(fullControllerType);
-
-                // Configure controllers list
-                Type controllerEntryType = fullControllerType.GetNestedType("ControllerEntry");
-                if (controllerEntryType != null && fxController != null)
-                {
-                    object entry = Activator.CreateInstance(controllerEntryType);
-                    FieldInfo controllerField = controllerEntryType.GetField("controller",
-                        BindingFlags.Public | BindingFlags.Instance);
-
-                    if (controllerField != null && guidControllerType != null)
-                    {
-                        object guidCtrl = CreateGuidWrapper(guidControllerType, fxController,
-                            ControllerGuid, AnimatorControllerFileID);
-                        if (guidCtrl != null)
-                            controllerField.SetValue(entry, guidCtrl);
-                    }
-
-                    AppendToList(fullController, fullControllerType, "controllers", entry);
-                }
-
-                // Configure menus list
-                Type menuEntryType = fullControllerType.GetNestedType("MenuEntry");
-                if (menuEntryType != null && menu != null)
-                {
-                    object entry = Activator.CreateInstance(menuEntryType);
-                    FieldInfo menuField = menuEntryType.GetField("menu",
-                        BindingFlags.Public | BindingFlags.Instance);
-
-                    if (menuField != null && guidMenuType != null)
-                    {
-                        object guidMenu = CreateGuidWrapper(guidMenuType, menu,
-                            MenuGuid, MonoBehaviourFileID);
-                        if (guidMenu != null)
-                            menuField.SetValue(entry, guidMenu);
-                    }
-
-                    AppendToList(fullController, fullControllerType, "menus", entry);
-                }
-
-                // Configure prms list
-                Type paramsEntryType = fullControllerType.GetNestedType("ParamsEntry");
-                if (paramsEntryType != null && prms != null)
-                {
-                    object entry = Activator.CreateInstance(paramsEntryType);
-                    FieldInfo paramsField = paramsEntryType.GetField("parameters",
-                        BindingFlags.Public | BindingFlags.Instance);
-
-                    if (paramsField != null && guidParamsType != null)
-                    {
-                        object guidPrms = CreateGuidWrapper(guidParamsType, prms,
-                            ParamsGuid, MonoBehaviourFileID);
-                        if (guidPrms != null)
-                            paramsField.SetValue(entry, guidPrms);
-                    }
-
-                    AppendToList(fullController, fullControllerType, "prms", entry);
-                }
-
-                // Configure globalParams = ["*"]
-                // This is List<string> — set '*' so all parameters pass through without VF## prefix.
-                SetGlobalParams(fullController, fullControllerType, "*");
-
-                // Assign content
-                FieldInfo contentField = vrcfuryType.GetField("content",
-                    BindingFlags.Public | BindingFlags.Instance);
-                contentField?.SetValue(vrcfuryComp, fullController);
-
-                Debug.Log("[ASM-Lite] FullController configured: controller=" +
-                    (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
-                    ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
-                    ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
-                    ", globalParams=[\"*\"]");
+                Debug.LogError("[ASM-Lite] Failed to add VRCFury component. Is VRCFury installed correctly?");
+                UnityEngine.Object.DestroyImmediate(go);
+                return;
             }
+
+            // Set 'content' to a FullController
+            object fullController = Activator.CreateInstance(s_fullControllerType);
+
+            // Configure controllers list
+            if (s_controllerEntryType != null && fxController != null)
+            {
+                object entry = Activator.CreateInstance(s_controllerEntryType);
+
+                if (s_controllerField != null && guidControllerType != null)
+                {
+                    object guidCtrl = CreateGuidWrapper(guidControllerType, fxController,
+                        ASMLiteAssetPaths.FXController, AnimatorControllerFileID);
+                    if (guidCtrl != null)
+                        s_controllerField.SetValue(entry, guidCtrl);
+                }
+
+                AppendToList(fullController, s_fullControllerType, "controllers", entry);
+            }
+
+            // Configure menus list
+            if (s_menuEntryType != null && menu != null)
+            {
+                object entry = Activator.CreateInstance(s_menuEntryType);
+
+                if (s_menuField != null && guidMenuType != null)
+                {
+                    object guidMenu = CreateGuidWrapper(guidMenuType, menu,
+                        ASMLiteAssetPaths.Menu, MonoBehaviourFileID);
+                    if (guidMenu != null)
+                        s_menuField.SetValue(entry, guidMenu);
+                }
+
+                AppendToList(fullController, s_fullControllerType, "menus", entry);
+            }
+
+            // Configure prms list
+            if (s_paramsEntryType != null && prms != null)
+            {
+                object entry = Activator.CreateInstance(s_paramsEntryType);
+
+                if (s_paramsField != null && guidParamsType != null)
+                {
+                    object guidPrms = CreateGuidWrapper(guidParamsType, prms,
+                        ASMLiteAssetPaths.ExprParams, MonoBehaviourFileID);
+                    if (guidPrms != null)
+                        s_paramsField.SetValue(entry, guidPrms);
+                }
+
+                AppendToList(fullController, s_fullControllerType, "prms", entry);
+            }
+
+            // Configure globalParams = ["*"]
+            SetGlobalParams(fullController, s_fullControllerType, "*");
+
+            // Assign content via cached field
+            s_contentField?.SetValue(vrcfuryComp, fullController);
+
+            Debug.Log("[ASM-Lite] FullController configured: controller=" +
+                (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
+                ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
+                ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
+                ", globalParams=[\"*\"]");
 
             // ── Save as prefab ───────────────────────────────────────────────
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, ASMLiteAssetPaths.Prefab);
@@ -185,31 +214,54 @@ namespace ASMLite.Editor
         // ── Reflection helpers ────────────────────────────────────────────────
 
         /// <summary>
-        /// Searches all loaded assemblies for a type by its full name.
+        /// Searches all loaded assemblies for a type by its full name. Results are
+        /// cached in <see cref="s_typeCache"/> to avoid repeated assembly scans (R025).
         /// </summary>
         private static Type FindType(string fullName)
         {
+            if (s_typeCache.TryGetValue(fullName, out var cached))
+                return cached;
+
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
                 {
                     var t = asm.GetType(fullName);
-                    if (t != null) return t;
+                    if (t != null)
+                    {
+                        s_typeCache[fullName] = t;
+                        return t;
+                    }
                 }
-                catch { /* skip assemblies that throw on introspection */ }
+                catch (ReflectionTypeLoadException)
+                {
+                    // Expected for assemblies that cannot be fully loaded — skip silently.
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ASM-Lite] Error scanning assembly {asm.GetName().Name}: {ex.Message}");
+                }
             }
             return null;
         }
 
         /// <summary>
         /// Creates a GuidWrapper instance (GuidController / GuidMenu / GuidParams)
-        /// with both <c>objRef</c> and <c>id</c> set from the given asset.
+        /// with both <c>objRef</c> and <c>id</c> set from the given asset. The GUID is
+        /// resolved at runtime via <see cref="AssetDatabase.AssetPathToGUID"/> (R026).
         /// </summary>
         private static object CreateGuidWrapper(Type wrapperType, UnityEngine.Object asset,
-            string guid, long fileID)
+            string assetPath, long fileID)
         {
             try
             {
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+                if (string.IsNullOrEmpty(guid))
+                {
+                    Debug.LogError($"[ASM-Lite] AssetPathToGUID returned empty for '{assetPath}'. Asset may not be imported yet.");
+                    return null;
+                }
+
                 object instance = Activator.CreateInstance(wrapperType);
 
                 FieldInfo objRefField = GetBaseField(wrapperType, "objRef");
@@ -224,7 +276,8 @@ namespace ASMLite.Editor
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[ASM-Lite] Could not create {wrapperType.Name}: {ex.Message}");
+                Debug.LogError($"[ASM-Lite] Could not create {wrapperType.Name}: {ex.Message}");
+                Debug.LogException(ex);
                 return null;
             }
         }
