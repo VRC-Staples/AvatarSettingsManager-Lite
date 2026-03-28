@@ -6,6 +6,9 @@
   <meta name="description" content="ASM-Lite adds Save, Load, and Reset for VRChat avatar expression parameter presets. Drop-in VRCFury prefab. Free and open source.">
   <title>ASM-Lite — Avatar Settings Manager Lite</title>
   <script type="module" src="https://unpkg.com/@fluentui/web-components"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" href="./favicon.ico">
 </head>
@@ -13,7 +16,7 @@
   <div class="col align-items-center content">
     <div id="listingInfo" class="col mb-4 w-100 align-items-center">
       {{~ if listingInfo.BannerImage; ~}}
-        <div class="bannerImage" style="background-image: url({{ listingInfo.BannerImageUrl }})"></div>
+        <img class="bannerImage" src="{{ listingInfo.BannerImageUrl }}" alt="{{ listingInfo.Name }}"/>
       {{~ end; ~}}
       <h1>
         {{~ listingInfo.Name ~}}
