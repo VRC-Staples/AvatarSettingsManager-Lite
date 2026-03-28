@@ -190,11 +190,13 @@ namespace ASMLite.Editor
             // Assign content via cached field
             s_contentField?.SetValue(vrcfuryComp, fullController);
 
+#if ASM_LITE_VERBOSE
             Debug.Log("[ASM-Lite] FullController configured: controller=" +
                 (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
                 ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
                 ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
                 ", globalParams=[\"*\"]");
+#endif
 
             // ── Save as prefab ───────────────────────────────────────────────
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, ASMLiteAssetPaths.Prefab);
@@ -203,7 +205,9 @@ namespace ASMLite.Editor
             if (prefab != null)
             {
                 AssetDatabase.Refresh();
+#if ASM_LITE_VERBOSE
                 Debug.Log($"[ASM-Lite] Prefab created at {ASMLiteAssetPaths.Prefab}");
+#endif
             }
             else
             {
