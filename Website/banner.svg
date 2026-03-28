@@ -1,45 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
   <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;700&amp;display=swap');
+    </style>
+
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%"   stop-color="#0e1219"/>
       <stop offset="100%" stop-color="#161d2a"/>
     </linearGradient>
     <radialGradient id="glow" cx="35%" cy="50%" r="50%">
-      <stop offset="0%"   stop-color="#63b3ed" stop-opacity="0.06"/>
+      <stop offset="0%"   stop-color="#63b3ed" stop-opacity="0.07"/>
       <stop offset="100%" stop-color="#63b3ed" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <!-- background -->
   <rect width="1200" height="300" fill="url(#bg)"/>
-
-  <!-- subtle glow behind text -->
   <rect width="1200" height="300" fill="url(#glow)"/>
 
-  <!-- background geometry — receding rings, right side -->
-  <circle cx="1050" cy="150" r="220" fill="none" stroke="#1c2535" stroke-width="1"/>
-  <circle cx="1050" cy="150" r="150" fill="none" stroke="#18202e" stroke-width="1"/>
-  <circle cx="1050" cy="150" r="80"  fill="none" stroke="#151c28" stroke-width="1"/>
+  <!-- background rings — depth -->
+  <circle cx="1060" cy="150" r="220" fill="none" stroke="#1c2535" stroke-width="1"/>
+  <circle cx="1060" cy="150" r="150" fill="none" stroke="#18202e" stroke-width="1"/>
+  <circle cx="1060" cy="150" r="78"  fill="none" stroke="#141b28" stroke-width="1"/>
 
   <!-- left accent bar -->
   <rect x="0" y="0" width="6" height="300" fill="#63b3ed"/>
 
-  <!-- "Avatar Settings Manager" — dominant, two lines -->
-  <text x="52" y="118"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-    font-size="64" font-weight="700" letter-spacing="-1.5" fill="#e6edf5">Avatar Settings</text>
+  <!-- title: Outfit Bold — geometric, distinct, screen-native -->
+  <text x="52" y="120"
+    font-family="'Outfit', 'Segoe UI', Arial, sans-serif"
+    font-size="66" font-weight="700" letter-spacing="-1"
+    fill="#e6edf5">Avatar Settings</text>
 
-  <text x="52" y="188"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-    font-size="64" font-weight="700" letter-spacing="-1.5" fill="#e6edf5">Manager</text>
+  <text x="52" y="192"
+    font-family="'Outfit', 'Segoe UI', Arial, sans-serif"
+    font-size="66" font-weight="700" letter-spacing="-1"
+    fill="#e6edf5">Manager</text>
 
-  <!-- LITE — subordinate, spaced, accent -->
-  <text x="56" y="232"
-    font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-    font-size="16" font-weight="300" letter-spacing="10" fill="#63b3ed">LITE</text>
+  <!-- LITE — same family, ultralight weight, wide tracking, accent blue -->
+  <text x="57" y="238"
+    font-family="'Outfit', 'Segoe UI', Arial, sans-serif"
+    font-size="17" font-weight="200" letter-spacing="11"
+    fill="#63b3ed">LITE</text>
 
   <!-- bottom rule -->
-  <rect x="0" y="294" width="1200" height="6" fill="#63b3ed" opacity="0.3"/>
-  <rect x="0" y="297" width="1200" height="3" fill="#3882b4" opacity="0.5"/>
+  <rect x="0" y="294" width="1200" height="6" fill="#63b3ed" opacity="0.28"/>
+  <rect x="0" y="297" width="1200" height="3" fill="#3882b4" opacity="0.45"/>
 
 </svg>
