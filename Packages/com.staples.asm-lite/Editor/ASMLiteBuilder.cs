@@ -253,7 +253,7 @@ namespace ASMLite.Editor
             // Pre-size all three lists and build in a single pass to avoid 3x iteration
             var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
             var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
-            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
+            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>((avatarParams.Count * 2) + 1);
 
             for (int i = 0; i < avatarParams.Count; i++)
             {
@@ -275,6 +275,14 @@ namespace ASMLite.Editor
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
                     source = $"ASMLite_Def_{p.name}",
                     name   = p.name,
+                });
+                // Also reset the slot's backup param to default so a subsequent
+                // Load on this slot returns defaults, not stale saved values.
+                resetParams.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type   = VRC_AvatarParameterDriver.ChangeType.Copy,
+                    source = $"ASMLite_Def_{p.name}",
+                    name   = $"ASMLite_Bak_S{slot}_{p.name}",
                 });
             }
 
