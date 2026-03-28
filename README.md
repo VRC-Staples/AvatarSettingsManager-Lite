@@ -1,20 +1,20 @@
 # ASM-Lite — Avatar Settings Manager Lite
 
-A lightweight VRCFury prefab for Save/Load/Reset expression parameter preset management on VRChat avatars.
+A lightweight VRCFury prefab that adds Save, Load, and Reset for expression parameter presets on VRChat avatars.
 
 ---
 
 ## Overview
 
-ASM-Lite lets avatar wearers save their current expression-parameter values into one of three preset slots, reload them at any time, or reset to defaults — all through in-game expression menus with no additional tools required.
+ASM-Lite lets you save your current expression parameter values into one of three preset slots, reload them at any time, or reset to defaults — all from the in-game expression menu with no extra tools needed.
 
-It works entirely at build time: ASM-Lite discovers all expression parameters on the avatar descriptor, generates the necessary FX animator layers and expression menu entries, and wires everything together via VRCFury so it is compatible with any VRCFury-based modular avatar workflow.
+Drop the prefab onto your avatar hierarchy and you're done. At build time, ASM-Lite scans the avatar's expression parameters, generates the FX animator layers and menu entries, and wires everything together through VRCFury non-destructively.
 
 ---
 
 ## Prerequisites
 
-- **VRChat Creator Companion (VCC)** — used to manage your avatar project
+- **VRChat Creator Companion (VCC)** — for managing your avatar project
 - **VRChat SDK** (Avatar SDK 3) — installed via VCC
 - **VRCFury** — installed via VCC
 
@@ -44,49 +44,47 @@ It works entirely at build time: ASM-Lite discovers all expression parameters on
 
 ## Usage
 
-After building and uploading your avatar:
+After uploading your avatar:
 
 1. Open the **Expression Menu** in-game.
 2. Navigate to **ASM-Lite**.
-3. Choose a slot (**Slot 1**, **Slot 2**, or **Slot 3**), then select an action:
-   - **Save** — writes all current expression-parameter values into the chosen slot. Requires confirmation to prevent accidental overwrites.
-   - **Load** — restores expression-parameter values from the chosen slot.
-   - **Reset** — resets all expression parameters to their default values.
+3. Pick a slot (**Slot 1**, **Slot 2**, or **Slot 3**) and choose an action:
+   - **Save** — snapshots all current expression parameter values into the slot. Requires a confirmation step to avoid accidental overwrites.
+   - **Load** — restores expression parameter values from the slot.
+   - **Reset** — returns all expression parameters to their default values.
 
 ---
 
 ## How It Works
 
-At avatar build time, ASM-Lite:
+At build time, ASM-Lite:
 
 1. **Discovers parameters** — reads all expression parameters from the avatar's VRC Avatar Descriptor.
-2. **Generates FX layers** — creates animator layers with states and transitions that read/write synced float/int/bool parameters mapped to the three save slots.
-3. **Builds the expression menu** — creates `ASM-Lite → Slot 1/2/3 → Save / Load / Reset` submenus and wires the control parameters.
-4. **Injects via VRCFury** — the generated layers and menu entries are applied non-destructively so they don't interfere with other VRCFury components.
+2. **Generates FX layers** — creates animator layers with states and transitions that read and write synced float, int, and bool parameters across the three slots.
+3. **Builds the expression menu** — creates the `ASM-Lite → Slot 1/2/3 → Save / Load / Reset` menu structure.
+4. **Injects via VRCFury** — merges the generated layers and menus non-destructively, so nothing interferes with other VRCFury components on the avatar.
 
-Backup and default parameters are local-only (not synced), so they don't consume your avatar's expression parameter budget.
+Backup and default parameters are local-only (not synced), so they don't eat into the expression parameter budget.
 
 ---
 
 ## Building from Source
 
-This repository is itself a Unity project used for development. The distributable package lives in `Packages/com.staples.asm-lite/`.
-
-Open the project through VCC (add it as an existing project) to ensure the VRChat SDK and VRCFury dependencies resolve correctly.
+The distributable package lives in `Packages/com.staples.asm-lite/`. Open the project through VCC to ensure the VRChat SDK and VRCFury dependencies resolve correctly.
 
 ---
 
 ## Releases
 
-Releases are published automatically via GitHub Actions. Each release includes:
+Releases are published automatically via GitHub Actions and include:
 - A `.zip` of the package (for VPM)
 - A `.unitypackage` (for manual import)
 - The `package.json` manifest
 
-The VPM listing at `https://vrc-staples.github.io/AvatarSettingsManager-Lite/index.json` is rebuilt automatically whenever a new release is published.
+The VPM listing rebuilds automatically on each new release.
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE) for details.
