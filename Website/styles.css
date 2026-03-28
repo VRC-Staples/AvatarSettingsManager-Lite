@@ -7,16 +7,38 @@
 }
 
 body {
-  padding: 0;
+  padding: 2rem 1rem;
   margin: 0;
   min-width: 100vw;
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   color: var(--neutral-foreground-rest);
   background-color: #12161e;
+}
+
+/* #1 — H1 contrast fix */
+h1 {
+  color: #e6edf5 !important;
+  margin-bottom: 0.5rem;
+}
+
+/* #3 + #9 — package card and search dark theme */
+fluent-data-grid,
+fluent-data-grid-row,
+fluent-data-grid-cell,
+#packageGrid {
+  background-color: #1a1f2a !important;
+  color: #e6edf5 !important;
+}
+
+fluent-text-field::part(root),
+fluent-text-field::part(control) {
+  background-color: #1a1f2a !important;
+  color: #e6edf5 !important;
+  border-color: #2e3848 !important;
 }
 
 .hidden {
@@ -130,6 +152,7 @@ h1 {
 .bannerImage {
   aspect-ratio: 5 / 1;
   border-radius: 6px;
+  overflow: hidden;
   max-width: 90%;
   width: 100%;
   background-size: cover;
