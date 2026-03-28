@@ -3,7 +3,7 @@
   "displayName": "Avatar Settings Manager - Lite",
   "version": "1.0.0",
   "unity": "2022.3",
-  "description": "Avatar Settings Manager Lite — drop-in VRCFury prefab for Save/Load/Reset expression parameter preset management on VRChat avatars.",
+  "description": "Drop-in VRCFury prefab — Save, Load, and Reset avatar expression parameter presets across three slots.",
   "author": {
     "name": ".Staples."
   },
