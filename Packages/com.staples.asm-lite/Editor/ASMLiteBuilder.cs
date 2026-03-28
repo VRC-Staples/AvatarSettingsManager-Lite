@@ -23,11 +23,7 @@ namespace ASMLite.Editor
     /// </summary>
     public static class ASMLiteBuilder
     {
-        // ─── Asset paths ──────────────────────────────────────────────────────
-
-        private const string FXControllerPath = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_FX.controller";
-        private const string ParamsAssetPath  = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Params.asset";
-        private const string MenuAssetPath    = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Menu.asset";
+        // ─── Asset paths — see ASMLiteAssetPaths for centralized constants ───
 
         // ─── Icon paths ───────────────────────────────────────────────────────
 
@@ -124,10 +120,10 @@ namespace ASMLite.Editor
         /// </summary>
         private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(FXControllerPath);
+            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
             if (ctrl == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load AnimatorController at '{FXControllerPath}'.");
+                Debug.LogError($"[ASM-Lite] Cannot load AnimatorController at '{ASMLiteAssetPaths.FXController}'.");
                 return;
             }
 
@@ -316,10 +312,10 @@ namespace ASMLite.Editor
         /// </summary>
         private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ParamsAssetPath);
+            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             if (paramsAsset == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionParameters at '{ParamsAssetPath}'.");
+                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionParameters at '{ASMLiteAssetPaths.ExprParams}'.");
                 return;
             }
 
@@ -392,14 +388,14 @@ namespace ASMLite.Editor
                 Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
 
             // ── Load root menu in-place to preserve its stable GUID ───────────
-            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(MenuAssetPath);
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
             if (rootMenu == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionsMenu at '{MenuAssetPath}'.");
+                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionsMenu at '{ASMLiteAssetPaths.Menu}'.");
                 return;
             }
 
-            string generatedDir = System.IO.Path.GetDirectoryName(MenuAssetPath);
+            string generatedDir = ASMLiteAssetPaths.GeneratedDir;
 
             // ── Delete and recreate the wrapper + slot/confirm assets ─────────
             string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
