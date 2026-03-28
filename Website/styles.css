@@ -155,8 +155,10 @@ h1 {
   overflow: hidden;
   max-width: 90%;
   width: 100%;
-  display: block;
-  object-fit: cover;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-image: url(banner.svg) !important;
   margin-bottom: 0.25rem;
 }
 
