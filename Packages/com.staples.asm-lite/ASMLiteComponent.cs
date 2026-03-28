@@ -1,5 +1,8 @@
 using UnityEngine;
 using VRC.SDKBase;
+#if UNITY_EDITOR
+using System.Reflection;
+#endif
 
 namespace ASMLite
 {
@@ -22,6 +25,36 @@ namespace ASMLite
         [SerializeField]
         public int slotCount = 3;
 
+#if UNITY_EDITOR
+        // ─── Reflection cache ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Cached reference to ASMLiteBuilder.Build to avoid repeated reflection
+        /// lookups on every preprocess call.
+        /// </summary>
+        private static MethodInfo s_buildMethod;
+
+        /// <summary>
+        /// Resolves and caches a reference to the ASMLiteBuilder.Build static method.
+        /// Returns null if the editor assembly is not loaded or the method is not found.
+        /// </summary>
+        private static MethodInfo GetBuildMethod()
+        {
+            if (s_buildMethod != null)
+                return s_buildMethod;
+
+            var type = System.Type.GetType("ASMLite.Editor.ASMLiteBuilder, ASMLite.Editor");
+            if (type == null)
+                return null;
+
+            s_buildMethod = type.GetMethod(
+                "Build",
+                BindingFlags.Public | BindingFlags.Static);
+
+            return s_buildMethod;
+        }
+#endif
+
         // ─── IPreprocessCallbackBehaviour ─────────────────────────────────────
 
         /// <summary>
@@ -37,10 +70,25 @@ namespace ASMLite
         public bool OnPreprocess()
         {
 #if UNITY_EDITOR
-            // Call ASMLiteBuilder.Build via the type name to avoid a hard compile-time
-            // dependency from the runtime assembly onto the editor assembly.
-            var builderType = System.Type.GetType("ASMLite.Editor.ASMLiteBuilder, ASMLite.Editor");
-            builderType?.GetMethod("Build")?.Invoke(null, new object[] { this });
+            // Call ASMLiteBuilder.Build via cached reflection to avoid a hard
+            // compile-time dependency from the runtime assembly onto the editor assembly.
+            var buildMethod = GetBuildMethod();
+            if (buildMethod == null)
+            {
+                Debug.LogError("[ASM-Lite] ASMLiteBuilder.Build method not found. Is the Editor assembly loaded?");
+                return false;
+            }
+
+            try
+            {
+                buildMethod.Invoke(null, new object[] { this });
+            }
+            catch (TargetInvocationException ex)
+            {
+                Debug.LogError("[ASM-Lite] Build failed.");
+                Debug.LogException(ex.InnerException ?? ex);
+                return false;
+            }
 #endif
             return true;
         }
