@@ -75,7 +75,9 @@ namespace ASMLite.Editor
             }
 
             // 4. Log discovery
+#if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");
+#endif
 
             // 5. Warn if zero params (layers will be generated with empty Copy lists)
             if (discoveredParams.Count == 0)
@@ -92,7 +94,9 @@ namespace ASMLite.Editor
             AssetDatabase.SaveAssets();
 
             // 10. Log completion
+#if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
+#endif
         }
 
         /// <summary>
@@ -101,7 +105,9 @@ namespace ASMLite.Editor
         /// </summary>
         public static void CleanupGeneratedAssets(ASMLiteComponent component)
         {
+#if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] CleanupGeneratedAssets called for '{component.gameObject.name}' — no cleanup required (in-place mutation model).");
+#endif
         }
 
         /// <summary>
@@ -132,11 +138,11 @@ namespace ASMLite.Editor
             }
 
             // Clear existing layers (iterate backwards to avoid index shifting)
-            while (ctrl.layers.Length > 0)
-                ctrl.RemoveLayer(0);
+            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
+                ctrl.RemoveLayer(i);
 
             // Clear existing parameters
-            var existingParams = ctrl.parameters.ToArray();
+            var existingParams = ctrl.parameters;
             foreach (var p in existingParams)
                 ctrl.RemoveParameter(p);
 
@@ -144,20 +150,26 @@ namespace ASMLite.Editor
             for (int slot = 1; slot <= slotCount; slot++)
                 ctrl.AddParameter($"ASMLite_S{slot}", AnimatorControllerParameterType.Int);
 
+            // Pre-compute mapped parameter types to avoid repeated MapValueType calls
+            var mappedTypes = new AnimatorControllerParameterType[avatarParams.Count];
+            for (int i = 0; i < avatarParams.Count; i++)
+                mappedTypes[i] = MapValueType(avatarParams[i].valueType);
+
             // Add per-slot backup parameters: ASMLite_Bak_S{slot}_{paramName}
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                foreach (var p in avatarParams)
-                    ctrl.AddParameter($"ASMLite_Bak_S{slot}_{p.name}", MapValueType(p.valueType));
+                for (int i = 0; i < avatarParams.Count; i++)
+                    ctrl.AddParameter($"ASMLite_Bak_S{slot}_{avatarParams[i].name}", mappedTypes[i]);
             }
 
             // Add default parameters (one set, not per-slot): ASMLite_Def_{paramName}
-            foreach (var p in avatarParams)
+            for (int i = 0; i < avatarParams.Count; i++)
             {
+                var p = avatarParams[i];
                 var acp = new AnimatorControllerParameter
                 {
                     name = $"ASMLite_Def_{p.name}",
-                    type = MapValueType(p.valueType)
+                    type = mappedTypes[i]
                 };
 
                 // Seed default value from the avatar's expression parameter
@@ -235,62 +247,61 @@ namespace ASMLite.Editor
             // ── Save state: avatar param → backup param, then reset control ──
 
             var saveDriver = saveState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-            saveDriver.parameters = new List<VRC_AvatarParameterDriver.Parameter>();
-            foreach (var p in avatarParams)
+            var loadDriver = loadState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+            var resetDriver = resetState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+
+            // Pre-size all three lists and build in a single pass to avoid 3x iteration
+            var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
+            var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
+            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
+
+            for (int i = 0; i < avatarParams.Count; i++)
             {
-                saveDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+                var p = avatarParams[i];
+                saveParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
                     source = p.name,
                     name   = $"ASMLite_Bak_S{slot}_{p.name}",
                 });
-            }
-            saveDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
-            {
-                type  = VRC_AvatarParameterDriver.ChangeType.Set,
-                name  = controlParam,
-                value = 0f,
-            });
-
-            // ── Load state: backup param → avatar param, then reset control ──
-
-            var loadDriver = loadState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-            loadDriver.parameters = new List<VRC_AvatarParameterDriver.Parameter>();
-            foreach (var p in avatarParams)
-            {
-                loadDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+                loadParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
                     source = $"ASMLite_Bak_S{slot}_{p.name}",
                     name   = p.name,
                 });
-            }
-            loadDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
-            {
-                type  = VRC_AvatarParameterDriver.ChangeType.Set,
-                name  = controlParam,
-                value = 0f,
-            });
-
-            // ── Reset state: default param → avatar param, then reset control ─
-
-            var resetDriver = resetState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-            resetDriver.parameters = new List<VRC_AvatarParameterDriver.Parameter>();
-            foreach (var p in avatarParams)
-            {
-                resetDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+                resetParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
                     source = $"ASMLite_Def_{p.name}",
                     name   = p.name,
                 });
             }
-            resetDriver.parameters.Add(new VRC_AvatarParameterDriver.Parameter
+
+            // Trailing Set entry resets the control parameter back to Idle on each driver
+            var resetControlEntry = new VRC_AvatarParameterDriver.Parameter
+            {
+                type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                name  = controlParam,
+                value = 0f,
+            };
+            saveParams.Add(resetControlEntry);
+            loadParams.Add(new VRC_AvatarParameterDriver.Parameter
             {
                 type  = VRC_AvatarParameterDriver.ChangeType.Set,
                 name  = controlParam,
                 value = 0f,
             });
+            resetParams.Add(new VRC_AvatarParameterDriver.Parameter
+            {
+                type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                name  = controlParam,
+                value = 0f,
+            });
+
+            saveDriver.parameters  = saveParams;
+            loadDriver.parameters  = loadParams;
+            resetDriver.parameters = resetParams;
 
             // ── Transitions ──────────────────────────────────────────────────
 
@@ -323,7 +334,8 @@ namespace ASMLite.Editor
                 return;
             }
 
-            var paramList = new List<VRCExpressionParameters.Parameter>();
+            int totalCount = slotCount + (slotCount * avatarParams.Count);
+            var paramList = new List<VRCExpressionParameters.Parameter>(totalCount);
 
             // Control params — synced triggers, not saved
             for (int i = 1; i <= slotCount; i++)
@@ -521,7 +533,9 @@ namespace ASMLite.Editor
             EditorUtility.SetDirty(rootMenu);
             // SaveAssets is called once in Build() after all three Populate methods complete.
 
+#if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + ASM-Lite wrapper + {slotCount} slot menus + {slotCount} confirm menus.");
+#endif
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
@@ -538,7 +552,9 @@ namespace ASMLite.Editor
                 case VRCExpressionParameters.ValueType.Int:   return AnimatorControllerParameterType.Int;
                 case VRCExpressionParameters.ValueType.Float: return AnimatorControllerParameterType.Float;
                 case VRCExpressionParameters.ValueType.Bool:  return AnimatorControllerParameterType.Bool;
-                default:                                      return AnimatorControllerParameterType.Float;
+                default:
+                    Debug.LogWarning($"[ASM-Lite] Unknown VRCExpressionParameters.ValueType '{vt}'. Defaulting to Float.");
+                    return AnimatorControllerParameterType.Float;
             }
         }
 
