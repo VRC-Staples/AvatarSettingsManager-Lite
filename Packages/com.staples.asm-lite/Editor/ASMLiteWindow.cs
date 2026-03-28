@@ -28,6 +28,20 @@ namespace ASMLite.Editor
         // Cached component reference — rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
 
+        // Cached LINQ Count() result — avoids per-repaint enumeration.
+        // -1 means invalid; recomputed lazily in DrawStatus.
+        private int _cachedCustomParamCount = -1;
+
+        // ── Static GUIContent ─────────────────────────────────────────────────
+
+        private static readonly GUIContent s_slotCountLabelActive =
+            new GUIContent("Slot Count",
+                "Number of expression parameter slots ASM-Lite manages on this avatar.");
+
+        private static readonly GUIContent s_slotCountLabelPending =
+            new GUIContent("Slot Count",
+                "Number of expression parameter slots ASM-Lite will manage on this avatar.");
+
         // ── Open ──────────────────────────────────────────────────────────────
 
         [MenuItem("Tools/.Staples./ASM-Lite")]
@@ -63,11 +77,13 @@ namespace ASMLite.Editor
 
                 EditorGUILayout.Space(8);
             }
+            catch (ExitGUIException) { throw; }
             catch (System.Exception ex)
             {
                 // Swallow mid-draw exceptions so EndScrollView always runs.
                 // The exception is logged so it's not silently lost.
-                if (Event.current.type != EventType.Layout)
+                // Log only on Layout events to avoid flooding during Repaint passes.
+                if (Event.current.type == EventType.Layout)
                     Debug.LogException(ex);
             }
             finally
@@ -102,13 +118,10 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar = newAvatar;
                 _cachedComponent = null;
+                _cachedCustomParamCount = -1;
 
                 if (_selectedAvatar != null)
-                {
-                    var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
-                    if (existing != null)
-                        _pendingSlotCount = existing.slotCount;
-                }
+                    SyncPendingSlotCountFromAvatar();
 
                 Repaint();
             }
@@ -134,9 +147,7 @@ namespace ASMLite.Editor
                 // Prefab is present — slot count still editable, but a rebuild
                 // is needed to apply changes to the generated assets.
                 int newSlot = EditorGUILayout.IntSlider(
-                    new GUIContent(
-                        "Slot Count",
-                        "Number of expression parameter slots ASM-Lite manages on this avatar."),
+                    s_slotCountLabelActive,
                     component.slotCount, 1, 10);
 
                 if (newSlot != component.slotCount)
@@ -154,9 +165,7 @@ namespace ASMLite.Editor
             {
                 // No prefab yet — user can configure before adding.
                 _pendingSlotCount = EditorGUILayout.IntSlider(
-                    new GUIContent(
-                        "Slot Count",
-                        "Number of expression parameter slots ASM-Lite will manage on this avatar."),
+                    s_slotCountLabelPending,
                     _pendingSlotCount, 1, 10);
             }
         }
@@ -180,11 +189,14 @@ namespace ASMLite.Editor
                     var exprParams = _selectedAvatar.expressionParameters;
                     if (exprParams != null && exprParams.parameters != null)
                     {
-                        int customCount = exprParams.parameters
-                            .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
+                        if (_cachedCustomParamCount < 0)
+                        {
+                            _cachedCustomParamCount = exprParams.parameters
+                                .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
+                        }
 
                         EditorGUILayout.HelpBox(
-                            $"✓ {customCount} custom parameter(s) will be backed up across " +
+                            $"✓ {_cachedCustomParamCount} custom parameter(s) will be backed up across " +
                             $"{component.slotCount} slot(s).",
                             MessageType.Info);
                     }
@@ -195,14 +207,17 @@ namespace ASMLite.Editor
                             MessageType.Warning);
                     }
                 }
-                catch
+                catch (System.Exception)
                 {
                     // Asset is mid-reimport — show a neutral message and wait for
                     // the next repaint when it will be stable again.
                     EditorGUILayout.HelpBox(
                         "⚠ Expression parameters are currently being imported. Please wait.",
                         MessageType.Warning);
-                    Repaint();
+                    // Gate Repaint on Layout to avoid a busy-spin loop when the
+                    // exception persists across multiple Repaint passes.
+                    if (Event.current.type == EventType.Layout)
+                        Repaint();
                 }
             }
             else
@@ -317,7 +332,11 @@ namespace ASMLite.Editor
             Debug.Log($"[ASM-Lite] Prefab added to '{_selectedAvatar.gameObject.name}' with {_pendingSlotCount} slot(s). Baking assets...");
 
             // Immediately bake so assets are populated before the user hits Play.
-            component = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            // Invalidate and re-fetch through the cache so the component reference
+            // is consistent with subsequent GetOrRefreshComponent() calls.
+            _cachedComponent  = null;
+            _lastRefreshFrame = -1;
+            component = GetOrRefreshComponent();
             if (component != null)
                 BakeAssets(component);
 
@@ -343,11 +362,21 @@ namespace ASMLite.Editor
                     "OK");
                 Debug.LogException(ex);
             }
-
-            Repaint();
         }
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Reads the slot count from the existing ASMLiteComponent on
+        /// <see cref="_selectedAvatar"/> and stores it in <see cref="_pendingSlotCount"/>.
+        /// Routes through the per-frame cache rather than calling GetComponentInChildren directly.
+        /// </summary>
+        private void SyncPendingSlotCountFromAvatar()
+        {
+            var existing = GetOrRefreshComponent();
+            if (existing != null)
+                _pendingSlotCount = existing.slotCount;
+        }
 
         private void OnSelectionChange()
         {
@@ -362,10 +391,8 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar  = descriptor;
                 _cachedComponent = null;
-
-                var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
-                if (existing != null)
-                    _pendingSlotCount = existing.slotCount;
+                _cachedCustomParamCount = -1;
+                SyncPendingSlotCountFromAvatar();
 
                 Repaint();
             }
