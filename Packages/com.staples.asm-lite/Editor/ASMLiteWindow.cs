@@ -148,7 +148,7 @@ namespace ASMLite.Editor
                 // is needed to apply changes to the generated assets.
                 int newSlot = EditorGUILayout.IntSlider(
                     s_slotCountLabelActive,
-                    component.slotCount, 1, 10);
+                    component.slotCount, 1, 8);
 
                 if (newSlot != component.slotCount)
                 {
@@ -166,7 +166,7 @@ namespace ASMLite.Editor
                 // No prefab yet — user can configure before adding.
                 _pendingSlotCount = EditorGUILayout.IntSlider(
                     s_slotCountLabelPending,
-                    _pendingSlotCount, 1, 10);
+                    _pendingSlotCount, 1, 8);
             }
         }
 
