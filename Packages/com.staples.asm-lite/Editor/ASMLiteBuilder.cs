@@ -15,7 +15,7 @@ namespace ASMLite.Editor
     ///
     /// Called from ASMLiteComponent.Preprocess() during the VRChat SDK avatar build
     /// pipeline. Discovers all custom avatar parameters, generates 3 FX animator
-    /// slot layers with Save/Load/Reset states using VRCAvatarParameterDriver Copy
+    /// slot layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
     /// operations, and writes 3 synced Int control parameters to ASMLite_Params.asset.
     ///
     /// All generated content is written into the existing stub assets in-place,
@@ -200,6 +200,8 @@ namespace ASMLite.Editor
         /// <summary>
         /// Builds one FX animator layer for the given slot with Idle, SaveSlot,
         /// LoadSlot, and ResetSlot states, each backed by a VRCAvatarParameterDriver.
+        /// ResetSlot clears the slot's backup parameters to defaults without
+        /// touching the live avatar parameters.
         /// </summary>
         private static void AddSlotLayer(AnimatorController ctrl, int slot, List<VRCExpressionParameters.Parameter> avatarParams)
         {
@@ -253,7 +255,7 @@ namespace ASMLite.Editor
             // Pre-size all three lists and build in a single pass to avoid 3x iteration
             var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
             var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
-            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>((avatarParams.Count * 2) + 1);
+            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
 
             for (int i = 0; i < avatarParams.Count; i++)
             {
@@ -270,14 +272,9 @@ namespace ASMLite.Editor
                     source = $"ASMLite_Bak_S{slot}_{p.name}",
                     name   = p.name,
                 });
-                resetParams.Add(new VRC_AvatarParameterDriver.Parameter
-                {
-                    type   = VRC_AvatarParameterDriver.ChangeType.Copy,
-                    source = $"ASMLite_Def_{p.name}",
-                    name   = p.name,
-                });
-                // Also reset the slot's backup param to default so a subsequent
-                // Load on this slot returns defaults, not stale saved values.
+                // Clear the slot's backup param to default so a subsequent
+                // Load on this slot returns defaults instead of stale saved values.
+                // Live avatar params are NOT touched — only the saved preset is cleared.
                 resetParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
@@ -390,7 +387,7 @@ namespace ASMLite.Editor
         ///   1 ASM-Lite wrapper menu +
         ///   slotCount slot sub-menus +
         ///   slotCount confirm sub-menus (Save confirmation) +
-        ///   slotCount reset-confirm sub-menus (Reset confirmation).
+        ///   slotCount reset-confirm sub-menus (Clear Preset confirmation).
         ///
         /// Menu hierarchy:
         ///   root
@@ -399,7 +396,7 @@ namespace ASMLite.Editor
         ///               ├─ Save   (SubMenu → confirmMenu)
         ///               │    └─ Confirm  (Button, param ASMLite_SN = 1)
         ///               ├─ Load   (Button, param ASMLite_SN = 2)
-        ///               └─ Reset  (SubMenu → resetConfirmMenu)
+        ///               └─ Clear Preset  (SubMenu → resetConfirmMenu)
         ///                    └─ Confirm  (Button, param ASMLite_SN = 3)
         ///
         /// Asset operations are batched with StartAssetEditing/StopAssetEditing (in a
@@ -487,7 +484,7 @@ namespace ASMLite.Editor
                     AssetDatabase.CreateAsset(resetConfirmMenu, resetConfirmPath);
                     resetConfirmMenus[slot - 1] = resetConfirmMenu;
 
-                    // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
+                    // ── Slot sub-menu (Save / Load / Clear Preset) ───────────────────────
                     var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                     {
@@ -508,7 +505,7 @@ namespace ASMLite.Editor
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Reset",
+                            name    = "Clear Preset",
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = resetConfirmMenu,
                             icon    = iconReset,
