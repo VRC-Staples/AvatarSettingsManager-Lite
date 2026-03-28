@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ASM-Lite — VPM Listing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2.5rem;
+      max-width: 560px;
+      width: 100%;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+    .subtitle { color: #8b949e; font-size: 0.95rem; margin-bottom: 2rem; }
+    .badge {
+      display: inline-block;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.78rem;
+      color: #58a6ff;
+      margin-bottom: 1.5rem;
+      font-family: monospace;
+    }
+    p { color: #c9d1d9; line-height: 1.6; margin-bottom: 1.5rem; }
+    .install-url {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      font-family: monospace;
+      font-size: 0.88rem;
+      color: #58a6ff;
+      word-break: break-all;
+      margin-bottom: 1.5rem;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #238636; color: #fff; margin-right: 0.75rem; }
+    .btn-secondary { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; }
+    .steps { margin-top: 2rem; border-top: 1px solid #30363d; padding-top: 1.5rem; }
+    .steps h2 { font-size: 1rem; color: #8b949e; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    ol { padding-left: 1.4rem; color: #c9d1d9; line-height: 1.8; }
+    code { background: #21262d; border-radius: 4px; padding: 0.1rem 0.35rem; font-size: 0.85em; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ASM-Lite</h1>
+    <p class="subtitle">Avatar Settings Manager Lite — VPM Package Listing</p>
+    <span class="badge">com.staples.asm-lite</span>
+
+    <p>Drop-in VRCFury prefab for VRChat avatars. Auto-discovers expression parameters at build time and adds Save&nbsp;/&nbsp;Load&nbsp;/&nbsp;Reset across three preset slots — no manual setup required.</p>
+
+    <div class="install-url">https://vrc-staples.github.io/AvatarSettingsManager-Lite/index.json</div>
+
+    <a class="btn btn-primary" href="https://github.com/VRC-Staples/AvatarSettingsManager-Lite/releases/latest">Latest Release</a>
+    <a class="btn btn-secondary" href="https://github.com/VRC-Staples/AvatarSettingsManager-Lite">GitHub</a>
+
+    <div class="steps">
+      <h2>Install via VCC</h2>
+      <ol>
+        <li>Open <strong>VRChat Creator Companion</strong>.</li>
+        <li>Go to <code>Settings → Packages → Add Repository</code>.</li>
+        <li>Paste the listing URL above and click <strong>Add</strong>.</li>
+        <li>Open your avatar project and add <strong>Avatar Settings Manager - Lite</strong> from the package list.</li>
+        <li>In Unity, open <code>Tools → .Staples. → ASM-Lite</code>, select your avatar, and click <strong>Add ASM-Lite Prefab</strong>.</li>
+      </ol>
+    </div>
+  </div>
+</body>
+</html>
