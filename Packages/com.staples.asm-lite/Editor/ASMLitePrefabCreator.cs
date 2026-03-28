@@ -24,10 +24,7 @@ namespace ASMLite.Editor
     /// </summary>
     public static class ASMLitePrefabCreator
     {
-        private const string PrefabPath      = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
-        private const string ControllerPath  = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_FX.controller";
-        private const string MenuPath        = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Menu.asset";
-        private const string ParamsPath      = "Packages/com.staples.asm-lite/GeneratedAssets/ASMLite_Params.asset";
+        // Asset paths — see ASMLiteAssetPaths for centralized constants.
 
         // Stable GUIDs from the .meta files written in T03.
         private const string ControllerGuid = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301";
@@ -49,16 +46,16 @@ namespace ASMLite.Editor
                 System.IO.Directory.CreateDirectory("Packages/com.staples.asm-lite/Prefabs");
 
             // ── Load stub assets ─────────────────────────────────────────────
-            var fxController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ControllerPath);
-            var menu         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(MenuPath);
-            var prms         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ParamsPath);
+            var fxController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ASMLiteAssetPaths.FXController);
+            var menu         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
+            var prms         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
 
             if (fxController == null)
-                Debug.LogWarning($"[ASM-Lite] Stub FX controller not found at {ControllerPath} — FullController will have no controller reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub FX controller not found at {ASMLiteAssetPaths.FXController} — FullController will have no controller reference.");
             if (menu == null)
-                Debug.LogWarning($"[ASM-Lite] Stub menu not found at {MenuPath} — FullController will have no menu reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub menu not found at {ASMLiteAssetPaths.Menu} — FullController will have no menu reference.");
             if (prms == null)
-                Debug.LogWarning($"[ASM-Lite] Stub params not found at {ParamsPath} — FullController will have no params reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub params not found at {ASMLiteAssetPaths.ExprParams} — FullController will have no params reference.");
 
             // ── Locate VRCFury types via reflection ──────────────────────────
             Type vrcfuryType        = FindType("VF.Model.VRCFury");
@@ -164,24 +161,24 @@ namespace ASMLite.Editor
                 contentField?.SetValue(vrcfuryComp, fullController);
 
                 Debug.Log("[ASM-Lite] FullController configured: controller=" +
-                    (fxController != null ? ControllerPath : "null") +
-                    ", menu=" + (menu != null ? MenuPath : "null") +
-                    ", params=" + (prms != null ? ParamsPath : "null") +
+                    (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
+                    ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
+                    ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
                     ", globalParams=[\"*\"]");
             }
 
             // ── Save as prefab ───────────────────────────────────────────────
-            var prefab = PrefabUtility.SaveAsPrefabAsset(go, PrefabPath);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, ASMLiteAssetPaths.Prefab);
             UnityEngine.Object.DestroyImmediate(go);
 
             if (prefab != null)
             {
                 AssetDatabase.Refresh();
-                Debug.Log($"[ASM-Lite] Prefab created at {PrefabPath}");
+                Debug.Log($"[ASM-Lite] Prefab created at {ASMLiteAssetPaths.Prefab}");
             }
             else
             {
-                Debug.LogError($"[ASM-Lite] Failed to save prefab at {PrefabPath}");
+                Debug.LogError($"[ASM-Lite] Failed to save prefab at {ASMLiteAssetPaths.Prefab}");
             }
         }
 

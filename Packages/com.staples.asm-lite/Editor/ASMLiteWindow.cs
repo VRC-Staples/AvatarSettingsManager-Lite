@@ -285,14 +285,13 @@ namespace ASMLite.Editor
 
             ASMLitePrefabCreator.CreatePrefab();
 
-            const string PrefabPath = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
-            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
 
             if (prefabAsset == null)
             {
                 EditorUtility.DisplayDialog(
                     "ASM-Lite: Error",
-                    $"Could not load prefab at {PrefabPath}.\nCheck the Console for details.",
+                    $"Could not load prefab at {ASMLiteAssetPaths.Prefab}.\nCheck the Console for details.",
                     "OK");
                 return;
             }
