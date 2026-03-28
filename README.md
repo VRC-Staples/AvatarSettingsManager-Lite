@@ -49,9 +49,9 @@ After uploading your avatar:
 1. Open the **Expression Menu** in-game.
 2. Navigate to **ASM-Lite**.
 3. Pick a slot (**Slot 1**, **Slot 2**, or **Slot 3**) and choose an action:
-   - **Save** - snapshots all current expression parameter values into the slot. Requires a confirmation step to avoid accidental overwrites.
-   - **Load** - restores expression parameter values from the slot.
-   - **Reset** - returns all expression parameters to their default values.
+   - **Save** — snapshots all current expression parameter values into the slot. Requires a confirmation step to avoid accidental overwrites.
+   - **Load** — restores expression parameter values from the slot.
+   - **Reset** — returns all expression parameters to their default values. Requires a confirmation step to avoid accidental resets.
 
 ---
 
