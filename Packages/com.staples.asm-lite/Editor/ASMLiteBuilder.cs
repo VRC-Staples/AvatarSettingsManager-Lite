@@ -88,7 +88,10 @@ namespace ASMLite.Editor
             PopulateExpressionParams(component.slotCount, discoveredParams);
             PopulateExpressionMenu(component.slotCount);
 
-            // 9. Log completion
+            // 9. Flush all dirty assets in one batch write
+            AssetDatabase.SaveAssets();
+
+            // 10. Log completion
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
         }
 
@@ -116,7 +119,8 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Clears and regenerates all parameters and layers in the managed FX
-        /// AnimatorController, then saves the asset.
+        /// AnimatorController, then marks the asset dirty for the consolidated
+        /// SaveAssets call in Build().
         /// </summary>
         private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
         {
@@ -178,7 +182,7 @@ namespace ASMLite.Editor
                 AddSlotLayer(ctrl, slot, avatarParams);
 
             EditorUtility.SetDirty(ctrl);
-            AssetDatabase.SaveAssets();
+            // SaveAssets is called once in Build() after all three Populate methods complete.
         }
 
         /// <summary>
@@ -356,7 +360,7 @@ namespace ASMLite.Editor
             paramsAsset.parameters = paramList.ToArray();
 
             EditorUtility.SetDirty(paramsAsset);
-            AssetDatabase.SaveAssets();
+            // SaveAssets is called once in Build() after all three Populate methods complete.
         }
 
         /// <summary>
@@ -375,10 +379,16 @@ namespace ASMLite.Editor
         ///               │    └─ Confirm  (Button, param ASMLite_SN = 1)
         ///               ├─ Load  (Button, param ASMLite_SN = 2)
         ///               └─ Reset (Button, param ASMLite_SN = 3)
+        ///
+        /// Asset operations are batched with StartAssetEditing/StopAssetEditing (in a
+        /// try/finally) so Unity imports all created assets in one pass rather than
+        /// triggering an import cycle per CreateAsset call. In-memory ScriptableObject
+        /// references are used throughout — no LoadAssetAtPath reload after CreateAsset.
         /// </summary>
         private static void PopulateExpressionMenu(int slotCount)
         {
-            // ── Load icons (null-safe — icons are optional) ───────────────────
+            // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
+            //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconSave    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
             var iconLoad    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
             var iconReset   = AssetDatabase.LoadAssetAtPath<Texture2D>(IconResetPath);
@@ -387,7 +397,7 @@ namespace ASMLite.Editor
             if (iconSave == null)
                 Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
 
-            // ── Load root menu in-place to preserve its stable GUID ───────────
+            // ── Load root menu in-place BEFORE the batch (preserves stable GUID) ──
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
             if (rootMenu == null)
             {
@@ -395,98 +405,108 @@ namespace ASMLite.Editor
                 return;
             }
 
-            string generatedDir = ASMLiteAssetPaths.GeneratedDir;
-
-            // ── Delete and recreate the wrapper + slot/confirm assets ─────────
+            string generatedDir    = ASMLiteAssetPaths.GeneratedDir;
             string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
-            if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath) != null)
+
+            // In-memory arrays for references used outside the batch block.
+            var confirmMenus = new VRCExpressionsMenu[slotCount];
+            var slotMenus    = new VRCExpressionsMenu[slotCount];
+
+            // ── Batch all delete/create operations to avoid per-asset import cycles ──
+            try
+            {
+                AssetDatabase.StartAssetEditing();
+
+                // Delete any existing presets wrapper (safe no-op if path doesn't exist)
                 AssetDatabase.DeleteAsset(presetsMenuPath);
 
-            for (int slot = 1; slot <= slotCount; slot++)
-            {
-                string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
-                string confirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
+                for (int slot = 1; slot <= slotCount; slot++)
+                {
+                    string slotPath    = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
+                    string confirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
 
-                if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath) != null)
+                    // Unconditional deletes — AssetDatabase.DeleteAsset is a safe no-op
+                    // on paths that don't exist, so no existence check is needed.
                     AssetDatabase.DeleteAsset(slotPath);
-                if (AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(confirmPath) != null)
                     AssetDatabase.DeleteAsset(confirmPath);
 
-                // ── Confirm sub-menu ──────────────────────────────────────────
-                var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-                confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
-                {
-                    new VRCExpressionsMenu.Control
+                    // ── Confirm sub-menu ──────────────────────────────────────────
+                    var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                     {
-                        name      = "Confirm",
-                        type      = VRCExpressionsMenu.Control.ControlType.Button,
-                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                        value     = 1f,
-                        icon      = iconSave,
-                    }
-                };
-                AssetDatabase.CreateAsset(confirmMenu, confirmPath);
+                        new VRCExpressionsMenu.Control
+                        {
+                            name      = "Confirm",
+                            type      = VRCExpressionsMenu.Control.ControlType.Button,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                            value     = 1f,
+                            icon      = iconSave,
+                        }
+                    };
+                    AssetDatabase.CreateAsset(confirmMenu, confirmPath);
+                    confirmMenus[slot - 1] = confirmMenu; // keep in-memory reference
 
-                // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
-                var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-                slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
-                {
-                    new VRCExpressionsMenu.Control
+                    // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
+                    var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                     {
-                        name    = "Save",
-                        type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                        subMenu = confirmMenu,
-                        icon    = iconSave,
-                    },
-                    new VRCExpressionsMenu.Control
-                    {
-                        name      = "Load",
-                        type      = VRCExpressionsMenu.Control.ControlType.Button,
-                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                        value     = 2f,
-                        icon      = iconLoad,
-                    },
-                    new VRCExpressionsMenu.Control
-                    {
-                        name      = "Reset",
-                        type      = VRCExpressionsMenu.Control.ControlType.Button,
-                        parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                        value     = 3f,
-                        icon      = iconReset,
-                    },
-                };
-                AssetDatabase.CreateAsset(slotMenu, slotPath);
+                        new VRCExpressionsMenu.Control
+                        {
+                            name    = "Save",
+                            type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                            subMenu = confirmMenu,
+                            icon    = iconSave,
+                        },
+                        new VRCExpressionsMenu.Control
+                        {
+                            name      = "Load",
+                            type      = VRCExpressionsMenu.Control.ControlType.Button,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                            value     = 2f,
+                            icon      = iconLoad,
+                        },
+                        new VRCExpressionsMenu.Control
+                        {
+                            name      = "Reset",
+                            type      = VRCExpressionsMenu.Control.ControlType.Button,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
+                            value     = 3f,
+                            icon      = iconReset,
+                        },
+                    };
+                    AssetDatabase.CreateAsset(slotMenu, slotPath);
+                    slotMenus[slot - 1] = slotMenu; // keep in-memory reference
+                }
+            }
+            finally
+            {
+                // StopAssetEditing is in a finally block so Unity's edit-batch counter is
+                // always decremented — even if an exception fires mid-loop. Forgetting this
+                // would leave the Editor in a frozen "editing" state requiring a restart.
+                AssetDatabase.StopAssetEditing();
             }
 
-            // Force Unity to import the newly created sub-menu assets before
-            // LoadAssetAtPath is called. Without this, the files exist on disk but
-            // are not yet registered in the asset database, causing LoadAssetAtPath
-            // to return null and leaving the root menu with null subMenu references
-            // on the first build.
-            AssetDatabase.Refresh();
-
-            // ── Build the ASM-Lite wrapper menu (Preset 1 … Preset N) ─────────
+            // ── Build the ASM-Lite wrapper menu using in-memory slot references ──
+            // StopAssetEditing() has processed the batch; in-memory ScriptableObject
+            // references are valid — no LoadAssetAtPath reload needed.
             var presetsMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
             presetsMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                string slotPath = $"{generatedDir}/ASMLite_Slot{slot}_Menu.asset";
-                var slotMenu    = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(slotPath);
-
                 presetsMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
                     name    = $"Preset {slot}",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = slotMenu,
+                    subMenu = slotMenus[slot - 1], // in-memory reference, not reloaded from disk
                     icon    = iconPresets,
                 });
             }
             AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
+            // presetsMenu in-memory reference remains valid — no reload needed.
 
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
             // is never broken.
-            presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
             rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
             {
                 new VRCExpressionsMenu.Control
@@ -499,7 +519,7 @@ namespace ASMLite.Editor
             };
 
             EditorUtility.SetDirty(rootMenu);
-            AssetDatabase.SaveAssets();
+            // SaveAssets is called once in Build() after all three Populate methods complete.
 
             Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + ASM-Lite wrapper + {slotCount} slot menus + {slotCount} confirm menus.");
         }
