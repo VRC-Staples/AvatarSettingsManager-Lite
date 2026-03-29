@@ -7,6 +7,19 @@ using System.Reflection;
 namespace ASMLite
 {
     /// <summary>
+    /// Controls which icon set is displayed in the ASM-Lite radial menu.
+    /// SameColor  — all gear icons tinted to match the avatar's active colour.
+    /// MultiColor — each gear slot uses its own distinct colour icon.
+    /// Custom     — user-supplied Texture2D icons from the customIcons array.
+    /// </summary>
+    public enum IconMode
+    {
+        SameColor  = 0,
+        MultiColor = 1,
+        Custom     = 2,
+    }
+
+    /// <summary>
     /// ASM-Lite component. Add this to an avatar root (or any child GameObject) to
     /// enable the ASM-Lite slot system. Implements IEditorOnly so the VRChat SDK
     /// strips the component from the build, and IPreprocessCallbackBehaviour so the
@@ -24,6 +37,26 @@ namespace ASMLite
         /// </summary>
         [SerializeField]
         public int slotCount = 3;
+
+        /// <summary>
+        /// Which icon set mode to use for the radial menu gear icons.
+        /// </summary>
+        [SerializeField]
+        public IconMode iconMode = IconMode.SameColor;
+
+        /// <summary>
+        /// Index of the gear icon (0-7) used when iconMode is SameColor or MultiColor.
+        /// Corresponds to the colour order in ASMLiteAssetPaths.GearIconPaths.
+        /// </summary>
+        [SerializeField]
+        public int selectedGearIndex = 0;
+
+        /// <summary>
+        /// User-supplied icon textures used when iconMode is Custom.
+        /// Should have one entry per expression parameter slot.
+        /// </summary>
+        [SerializeField]
+        public Texture2D[] customIcons = new Texture2D[0];
 
 #if UNITY_EDITOR
         // ─── Reflection cache ─────────────────────────────────────────────────
