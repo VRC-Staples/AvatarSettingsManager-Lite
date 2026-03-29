@@ -333,6 +333,13 @@ namespace ASMLite.Editor
                     if (Event.current.type == EventType.Layout)
                         Repaint();
                 }
+
+                int syncedBits = component.controlScheme == ControlScheme.CompactInt
+                    ? 8
+                    : 3 * component.slotCount;
+                EditorGUILayout.HelpBox(
+                    $"ASM-Lite uses {syncedBits} / 256 synced bits",
+                    MessageType.Info);
             }
             else
             {
