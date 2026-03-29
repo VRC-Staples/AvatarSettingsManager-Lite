@@ -88,7 +88,7 @@ namespace ASMLite.Editor
             // 6–8. Generate assets
             PopulateFXController(discoveredParams, component.slotCount);
             PopulateExpressionParams(component.slotCount, discoveredParams);
-            PopulateExpressionMenu(component.slotCount);
+            PopulateExpressionMenu(component);
 
             // 9. Flush all dirty assets in one batch write
             AssetDatabase.SaveAssets();
@@ -404,8 +404,10 @@ namespace ASMLite.Editor
         /// triggering an import cycle per CreateAsset call. In-memory ScriptableObject
         /// references are used throughout — no LoadAssetAtPath reload after CreateAsset.
         /// </summary>
-        private static void PopulateExpressionMenu(int slotCount)
+        private static void PopulateExpressionMenu(ASMLiteComponent component)
         {
+            int slotCount = component.slotCount;
+
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconSave    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
@@ -415,6 +417,11 @@ namespace ASMLite.Editor
 
             if (iconSave == null)
                 Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
+
+            // ── Build per-slot icon array BEFORE StartAssetEditing ───────────
+            var slotIcons = new Texture2D[slotCount];
+            for (int slot = 1; slot <= slotCount; slot++)
+                slotIcons[slot - 1] = ResolveSlotIcon(component, slot, iconPresets);
 
             // ── Load root menu in-place BEFORE the batch (preserves stable GUID) ──
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
@@ -535,7 +542,7 @@ namespace ASMLite.Editor
                     name    = $"Preset {slot}",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = slotMenus[slot - 1], // in-memory reference, not reloaded from disk
-                    icon    = iconPresets,
+                    icon    = slotIcons[slot - 1],
                 });
             }
             AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
@@ -610,6 +617,45 @@ namespace ASMLite.Editor
             t.exitTime       = 0f;
             t.duration       = 0f;
             t.hasFixedDuration = true;
+        }
+
+        /// <summary>
+        /// Resolves the icon for a given slot based on the component's iconMode.
+        ///   SameColor  — all slots use the single gear icon at selectedGearIndex.
+        ///   MultiColor — each slot cycles through GearIconPaths by index.
+        ///   Custom     — uses the user-supplied texture from customIcons[slot-1],
+        ///                falling back to <paramref name="fallback"/> if null/out-of-range.
+        ///   default    — returns <paramref name="fallback"/>.
+        /// All LoadAssetAtPath calls are expected to run before StartAssetEditing.
+        /// </summary>
+        private static Texture2D ResolveSlotIcon(ASMLiteComponent component, int slot, Texture2D fallback)
+        {
+            switch (component.iconMode)
+            {
+                case IconMode.SameColor:
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[component.selectedGearIndex]);
+                    return tex != null ? tex : fallback;
+                }
+                case IconMode.MultiColor:
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length]);
+                    return tex != null ? tex : fallback;
+                }
+                case IconMode.Custom:
+                {
+                    int index = slot - 1;
+                    if (component.customIcons != null
+                        && index < component.customIcons.Length
+                        && component.customIcons[index] != null)
+                        return component.customIcons[index];
+                    return fallback;
+                }
+                default:
+                    return fallback;
+            }
         }
     }
 }
