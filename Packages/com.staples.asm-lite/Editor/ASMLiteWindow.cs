@@ -26,6 +26,9 @@ namespace ASMLite.Editor
         // Pending slot count — shown before the prefab is added, applied on add.
         private int _pendingSlotCount = 3;
 
+        // Pending control scheme — shown before the prefab is added, applied on add.
+        private ControlScheme _pendingControlScheme = ControlScheme.SafeBool;
+
         // Cached component reference — rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
 
@@ -42,6 +45,14 @@ namespace ASMLite.Editor
         private static readonly GUIContent s_slotCountLabelPending =
             new GUIContent("Slot Count",
                 "Number of expression parameter slots ASM-Lite will manage on this avatar.");
+
+        private static readonly GUIContent s_schemeLabelActive =
+            new GUIContent("Control Scheme",
+                "Parameter encoding scheme ASM-Lite uses on this avatar.");
+
+        private static readonly GUIContent s_schemeLabelPending =
+            new GUIContent("Control Scheme",
+                "Parameter encoding scheme ASM-Lite will use on this avatar.");
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -171,6 +182,31 @@ namespace ASMLite.Editor
                     s_slotCountLabelPending,
                     _pendingSlotCount, 1, 8);
             }
+
+            // ── Control scheme ──
+            if (component)
+            {
+                var newScheme = (ControlScheme)EditorGUILayout.EnumPopup(
+                    s_schemeLabelActive, component.controlScheme);
+                if (newScheme != component.controlScheme)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Control Scheme");
+                    component.controlScheme = newScheme;
+                    EditorUtility.SetDirty(component);
+                }
+            }
+            else
+            {
+                _pendingControlScheme = (ControlScheme)EditorGUILayout.EnumPopup(
+                    s_schemeLabelPending, _pendingControlScheme);
+            }
+
+            // Scheme description HelpBox — resolve from whichever source is active
+            var activeScheme = component ? component.controlScheme : _pendingControlScheme;
+            string schemeDesc = activeScheme == ControlScheme.CompactInt
+                ? "Compact (1 shared Int): Uses a single synced Int parameter for all slots.\nMaximum parameter budget savings — recommended for avatars with many other synced parameters."
+                : "Safe (3 bools/slot): Uses 3 synced Bool parameters per slot.\nSimplest setup — recommended for avatars with a small parameter budget.";
+            EditorGUILayout.HelpBox(schemeDesc, MessageType.None);
         }
 
         private void DrawIconMode()
@@ -397,7 +433,10 @@ namespace ASMLite.Editor
 
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
+            {
                 component.slotCount = _pendingSlotCount;
+                component.controlScheme = _pendingControlScheme;
+            }
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
@@ -453,7 +492,10 @@ namespace ASMLite.Editor
         {
             var existing = GetOrRefreshComponent();
             if (existing != null)
+            {
                 _pendingSlotCount = existing.slotCount;
+                _pendingControlScheme = existing.controlScheme;
+            }
         }
 
         private void OnSelectionChange()
