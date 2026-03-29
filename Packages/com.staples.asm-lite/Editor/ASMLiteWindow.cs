@@ -1,4 +1,5 @@
 using System.Linq;
+using ASMLite;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -48,7 +49,7 @@ namespace ASMLite.Editor
         public static void Open()
         {
             var win = GetWindow<ASMLiteWindow>(title: "ASM-Lite");
-            win.minSize = new Vector2(380, 360);
+            win.minSize = new Vector2(380, 480);
             win.Show();
         }
 
@@ -69,6 +70,8 @@ namespace ASMLite.Editor
                 {
                     EditorGUILayout.Space(8);
                     DrawSettings();
+                    EditorGUILayout.Space(8);
+                    DrawIconMode();
                     EditorGUILayout.Space(8);
                     DrawStatus();
                     EditorGUILayout.Space(12);
@@ -167,6 +170,81 @@ namespace ASMLite.Editor
                 _pendingSlotCount = EditorGUILayout.IntSlider(
                     s_slotCountLabelPending,
                     _pendingSlotCount, 1, 8);
+            }
+        }
+
+        private void DrawIconMode()
+        {
+            var component = GetOrRefreshComponent();
+
+            if (!component)
+                return;
+
+            Undo.RecordObject(component, "Change ASM-Lite Icon Mode");
+
+            EditorGUILayout.LabelField("Icon Mode", EditorStyles.boldLabel);
+
+            // Always resize customIcons to match slotCount before any indexing.
+            if (component.customIcons == null || component.customIcons.Length != component.slotCount)
+            {
+                var resized = new Texture2D[component.slotCount];
+                if (component.customIcons != null)
+                {
+                    int copy = Mathf.Min(component.customIcons.Length, component.slotCount);
+                    System.Array.Copy(component.customIcons, resized, copy);
+                }
+                component.customIcons = resized;
+                EditorUtility.SetDirty(component);
+            }
+
+            // Mode selector.
+            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", component.iconMode);
+            if (newMode != component.iconMode)
+            {
+                component.iconMode = newMode;
+                EditorUtility.SetDirty(component);
+            }
+
+            // Per-mode controls.
+            switch (component.iconMode)
+            {
+                case IconMode.SameColor:
+                {
+                    var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
+                    int newIndex = EditorGUILayout.Popup("Gear Color", component.selectedGearIndex, colorNames);
+                    if (newIndex != component.selectedGearIndex)
+                    {
+                        component.selectedGearIndex = newIndex;
+                        EditorUtility.SetDirty(component);
+                    }
+                    break;
+                }
+
+                case IconMode.MultiColor:
+                {
+                    EditorGUILayout.HelpBox(
+                        "Each slot gets a unique gear color.\nSlots 1\u20134: Blue, Red, Green, Purple\nSlots 5\u20138: Cyan, Orange, Pink, Yellow",
+                        MessageType.None);
+                    break;
+                }
+
+                case IconMode.Custom:
+                {
+                    for (int i = 0; i < component.slotCount; i++)
+                    {
+                        var newTex = (Texture2D)EditorGUILayout.ObjectField(
+                            $"Slot {i + 1} Icon",
+                            component.customIcons[i],
+                            typeof(Texture2D),
+                            allowSceneObjects: false);
+                        if (newTex != component.customIcons[i])
+                        {
+                            component.customIcons[i] = newTex;
+                            EditorUtility.SetDirty(component);
+                        }
+                    }
+                    break;
+                }
             }
         }
 
