@@ -15,8 +15,14 @@ namespace ASMLite.Editor
     ///
     /// Called from ASMLiteComponent.Preprocess() during the VRChat SDK avatar build
     /// pipeline. Discovers all custom avatar parameters, generates 3 FX animator
-    /// slot layers with Save/Load/Reset states using VRCAvatarParameterDriver Copy
-    /// operations, and writes 3 synced Int control parameters to ASMLite_Params.asset.
+    /// slot layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
+    /// operations, and writes synced control parameters to ASMLite_Params.asset.
+    ///
+    /// ControlScheme.SafeBool   — 3 Bool params per slot (ASMLite_S{slot}_Save/Load/Clear)
+    ///                            transitions use AnimatorConditionMode.If
+    /// ControlScheme.CompactInt — 1 shared Int param (ASMLite_Ctrl) for all slots
+    ///                            transitions use AnimatorConditionMode.Equals with
+    ///                            encoded values (slot-1)*3+1/2/3
     ///
     /// All generated content is written into the existing stub assets in-place,
     /// preserving their stable GUIDs.
@@ -30,7 +36,7 @@ namespace ASMLite.Editor
         private const string IconSavePath    = "Packages/com.staples.asm-lite/Icons/Save.png";
         private const string IconLoadPath    = "Packages/com.staples.asm-lite/Icons/Load.png";
         private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
-        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Presets.png";
+        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Gears/BlueGear.png";
 
         // ─── Public API ───────────────────────────────────────────────────────
 
@@ -85,10 +91,12 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 6–8. Generate assets
-            PopulateFXController(discoveredParams, component.slotCount);
-            PopulateExpressionParams(component.slotCount, discoveredParams);
-            PopulateExpressionMenu(component.slotCount);
+            // 6–8. Generate assets — pass controlScheme to each Populate method so
+            //      the correct parameter encoding is applied consistently across
+            //      FX controller, expression params, and expression menu.
+            PopulateFXController(discoveredParams, component.slotCount, component.controlScheme);
+            PopulateExpressionParams(component.slotCount, discoveredParams, component.controlScheme);
+            PopulateExpressionMenu(component);
 
             // 9. Flush all dirty assets in one batch write
             AssetDatabase.SaveAssets();
@@ -116,8 +124,8 @@ namespace ASMLite.Editor
         /// </summary>
         public static string Validate(ASMLiteComponent component)
         {
-            if (component.slotCount < 1 || component.slotCount > 3)
-                return $"[ASM-Lite] slotCount must be between 1 and 3 (got {component.slotCount}).";
+            if (component.slotCount < 1 || component.slotCount > 8)
+                return $"[ASM-Lite] slotCount must be between 1 and 8 (got {component.slotCount}).";
             return null;
         }
 
@@ -127,8 +135,12 @@ namespace ASMLite.Editor
         /// Clears and regenerates all parameters and layers in the managed FX
         /// AnimatorController, then marks the asset dirty for the consolidated
         /// SaveAssets call in Build().
+        ///
+        /// ControlScheme determines which control parameters are added:
+        ///   SafeBool   — 3 Bool params per slot: ASMLite_S{slot}_Save/Load/Clear
+        ///   CompactInt — 1 shared Int param: ASMLite_Ctrl (added once, before slot loop)
         /// </summary>
-        private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
+        private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount, ControlScheme scheme)
         {
             var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
             if (ctrl == null)
@@ -146,9 +158,22 @@ namespace ASMLite.Editor
             foreach (var p in existingParams)
                 ctrl.RemoveParameter(p);
 
-            // Add slot control parameters: ASMLite_S1, ASMLite_S2, ..., ASMLite_SN
-            for (int slot = 1; slot <= slotCount; slot++)
-                ctrl.AddParameter($"ASMLite_S{slot}", AnimatorControllerParameterType.Int);
+            // Add slot control parameters — branched on ControlScheme
+            if (scheme == ControlScheme.SafeBool)
+            {
+                // SafeBool: 3 Bool params per slot — Save, Load, Clear
+                for (int slot = 1; slot <= slotCount; slot++)
+                {
+                    ctrl.AddParameter($"ASMLite_S{slot}_Save",  AnimatorControllerParameterType.Bool);
+                    ctrl.AddParameter($"ASMLite_S{slot}_Load",  AnimatorControllerParameterType.Bool);
+                    ctrl.AddParameter($"ASMLite_S{slot}_Clear", AnimatorControllerParameterType.Bool);
+                }
+            }
+            else
+            {
+                // CompactInt: 1 shared Int param for all slots
+                ctrl.AddParameter("ASMLite_Ctrl", AnimatorControllerParameterType.Int);
+            }
 
             // Pre-compute mapped parameter types to avoid repeated MapValueType calls
             var mappedTypes = new AnimatorControllerParameterType[avatarParams.Count];
@@ -189,9 +214,9 @@ namespace ASMLite.Editor
                 ctrl.AddParameter(acp);
             }
 
-            // Generate one layer per slot
+            // Generate one layer per slot — pass scheme so transitions are encoded correctly
             for (int slot = 1; slot <= slotCount; slot++)
-                AddSlotLayer(ctrl, slot, avatarParams);
+                AddSlotLayer(ctrl, slot, avatarParams, scheme);
 
             EditorUtility.SetDirty(ctrl);
             // SaveAssets is called once in Build() after all three Populate methods complete.
@@ -200,11 +225,51 @@ namespace ASMLite.Editor
         /// <summary>
         /// Builds one FX animator layer for the given slot with Idle, SaveSlot,
         /// LoadSlot, and ResetSlot states, each backed by a VRCAvatarParameterDriver.
+        /// ResetSlot clears the slot's backup parameters to defaults without
+        /// touching the live avatar parameters.
+        ///
+        /// ControlScheme determines transition conditions and driver reset entries:
+        ///   SafeBool   — transitions use AnimatorConditionMode.If on the per-slot Bool params;
+        ///                driver resets add 3 Set entries (one per Bool param, value=0f)
+        ///   CompactInt — transitions use AnimatorConditionMode.Equals on ASMLite_Ctrl with
+        ///                encoded values (slot-1)*3+1/2/3; driver resets add 1 Set entry (value=0f)
         /// </summary>
-        private static void AddSlotLayer(AnimatorController ctrl, int slot, List<VRCExpressionParameters.Parameter> avatarParams)
+        private static void AddSlotLayer(AnimatorController ctrl, int slot, List<VRCExpressionParameters.Parameter> avatarParams, ControlScheme scheme)
         {
-            string slotName     = $"ASMLite_Slot{slot}";
-            string controlParam = $"ASMLite_S{slot}";
+            string slotName = $"ASMLite_Slot{slot}";
+
+            // Zone A — control param names / encoded values, resolved per scheme
+            string saveParam;
+            string loadParam;
+            string clearParam;
+            string controlParam;
+            int    saveValue;
+            int    loadValue;
+            int    clearValue;
+
+            if (scheme == ControlScheme.SafeBool)
+            {
+                saveParam   = $"ASMLite_S{slot}_Save";
+                loadParam   = $"ASMLite_S{slot}_Load";
+                clearParam  = $"ASMLite_S{slot}_Clear";
+                // Not used in SafeBool, assigned to satisfy compiler
+                controlParam = saveParam;
+                saveValue    = 1;
+                loadValue    = 1;
+                clearValue   = 1;
+            }
+            else
+            {
+                // CompactInt: single shared param, encoded values
+                controlParam = "ASMLite_Ctrl";
+                saveValue    = (slot - 1) * 3 + 1;
+                loadValue    = (slot - 1) * 3 + 2;
+                clearValue   = (slot - 1) * 3 + 3;
+                // Not used in CompactInt path, assigned to satisfy compiler
+                saveParam  = controlParam;
+                loadParam  = controlParam;
+                clearParam = controlParam;
+            }
 
             // Create and register the state machine as a sub-asset of the controller so
             // it survives serialization (required when HideInHierarchy is set).
@@ -246,14 +311,14 @@ namespace ASMLite.Editor
 
             // ── Save state: avatar param → backup param, then reset control ──
 
-            var saveDriver = saveState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
-            var loadDriver = loadState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+            var saveDriver  = saveState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+            var loadDriver  = loadState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
             var resetDriver = resetState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
 
             // Pre-size all three lists and build in a single pass to avoid 3x iteration
-            var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
-            var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
-            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 1);
+            var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
+            var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
+            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
 
             for (int i = 0; i < avatarParams.Count; i++)
             {
@@ -270,45 +335,95 @@ namespace ASMLite.Editor
                     source = $"ASMLite_Bak_S{slot}_{p.name}",
                     name   = p.name,
                 });
+                // Clear the slot's backup param to default so a subsequent
+                // Load on this slot returns defaults instead of stale saved values.
+                // Live avatar params are NOT touched — only the saved preset is cleared.
                 resetParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
                     source = $"ASMLite_Def_{p.name}",
-                    name   = p.name,
+                    name   = $"ASMLite_Bak_S{slot}_{p.name}",
                 });
             }
 
-            // Trailing Set entry resets the control parameter back to Idle on each driver
-            var resetControlEntry = new VRC_AvatarParameterDriver.Parameter
+            // Zone B — trailing Set entries reset the control parameter(s) back to Idle
+            // SafeBool:   3 Set entries per driver (one per Bool param, value = 0f)
+            // CompactInt: 1 Set entry per driver for ASMLite_Ctrl, value = 0f
+            if (scheme == ControlScheme.SafeBool)
             {
-                type  = VRC_AvatarParameterDriver.ChangeType.Set,
-                name  = controlParam,
-                value = 0f,
-            };
-            saveParams.Add(resetControlEntry);
-            loadParams.Add(new VRC_AvatarParameterDriver.Parameter
+                var saveBoolReset = new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = $"ASMLite_S{slot}_Save",
+                    value = 0f,
+                };
+                var loadBoolReset = new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = $"ASMLite_S{slot}_Load",
+                    value = 0f,
+                };
+                var clearBoolReset = new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = $"ASMLite_S{slot}_Clear",
+                    value = 0f,
+                };
+                // Each driver resets all three bools so any bool is back to false after
+                // the action completes, regardless of which action was triggered.
+                saveParams.Add(saveBoolReset);
+                saveParams.Add(loadBoolReset);
+                saveParams.Add(clearBoolReset);
+                loadParams.Add(saveBoolReset);
+                loadParams.Add(loadBoolReset);
+                loadParams.Add(clearBoolReset);
+                resetParams.Add(saveBoolReset);
+                resetParams.Add(loadBoolReset);
+                resetParams.Add(clearBoolReset);
+            }
+            else
             {
-                type  = VRC_AvatarParameterDriver.ChangeType.Set,
-                name  = controlParam,
-                value = 0f,
-            });
-            resetParams.Add(new VRC_AvatarParameterDriver.Parameter
-            {
-                type  = VRC_AvatarParameterDriver.ChangeType.Set,
-                name  = controlParam,
-                value = 0f,
-            });
+                // CompactInt: single reset entry for ASMLite_Ctrl
+                var resetCtrlEntry = new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = "ASMLite_Ctrl",
+                    value = 0f,
+                };
+                saveParams.Add(resetCtrlEntry);
+                loadParams.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = "ASMLite_Ctrl",
+                    value = 0f,
+                });
+                resetParams.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type  = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name  = "ASMLite_Ctrl",
+                    value = 0f,
+                });
+            }
 
             saveDriver.parameters  = saveParams;
             loadDriver.parameters  = loadParams;
             resetDriver.parameters = resetParams;
 
-            // ── Transitions ──────────────────────────────────────────────────
-
-            // Idle → action states (condition-based, no exit time)
-            AddConditionTransition(idleState, saveState,  controlParam, AnimatorConditionMode.Equals, 1);
-            AddConditionTransition(idleState, loadState,  controlParam, AnimatorConditionMode.Equals, 2);
-            AddConditionTransition(idleState, resetState, controlParam, AnimatorConditionMode.Equals, 3);
+            // ── Zone C — Transitions from Idle ───────────────────────────────
+            // SafeBool:   AnimatorConditionMode.If  on per-slot Bool params
+            // CompactInt: AnimatorConditionMode.Equals on ASMLite_Ctrl with encoded values
+            if (scheme == ControlScheme.SafeBool)
+            {
+                AddConditionTransition(idleState, saveState,  saveParam,  AnimatorConditionMode.If, 1);
+                AddConditionTransition(idleState, loadState,  loadParam,  AnimatorConditionMode.If, 1);
+                AddConditionTransition(idleState, resetState, clearParam, AnimatorConditionMode.If, 1);
+            }
+            else
+            {
+                AddConditionTransition(idleState, saveState,  controlParam, AnimatorConditionMode.Equals, saveValue);
+                AddConditionTransition(idleState, loadState,  controlParam, AnimatorConditionMode.Equals, loadValue);
+                AddConditionTransition(idleState, resetState, controlParam, AnimatorConditionMode.Equals, clearValue);
+            }
 
             // Action states → Idle (exit-time at 0, immediate)
             AddExitTimeTransition(saveState,  idleState);
@@ -318,14 +433,19 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Writes the following into the managed VRCExpressionParameters asset:
-        ///   • slotCount synced Int control params (ASMLite_S1 … ASMLite_SN)
-        ///     saved: false, networkSynced: true  — momentary triggers, no persistence needed
-        ///   • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
-        ///     saved: true, networkSynced: false  — persisted across world changes via
-        ///     VRChat local storage; VRCFury Unlimited Parameters handles sync compression
-        ///     so the raw bit cost is irrelevant.
+        ///   SafeBool scheme:
+        ///     • 3×slotCount synced Bool control params (ASMLite_S{slot}_Save/Load/Clear)
+        ///       saved: false, networkSynced: true  — momentary triggers, no persistence needed
+        ///   CompactInt scheme:
+        ///     • 1 synced Int control param (ASMLite_Ctrl)
+        ///       saved: false, networkSynced: true  — momentary trigger, shared across all slots
+        ///   Both schemes:
+        ///     • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
+        ///       saved: true, networkSynced: false  — persisted across world changes via
+        ///       VRChat local storage; VRCFury Unlimited Parameters handles sync compression
+        ///       so the raw bit cost is irrelevant.
         /// </summary>
-        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
+        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams, ControlScheme scheme)
         {
             var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             if (paramsAsset == null)
@@ -334,15 +454,49 @@ namespace ASMLite.Editor
                 return;
             }
 
-            int totalCount = slotCount + (slotCount * avatarParams.Count);
+            // Calculate total count based on scheme
+            int controlParamCount = (scheme == ControlScheme.SafeBool) ? (slotCount * 3) : 1;
+            int totalCount = controlParamCount + (slotCount * avatarParams.Count);
             var paramList = new List<VRCExpressionParameters.Parameter>(totalCount);
 
-            // Control params — synced triggers, not saved
-            for (int i = 1; i <= slotCount; i++)
+            // Control params — synced triggers, not saved — branched on scheme
+            if (scheme == ControlScheme.SafeBool)
             {
+                // SafeBool: 3 Bool params per slot
+                for (int slot = 1; slot <= slotCount; slot++)
+                {
+                    paramList.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Save",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                    paramList.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Load",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                    paramList.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Clear",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                }
+            }
+            else
+            {
+                // CompactInt: 1 shared Int param for all slots
                 paramList.Add(new VRCExpressionParameters.Parameter
                 {
-                    name          = $"ASMLite_S{i}",
+                    name          = "ASMLite_Ctrl",
                     valueType     = VRCExpressionParameters.ValueType.Int,
                     defaultValue  = 0f,
                     saved         = false,
@@ -382,25 +536,34 @@ namespace ASMLite.Editor
         ///   1 ASM-Lite wrapper menu +
         ///   slotCount slot sub-menus +
         ///   slotCount confirm sub-menus (Save confirmation) +
-        ///   slotCount reset-confirm sub-menus (Reset confirmation).
+        ///   slotCount reset-confirm sub-menus (Clear Preset confirmation).
+        ///
+        /// ControlScheme determines the parameter names and values in menu buttons:
+        ///   SafeBool   — Save: ASMLite_S{slot}_Save=1, Load: ASMLite_S{slot}_Load=1,
+        ///                      Clear: ASMLite_S{slot}_Clear=1
+        ///   CompactInt — Save: ASMLite_Ctrl=(slot-1)*3+1, Load: ASMLite_Ctrl=(slot-1)*3+2,
+        ///                      Clear: ASMLite_Ctrl=(slot-1)*3+3
         ///
         /// Menu hierarchy:
         ///   root
         ///     └─ ASM-Lite  (SubMenu → presetsMenu)
         ///          └─ Preset N  (SubMenu → slotMenu)
         ///               ├─ Save   (SubMenu → confirmMenu)
-        ///               │    └─ Confirm  (Button, param ASMLite_SN = 1)
-        ///               ├─ Load   (Button, param ASMLite_SN = 2)
-        ///               └─ Reset  (SubMenu → resetConfirmMenu)
-        ///                    └─ Confirm  (Button, param ASMLite_SN = 3)
+        ///               │    └─ Confirm  (Button, scheme-appropriate param)
+        ///               ├─ Load   (Button, scheme-appropriate param)
+        ///               └─ Clear Preset  (SubMenu → resetConfirmMenu)
+        ///                    └─ Confirm  (Button, scheme-appropriate param)
         ///
         /// Asset operations are batched with StartAssetEditing/StopAssetEditing (in a
         /// try/finally) so Unity imports all created assets in one pass rather than
         /// triggering an import cycle per CreateAsset call. In-memory ScriptableObject
         /// references are used throughout — no LoadAssetAtPath reload after CreateAsset.
         /// </summary>
-        private static void PopulateExpressionMenu(int slotCount)
+        private static void PopulateExpressionMenu(ASMLiteComponent component)
         {
+            int slotCount = component.slotCount;
+            var scheme    = component.controlScheme;
+
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconSave    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
@@ -410,6 +573,11 @@ namespace ASMLite.Editor
 
             if (iconSave == null)
                 Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
+
+            // ── Build per-slot icon array BEFORE StartAssetEditing ───────────
+            var slotIcons = new Texture2D[slotCount];
+            for (int slot = 1; slot <= slotCount; slot++)
+                slotIcons[slot - 1] = ResolveSlotIcon(component, slot, iconPresets);
 
             // ── Load root menu in-place BEFORE the batch (preserves stable GUID) ──
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
@@ -447,6 +615,33 @@ namespace ASMLite.Editor
                     AssetDatabase.DeleteAsset(confirmPath);
                     AssetDatabase.DeleteAsset(resetConfirmPath);
 
+                    // Resolve scheme-specific param names and values for this slot
+                    string saveParamName;
+                    float  saveParamValue;
+                    string loadParamName;
+                    float  loadParamValue;
+                    string clearParamName;
+                    float  clearParamValue;
+
+                    if (scheme == ControlScheme.SafeBool)
+                    {
+                        saveParamName  = $"ASMLite_S{slot}_Save";
+                        saveParamValue = 1f;
+                        loadParamName  = $"ASMLite_S{slot}_Load";
+                        loadParamValue = 1f;
+                        clearParamName = $"ASMLite_S{slot}_Clear";
+                        clearParamValue = 1f;
+                    }
+                    else
+                    {
+                        saveParamName  = "ASMLite_Ctrl";
+                        saveParamValue = (float)((slot - 1) * 3 + 1);
+                        loadParamName  = "ASMLite_Ctrl";
+                        loadParamValue = (float)((slot - 1) * 3 + 2);
+                        clearParamName  = "ASMLite_Ctrl";
+                        clearParamValue = (float)((slot - 1) * 3 + 3);
+                    }
+
                     // ── Save confirm sub-menu ─────────────────────────────────────
                     var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     confirmMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
@@ -455,8 +650,8 @@ namespace ASMLite.Editor
                         {
                             name      = "Confirm",
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
-                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                            value     = 1f,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = saveParamName },
+                            value     = saveParamValue,
                             icon      = iconSave,
                         }
                     };
@@ -471,15 +666,15 @@ namespace ASMLite.Editor
                         {
                             name      = "Confirm",
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
-                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                            value     = 3f,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = clearParamName },
+                            value     = clearParamValue,
                             icon      = iconReset,
                         }
                     };
                     AssetDatabase.CreateAsset(resetConfirmMenu, resetConfirmPath);
                     resetConfirmMenus[slot - 1] = resetConfirmMenu;
 
-                    // ── Slot sub-menu (Save / Load / Reset) ───────────────────────
+                    // ── Slot sub-menu (Save / Load / Clear Preset) ───────────────────────
                     var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     slotMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>
                     {
@@ -494,13 +689,13 @@ namespace ASMLite.Editor
                         {
                             name      = "Load",
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
-                            parameter = new VRCExpressionsMenu.Control.Parameter { name = $"ASMLite_S{slot}" },
-                            value     = 2f,
+                            parameter = new VRCExpressionsMenu.Control.Parameter { name = loadParamName },
+                            value     = loadParamValue,
                             icon      = iconLoad,
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Reset",
+                            name    = "Clear Preset",
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = resetConfirmMenu,
                             icon    = iconReset,
@@ -530,7 +725,7 @@ namespace ASMLite.Editor
                     name    = $"Preset {slot}",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = slotMenus[slot - 1], // in-memory reference, not reloaded from disk
-                    icon    = iconPresets,
+                    icon    = slotIcons[slot - 1],
                 });
             }
             AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
@@ -605,6 +800,45 @@ namespace ASMLite.Editor
             t.exitTime       = 0f;
             t.duration       = 0f;
             t.hasFixedDuration = true;
+        }
+
+        /// <summary>
+        /// Resolves the icon for a given slot based on the component's iconMode.
+        ///   SameColor  — all slots use the single gear icon at selectedGearIndex.
+        ///   MultiColor — each slot cycles through GearIconPaths by index.
+        ///   Custom     — uses the user-supplied texture from customIcons[slot-1],
+        ///                falling back to <paramref name="fallback"/> if null/out-of-range.
+        ///   default    — returns <paramref name="fallback"/>.
+        /// All LoadAssetAtPath calls are expected to run before StartAssetEditing.
+        /// </summary>
+        private static Texture2D ResolveSlotIcon(ASMLiteComponent component, int slot, Texture2D fallback)
+        {
+            switch (component.iconMode)
+            {
+                case IconMode.SameColor:
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[component.selectedGearIndex]);
+                    return tex != null ? tex : fallback;
+                }
+                case IconMode.MultiColor:
+                {
+                    var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length]);
+                    return tex != null ? tex : fallback;
+                }
+                case IconMode.Custom:
+                {
+                    int index = slot - 1;
+                    if (component.customIcons != null
+                        && index < component.customIcons.Length
+                        && component.customIcons[index] != null)
+                        return component.customIcons[index];
+                    return fallback;
+                }
+                default:
+                    return fallback;
+            }
         }
     }
 }

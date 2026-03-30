@@ -1,22 +1,22 @@
-# ASM-Lite - Avatar Settings Manager Lite
+# ASM-Lite — Avatar Settings Manager Lite
 
-A lightweight VRCFury prefab that adds Save, Load, and Reset for expression parameter presets on VRChat avatars.
+A lightweight VRCFury prefab that adds Save, Load, and Clear Preset for expression parameter presets on VRChat avatars.
 
 ---
 
 ## Overview
 
-ASM-Lite lets you save your current expression parameter values into one of three preset slots, reload them at any time, or reset to defaults - all from the in-game expression menu with no extra tools needed.
+ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults — all from the in-game expression menu with no extra tools needed.
 
-Drop the prefab onto your avatar hierarchy and you're done. At build time, ASM-Lite scans the avatar's expression parameters, generates the FX animator layers and menu entries, and wires everything together through VRCFury non-destructively.
+Drop the prefab onto your avatar, configure your slot count and icon style, and click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, generates the FX animator layers and menu entries, and wires everything together through VRCFury non-destructively.
 
 ---
 
 ## Prerequisites
 
-- **VRChat Creator Companion (VCC)** - for managing your avatar project
-- **VRChat SDK** (Avatar SDK 3) - installed via VCC
-- **VRCFury** - installed via VCC
+- **VRChat Creator Companion (VCC)** — for managing your avatar project
+- **VRChat SDK** (Avatar SDK 3) — installed via VCC
+- **VRCFury** — installed via VCC
 
 ---
 
@@ -31,27 +31,70 @@ Drop the prefab onto your avatar hierarchy and you're done. At build time, ASM-L
    https://vrc-staples.github.io/AvatarSettingsManager-Lite/index.json
    ```
 4. Open your avatar project in VCC and add **Avatar Settings Manager - Lite** from the package list.
-5. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, and click **Add ASM-Lite Prefab**.
+5. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, configure settings, and click **Add ASM-Lite Prefab**.
 
 ### Local Install (Testing / Dev)
 
 1. Clone or download this repository.
 2. In VCC, go to **Settings → User Packages → Add** and select the `Packages/com.staples.asm-lite` folder.
 3. Open your avatar project in VCC and add **Avatar Settings Manager - Lite** from the package list.
-4. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, and click **Add ASM-Lite Prefab**.
+4. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, configure settings, and click **Add ASM-Lite Prefab**.
 
 ---
 
 ## Usage
 
-After uploading your avatar:
+### In the Editor
 
-1. Open the **Expression Menu** in-game.
+1. Open **Tools → .Staples. → ASM-Lite**.
+2. Select your avatar from the **Avatar Root** field.
+3. Configure your settings (all options are available before adding the prefab):
+   - **Slot Count** — number of preset slots (1–8).
+   - **Control Scheme** — how ASM-Lite encodes slot actions (see below).
+   - **Icon Mode** — what icons appear in the expression menu for each slot (see below).
+4. Click **Add ASM-Lite Prefab**.
+
+Once the prefab is added, two buttons appear:
+- **Rebuild ASM-Lite** — regenerates all assets after changing slot count, control scheme, or icon settings.
+- **Remove Prefab** — removes the ASM-Lite prefab from the avatar hierarchy with undo support.
+
+### In-Game
+
+1. Open the **Expression Menu**.
 2. Navigate to **ASM-Lite**.
-3. Pick a slot (**Slot 1**, **Slot 2**, or **Slot 3**) and choose an action:
-   - **Save** — snapshots all current expression parameter values into the slot. Requires a confirmation step to avoid accidental overwrites.
+3. Pick a slot and choose an action:
+   - **Save** — snapshots all current expression parameter values into the slot. Requires confirmation to prevent accidental overwrites.
    - **Load** — restores expression parameter values from the slot.
-   - **Reset** — returns all expression parameters to their default values. Requires a confirmation step to avoid accidental resets.
+   - **Clear Preset** — resets the slot's saved values back to defaults. Requires confirmation. Does not affect your live expression parameters.
+
+---
+
+## Settings
+
+### Slot Count
+
+The number of independent preset slots ASM-Lite manages, from 1 to 8. Each slot stores a full snapshot of every expression parameter on the avatar. Changes take effect after a rebuild.
+
+### Control Scheme
+
+Controls how ASM-Lite encodes the Save / Load / Clear actions as VRChat expression parameters.
+
+| Scheme | Parameters | Synced Bits | Best For |
+|---|---|---|---|
+| **Safe Bool** | 3 Bool params per slot | 3 × slot count | Avatars with a small existing parameter budget |
+| **Compact Int** | 1 shared Int for all slots | 8 bits flat | Avatars with many other synced parameters |
+
+Both schemes are functionally identical in-game. Compact Int is more efficient at 5 or more slots.
+
+### Icon Mode
+
+Controls the icons displayed in the expression menu for each preset slot.
+
+| Mode | Behavior |
+|---|---|
+| **Same Color** | All slots use one gear icon. Choose from Blue, Red, Green, Purple, Cyan, Orange, Pink, or Yellow. |
+| **Multi Color** | Each slot automatically gets a distinct gear color cycling through the same 8 colors. |
+| **Custom** | Assign your own Texture2D per slot. |
 
 ---
 
@@ -59,12 +102,12 @@ After uploading your avatar:
 
 At build time, ASM-Lite:
 
-1. **Discovers parameters** - reads all expression parameters from the avatar's VRC Avatar Descriptor.
-2. **Generates FX layers** - creates animator layers with states and transitions that read and write synced float, int, and bool parameters across the three slots.
-3. **Builds the expression menu** - creates the `ASM-Lite → Slot 1/2/3 → Save / Load / Reset` menu structure.
-4. **Injects via VRCFury** - merges the generated layers and menus non-destructively, so nothing interferes with other VRCFury components on the avatar.
+1. **Discovers parameters** — reads all expression parameters from the avatar's VRC Avatar Descriptor, skipping any already prefixed with `ASMLite_`.
+2. **Generates FX layers** — creates an animator layer per slot with Idle, SaveSlot, LoadSlot, and ResetSlot states backed by `VRCAvatarParameterDriver` Copy and Set operations.
+3. **Builds the expression menu** — generates the nested `ASM-Lite → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear.
+4. **Injects via VRCFury** — merges the generated layers and menus non-destructively at upload time, so nothing interferes with other VRCFury components on the avatar.
 
-Backup and default parameters are local-only (not synced), so they don't eat into the expression parameter budget.
+Backup parameters (`ASMLite_Bak_*`) and default parameters (`ASMLite_Def_*`) are local-only and not synced, so they do not consume the 256-bit expression parameter sync budget.
 
 ---
 
@@ -76,15 +119,16 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 
 ## Releases
 
-Releases are published automatically via GitHub Actions and include:
-- A `.zip` of the package (for VPM)
-- A `.unitypackage` (for manual import)
-- The `package.json` manifest
+Releases are published automatically via GitHub Actions. The VPM listing rebuilds automatically on each new release.
 
-The VPM listing rebuilds automatically on each new release.
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a full version history.
 
 ---
 
 ## License
 
-MIT - see [LICENSE](LICENSE) for details.
+GPL-3.0 — see [LICENSE](LICENSE) for details.

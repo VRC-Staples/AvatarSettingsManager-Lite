@@ -1,4 +1,5 @@
 using System.Linq;
+using ASMLite;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -25,12 +26,24 @@ namespace ASMLite.Editor
         // Pending slot count — shown before the prefab is added, applied on add.
         private int _pendingSlotCount = 3;
 
+        // Pending control scheme — shown before the prefab is added, applied on add.
+        private ControlScheme _pendingControlScheme = ControlScheme.SafeBool;
+
         // Cached component reference — rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
 
         // Cached LINQ Count() result — avoids per-repaint enumeration.
         // -1 means invalid; recomputed lazily in DrawStatus.
         private int _cachedCustomParamCount = -1;
+
+        // Pending icon mode — shown before the prefab is added, applied on add.
+        private IconMode _pendingIconMode = IconMode.SameColor;
+
+        // Pending gear index — shown before the prefab is added, applied on add.
+        private int _pendingSelectedGearIndex = 0;
+
+        // Pending custom icons — shown before the prefab is added, applied on add.
+        private Texture2D[] _pendingCustomIcons = new Texture2D[3];
 
         // ── Static GUIContent ─────────────────────────────────────────────────
 
@@ -42,13 +55,21 @@ namespace ASMLite.Editor
             new GUIContent("Slot Count",
                 "Number of expression parameter slots ASM-Lite will manage on this avatar.");
 
+        private static readonly GUIContent s_schemeLabelActive =
+            new GUIContent("Control Scheme",
+                "Parameter encoding scheme ASM-Lite uses on this avatar.");
+
+        private static readonly GUIContent s_schemeLabelPending =
+            new GUIContent("Control Scheme",
+                "Parameter encoding scheme ASM-Lite will use on this avatar.");
+
         // ── Open ──────────────────────────────────────────────────────────────
 
         [MenuItem("Tools/.Staples./ASM-Lite")]
         public static void Open()
         {
             var win = GetWindow<ASMLiteWindow>(title: "ASM-Lite");
-            win.minSize = new Vector2(380, 360);
+            win.minSize = new Vector2(380, 480);
             win.Show();
         }
 
@@ -69,6 +90,8 @@ namespace ASMLite.Editor
                 {
                     EditorGUILayout.Space(8);
                     DrawSettings();
+                    EditorGUILayout.Space(8);
+                    DrawIconMode();
                     EditorGUILayout.Space(8);
                     DrawStatus();
                     EditorGUILayout.Space(12);
@@ -148,7 +171,7 @@ namespace ASMLite.Editor
                 // is needed to apply changes to the generated assets.
                 int newSlot = EditorGUILayout.IntSlider(
                     s_slotCountLabelActive,
-                    component.slotCount, 1, 10);
+                    component.slotCount, 1, 8);
 
                 if (newSlot != component.slotCount)
                 {
@@ -166,7 +189,142 @@ namespace ASMLite.Editor
                 // No prefab yet — user can configure before adding.
                 _pendingSlotCount = EditorGUILayout.IntSlider(
                     s_slotCountLabelPending,
-                    _pendingSlotCount, 1, 10);
+                    _pendingSlotCount, 1, 8);
+            }
+
+            // ── Control scheme ──
+            if (component)
+            {
+                var newScheme = (ControlScheme)EditorGUILayout.EnumPopup(
+                    s_schemeLabelActive, component.controlScheme);
+                if (newScheme != component.controlScheme)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Control Scheme");
+                    component.controlScheme = newScheme;
+                    EditorUtility.SetDirty(component);
+                }
+            }
+            else
+            {
+                _pendingControlScheme = (ControlScheme)EditorGUILayout.EnumPopup(
+                    s_schemeLabelPending, _pendingControlScheme);
+            }
+
+            // Scheme description HelpBox — resolve from whichever source is active
+            var activeScheme = component ? component.controlScheme : _pendingControlScheme;
+            string schemeDesc = activeScheme == ControlScheme.CompactInt
+                ? "Compact (1 shared Int): Uses a single synced Int parameter for all slots.\nMaximum parameter budget savings — recommended for avatars with many other synced parameters."
+                : "Safe (3 bools/slot): Uses 3 synced Bool parameters per slot.\nSimplest setup — recommended for avatars with a small parameter budget.";
+            EditorGUILayout.HelpBox(schemeDesc, MessageType.None);
+        }
+
+        private void DrawIconMode()
+        {
+            var component = GetOrRefreshComponent();
+
+            EditorGUILayout.LabelField("Icon Mode", EditorStyles.boldLabel);
+
+            // Determine current mode and slot count based on whether component exists
+            int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
+            IconMode currentMode = component ? component.iconMode : _pendingIconMode;
+            int currentGearIndex = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
+            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
+
+            // Always resize customIcons to match slotCount before any indexing.
+            if (currentCustomIcons == null || currentCustomIcons.Length != currentSlotCount)
+            {
+                var resized = new Texture2D[currentSlotCount];
+                if (currentCustomIcons != null)
+                {
+                    int copy = Mathf.Min(currentCustomIcons.Length, currentSlotCount);
+                    System.Array.Copy(currentCustomIcons, resized, copy);
+                }
+                currentCustomIcons = resized;
+
+                if (component)
+                {
+                    component.customIcons = resized;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingCustomIcons = resized;
+                }
+            }
+
+            // Mode selector.
+            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", currentMode);
+            if (newMode != currentMode)
+            {
+                if (component)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Icon Mode");
+                    component.iconMode = newMode;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingIconMode = newMode;
+                }
+            }
+
+            // Per-mode controls.
+            switch (newMode)
+            {
+                case IconMode.SameColor:
+                {
+                    var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
+                    int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, colorNames);
+                    if (newIndex != currentGearIndex)
+                    {
+                        if (component)
+                        {
+                            Undo.RecordObject(component, "Change ASM-Lite Gear Color");
+                            component.selectedGearIndex = newIndex;
+                            EditorUtility.SetDirty(component);
+                        }
+                        else
+                        {
+                            _pendingSelectedGearIndex = newIndex;
+                        }
+                    }
+                    break;
+                }
+
+                case IconMode.MultiColor:
+                {
+                    EditorGUILayout.HelpBox(
+                        "Each slot gets a unique gear color.\nSlots 1\u20134: Blue, Red, Green, Purple\nSlots 5\u20138: Cyan, Orange, Pink, Yellow",
+                        MessageType.None);
+                    break;
+                }
+
+                case IconMode.Custom:
+                {
+                    for (int i = 0; i < currentSlotCount; i++)
+                    {
+                        var newTex = (Texture2D)EditorGUILayout.ObjectField(
+                            $"Slot {i + 1} Icon",
+                            currentCustomIcons[i],
+                            typeof(Texture2D),
+                            allowSceneObjects: false);
+                        if (newTex != currentCustomIcons[i])
+                        {
+                            currentCustomIcons[i] = newTex;
+                            if (component)
+                            {
+                                Undo.RecordObject(component, "Change ASM-Lite Custom Icon");
+                                component.customIcons[i] = newTex;
+                                EditorUtility.SetDirty(component);
+                            }
+                            else
+                            {
+                                _pendingCustomIcons[i] = newTex;
+                            }
+                        }
+                    }
+                    break;
+                }
             }
         }
 
@@ -219,6 +377,13 @@ namespace ASMLite.Editor
                     if (Event.current.type == EventType.Layout)
                         Repaint();
                 }
+
+                int syncedBits = component.controlScheme == ControlScheme.CompactInt
+                    ? 8
+                    : 3 * component.slotCount;
+                EditorGUILayout.HelpBox(
+                    $"ASM-Lite uses {syncedBits} / 256 synced bits",
+                    MessageType.Info);
             }
             else
             {
@@ -235,6 +400,9 @@ namespace ASMLite.Editor
 
             if (component)
             {
+                // Two-button layout: Rebuild and Remove
+                EditorGUILayout.BeginHorizontal();
+
                 if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36)))
                 {
                     // Defer past the current OnGUI pass so AssetDatabase operations
@@ -242,6 +410,22 @@ namespace ASMLite.Editor
                     var captured = component;
                     EditorApplication.delayCall += () => BakeAssets(captured);
                 }
+
+                if (GUILayout.Button("Remove Prefab", GUILayout.Height(36)))
+                {
+                    bool confirm = EditorUtility.DisplayDialog(
+                        "Remove ASM-Lite Prefab",
+                        "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
+                        "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
+                        "Remove", "Cancel");
+
+                    if (confirm)
+                    {
+                        EditorApplication.delayCall += () => RemovePrefab(component);
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
             }
             else
             {
@@ -319,7 +503,19 @@ namespace ASMLite.Editor
 
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
+            {
                 component.slotCount = _pendingSlotCount;
+                component.controlScheme = _pendingControlScheme;
+                component.iconMode = _pendingIconMode;
+                component.selectedGearIndex = _pendingSelectedGearIndex;
+
+                // Resize and copy custom icons
+                if (_pendingCustomIcons != null)
+                {
+                    component.customIcons = new Texture2D[_pendingCustomIcons.Length];
+                    System.Array.Copy(_pendingCustomIcons, component.customIcons, _pendingCustomIcons.Length);
+                }
+            }
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
@@ -364,18 +560,50 @@ namespace ASMLite.Editor
             }
         }
 
+        private void RemovePrefab(ASMLiteComponent component)
+        {
+            if (component == null || component.gameObject == null)
+                return;
+
+            Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
+            int group = Undo.GetCurrentGroup();
+
+            var prefabRoot = component.gameObject;
+            Undo.DestroyObjectImmediate(prefabRoot);
+
+            Undo.CollapseUndoOperations(group);
+
+            _cachedComponent  = null;
+            _lastRefreshFrame = -1;
+
+            Debug.Log("[ASM-Lite] Prefab removed from avatar.");
+            Repaint();
+        }
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Reads the slot count from the existing ASMLiteComponent on
-        /// <see cref="_selectedAvatar"/> and stores it in <see cref="_pendingSlotCount"/>.
+        /// Reads the slot count and icon settings from the existing ASMLiteComponent on
+        /// <see cref="_selectedAvatar"/> and stores them in the pending fields.
         /// Routes through the per-frame cache rather than calling GetComponentInChildren directly.
         /// </summary>
         private void SyncPendingSlotCountFromAvatar()
         {
             var existing = GetOrRefreshComponent();
             if (existing != null)
+            {
                 _pendingSlotCount = existing.slotCount;
+                _pendingControlScheme = existing.controlScheme;
+                _pendingIconMode = existing.iconMode;
+                _pendingSelectedGearIndex = existing.selectedGearIndex;
+
+                // Sync custom icons array
+                if (existing.customIcons != null)
+                {
+                    _pendingCustomIcons = new Texture2D[existing.customIcons.Length];
+                    System.Array.Copy(existing.customIcons, _pendingCustomIcons, existing.customIcons.Length);
+                }
+            }
         }
 
         private void OnSelectionChange()
