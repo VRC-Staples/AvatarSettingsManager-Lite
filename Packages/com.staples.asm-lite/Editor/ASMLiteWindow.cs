@@ -36,6 +36,15 @@ namespace ASMLite.Editor
         // -1 means invalid; recomputed lazily in DrawStatus.
         private int _cachedCustomParamCount = -1;
 
+        // Pending icon mode — shown before the prefab is added, applied on add.
+        private IconMode _pendingIconMode = IconMode.SameColor;
+
+        // Pending gear index — shown before the prefab is added, applied on add.
+        private int _pendingSelectedGearIndex = 0;
+
+        // Pending custom icons — shown before the prefab is added, applied on add.
+        private Texture2D[] _pendingCustomIcons = new Texture2D[3];
+
         // ── Static GUIContent ─────────────────────────────────────────────────
 
         private static readonly GUIContent s_slotCountLabelActive =
@@ -213,45 +222,71 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            if (!component)
-                return;
-
-            Undo.RecordObject(component, "Change ASM-Lite Icon Mode");
-
             EditorGUILayout.LabelField("Icon Mode", EditorStyles.boldLabel);
 
+            // Determine current mode and slot count based on whether component exists
+            int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
+            IconMode currentMode = component ? component.iconMode : _pendingIconMode;
+            int currentGearIndex = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
+            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
+
             // Always resize customIcons to match slotCount before any indexing.
-            if (component.customIcons == null || component.customIcons.Length != component.slotCount)
+            if (currentCustomIcons == null || currentCustomIcons.Length != currentSlotCount)
             {
-                var resized = new Texture2D[component.slotCount];
-                if (component.customIcons != null)
+                var resized = new Texture2D[currentSlotCount];
+                if (currentCustomIcons != null)
                 {
-                    int copy = Mathf.Min(component.customIcons.Length, component.slotCount);
-                    System.Array.Copy(component.customIcons, resized, copy);
+                    int copy = Mathf.Min(currentCustomIcons.Length, currentSlotCount);
+                    System.Array.Copy(currentCustomIcons, resized, copy);
                 }
-                component.customIcons = resized;
-                EditorUtility.SetDirty(component);
+                currentCustomIcons = resized;
+
+                if (component)
+                {
+                    component.customIcons = resized;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingCustomIcons = resized;
+                }
             }
 
             // Mode selector.
-            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", component.iconMode);
-            if (newMode != component.iconMode)
+            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", currentMode);
+            if (newMode != currentMode)
             {
-                component.iconMode = newMode;
-                EditorUtility.SetDirty(component);
+                if (component)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Icon Mode");
+                    component.iconMode = newMode;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingIconMode = newMode;
+                }
             }
 
             // Per-mode controls.
-            switch (component.iconMode)
+            switch (newMode)
             {
                 case IconMode.SameColor:
                 {
                     var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
-                    int newIndex = EditorGUILayout.Popup("Gear Color", component.selectedGearIndex, colorNames);
-                    if (newIndex != component.selectedGearIndex)
+                    int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, colorNames);
+                    if (newIndex != currentGearIndex)
                     {
-                        component.selectedGearIndex = newIndex;
-                        EditorUtility.SetDirty(component);
+                        if (component)
+                        {
+                            Undo.RecordObject(component, "Change ASM-Lite Gear Color");
+                            component.selectedGearIndex = newIndex;
+                            EditorUtility.SetDirty(component);
+                        }
+                        else
+                        {
+                            _pendingSelectedGearIndex = newIndex;
+                        }
                     }
                     break;
                 }
@@ -266,17 +301,26 @@ namespace ASMLite.Editor
 
                 case IconMode.Custom:
                 {
-                    for (int i = 0; i < component.slotCount; i++)
+                    for (int i = 0; i < currentSlotCount; i++)
                     {
                         var newTex = (Texture2D)EditorGUILayout.ObjectField(
                             $"Slot {i + 1} Icon",
-                            component.customIcons[i],
+                            currentCustomIcons[i],
                             typeof(Texture2D),
                             allowSceneObjects: false);
-                        if (newTex != component.customIcons[i])
+                        if (newTex != currentCustomIcons[i])
                         {
-                            component.customIcons[i] = newTex;
-                            EditorUtility.SetDirty(component);
+                            currentCustomIcons[i] = newTex;
+                            if (component)
+                            {
+                                Undo.RecordObject(component, "Change ASM-Lite Custom Icon");
+                                component.customIcons[i] = newTex;
+                                EditorUtility.SetDirty(component);
+                            }
+                            else
+                            {
+                                _pendingCustomIcons[i] = newTex;
+                            }
                         }
                     }
                     break;
@@ -356,6 +400,9 @@ namespace ASMLite.Editor
 
             if (component)
             {
+                // Two-button layout: Rebuild and Remove
+                EditorGUILayout.BeginHorizontal();
+
                 if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36)))
                 {
                     // Defer past the current OnGUI pass so AssetDatabase operations
@@ -363,6 +410,22 @@ namespace ASMLite.Editor
                     var captured = component;
                     EditorApplication.delayCall += () => BakeAssets(captured);
                 }
+
+                if (GUILayout.Button("Remove Prefab", GUILayout.Height(36)))
+                {
+                    bool confirm = EditorUtility.DisplayDialog(
+                        "Remove ASM-Lite Prefab",
+                        "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
+                        "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
+                        "Remove", "Cancel");
+
+                    if (confirm)
+                    {
+                        EditorApplication.delayCall += () => RemovePrefab(component);
+                    }
+                }
+
+                EditorGUILayout.EndHorizontal();
             }
             else
             {
@@ -443,6 +506,15 @@ namespace ASMLite.Editor
             {
                 component.slotCount = _pendingSlotCount;
                 component.controlScheme = _pendingControlScheme;
+                component.iconMode = _pendingIconMode;
+                component.selectedGearIndex = _pendingSelectedGearIndex;
+
+                // Resize and copy custom icons
+                if (_pendingCustomIcons != null)
+                {
+                    component.customIcons = new Texture2D[_pendingCustomIcons.Length];
+                    System.Array.Copy(_pendingCustomIcons, component.customIcons, _pendingCustomIcons.Length);
+                }
             }
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
@@ -488,11 +560,31 @@ namespace ASMLite.Editor
             }
         }
 
+        private void RemovePrefab(ASMLiteComponent component)
+        {
+            if (component == null || component.gameObject == null)
+                return;
+
+            Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
+            int group = Undo.GetCurrentGroup();
+
+            var prefabRoot = component.gameObject;
+            Undo.DestroyObjectImmediate(prefabRoot);
+
+            Undo.CollapseUndoOperations(group);
+
+            _cachedComponent  = null;
+            _lastRefreshFrame = -1;
+
+            Debug.Log("[ASM-Lite] Prefab removed from avatar.");
+            Repaint();
+        }
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Reads the slot count from the existing ASMLiteComponent on
-        /// <see cref="_selectedAvatar"/> and stores it in <see cref="_pendingSlotCount"/>.
+        /// Reads the slot count and icon settings from the existing ASMLiteComponent on
+        /// <see cref="_selectedAvatar"/> and stores them in the pending fields.
         /// Routes through the per-frame cache rather than calling GetComponentInChildren directly.
         /// </summary>
         private void SyncPendingSlotCountFromAvatar()
@@ -502,6 +594,15 @@ namespace ASMLite.Editor
             {
                 _pendingSlotCount = existing.slotCount;
                 _pendingControlScheme = existing.controlScheme;
+                _pendingIconMode = existing.iconMode;
+                _pendingSelectedGearIndex = existing.selectedGearIndex;
+
+                // Sync custom icons array
+                if (existing.customIcons != null)
+                {
+                    _pendingCustomIcons = new Texture2D[existing.customIcons.Length];
+                    System.Array.Copy(existing.customIcons, _pendingCustomIcons, existing.customIcons.Length);
+                }
             }
         }
 
