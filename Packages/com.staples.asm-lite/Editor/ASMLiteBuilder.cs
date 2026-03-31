@@ -98,8 +98,11 @@ namespace ASMLite.Editor
             PopulateExpressionParams(component.slotCount, discoveredParams, component.controlScheme);
             PopulateExpressionMenu(component);
 
-            // 9. Flush all dirty assets in one batch write
+            // 9. Flush all dirty assets in one batch write, then force a synchronous
+            //    re-import so VRCFury reads the freshly written params — not the
+            //    stale in-memory state from a previous build session.
             AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
 
             // 10. Log completion
 #if ASM_LITE_VERBOSE
@@ -153,10 +156,12 @@ namespace ASMLite.Editor
             for (int i = ctrl.layers.Length - 1; i >= 0; i--)
                 ctrl.RemoveLayer(i);
 
-            // Clear existing parameters
-            var existingParams = ctrl.parameters;
-            foreach (var p in existingParams)
-                ctrl.RemoveParameter(p);
+            // Clear existing parameters.
+            // Iterate until empty rather than foreach — RemoveParameter modifies the
+            // underlying list, and a stale controller may contain duplicate-named entries
+            // (from an older build) where a single-pass foreach leaves stragglers.
+            while (ctrl.parameters.Length > 0)
+                ctrl.RemoveParameter(ctrl.parameters[0]);
 
             // Add slot control parameters — branched on ControlScheme
             if (scheme == ControlScheme.SafeBool)
@@ -181,16 +186,31 @@ namespace ASMLite.Editor
                 mappedTypes[i] = MapValueType(avatarParams[i].valueType);
 
             // Add per-slot backup parameters: ASMLite_Bak_S{slot}_{paramName}
+            // Track names added to guard against duplicate avatar param names.
+            var addedParams = new HashSet<string>();
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 for (int i = 0; i < avatarParams.Count; i++)
-                    ctrl.AddParameter($"ASMLite_Bak_S{slot}_{avatarParams[i].name}", mappedTypes[i]);
+                {
+                    string bakName = $"ASMLite_Bak_S{slot}_{avatarParams[i].name}";
+                    if (addedParams.Add(bakName))
+                        ctrl.AddParameter(bakName, mappedTypes[i]);
+                    else
+                        Debug.LogWarning($"[ASM-Lite] Duplicate FX parameter skipped: '{bakName}'");
+                }
             }
 
             // Add default parameters (one set, not per-slot): ASMLite_Def_{paramName}
             for (int i = 0; i < avatarParams.Count; i++)
             {
                 var p = avatarParams[i];
+                string defName = $"ASMLite_Def_{p.name}";
+                if (!addedParams.Add(defName))
+                {
+                    Debug.LogWarning($"[ASM-Lite] Duplicate FX parameter skipped: '{defName}'");
+                    continue;
+                }
+
                 var acp = new AnimatorControllerParameter
                 {
                     name = $"ASMLite_Def_{p.name}",
@@ -523,7 +543,20 @@ namespace ASMLite.Editor
                 }
             }
 
-            paramsAsset.parameters = paramList.ToArray();
+            // Deduplicate by name before assigning — stale on-disk assets from older
+            // builds may have left duplicate entries with conflicting types, which causes
+            // VRCFury's ParamManager to throw a type-conflict error at build time.
+            var seen = new HashSet<string>();
+            var deduped = new List<VRCExpressionParameters.Parameter>(paramList.Count);
+            foreach (var p in paramList)
+            {
+                if (seen.Add(p.name))
+                    deduped.Add(p);
+                else
+                    Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from output: '{p.name}'");
+            }
+
+            paramsAsset.parameters = deduped.ToArray();
 
             EditorUtility.SetDirty(paramsAsset);
             // SaveAssets is called once in Build() after all three Populate methods complete.
@@ -566,10 +599,27 @@ namespace ASMLite.Editor
 
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
-            var iconSave    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
-            var iconLoad    = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
-            var iconReset   = AssetDatabase.LoadAssetAtPath<Texture2D>(IconResetPath);
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPresetsPath);
+
+            // Resolve action icons — use component's custom icons when actionIconMode is Custom,
+            // falling back to the bundled defaults for any that are null.
+            Texture2D bundledSave  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
+            Texture2D bundledLoad  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
+            Texture2D bundledReset = AssetDatabase.LoadAssetAtPath<Texture2D>(IconResetPath);
+
+            Texture2D iconSave, iconLoad, iconReset;
+            if (component.actionIconMode == ActionIconMode.Custom)
+            {
+                iconSave  = component.customSaveIcon  != null ? component.customSaveIcon  : bundledSave;
+                iconLoad  = component.customLoadIcon  != null ? component.customLoadIcon  : bundledLoad;
+                iconReset = component.customClearIcon != null ? component.customClearIcon : bundledReset;
+            }
+            else
+            {
+                iconSave  = bundledSave;
+                iconLoad  = bundledLoad;
+                iconReset = bundledReset;
+            }
 
             if (iconSave == null)
                 Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");

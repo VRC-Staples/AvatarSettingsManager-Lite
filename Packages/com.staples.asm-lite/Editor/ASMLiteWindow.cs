@@ -45,30 +45,38 @@ namespace ASMLite.Editor
         // Pending custom icons — shown before the prefab is added, applied on add.
         private Texture2D[] _pendingCustomIcons = new Texture2D[3];
 
+        // Pending action icon mode — shown before the prefab is added, applied on add.
+        private ActionIconMode _pendingActionIconMode = ActionIconMode.Default;
+
+        // Pending custom action icons — used when _pendingActionIconMode is Custom.
+        private Texture2D _pendingCustomSaveIcon;
+        private Texture2D _pendingCustomLoadIcon;
+        private Texture2D _pendingCustomClearIcon;
+
         // ── Static GUIContent ─────────────────────────────────────────────────
 
         private static readonly GUIContent s_slotCountLabelActive =
             new GUIContent("Slot Count",
-                "Number of expression parameter slots ASM-Lite manages on this avatar.");
+                "How many preset slots your avatar has. Each slot can hold a full snapshot of your settings.");
 
         private static readonly GUIContent s_slotCountLabelPending =
             new GUIContent("Slot Count",
-                "Number of expression parameter slots ASM-Lite will manage on this avatar.");
+                "How many preset slots to add. Each slot lets you save and load a full set of avatar settings.");
 
         private static readonly GUIContent s_schemeLabelActive =
             new GUIContent("Control Scheme",
-                "Parameter encoding scheme ASM-Lite uses on this avatar.");
+                "How slot buttons are wired up. SafeBool is simpler; CompactInt saves sync budget on avatars with lots of slots.");
 
         private static readonly GUIContent s_schemeLabelPending =
             new GUIContent("Control Scheme",
-                "Parameter encoding scheme ASM-Lite will use on this avatar.");
+                "How slot buttons will be wired up. SafeBool is simpler; CompactInt saves sync budget on avatars with lots of slots.");
 
         // ── Open ──────────────────────────────────────────────────────────────
 
         [MenuItem("Tools/.Staples./ASM-Lite")]
         public static void Open()
         {
-            var win = GetWindow<ASMLiteWindow>(title: "ASM-Lite");
+            var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
             win.minSize = new Vector2(380, 480);
             win.Show();
         }
@@ -92,6 +100,8 @@ namespace ASMLite.Editor
                     DrawSettings();
                     EditorGUILayout.Space(8);
                     DrawIconMode();
+                    EditorGUILayout.Space(8);
+                    DrawActionIcons();
                     EditorGUILayout.Space(8);
                     DrawStatus();
                     EditorGUILayout.Space(12);
@@ -120,7 +130,7 @@ namespace ASMLite.Editor
         private void DrawHeader()
         {
             EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField("ASM-Lite", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(".Staples. ASM-Lite", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
                 "Avatar Settings Manager — Lite Edition",
                 EditorStyles.miniLabel);
@@ -328,6 +338,85 @@ namespace ASMLite.Editor
             }
         }
 
+        /// <summary>
+        /// Draws the Action Icons section. Allows the user to choose between the
+        /// bundled Save/Load/Clear Preset icons (Default) or custom Texture2D icons
+        /// (Custom). Custom icons apply globally — the same three textures are used
+        /// across all slot submenus.
+        /// </summary>
+        private void DrawActionIcons()
+        {
+            var component = GetOrRefreshComponent();
+
+            EditorGUILayout.LabelField("Action Icons", EditorStyles.boldLabel);
+
+            ActionIconMode currentMode = component ? component.actionIconMode : _pendingActionIconMode;
+
+            var newMode = (ActionIconMode)EditorGUILayout.EnumPopup("Action Icon Mode", currentMode);
+            if (newMode != currentMode)
+            {
+                if (component)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Action Icon Mode");
+                    component.actionIconMode = newMode;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingActionIconMode = newMode;
+                }
+            }
+
+            if (newMode == ActionIconMode.Custom)
+            {
+                Texture2D currentSave  = component ? component.customSaveIcon  : _pendingCustomSaveIcon;
+                Texture2D currentLoad  = component ? component.customLoadIcon  : _pendingCustomLoadIcon;
+                Texture2D currentClear = component ? component.customClearIcon : _pendingCustomClearIcon;
+
+                // Save icon
+                var newSave = (Texture2D)EditorGUILayout.ObjectField(
+                    "Save Icon", currentSave, typeof(Texture2D), allowSceneObjects: false);
+                if (newSave != currentSave)
+                {
+                    if (component)
+                    {
+                        Undo.RecordObject(component, "Change ASM-Lite Save Icon");
+                        component.customSaveIcon = newSave;
+                        EditorUtility.SetDirty(component);
+                    }
+                    else { _pendingCustomSaveIcon = newSave; }
+                }
+
+                // Load icon
+                var newLoad = (Texture2D)EditorGUILayout.ObjectField(
+                    "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
+                if (newLoad != currentLoad)
+                {
+                    if (component)
+                    {
+                        Undo.RecordObject(component, "Change ASM-Lite Load Icon");
+                        component.customLoadIcon = newLoad;
+                        EditorUtility.SetDirty(component);
+                    }
+                    else { _pendingCustomLoadIcon = newLoad; }
+                }
+
+                // Clear Preset icon
+                var newClear = (Texture2D)EditorGUILayout.ObjectField(
+                    "Clear Preset Icon", currentClear, typeof(Texture2D), allowSceneObjects: false);
+                if (newClear != currentClear)
+                {
+                    if (component)
+                    {
+                        Undo.RecordObject(component, "Change ASM-Lite Clear Preset Icon");
+                        component.customClearIcon = newClear;
+                        EditorUtility.SetDirty(component);
+                    }
+                    else { _pendingCustomClearIcon = newClear; }
+                }
+            }
+        }
+
         private void DrawStatus()
         {
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
@@ -508,6 +597,10 @@ namespace ASMLite.Editor
                 component.controlScheme = _pendingControlScheme;
                 component.iconMode = _pendingIconMode;
                 component.selectedGearIndex = _pendingSelectedGearIndex;
+                component.actionIconMode = _pendingActionIconMode;
+                component.customSaveIcon  = _pendingCustomSaveIcon;
+                component.customLoadIcon  = _pendingCustomLoadIcon;
+                component.customClearIcon = _pendingCustomClearIcon;
 
                 // Resize and copy custom icons
                 if (_pendingCustomIcons != null)
@@ -596,6 +689,10 @@ namespace ASMLite.Editor
                 _pendingControlScheme = existing.controlScheme;
                 _pendingIconMode = existing.iconMode;
                 _pendingSelectedGearIndex = existing.selectedGearIndex;
+                _pendingActionIconMode = existing.actionIconMode;
+                _pendingCustomSaveIcon  = existing.customSaveIcon;
+                _pendingCustomLoadIcon  = existing.customLoadIcon;
+                _pendingCustomClearIcon = existing.customClearIcon;
 
                 // Sync custom icons array
                 if (existing.customIcons != null)
