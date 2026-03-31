@@ -20,6 +20,18 @@ namespace ASMLite
     }
 
     /// <summary>
+    /// Controls which icons are used for the Save, Load, and Clear Preset action buttons
+    /// inside each slot submenu.
+    /// Default — use the bundled Save.png, Load.png, Reset.png icons.
+    /// Custom  — user-supplied Texture2D icons for each action type.
+    /// </summary>
+    public enum ActionIconMode
+    {
+        Default = 0,
+        Custom  = 1,
+    }
+
+    /// <summary>
     /// Controls how ASM-Lite encodes slot control parameters.
     /// SafeBool   — 3 synced Bool parameters per slot (simplest, costs 3×slotCount bits).
     /// CompactInt — 1 shared synced Int for all slots (costs 8 bits regardless of slot count).
@@ -74,6 +86,31 @@ namespace ASMLite
         /// </summary>
         [SerializeField]
         public ControlScheme controlScheme = ControlScheme.SafeBool;
+
+        /// <summary>
+        /// Which icon set to use for the Save, Load, and Clear Preset action buttons.
+        /// Default uses the bundled icons; Custom allows user-supplied textures.
+        /// </summary>
+        [SerializeField]
+        public ActionIconMode actionIconMode = ActionIconMode.Default;
+
+        /// <summary>
+        /// User-supplied icon for the Save action button. Used when actionIconMode is Custom.
+        /// </summary>
+        [SerializeField]
+        public Texture2D customSaveIcon;
+
+        /// <summary>
+        /// User-supplied icon for the Load action button. Used when actionIconMode is Custom.
+        /// </summary>
+        [SerializeField]
+        public Texture2D customLoadIcon;
+
+        /// <summary>
+        /// User-supplied icon for the Clear Preset action button. Used when actionIconMode is Custom.
+        /// </summary>
+        [SerializeField]
+        public Texture2D customClearIcon;
 
 #if UNITY_EDITOR
         // ─── Reflection cache ─────────────────────────────────────────────────
