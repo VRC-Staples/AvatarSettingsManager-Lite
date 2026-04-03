@@ -36,6 +36,10 @@ namespace ASMLite.Editor
         // -1 means invalid; recomputed lazily in DrawStatus.
         private int _cachedCustomParamCount = -1;
 
+        // Parameter count returned by the last successful build (post-VRCFury clone).
+        // -1 means no build has run yet this session.
+        private int _discoveredParamCount = -1;
+
         // Pending icon mode — shown before the prefab is added, applied on add.
         private IconMode _pendingIconMode = IconMode.SameColor;
 
@@ -52,6 +56,9 @@ namespace ASMLite.Editor
         private Texture2D _pendingCustomSaveIcon;
         private Texture2D _pendingCustomLoadIcon;
         private Texture2D _pendingCustomClearIcon;
+
+        // Icons foldout — collapsed by default (progressive disclosure)
+        private bool _showIconSettings = false;
 
         // ── Banner ────────────────────────────────────────────────────────────
 
@@ -106,12 +113,16 @@ namespace ASMLite.Editor
                     EditorGUILayout.Space(8);
                     DrawSettings();
                     EditorGUILayout.Space(8);
-                    DrawIconMode();
-                    EditorGUILayout.Space(8);
-                    DrawActionIcons();
+                    _showIconSettings = EditorGUILayout.Foldout(
+                        _showIconSettings, "Icon Settings", toggleOnLabelClick: true);
+                    if (_showIconSettings)
+                    {
+                        DrawIconMode();
+                        DrawActionIcons();
+                    }
                     EditorGUILayout.Space(8);
                     DrawStatus();
-                    EditorGUILayout.Space(12);
+                    EditorGUILayout.Space(16);
                     DrawActionButton();
                 }
 
@@ -168,7 +179,7 @@ namespace ASMLite.Editor
 
         private void DrawAvatarPicker()
         {
-            EditorGUILayout.Space(4);
+            EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Avatar", EditorStyles.boldLabel);
 
             var newAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(
@@ -182,6 +193,7 @@ namespace ASMLite.Editor
                 _selectedAvatar = newAvatar;
                 _cachedComponent = null;
                 _cachedCustomParamCount = -1;
+                _discoveredParamCount = -1;
 
                 if (_selectedAvatar != null)
                     SyncPendingSlotCountFromAvatar();
@@ -262,7 +274,7 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            EditorGUILayout.LabelField("Icon Mode", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Icons", EditorStyles.boldLabel);
 
             // Determine current mode and slot count based on whether component exists
             int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
@@ -378,8 +390,6 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            EditorGUILayout.LabelField("Action Icons", EditorStyles.boldLabel);
-
             ActionIconMode currentMode = component ? component.actionIconMode : _pendingActionIconMode;
 
             var newMode = (ActionIconMode)EditorGUILayout.EnumPopup("Action Icon Mode", currentMode);
@@ -463,25 +473,35 @@ namespace ASMLite.Editor
                 // parameters array can be transiently null while Unity is importing.
                 try
                 {
-                    var exprParams = _selectedAvatar.expressionParameters;
-                    if (exprParams != null && exprParams.parameters != null)
+                    if (_discoveredParamCount >= 0)
                     {
-                        if (_cachedCustomParamCount < 0)
-                        {
-                            _cachedCustomParamCount = exprParams.parameters
-                                .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
-                        }
-
+                        // Post-build count — includes VRCFury Toggle/FullController params.
                         EditorGUILayout.HelpBox(
-                            $"✓ {_cachedCustomParamCount} custom parameter(s) will be backed up across " +
+                            $"✓ {_discoveredParamCount} custom parameter(s) backed up across " +
                             $"{component.slotCount} slot(s).",
                             MessageType.Info);
                     }
                     else
                     {
-                        EditorGUILayout.HelpBox(
-                            "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
-                            MessageType.Warning);
+                        var exprParams = _selectedAvatar.expressionParameters;
+                        if (exprParams != null && exprParams.parameters != null)
+                        {
+                            if (_cachedCustomParamCount < 0)
+                            {
+                                _cachedCustomParamCount = exprParams.parameters
+                                    .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
+                            }
+
+                            EditorGUILayout.HelpBox(
+                                $"✓ {_cachedCustomParamCount} custom parameter(s) detected — rebuild to include VRCFury parameters.",
+                                MessageType.Info);
+                        }
+                        else
+                        {
+                            EditorGUILayout.HelpBox(
+                                "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
+                                MessageType.Warning);
+                        }
                     }
                 }
                 catch (System.Exception)
@@ -530,7 +550,11 @@ namespace ASMLite.Editor
                     EditorApplication.delayCall += () => BakeAssets(captured);
                 }
 
-                if (GUILayout.Button("Remove Prefab", GUILayout.Height(36)))
+                var prevColor = GUI.color;
+                GUI.color = new Color(1f, 0.45f, 0.45f);
+                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(24));
+                GUI.color = prevColor;
+                if (removeClicked)
                 {
                     bool confirm = EditorUtility.DisplayDialog(
                         "Remove ASM-Lite Prefab",
@@ -548,6 +572,8 @@ namespace ASMLite.Editor
             }
             else
             {
+                EditorGUILayout.LabelField("Step 1 of 2: Configure, then add the prefab.", EditorStyles.centeredGreyMiniLabel);
+                EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
                 {
                     // Defer past the current OnGUI pass — CreatePrefab calls
@@ -669,7 +695,9 @@ namespace ASMLite.Editor
 
             try
             {
-                ASMLiteBuilder.Build(component);
+                int count = ASMLiteBuilder.Build(component);
+                if (count >= 0)
+                    _discoveredParamCount = count;
                 AssetDatabase.Refresh();
                 Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}'.");
             }
@@ -747,6 +775,7 @@ namespace ASMLite.Editor
                 _selectedAvatar  = descriptor;
                 _cachedComponent = null;
                 _cachedCustomParamCount = -1;
+                _discoveredParamCount = -1;
                 SyncPendingSlotCountFromAvatar();
 
                 Repaint();
