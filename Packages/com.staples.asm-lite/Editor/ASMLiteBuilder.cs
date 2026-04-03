@@ -963,7 +963,7 @@ namespace ASMLite.Editor
             {
                 new VRCExpressionsMenu.Control
                 {
-                    name    = "ASM-Lite",
+                    name    = "Settings Manager",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = presetsMenu,
                     icon    = iconPresets,
