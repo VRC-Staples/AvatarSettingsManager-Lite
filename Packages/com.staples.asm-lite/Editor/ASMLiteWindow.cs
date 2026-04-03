@@ -137,7 +137,7 @@ namespace ASMLite.Editor
                 {
                     EditorGUILayout.Space(8);
                     DrawSettings();
-                    EditorGUILayout.Space(8);
+                    SectionSeparator();
                     _showIconSettings = EditorGUILayout.Foldout(
                         _showIconSettings, "Icon Settings", toggleOnLabelClick: true);
                     if (_showIconSettings)
@@ -147,7 +147,7 @@ namespace ASMLite.Editor
                         EditorGUILayout.Space(8);
                         DrawWheelPreview();
                     }
-                    EditorGUILayout.Space(8);
+                    SectionSeparator();
                     DrawStatus();
                     EditorGUILayout.Space(16);
                     DrawActionButton();
@@ -171,6 +171,18 @@ namespace ASMLite.Editor
         }
 
         // ── Sections ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Draws a subtle 1px horizontal rule between sections.
+        /// Provides visual boundary (ux-common-region-boundaries) without heavy chrome.
+        /// </summary>
+        private static void SectionSeparator()
+        {
+            EditorGUILayout.Space(6);
+            Rect r = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
+            EditorGUI.DrawRect(r, new Color(1f, 1f, 1f, 0.08f));
+            EditorGUILayout.Space(6);
+        }
 
         private void DrawHeader()
         {
@@ -836,7 +848,7 @@ namespace ASMLite.Editor
 
                 var prevColor = GUI.color;
                 GUI.color = new Color(1f, 0.45f, 0.45f);
-                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(24));
+                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32));
                 GUI.color = prevColor;
                 if (removeClicked)
                 {
