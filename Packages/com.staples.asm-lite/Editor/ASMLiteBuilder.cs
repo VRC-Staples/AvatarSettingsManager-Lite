@@ -1,8 +1,10 @@
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -26,6 +28,13 @@ namespace ASMLite.Editor
     ///
     /// All generated content is written into the existing stub assets in-place,
     /// preserving their stable GUIDs.
+    ///
+    /// Parameter discovery uses a dry-clone build: a temporary copy of the avatar
+    /// (minus ASM-Lite components) is instantiated, VRCFury's RunMain is invoked
+    /// on it via reflection, and the resulting merged expression parameters are
+    /// read back. This ensures VRCFury Toggle and FullController parameters (which
+    /// are injected at preprocess order 0, after ASM-Lite's order -10) are captured
+    /// correctly regardless of build order. The clone is destroyed immediately after.
     /// </summary>
     public static class ASMLiteBuilder
     {
@@ -38,11 +47,191 @@ namespace ASMLite.Editor
         private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
         private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Gears/BlueGear.png";
 
+        // ─── Reflection cache — VRCFuryBuilder.RunMain ───────────────────────
+
+        private static MethodInfo s_vrcfuryRunMain;
+        private static bool       s_vrcfuryRunMainSearched;
+
+        /// <summary>
+        /// Resolves VRCFuryBuilder.RunMain(VFGameObject) via reflection and caches it.
+        /// Returns null if VRCFury is not installed or the method signature changed.
+        /// </summary>
+        private static MethodInfo GetVRCFuryRunMain()
+        {
+            if (s_vrcfuryRunMainSearched)
+                return s_vrcfuryRunMain;
+
+            s_vrcfuryRunMainSearched = true;
+
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var t = asm.GetType("VF.Builder.VRCFuryBuilder");
+                    if (t == null) continue;
+
+                    // RunMain(VFGameObject avatarObject) — internal static
+                    var m = t.GetMethod("RunMain",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (m != null)
+                    {
+                        s_vrcfuryRunMain = m;
+                        break;
+                    }
+                }
+                catch (ReflectionTypeLoadException) { }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ASM-Lite] Error scanning assembly for VRCFuryBuilder: {ex.Message}");
+                }
+            }
+
+            return s_vrcfuryRunMain;
+        }
+
         // ─── Public API ───────────────────────────────────────────────────────
 
         /// <summary>
+        /// Discovers the post-VRCFury parameter set for an avatar by running a
+        /// temporary clone build. Instantiates a scene copy of the avatar, removes
+        /// all ASMLiteComponent instances from it, calls VRCFury's RunMain on the
+        /// clone to let VRCFury inject its own parameters, then reads the merged
+        /// expressionParameters back. The clone is destroyed in a finally block.
+        ///
+        /// Returns the discovered parameters (excluding any ASMLite_ prefixed names),
+        /// or falls back to the avatar's base expression parameters if VRCFury is not
+        /// installed or the clone build throws.
+        ///
+        /// VFGameObject is VRCFury's internal scene-object wrapper. RunMain accepts
+        /// a VFGameObject but VFGameObject has an implicit cast from GameObject.
+        /// We pass the clone's root GameObject and rely on that cast via reflection.
+        /// </summary>
+        public static List<VRCExpressionParameters.Parameter> DiscoverParametersViaCloneBuild(
+            VRCAvatarDescriptor avDesc)
+        {
+            var runMain = GetVRCFuryRunMain();
+
+            if (runMain == null)
+            {
+                Debug.LogWarning("[ASM-Lite] VRCFuryBuilder.RunMain not found — falling back to base expression parameters. VRCFury Toggle/FullController parameters will not be discovered.");
+                return ReadBaseParams(avDesc);
+            }
+
+            GameObject clone = null;
+            try
+            {
+                // Instantiate a full copy of the avatar in the scene so RunMain has
+                // a valid scene object with all its component references intact.
+                clone = UnityEngine.Object.Instantiate(avDesc.gameObject);
+                clone.name = avDesc.gameObject.name + "__ASMLiteDiscovery";
+                clone.SetActive(false); // keep it invisible during the build
+
+                // Remove every ASMLiteComponent from the clone so ASM-Lite's own
+                // preprocess callback does not fire recursively on the clone.
+                foreach (var c in clone.GetComponentsInChildren<ASMLiteComponent>(includeInactive: true))
+                    UnityEngine.Object.DestroyImmediate(c);
+
+#if ASM_LITE_VERBOSE
+                Debug.Log($"[ASM-Lite] DiscoverParametersViaCloneBuild: running VRCFury on clone '{clone.name}'.");
+#endif
+
+                // RunMain(VFGameObject) — VFGameObject has an implicit operator from
+                // GameObject, but since we're calling via reflection with object[], we
+                // pass the GameObject directly. VFGameObject's implicit cast is a static
+                // operator and MethodInfo.Invoke performs no implicit conversions, so we
+                // must wrap it manually via the VFGameObject type if it exists.
+                // Simplest safe path: find VFGameObject and call its implicit cast, or
+                // just pass the GameObject and let the runtime invoke the implicit op.
+                // In practice, passing a GameObject to a VFGameObject parameter via
+                // reflection works when VFGameObject defines `implicit operator VFGameObject(GameObject)`.
+                // We verify this works by checking for that operator and using it explicitly.
+                object cloneArg = WrapAsVFGameObject(clone);
+                runMain.Invoke(null, new[] { cloneArg });
+
+                // VRCFury has now merged all Toggle/FullController parameters into
+                // the clone's VRCAvatarDescriptor.expressionParameters.
+                var cloneDesc = clone.GetComponent<VRCAvatarDescriptor>();
+                return ReadBaseParams(cloneDesc);
+            }
+            catch (TargetInvocationException tie)
+            {
+                Debug.LogWarning($"[ASM-Lite] VRCFury clone build failed — falling back to base expression parameters.\n{(tie.InnerException ?? tie).Message}");
+                return ReadBaseParams(avDesc);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] DiscoverParametersViaCloneBuild failed — falling back to base expression parameters.\n{ex.Message}");
+                return ReadBaseParams(avDesc);
+            }
+            finally
+            {
+                if (clone != null)
+                    UnityEngine.Object.DestroyImmediate(clone);
+            }
+        }
+
+        /// <summary>
+        /// Attempts to wrap a GameObject as a VFGameObject by finding and invoking
+        /// VFGameObject's implicit operator. If VFGameObject is not found, returns
+        /// the GameObject directly (works when RunMain accepts a base type or when
+        /// the runtime can resolve the implicit cast).
+        /// </summary>
+        private static object WrapAsVFGameObject(GameObject go)
+        {
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var t = asm.GetType("VF.Utils.VFGameObject");
+                    if (t == null) continue;
+
+                    // Look for: public static implicit operator VFGameObject(GameObject go)
+                    var op = t.GetMethod("op_Implicit",
+                        BindingFlags.Static | BindingFlags.Public,
+                        null,
+                        new[] { typeof(GameObject) },
+                        null);
+                    if (op != null)
+                        return op.Invoke(null, new object[] { go });
+
+                    break;
+                }
+                catch (ReflectionTypeLoadException) { }
+            }
+            // Fallback: pass the GameObject directly. RunMain will throw if it can't
+            // accept it, and the caller's catch will fall back to base params.
+            return go;
+        }
+
+        /// <summary>
+        /// Reads expression parameters from a VRCAvatarDescriptor, filtering out
+        /// empty names and any ASMLite_-prefixed parameters.
+        /// </summary>
+        private static List<VRCExpressionParameters.Parameter> ReadBaseParams(VRCAvatarDescriptor avDesc)
+        {
+            var exprParams = avDesc?.expressionParameters;
+            var result = new List<VRCExpressionParameters.Parameter>();
+            if (exprParams?.parameters == null)
+                return result;
+
+            foreach (var p in exprParams.parameters)
+            {
+                if (string.IsNullOrEmpty(p.name))
+                    continue;
+                if (p.name.StartsWith("ASMLite_"))
+                {
+                    Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}' — already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
+                    continue;
+                }
+                result.Add(p);
+            }
+            return result;
+        }
+
+        /// <summary>
         /// Entry point called during avatar build preprocessing.
-        /// Discovers custom avatar parameters and generates all slot assets.
+        /// Discovers custom avatar parameters via a temporary VRCFury clone build,
+        /// then generates all slot assets.
         /// </summary>
         public static void Build(ASMLiteComponent component)
         {
@@ -54,57 +243,41 @@ namespace ASMLite.Editor
                 return;
             }
 
-            // 2. Get expression parameters
-            var exprParams = avDesc.expressionParameters;
-            if (exprParams == null)
+            if (avDesc.expressionParameters == null)
             {
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 3. Discover custom parameters
-            var discoveredParams = new List<VRCExpressionParameters.Parameter>();
-            if (exprParams != null && exprParams.parameters != null)
-            {
-                foreach (var p in exprParams.parameters)
-                {
-                    if (string.IsNullOrEmpty(p.name))
-                        continue;
+            // 2. Discover parameters via clone build so VRCFury Toggle and
+            //    FullController parameters are included even though VRCFury runs
+            //    after ASM-Lite in the preprocess order.
+            var discoveredParams = DiscoverParametersViaCloneBuild(avDesc);
 
-                    if (p.name.StartsWith("ASMLite_"))
-                    {
-                        Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}' — already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
-                        continue;
-                    }
-
-                    discoveredParams.Add(p);
-                }
-            }
-
-            // 4. Log discovery
+            // 3. Log discovery
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");
 #endif
 
-            // 5. Warn if zero params (layers will be generated with empty Copy lists)
+            // 4. Warn if zero params (layers will be generated with empty Copy lists)
             if (discoveredParams.Count == 0)
             {
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 6–8. Generate assets — pass controlScheme to each Populate method so
+            // 5–7. Generate assets — pass controlScheme to each Populate method so
             //      the correct parameter encoding is applied consistently across
             //      FX controller, expression params, and expression menu.
             PopulateFXController(discoveredParams, component.slotCount, component.controlScheme);
             PopulateExpressionParams(component.slotCount, discoveredParams, component.controlScheme);
             PopulateExpressionMenu(component);
 
-            // 9. Flush all dirty assets in one batch write, then force a synchronous
+            // 8. Flush all dirty assets in one batch write, then force a synchronous
             //    re-import so VRCFury reads the freshly written params — not the
             //    stale in-memory state from a previous build session.
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            // 10. Log completion
+            // 9. Log completion
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
