@@ -53,6 +53,14 @@ namespace ASMLite.Editor
         private Texture2D _pendingCustomLoadIcon;
         private Texture2D _pendingCustomClearIcon;
 
+        // ── Banner ────────────────────────────────────────────────────────────
+
+        private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
+        private const float  BannerAspect = 1200f / 300f; // 4 : 1
+
+        // Loaded once on first draw, never reloaded mid-session.
+        private Texture2D _bannerTexture;
+
         // ── Static GUIContent ─────────────────────────────────────────────────
 
         private static readonly GUIContent s_slotCountLabelActive =
@@ -90,7 +98,6 @@ namespace ASMLite.Editor
             try
             {
                 DrawHeader();
-                EditorGUILayout.Space(8);
 
                 DrawAvatarPicker();
 
@@ -129,11 +136,34 @@ namespace ASMLite.Editor
 
         private void DrawHeader()
         {
-            EditorGUILayout.Space(6);
-            EditorGUILayout.LabelField(".Staples. ASM-Lite", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Avatar Settings Manager — Lite Edition",
-                EditorStyles.miniLabel);
+            // Load banner texture once — null after domain reload until first draw.
+            if (_bannerTexture == null)
+                _bannerTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(BannerPath);
+
+            if (_bannerTexture != null)
+            {
+                // Scale to full available width, clamp height to preserve 4:1 aspect.
+                float availableWidth = EditorGUIUtility.currentViewWidth - 4f; // 2px padding each side
+                float bannerHeight   = Mathf.Round(availableWidth / BannerAspect);
+
+                // Reserve layout space so the scroll view accounts for the banner height.
+                Rect bannerRect = GUILayoutUtility.GetRect(availableWidth, bannerHeight,
+                    GUILayout.ExpandWidth(true));
+
+                // Draw flush to the left edge of the window.
+                bannerRect.x      = 0f;
+                bannerRect.width  = availableWidth + 4f;
+
+                GUI.DrawTexture(bannerRect, _bannerTexture, ScaleMode.ScaleToFit, alphaBlend: false);
+                EditorGUILayout.Space(4);
+            }
+            else
+            {
+                // Fallback when banner hasn't been imported yet.
+                EditorGUILayout.Space(6);
+                EditorGUILayout.LabelField(".Staples. ASM-Lite", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Avatar Settings Manager — Lite Edition", EditorStyles.miniLabel);
+            }
         }
 
         private void DrawAvatarPicker()
