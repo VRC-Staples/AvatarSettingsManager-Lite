@@ -233,14 +233,14 @@ namespace ASMLite.Editor
         /// Discovers custom avatar parameters via a temporary VRCFury clone build,
         /// then generates all slot assets.
         /// </summary>
-        public static void Build(ASMLiteComponent component)
+        public static int Build(ASMLiteComponent component)
         {
             // 1. Find avatar descriptor
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avDesc == null)
             {
                 Debug.LogError($"[ASM-Lite] Build failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.");
-                return;
+                return -1;
             }
 
             if (avDesc.expressionParameters == null)
@@ -281,6 +281,8 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
+
+            return discoveredParams.Count;
         }
 
         /// <summary>
