@@ -8,22 +8,22 @@ namespace ASMLite
 {
     /// <summary>
     /// Controls which icon set is displayed in the ASM-Lite radial menu.
-    /// SameColor  — all gear icons tinted to match the avatar's active colour.
-    /// MultiColor — each gear slot uses its own distinct colour icon.
-    /// Custom     — user-supplied Texture2D icons from the customIcons array.
+    /// SameColor  -- all gear icons tinted to match the avatar's active colour.
+    /// MultiColor -- each gear slot uses its own distinct colour icon.
+    /// Custom     -- user-supplied Texture2D icons from the customIcons array.
     /// </summary>
     public enum IconMode
     {
-        SameColor  = 0,
-        MultiColor = 1,
+        MultiColor = 0,
+        SameColor  = 1,
         Custom     = 2,
     }
 
     /// <summary>
     /// Controls which icons are used for the Save, Load, and Clear Preset action buttons
     /// inside each slot submenu.
-    /// Default — use the bundled Save.png, Load.png, Reset.png icons.
-    /// Custom  — user-supplied Texture2D icons for each action type.
+    /// Default -- use the bundled Save.png, Load.png, Reset.png icons.
+    /// Custom  -- user-supplied Texture2D icons for each action type.
     /// </summary>
     public enum ActionIconMode
     {
@@ -33,8 +33,8 @@ namespace ASMLite
 
     /// <summary>
     /// Controls how ASM-Lite encodes slot control parameters.
-    /// SafeBool   — 3 synced Bool parameters per slot (simplest, costs 3×slotCount bits).
-    /// CompactInt — 1 shared synced Int for all slots (costs 8 bits regardless of slot count).
+    /// SafeBool   -- 3 synced Bool parameters per slot (simplest, costs 3×slotCount bits).
+    /// CompactInt -- 1 shared synced Int for all slots (costs 8 bits regardless of slot count).
     /// </summary>
     public enum ControlScheme
     {
@@ -65,7 +65,7 @@ namespace ASMLite
         /// Which icon set mode to use for the radial menu gear icons.
         /// </summary>
         [SerializeField]
-        public IconMode iconMode = IconMode.SameColor;
+        public IconMode iconMode = IconMode.MultiColor;
 
         /// <summary>
         /// Index of the gear icon (0-7) used when iconMode is SameColor or MultiColor.

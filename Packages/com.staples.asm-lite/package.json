@@ -1,7 +1,7 @@
 {
   "name": "com.staples.asm-lite",
   "displayName": "Avatar Settings Manager - Lite",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "unity": "2022.3",
   "description": "Drop-in VRCFury prefab — Save, Load, and Reset avatar expression parameter presets across three slots.",
   "author": {

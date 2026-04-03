@@ -1,0 +1,25 @@
+{
+    "name": "ASMLite.Tests.Editor",
+    "rootNamespace": "ASMLite.Tests.Editor",
+    "references": [
+        "ASMLite",
+        "ASMLite.Editor",
+        "VRC.SDKBase",
+        "VRC.SDK3.Avatars",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
