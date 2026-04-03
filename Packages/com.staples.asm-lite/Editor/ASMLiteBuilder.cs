@@ -627,37 +627,30 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Writes the following into the managed VRCExpressionParameters asset:
-        ///   SafeBool scheme:
-        ///     • 3×slotCount synced Bool control params (ASMLite_S{slot}_Save/Load/Clear)
-        ///       saved: false, networkSynced: true  -- momentary triggers, no persistence needed
-        ///   CompactInt scheme:
-        ///     • 1 synced Int control param (ASMLite_Ctrl)
-        ///       saved: false, networkSynced: true  -- momentary trigger, shared across all slots
-        ///   Both schemes:
-        ///     • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
-        ///       saved: true, networkSynced: false  -- persisted across world changes via
-        ///       VRChat local storage; VRCFury Unlimited Parameters handles sync compression
-        ///       so the raw bit cost is irrelevant.
+        /// Builds the expression parameter payload for ASM-Lite.
+        ///
+        /// Generated params (controls + active backup schema) are always emitted first.
+        /// Legacy backup params from an existing asset are appended if they are not part
+        /// of the current schema. This preserves previously saved slot values when users
+        /// increase slot count and also change avatar parameter schema in the same rebuild.
+        ///
+        /// Only legacy backup params are preserved. Legacy control params are not kept.
+        /// If a generated backup name exists, generated wins and legacy is ignored.
         /// </summary>
-        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams, ControlScheme scheme)
+        internal static List<VRCExpressionParameters.Parameter> BuildExpressionParamsWithLegacyPreservation(
+            int slotCount,
+            List<VRCExpressionParameters.Parameter> avatarParams,
+            ControlScheme scheme,
+            VRCExpressionParameters.Parameter[] existingParams)
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            if (paramsAsset == null)
-            {
-                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionParameters at '{ASMLiteAssetPaths.ExprParams}'.");
-                return;
-            }
-
-            // Calculate total count based on scheme
+            // Calculate total count based on scheme and current avatar schema.
             int controlParamCount = (scheme == ControlScheme.SafeBool) ? (slotCount * 3) : 1;
             int totalCount = controlParamCount + (slotCount * avatarParams.Count);
             var paramList = new List<VRCExpressionParameters.Parameter>(totalCount);
 
-            // Control params -- synced triggers, not saved -- branched on scheme
+            // Control params: synced triggers, not saved.
             if (scheme == ControlScheme.SafeBool)
             {
-                // SafeBool: 3 Bool params per slot
                 for (int slot = 1; slot <= slotCount; slot++)
                 {
                     paramList.Add(new VRCExpressionParameters.Parameter
@@ -688,7 +681,6 @@ namespace ASMLite.Editor
             }
             else
             {
-                // CompactInt: 1 shared Int param for all slots
                 paramList.Add(new VRCExpressionParameters.Parameter
                 {
                     name          = "ASMLite_Ctrl",
@@ -699,10 +691,7 @@ namespace ASMLite.Editor
                 });
             }
 
-            // Backup params -- saved locally, not synced
-            // saved: true persists values across world changes via VRChat local storage.
-            // networkSynced: false keeps them off the sync budget entirely;
-            // VRCFury Unlimited Parameters handles any compression needed.
+            // Current backup schema: saved local params per slot.
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 foreach (var p in avatarParams)
@@ -718,20 +707,82 @@ namespace ASMLite.Editor
                 }
             }
 
-            // Deduplicate by name before assigning -- stale on-disk assets from older
-            // builds may have left duplicate entries with conflicting types, which causes
-            // VRCFury's ParamManager to throw a type-conflict error at build time.
+            // Deduplicate generated names and create lookup for legacy preservation.
             var seen = new HashSet<string>();
-            var deduped = new List<VRCExpressionParameters.Parameter>(paramList.Count);
+            var merged = new List<VRCExpressionParameters.Parameter>(paramList.Count);
             foreach (var p in paramList)
             {
                 if (seen.Add(p.name))
-                    deduped.Add(p);
+                    merged.Add(p);
                 else
-                    Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from output: '{p.name}'");
+                    Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from generated output: '{p.name}'");
             }
 
-            paramsAsset.parameters = deduped.ToArray();
+            // Preserve legacy backup params that are no longer in the generated schema.
+            int preservedLegacyCount = 0;
+            if (existingParams != null)
+            {
+                foreach (var existing in existingParams)
+                {
+                    if (string.IsNullOrWhiteSpace(existing.name))
+                        continue;
+                    if (!existing.name.StartsWith("ASMLite_Bak_"))
+                        continue;
+                    if (!seen.Add(existing.name))
+                        continue;
+
+                    // Keep existing type/default and force backup persistence flags.
+                    merged.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = existing.name,
+                        valueType     = existing.valueType,
+                        defaultValue  = existing.defaultValue,
+                        saved         = true,
+                        networkSynced = false,
+                    });
+                    preservedLegacyCount++;
+                }
+            }
+
+#if ASM_LITE_VERBOSE
+            if (preservedLegacyCount > 0)
+                Debug.Log($"[ASM-Lite] Preserved {preservedLegacyCount} legacy backup parameter(s) during schema rebuild.");
+#endif
+
+            return merged;
+        }
+
+        /// <summary>
+        /// Writes the following into the managed VRCExpressionParameters asset:
+        ///   SafeBool scheme:
+        ///     • 3×slotCount synced Bool control params (ASMLite_S{slot}_Save/Load/Clear)
+        ///       saved: false, networkSynced: true; momentary triggers
+        ///   CompactInt scheme:
+        ///     • 1 synced Int control param (ASMLite_Ctrl)
+        ///       saved: false, networkSynced: true; momentary trigger
+        ///   Both schemes:
+        ///     • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
+        ///       saved: true, networkSynced: false; local persistence
+        ///
+        /// Legacy backup params from prior schemas are preserved when not colliding
+        /// with the current schema to avoid dropping existing user presets.
+        /// </summary>
+        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams, ControlScheme scheme)
+        {
+            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            if (paramsAsset == null)
+            {
+                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionParameters at '{ASMLiteAssetPaths.ExprParams}'.");
+                return;
+            }
+
+            var merged = BuildExpressionParamsWithLegacyPreservation(
+                slotCount,
+                avatarParams,
+                scheme,
+                paramsAsset.parameters);
+
+            paramsAsset.parameters = merged.ToArray();
 
             EditorUtility.SetDirty(paramsAsset);
             // SaveAssets is called once in Build() after all three Populate methods complete.
