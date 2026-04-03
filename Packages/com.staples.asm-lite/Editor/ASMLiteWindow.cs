@@ -82,7 +82,7 @@ namespace ASMLite.Editor
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
-        private const float  BannerAspect = 1200f / 560f; // display taller than source ratio for readability
+        private const float  BannerAspect = 1200f / 520f; // slightly shorter so the UI, not the banner, remains dominant
 
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
@@ -180,7 +180,7 @@ namespace ASMLite.Editor
         {
             EditorGUILayout.Space(6);
             Rect r = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(r, new Color(1f, 1f, 1f, 0.08f));
+            EditorGUI.DrawRect(r, new Color(0.10f, 0.35f, 0.38f, 0.20f));
             EditorGUILayout.Space(6);
         }
 
@@ -617,27 +617,28 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField(
                 "Approximate representation of how your menus will appear in VRChat.",
                 EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(6);
+            EditorGUILayout.Space(4);
 
             float availWidth = EditorGUIUtility.currentViewWidth - 32f;
 
-            // GestureManager canonical size is 300px -- scale to fit available width,
-            // capped at 300 so it never exceeds the reference.
-            float mainSize = Mathf.Clamp(availWidth * 0.52f, 160f, 300f);
-            float subSize  = Mathf.Round(mainSize * 0.50f);
+            // GestureManager canonical size is 300px. Keep the preview one step
+            // smaller than the settings controls so it reads as confirmation,
+            // not the primary focal point.
+            float mainSize = Mathf.Clamp(availWidth * 0.46f, 150f, 260f);
+            float subSize  = Mathf.Round(mainSize * 0.46f);
 
-            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + 4f);
+            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + subSize * 0.35f + 4f);
 
             // Main wheel: left-center.
             Rect mainRect = new Rect(
-                rowRect.x + availWidth * 0.22f - mainSize * 0.5f,
+                rowRect.x + availWidth * 0.24f - mainSize * 0.5f,
                 rowRect.y,
                 mainSize, mainSize);
 
-            // Sub-wheel: right, vertically centered.
+            // Sub-wheel: offset down and right so it reads as a drill-down from the main wheel.
             Rect subRect = new Rect(
-                rowRect.x + availWidth * 0.60f,
-                rowRect.y + (mainSize - subSize) * 0.5f,
+                rowRect.x + availWidth * 0.63f,
+                rowRect.y + mainSize * 0.36f,
                 subSize, subSize);
 
             if (Event.current.type != EventType.Repaint)
@@ -728,7 +729,7 @@ namespace ASMLite.Editor
             {
                 alignment = TextAnchor.UpperCenter,
                 fontSize  = Mathf.Max(7, Mathf.RoundToInt(8f * scale)),
-                normal    = { textColor = Color.white }
+                normal    = { textColor = new Color(1f, 1f, 1f, 0.82f) }
             };
 
             for (int i = 0; i < count; i++)
@@ -838,7 +839,7 @@ namespace ASMLite.Editor
                 // Two-button layout: Rebuild and Remove
                 EditorGUILayout.BeginHorizontal();
 
-                if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36)))
+                if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
                 {
                     // Defer past the current OnGUI pass so AssetDatabase operations
                     // don't corrupt the layout group stack mid-frame.
@@ -848,7 +849,7 @@ namespace ASMLite.Editor
 
                 var prevColor = GUI.color;
                 GUI.color = new Color(1f, 0.45f, 0.45f);
-                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32));
+                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32), GUILayout.MinWidth(110));
                 GUI.color = prevColor;
                 if (removeClicked)
                 {
