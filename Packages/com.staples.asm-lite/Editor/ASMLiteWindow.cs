@@ -119,7 +119,13 @@ namespace ASMLite.Editor
 
         private void OnGUI()
         {
-            _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
+            _scrollPos = EditorGUILayout.BeginScrollView(
+                _scrollPos,
+                alwaysShowHorizontal: false,
+                alwaysShowVertical: false,
+                horizontalScrollbar: GUIStyle.none,
+                verticalScrollbar: GUI.skin.verticalScrollbar,
+                background: GUIStyle.none);
 
             try
             {
