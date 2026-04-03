@@ -68,6 +68,7 @@ namespace ASMLite.Editor
         private Texture2D   _previewSaveIcon;
         private Texture2D   _previewLoadIcon;
         private Texture2D   _previewClearIcon;
+        private Texture2D   _previewBackIcon;
 
         // Signature of the last preview build -- used to detect staleness.
         private int    _previewSlotCount      = -1;
@@ -577,17 +578,22 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            int            slotCount   = component ? component.slotCount        : _pendingSlotCount;
-            IconMode       iconMode    = component ? component.iconMode          : _pendingIconMode;
-            int            gearIndex   = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
-            ActionIconMode actionMode  = component ? component.actionIconMode    : _pendingActionIconMode;
-            Texture2D[]    customIcons = component ? component.customIcons       : _pendingCustomIcons;
-            Texture2D      customSave  = component ? component.customSaveIcon    : _pendingCustomSaveIcon;
-            Texture2D      customLoad  = component ? component.customLoadIcon    : _pendingCustomLoadIcon;
-            Texture2D      customClear = component ? component.customClearIcon   : _pendingCustomClearIcon;
+            int            slotCount   = component ? component.slotCount          : _pendingSlotCount;
+            IconMode       iconMode    = component ? component.iconMode            : _pendingIconMode;
+            int            gearIndex   = component ? component.selectedGearIndex   : _pendingSelectedGearIndex;
+            ActionIconMode actionMode  = component ? component.actionIconMode      : _pendingActionIconMode;
+            Texture2D[]    customIcons = component ? component.customIcons         : _pendingCustomIcons;
+            Texture2D      customSave  = component ? component.customSaveIcon      : _pendingCustomSaveIcon;
+            Texture2D      customLoad  = component ? component.customLoadIcon      : _pendingCustomLoadIcon;
+            Texture2D      customClear = component ? component.customClearIcon     : _pendingCustomClearIcon;
 
             RefreshPreviewCache(slotCount, iconMode, gearIndex, actionMode,
                 customIcons, customSave, customLoad, customClear);
+
+            // Load back arrow once.
+            if (_previewBackIcon == null)
+                _previewBackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Packages/com.staples.asm-lite/Icons/BackArrow.png") ?? _previewFallback;
 
             EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.boldLabel);
             EditorGUILayout.LabelField(
@@ -596,17 +602,21 @@ namespace ASMLite.Editor
             EditorGUILayout.Space(6);
 
             float availWidth = EditorGUIUtility.currentViewWidth - 32f;
-            float mainSize   = Mathf.Clamp(availWidth * 0.52f, 160f, 240f);
-            float subSize    = Mathf.Round(mainSize * 0.46f);
-            float rowHeight  = mainSize;
 
-            Rect rowRect = GUILayoutUtility.GetRect(availWidth, rowHeight + 4f);
+            // GestureManager canonical size is 300px -- scale to fit available width,
+            // capped at 300 so it never exceeds the reference.
+            float mainSize = Mathf.Clamp(availWidth * 0.52f, 160f, 300f);
+            float subSize  = Mathf.Round(mainSize * 0.50f);
 
+            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + 4f);
+
+            // Main wheel: left-center.
             Rect mainRect = new Rect(
                 rowRect.x + availWidth * 0.22f - mainSize * 0.5f,
                 rowRect.y,
                 mainSize, mainSize);
 
+            // Sub-wheel: right, vertically centered.
             Rect subRect = new Rect(
                 rowRect.x + availWidth * 0.60f,
                 rowRect.y + (mainSize - subSize) * 0.5f,
@@ -615,14 +625,26 @@ namespace ASMLite.Editor
             if (Event.current.type != EventType.Repaint)
                 return;
 
-            DrawRadialWheel(mainRect, _previewGearTextures, slotCount, label: null);
+            // Main wheel: Back at top, then user slot icons.
+            var mainIcons  = new Texture2D[slotCount + 1];
+            var mainLabels = new string[slotCount + 1];
+            mainIcons[0]  = _previewBackIcon;
+            mainLabels[0] = "Back";
+            for (int i = 0; i < slotCount; i++)
+            {
+                mainIcons[i + 1]  = _previewGearTextures[i];
+                mainLabels[i + 1] = $"Slot {i + 1}";
+            }
+            DrawRadialWheel(mainRect, mainIcons, mainLabels);
 
-            var actionIcons  = new[] { _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
-            var actionLabels = new[] { "Save", "Load", "Clear" };
-            DrawRadialWheel(subRect, actionIcons, 3, label: "Slot 1", actionLabels: actionLabels);
+            // Sub-wheel: Back at top, then Save/Load/Clear.
+            var subIcons  = new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
+            var subLabels = new[] { "Back", "Save", "Load", "Clear" };
+            DrawRadialWheel(subRect, subIcons, subLabels);
 
+            // Connector line.
             var origHandles = Handles.color;
-            Handles.color = new Color(1f, 1f, 1f, 0.18f);
+            Handles.color = new Color(0.1f, 0.35f, 0.38f, 0.6f);
             Handles.DrawLine(
                 new Vector3(mainRect.xMax, mainRect.center.y),
                 new Vector3(subRect.xMin,  subRect.center.y));
@@ -630,89 +652,87 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Draws one circular radial wheel. Icons at equal angular intervals,
-        /// VRC-style dark background, divider lines, optional centre label.
+        /// Draws a VRC-style radial menu wheel using GestureManager exact dimensions and colors.
+        /// Slot 0 is always at the top (12 o'clock) and goes clockwise.
         /// </summary>
-        private void DrawRadialWheel(Rect rect, Texture2D[] icons, int count,
-            string label, string[] actionLabels = null)
+        private void DrawRadialWheel(Rect rect, Texture2D[] icons, string[] labels)
         {
-            if (icons == null || count == 0) return;
+            int count = icons.Length;
+            if (count == 0) return;
 
             float cx = rect.center.x;
             float cy = rect.center.y;
-            float r  = rect.width * 0.5f;
 
-            var origColor = GUI.color;
+            // GestureManager: Size=300, radius=150. Scale proportionally.
+            float scale      = rect.width / 300f;
+            float outerR     = rect.width * 0.5f;         // 150px at 300
+            float innerR     = rect.width / 6f;            // 50px at 300 (InnerSize/2 = 100/2)
+            float iconRadius = rect.width / 3f;            // 100px at 300 (Size/3)
+            float iconSize   = rect.width * 0.22f;         // ~66px at 300
+            float halfIcon   = iconSize * 0.5f;
 
-            // Dark background.
-            GUI.color = new Color(0.09f, 0.11f, 0.15f, 1f);
+            // GM colors exactly.
+            var colorMain   = new Color(0.14f, 0.18f, 0.20f);
+            var colorBorder = new Color(0.10f, 0.35f, 0.38f);
+            var colorInner  = new Color(0.21f, 0.24f, 0.27f);
+
+            var origColor   = GUI.color;
+            var origHandles = Handles.color;
+
+            // Background fill (full circle approximated by square -- Handles clips it).
+            GUI.color = colorMain;
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = origColor;
 
-            // Outer ring border.
-            Handles.color = new Color(0.45f, 0.48f, 0.55f, 0.7f);
-            Handles.DrawWireDisc(new Vector3(cx, cy, 0f), Vector3.forward, r - 1f);
+            // Outer ring.
+            Handles.color = colorBorder;
+            Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
-            // Centre hub.
-            float centerR = r * 0.12f;
-            Handles.color = new Color(0.25f, 0.28f, 0.34f, 1f);
-            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, centerR);
-
-            // Segment dividers.
+            // Segment dividers -- 2px lines from inner circle to outer edge.
             float angleStep = 360f / count;
-            Handles.color = new Color(0.45f, 0.48f, 0.55f, 0.35f);
+            Handles.color = new Color(colorBorder.r, colorBorder.g, colorBorder.b, 0.55f);
             for (int i = 0; i < count; i++)
             {
                 float a = Mathf.Deg2Rad * (i * angleStep - 90f);
-                Handles.DrawLine(
-                    new Vector3(cx + Mathf.Cos(a) * centerR,  cy + Mathf.Sin(a) * centerR,  0f),
-                    new Vector3(cx + Mathf.Cos(a) * (r - 1f), cy + Mathf.Sin(a) * (r - 1f), 0f));
+                var p0 = new Vector3(cx + Mathf.Cos(a) * innerR,       cy + Mathf.Sin(a) * innerR,       0f);
+                var p1 = new Vector3(cx + Mathf.Cos(a) * (outerR - 1f), cy + Mathf.Sin(a) * (outerR - 1f), 0f);
+                Handles.DrawLine(p0, p1);
             }
 
-            // Centre label.
-            if (!string.IsNullOrEmpty(label))
-            {
-                var centreStyle = new GUIStyle(EditorStyles.miniLabel)
-                {
-                    alignment = TextAnchor.MiddleCenter,
-                    normal    = { textColor = new Color(0.7f, 0.75f, 0.82f) },
-                    fontSize  = Mathf.Max(7, Mathf.RoundToInt(r * 0.18f))
-                };
-                GUI.Label(new Rect(cx - centerR, cy - centerR, centerR * 2f, centerR * 2f),
-                    label, centreStyle);
-            }
+            // Inner hub circle (RadialInner color, with teal border).
+            Handles.color = colorInner;
+            Handles.DrawSolidDisc(new Vector3(cx, cy), Vector3.forward, innerR);
+            Handles.color = colorBorder;
+            Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, innerR);
 
-            // Icons.
-            float iconRingRadius = r * 0.62f;
-            float iconSize       = r * 0.36f;
-            float halfIcon       = iconSize * 0.5f;
-
+            // Icons and labels.
             var labelStyle = new GUIStyle(EditorStyles.miniLabel)
             {
                 alignment = TextAnchor.UpperCenter,
-                normal    = { textColor = new Color(0.85f, 0.88f, 0.92f) },
-                fontSize  = Mathf.Max(7, Mathf.RoundToInt(iconSize * 0.28f))
+                fontSize  = Mathf.Max(7, Mathf.RoundToInt(8f * scale)),
+                normal    = { textColor = Color.white }
             };
 
             for (int i = 0; i < count; i++)
             {
                 float angleRad = Mathf.Deg2Rad * (i * angleStep - 90f);
-                float ix = cx + Mathf.Cos(angleRad) * iconRingRadius;
-                float iy = cy + Mathf.Sin(angleRad) * iconRingRadius;
+                float ix = cx + Mathf.Cos(angleRad) * iconRadius;
+                float iy = cy + Mathf.Sin(angleRad) * iconRadius;
 
                 Rect iconRect = new Rect(ix - halfIcon, iy - halfIcon, iconSize, iconSize);
-                var tex = (i < icons.Length && icons[i] != null) ? icons[i] : _previewFallback;
                 GUI.color = Color.white;
-                GUI.DrawTexture(iconRect, tex, ScaleMode.ScaleToFit, alphaBlend: true);
+                GUI.DrawTexture(iconRect, icons[i] ?? _previewFallback, ScaleMode.ScaleToFit, alphaBlend: true);
 
-                if (actionLabels != null && i < actionLabels.Length)
+                if (labels != null && i < labels.Length)
                 {
-                    Rect lblRect = new Rect(ix - iconSize, iy + halfIcon + 1f, iconSize * 2f, 14f);
-                    GUI.Label(lblRect, actionLabels[i], labelStyle);
+                    float lblWidth = iconSize * 2.2f;
+                    Rect lblRect = new Rect(ix - lblWidth * 0.5f, iy + halfIcon + 1f, lblWidth, 14f);
+                    GUI.Label(lblRect, labels[i], labelStyle);
                 }
             }
 
-            GUI.color = origColor;
+            Handles.color = origHandles;
+            GUI.color     = origColor;
         }
 
         private void DrawStatus()
