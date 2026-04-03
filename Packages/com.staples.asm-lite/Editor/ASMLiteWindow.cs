@@ -688,12 +688,12 @@ namespace ASMLite.Editor
             Handles.color = colorBorder;
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
-            // Segment dividers -- 2px lines from inner circle to outer edge.
+            // Segment dividers -- 2px lines between icons, offset by half a step.
             float angleStep = 360f / count;
             Handles.color = new Color(colorBorder.r, colorBorder.g, colorBorder.b, 0.55f);
             for (int i = 0; i < count; i++)
             {
-                float a = Mathf.Deg2Rad * (i * angleStep - 90f);
+                float a = Mathf.Deg2Rad * (i * angleStep - 90f + angleStep * 0.5f);
                 var p0 = new Vector3(cx + Mathf.Cos(a) * innerR,       cy + Mathf.Sin(a) * innerR,       0f);
                 var p1 = new Vector3(cx + Mathf.Cos(a) * (outerR - 1f), cy + Mathf.Sin(a) * (outerR - 1f), 0f);
                 Handles.DrawLine(p0, p1);
