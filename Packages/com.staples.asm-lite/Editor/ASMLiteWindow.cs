@@ -627,7 +627,7 @@ namespace ASMLite.Editor
             float mainSize = Mathf.Clamp(availWidth * 0.46f, 150f, 260f);
             float subSize  = Mathf.Round(mainSize * 0.46f);
 
-            Rect rowRect = GUILayoutUtility.GetRect(availWidth, Mathf.Max(mainSize, mainSize * 0.36f + subSize) + 4f);
+            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + subSize * 0.35f + 4f);
 
             // Main wheel: left-center.
             Rect mainRect = new Rect(
@@ -817,7 +817,6 @@ namespace ASMLite.Editor
                 int syncedBits = component.controlScheme == ControlScheme.CompactInt
                     ? 8
                     : 3 * component.slotCount;
-                EditorGUILayout.Space(2);
                 EditorGUILayout.HelpBox(
                     $"ASM-Lite uses {syncedBits} / 256 synced bits",
                     MessageType.Info);
