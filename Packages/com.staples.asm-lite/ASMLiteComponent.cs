@@ -14,8 +14,8 @@ namespace ASMLite
     /// </summary>
     public enum IconMode
     {
-        SameColor  = 0,
-        MultiColor = 1,
+        MultiColor = 0,
+        SameColor  = 1,
         Custom     = 2,
     }
 
