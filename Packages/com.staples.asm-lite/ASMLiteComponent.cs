@@ -65,7 +65,7 @@ namespace ASMLite
         /// Which icon set mode to use for the radial menu gear icons.
         /// </summary>
         [SerializeField]
-        public IconMode iconMode = IconMode.SameColor;
+        public IconMode iconMode = IconMode.MultiColor;
 
         /// <summary>
         /// Index of the gear icon (0-7) used when iconMode is SameColor or MultiColor.
