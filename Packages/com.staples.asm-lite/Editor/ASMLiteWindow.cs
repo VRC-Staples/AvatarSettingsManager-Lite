@@ -63,7 +63,7 @@ namespace ASMLite.Editor
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
-        private const float  BannerAspect = 1200f / 500f; // display taller than source ratio for readability
+        private const float  BannerAspect = 1200f / 560f; // display taller than source ratio for readability
 
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
@@ -92,7 +92,7 @@ namespace ASMLite.Editor
         public static void Open()
         {
             var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
-            win.minSize = new Vector2(560, 640);
+            win.minSize = new Vector2(600, 680);
             win.Show();
         }
 
