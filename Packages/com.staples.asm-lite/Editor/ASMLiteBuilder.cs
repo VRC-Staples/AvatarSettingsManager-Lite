@@ -1,8 +1,10 @@
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -11,103 +13,276 @@ using VRC.SDKBase;
 namespace ASMLite.Editor
 {
     /// <summary>
-    /// ASMLiteBuilder — static editor utility for build-time asset generation.
+    /// ASMLiteBuilder -- static editor utility for build-time asset generation.
     ///
     /// Called from ASMLiteComponent.Preprocess() during the VRChat SDK avatar build
     /// pipeline. Discovers all custom avatar parameters, generates 3 FX animator
     /// slot layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
     /// operations, and writes synced control parameters to ASMLite_Params.asset.
     ///
-    /// ControlScheme.SafeBool   — 3 Bool params per slot (ASMLite_S{slot}_Save/Load/Clear)
+    /// ControlScheme.SafeBool   -- 3 Bool params per slot (ASMLite_S{slot}_Save/Load/Clear)
     ///                            transitions use AnimatorConditionMode.If
-    /// ControlScheme.CompactInt — 1 shared Int param (ASMLite_Ctrl) for all slots
+    /// ControlScheme.CompactInt -- 1 shared Int param (ASMLite_Ctrl) for all slots
     ///                            transitions use AnimatorConditionMode.Equals with
     ///                            encoded values (slot-1)*3+1/2/3
     ///
     /// All generated content is written into the existing stub assets in-place,
     /// preserving their stable GUIDs.
+    ///
+    /// Parameter discovery uses a dry-clone build: a temporary copy of the avatar
+    /// (minus ASM-Lite components) is instantiated, VRCFury's RunMain is invoked
+    /// on it via reflection, and the resulting merged expression parameters are
+    /// read back. This ensures VRCFury Toggle and FullController parameters (which
+    /// are injected at preprocess order 0, after ASM-Lite's order -10) are captured
+    /// correctly regardless of build order. The clone is destroyed immediately after.
     /// </summary>
     public static class ASMLiteBuilder
     {
-        // ─── Asset paths — see ASMLiteAssetPaths for centralized constants ───
+        // ─── Asset paths -- see ASMLiteAssetPaths for centralized constants ───
 
         // ─── Icon paths ───────────────────────────────────────────────────────
 
         private const string IconSavePath    = "Packages/com.staples.asm-lite/Icons/Save.png";
         private const string IconLoadPath    = "Packages/com.staples.asm-lite/Icons/Load.png";
         private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
-        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Gears/BlueGear.png";
+        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/SlidersIcon.png";
+
+        // ─── Reflection cache -- VRCFuryBuilder.RunMain ───────────────────────
+
+        private static MethodInfo s_vrcfuryRunMain;
+        private static bool       s_vrcfuryRunMainSearched;
+
+        /// <summary>
+        /// Resolves VRCFuryBuilder.RunMain(VFGameObject) via reflection and caches it.
+        /// Returns null if VRCFury is not installed or the method signature changed.
+        /// </summary>
+        private static MethodInfo GetVRCFuryRunMain()
+        {
+            if (s_vrcfuryRunMainSearched)
+                return s_vrcfuryRunMain;
+
+            s_vrcfuryRunMainSearched = true;
+
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var t = asm.GetType("VF.Builder.VRCFuryBuilder");
+                    if (t == null) continue;
+
+                    // RunMain(VFGameObject avatarObject) -- internal static
+                    var m = t.GetMethod("RunMain",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                    if (m != null)
+                    {
+                        s_vrcfuryRunMain = m;
+                        break;
+                    }
+                }
+                catch (ReflectionTypeLoadException) { }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[ASM-Lite] Error scanning assembly for VRCFuryBuilder: {ex.Message}");
+                }
+            }
+
+            return s_vrcfuryRunMain;
+        }
 
         // ─── Public API ───────────────────────────────────────────────────────
 
         /// <summary>
-        /// Entry point called during avatar build preprocessing.
-        /// Discovers custom avatar parameters and generates all slot assets.
+        /// Discovers the post-VRCFury parameter set for an avatar by running a
+        /// temporary clone build. Instantiates a scene copy of the avatar, removes
+        /// all ASMLiteComponent instances from it, calls VRCFury's RunMain on the
+        /// clone to let VRCFury inject its own parameters, then reads the merged
+        /// expressionParameters back. The clone is destroyed in a finally block.
+        ///
+        /// Returns the discovered parameters (excluding any ASMLite_ prefixed names),
+        /// or falls back to the avatar's base expression parameters if VRCFury is not
+        /// installed or the clone build throws.
+        ///
+        /// VFGameObject is VRCFury's internal scene-object wrapper. RunMain accepts
+        /// a VFGameObject but VFGameObject has an implicit cast from GameObject.
+        /// We pass the clone's root GameObject and rely on that cast via reflection.
         /// </summary>
-        public static void Build(ASMLiteComponent component)
+        public static List<VRCExpressionParameters.Parameter> DiscoverParametersViaCloneBuild(
+            VRCAvatarDescriptor avDesc)
+        {
+            var runMain = GetVRCFuryRunMain();
+
+            if (runMain == null)
+            {
+                Debug.LogWarning("[ASM-Lite] VRCFuryBuilder.RunMain not found -- falling back to base expression parameters. VRCFury Toggle/FullController parameters will not be discovered.");
+                return ReadBaseParams(avDesc);
+            }
+
+            GameObject clone = null;
+            try
+            {
+                // Instantiate a full copy of the avatar in the scene so RunMain has
+                // a valid scene object with all its component references intact.
+                clone = UnityEngine.Object.Instantiate(avDesc.gameObject);
+                clone.name = avDesc.gameObject.name + "__ASMLiteDiscovery";
+                clone.SetActive(false); // keep it invisible during the build
+
+                // Remove every ASMLiteComponent from the clone so ASM-Lite's own
+                // preprocess callback does not fire recursively on the clone.
+                foreach (var c in clone.GetComponentsInChildren<ASMLiteComponent>(includeInactive: true))
+                    UnityEngine.Object.DestroyImmediate(c);
+
+#if ASM_LITE_VERBOSE
+                Debug.Log($"[ASM-Lite] DiscoverParametersViaCloneBuild: running VRCFury on clone '{clone.name}'.");
+#endif
+
+                // RunMain(VFGameObject) -- VFGameObject has an implicit operator from
+                // GameObject, but since we're calling via reflection with object[], we
+                // pass the GameObject directly. VFGameObject's implicit cast is a static
+                // operator and MethodInfo.Invoke performs no implicit conversions, so we
+                // must wrap it manually via the VFGameObject type if it exists.
+                // Simplest safe path: find VFGameObject and call its implicit cast, or
+                // just pass the GameObject and let the runtime invoke the implicit op.
+                // In practice, passing a GameObject to a VFGameObject parameter via
+                // reflection works when VFGameObject defines `implicit operator VFGameObject(GameObject)`.
+                // We verify this works by checking for that operator and using it explicitly.
+                object cloneArg = WrapAsVFGameObject(clone);
+                runMain.Invoke(null, new[] { cloneArg });
+
+                // VRCFury has now merged all Toggle/FullController parameters into
+                // the clone's VRCAvatarDescriptor.expressionParameters.
+                var cloneDesc = clone.GetComponent<VRCAvatarDescriptor>();
+                return ReadBaseParams(cloneDesc);
+            }
+            catch (TargetInvocationException tie)
+            {
+                Debug.LogWarning($"[ASM-Lite] VRCFury clone build failed -- falling back to base expression parameters.\n{(tie.InnerException ?? tie).Message}");
+                return ReadBaseParams(avDesc);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] DiscoverParametersViaCloneBuild failed -- falling back to base expression parameters.\n{ex.Message}");
+                return ReadBaseParams(avDesc);
+            }
+            finally
+            {
+                if (clone != null)
+                    UnityEngine.Object.DestroyImmediate(clone);
+            }
+        }
+
+        /// <summary>
+        /// Attempts to wrap a GameObject as a VFGameObject by finding and invoking
+        /// VFGameObject's implicit operator. If VFGameObject is not found, returns
+        /// the GameObject directly (works when RunMain accepts a base type or when
+        /// the runtime can resolve the implicit cast).
+        /// </summary>
+        private static object WrapAsVFGameObject(GameObject go)
+        {
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var t = asm.GetType("VF.Utils.VFGameObject");
+                    if (t == null) continue;
+
+                    // Look for: public static implicit operator VFGameObject(GameObject go)
+                    var op = t.GetMethod("op_Implicit",
+                        BindingFlags.Static | BindingFlags.Public,
+                        null,
+                        new[] { typeof(GameObject) },
+                        null);
+                    if (op != null)
+                        return op.Invoke(null, new object[] { go });
+
+                    break;
+                }
+                catch (ReflectionTypeLoadException) { }
+            }
+            // Fallback: pass the GameObject directly. RunMain will throw if it can't
+            // accept it, and the caller's catch will fall back to base params.
+            return go;
+        }
+
+        /// <summary>
+        /// Reads expression parameters from a VRCAvatarDescriptor, filtering out
+        /// empty names and any ASMLite_-prefixed parameters.
+        /// </summary>
+        private static List<VRCExpressionParameters.Parameter> ReadBaseParams(VRCAvatarDescriptor avDesc)
+        {
+            var exprParams = avDesc?.expressionParameters;
+            var result = new List<VRCExpressionParameters.Parameter>();
+            if (exprParams?.parameters == null)
+                return result;
+
+            foreach (var p in exprParams.parameters)
+            {
+                if (string.IsNullOrEmpty(p.name))
+                    continue;
+                if (p.name.StartsWith("ASMLite_"))
+                {
+                    Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}' -- already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
+                    continue;
+                }
+                result.Add(p);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Entry point called during avatar build preprocessing.
+        /// Discovers custom avatar parameters via a temporary VRCFury clone build,
+        /// then generates all slot assets.
+        /// </summary>
+        public static int Build(ASMLiteComponent component)
         {
             // 1. Find avatar descriptor
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avDesc == null)
             {
                 Debug.LogError($"[ASM-Lite] Build failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.");
-                return;
+                return -1;
             }
 
-            // 2. Get expression parameters
-            var exprParams = avDesc.expressionParameters;
-            if (exprParams == null)
+            if (avDesc.expressionParameters == null)
             {
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 3. Discover custom parameters
-            var discoveredParams = new List<VRCExpressionParameters.Parameter>();
-            if (exprParams != null && exprParams.parameters != null)
-            {
-                foreach (var p in exprParams.parameters)
-                {
-                    if (string.IsNullOrEmpty(p.name))
-                        continue;
+            // 2. Discover parameters via clone build so VRCFury Toggle and
+            //    FullController parameters are included even though VRCFury runs
+            //    after ASM-Lite in the preprocess order.
+            var discoveredParams = DiscoverParametersViaCloneBuild(avDesc);
 
-                    if (p.name.StartsWith("ASMLite_"))
-                    {
-                        Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}' — already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
-                        continue;
-                    }
-
-                    discoveredParams.Add(p);
-                }
-            }
-
-            // 4. Log discovery
+            // 3. Log discovery
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");
 #endif
 
-            // 5. Warn if zero params (layers will be generated with empty Copy lists)
+            // 4. Warn if zero params (layers will be generated with empty Copy lists)
             if (discoveredParams.Count == 0)
             {
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 6–8. Generate assets — pass controlScheme to each Populate method so
+            // 5–7. Generate assets -- pass controlScheme to each Populate method so
             //      the correct parameter encoding is applied consistently across
             //      FX controller, expression params, and expression menu.
             PopulateFXController(discoveredParams, component.slotCount, component.controlScheme);
             PopulateExpressionParams(component.slotCount, discoveredParams, component.controlScheme);
             PopulateExpressionMenu(component);
 
-            // 9. Flush all dirty assets in one batch write, then force a synchronous
-            //    re-import so VRCFury reads the freshly written params — not the
+            // 8. Flush all dirty assets in one batch write, then force a synchronous
+            //    re-import so VRCFury reads the freshly written params -- not the
             //    stale in-memory state from a previous build session.
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            // 10. Log completion
+            // 9. Log completion
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
+
+            return discoveredParams.Count;
         }
 
         /// <summary>
@@ -117,7 +292,7 @@ namespace ASMLite.Editor
         public static void CleanupGeneratedAssets(ASMLiteComponent component)
         {
 #if ASM_LITE_VERBOSE
-            Debug.Log($"[ASM-Lite] CleanupGeneratedAssets called for '{component.gameObject.name}' — no cleanup required (in-place mutation model).");
+            Debug.Log($"[ASM-Lite] CleanupGeneratedAssets called for '{component.gameObject.name}' -- no cleanup required (in-place mutation model).");
 #endif
         }
 
@@ -140,8 +315,8 @@ namespace ASMLite.Editor
         /// SaveAssets call in Build().
         ///
         /// ControlScheme determines which control parameters are added:
-        ///   SafeBool   — 3 Bool params per slot: ASMLite_S{slot}_Save/Load/Clear
-        ///   CompactInt — 1 shared Int param: ASMLite_Ctrl (added once, before slot loop)
+        ///   SafeBool   -- 3 Bool params per slot: ASMLite_S{slot}_Save/Load/Clear
+        ///   CompactInt -- 1 shared Int param: ASMLite_Ctrl (added once, before slot loop)
         /// </summary>
         private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount, ControlScheme scheme)
         {
@@ -157,16 +332,16 @@ namespace ASMLite.Editor
                 ctrl.RemoveLayer(i);
 
             // Clear existing parameters.
-            // Iterate until empty rather than foreach — RemoveParameter modifies the
+            // Iterate until empty rather than foreach -- RemoveParameter modifies the
             // underlying list, and a stale controller may contain duplicate-named entries
             // (from an older build) where a single-pass foreach leaves stragglers.
             while (ctrl.parameters.Length > 0)
                 ctrl.RemoveParameter(ctrl.parameters[0]);
 
-            // Add slot control parameters — branched on ControlScheme
+            // Add slot control parameters -- branched on ControlScheme
             if (scheme == ControlScheme.SafeBool)
             {
-                // SafeBool: 3 Bool params per slot — Save, Load, Clear
+                // SafeBool: 3 Bool params per slot -- Save, Load, Clear
                 for (int slot = 1; slot <= slotCount; slot++)
                 {
                     ctrl.AddParameter($"ASMLite_S{slot}_Save",  AnimatorControllerParameterType.Bool);
@@ -234,7 +409,7 @@ namespace ASMLite.Editor
                 ctrl.AddParameter(acp);
             }
 
-            // Generate one layer per slot — pass scheme so transitions are encoded correctly
+            // Generate one layer per slot -- pass scheme so transitions are encoded correctly
             for (int slot = 1; slot <= slotCount; slot++)
                 AddSlotLayer(ctrl, slot, avatarParams, scheme);
 
@@ -249,16 +424,16 @@ namespace ASMLite.Editor
         /// touching the live avatar parameters.
         ///
         /// ControlScheme determines transition conditions and driver reset entries:
-        ///   SafeBool   — transitions use AnimatorConditionMode.If on the per-slot Bool params;
+        ///   SafeBool   -- transitions use AnimatorConditionMode.If on the per-slot Bool params;
         ///                driver resets add 3 Set entries (one per Bool param, value=0f)
-        ///   CompactInt — transitions use AnimatorConditionMode.Equals on ASMLite_Ctrl with
+        ///   CompactInt -- transitions use AnimatorConditionMode.Equals on ASMLite_Ctrl with
         ///                encoded values (slot-1)*3+1/2/3; driver resets add 1 Set entry (value=0f)
         /// </summary>
         private static void AddSlotLayer(AnimatorController ctrl, int slot, List<VRCExpressionParameters.Parameter> avatarParams, ControlScheme scheme)
         {
             string slotName = $"ASMLite_Slot{slot}";
 
-            // Zone A — control param names / encoded values, resolved per scheme
+            // Zone A -- control param names / encoded values, resolved per scheme
             string saveParam;
             string loadParam;
             string clearParam;
@@ -357,7 +532,7 @@ namespace ASMLite.Editor
                 });
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
-                // Live avatar params are NOT touched — only the saved preset is cleared.
+                // Live avatar params are NOT touched -- only the saved preset is cleared.
                 resetParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
@@ -366,7 +541,7 @@ namespace ASMLite.Editor
                 });
             }
 
-            // Zone B — trailing Set entries reset the control parameter(s) back to Idle
+            // Zone B -- trailing Set entries reset the control parameter(s) back to Idle
             // SafeBool:   3 Set entries per driver (one per Bool param, value = 0f)
             // CompactInt: 1 Set entry per driver for ASMLite_Ctrl, value = 0f
             if (scheme == ControlScheme.SafeBool)
@@ -429,7 +604,7 @@ namespace ASMLite.Editor
             loadDriver.parameters  = loadParams;
             resetDriver.parameters = resetParams;
 
-            // ── Zone C — Transitions from Idle ───────────────────────────────
+            // ── Zone C -- Transitions from Idle ───────────────────────────────
             // SafeBool:   AnimatorConditionMode.If  on per-slot Bool params
             // CompactInt: AnimatorConditionMode.Equals on ASMLite_Ctrl with encoded values
             if (scheme == ControlScheme.SafeBool)
@@ -455,13 +630,13 @@ namespace ASMLite.Editor
         /// Writes the following into the managed VRCExpressionParameters asset:
         ///   SafeBool scheme:
         ///     • 3×slotCount synced Bool control params (ASMLite_S{slot}_Save/Load/Clear)
-        ///       saved: false, networkSynced: true  — momentary triggers, no persistence needed
+        ///       saved: false, networkSynced: true  -- momentary triggers, no persistence needed
         ///   CompactInt scheme:
         ///     • 1 synced Int control param (ASMLite_Ctrl)
-        ///       saved: false, networkSynced: true  — momentary trigger, shared across all slots
+        ///       saved: false, networkSynced: true  -- momentary trigger, shared across all slots
         ///   Both schemes:
         ///     • slotCount × avatarParams backup params (ASMLite_Bak_S{slot}_{name})
-        ///       saved: true, networkSynced: false  — persisted across world changes via
+        ///       saved: true, networkSynced: false  -- persisted across world changes via
         ///       VRChat local storage; VRCFury Unlimited Parameters handles sync compression
         ///       so the raw bit cost is irrelevant.
         /// </summary>
@@ -479,7 +654,7 @@ namespace ASMLite.Editor
             int totalCount = controlParamCount + (slotCount * avatarParams.Count);
             var paramList = new List<VRCExpressionParameters.Parameter>(totalCount);
 
-            // Control params — synced triggers, not saved — branched on scheme
+            // Control params -- synced triggers, not saved -- branched on scheme
             if (scheme == ControlScheme.SafeBool)
             {
                 // SafeBool: 3 Bool params per slot
@@ -524,7 +699,7 @@ namespace ASMLite.Editor
                 });
             }
 
-            // Backup params — saved locally, not synced
+            // Backup params -- saved locally, not synced
             // saved: true persists values across world changes via VRChat local storage.
             // networkSynced: false keeps them off the sync budget entirely;
             // VRCFury Unlimited Parameters handles any compression needed.
@@ -543,7 +718,7 @@ namespace ASMLite.Editor
                 }
             }
 
-            // Deduplicate by name before assigning — stale on-disk assets from older
+            // Deduplicate by name before assigning -- stale on-disk assets from older
             // builds may have left duplicate entries with conflicting types, which causes
             // VRCFury's ParamManager to throw a type-conflict error at build time.
             var seen = new HashSet<string>();
@@ -572,9 +747,9 @@ namespace ASMLite.Editor
         ///   slotCount reset-confirm sub-menus (Clear Preset confirmation).
         ///
         /// ControlScheme determines the parameter names and values in menu buttons:
-        ///   SafeBool   — Save: ASMLite_S{slot}_Save=1, Load: ASMLite_S{slot}_Load=1,
+        ///   SafeBool   -- Save: ASMLite_S{slot}_Save=1, Load: ASMLite_S{slot}_Load=1,
         ///                      Clear: ASMLite_S{slot}_Clear=1
-        ///   CompactInt — Save: ASMLite_Ctrl=(slot-1)*3+1, Load: ASMLite_Ctrl=(slot-1)*3+2,
+        ///   CompactInt -- Save: ASMLite_Ctrl=(slot-1)*3+1, Load: ASMLite_Ctrl=(slot-1)*3+2,
         ///                      Clear: ASMLite_Ctrl=(slot-1)*3+3
         ///
         /// Menu hierarchy:
@@ -590,7 +765,7 @@ namespace ASMLite.Editor
         /// Asset operations are batched with StartAssetEditing/StopAssetEditing (in a
         /// try/finally) so Unity imports all created assets in one pass rather than
         /// triggering an import cycle per CreateAsset call. In-memory ScriptableObject
-        /// references are used throughout — no LoadAssetAtPath reload after CreateAsset.
+        /// references are used throughout -- no LoadAssetAtPath reload after CreateAsset.
         /// </summary>
         private static void PopulateExpressionMenu(ASMLiteComponent component)
         {
@@ -601,7 +776,7 @@ namespace ASMLite.Editor
             //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPresetsPath);
 
-            // Resolve action icons — use component's custom icons when actionIconMode is Custom,
+            // Resolve action icons -- use component's custom icons when actionIconMode is Custom,
             // falling back to the bundled defaults for any that are null.
             Texture2D bundledSave  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
             Texture2D bundledLoad  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
@@ -622,7 +797,7 @@ namespace ASMLite.Editor
             }
 
             if (iconSave == null)
-                Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " — controls will have no icon.");
+                Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + " -- controls will have no icon.");
 
             // ── Build per-slot icon array BEFORE StartAssetEditing ───────────
             var slotIcons = new Texture2D[slotCount];
@@ -659,7 +834,7 @@ namespace ASMLite.Editor
                     string confirmPath      = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
                     string resetConfirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ResetConfirmMenu.asset";
 
-                    // Unconditional deletes — AssetDatabase.DeleteAsset is a safe no-op
+                    // Unconditional deletes -- AssetDatabase.DeleteAsset is a safe no-op
                     // on paths that don't exist, so no existence check is needed.
                     AssetDatabase.DeleteAsset(slotPath);
                     AssetDatabase.DeleteAsset(confirmPath);
@@ -758,14 +933,14 @@ namespace ASMLite.Editor
             finally
             {
                 // StopAssetEditing is in a finally block so Unity's edit-batch counter is
-                // always decremented — even if an exception fires mid-loop. Forgetting this
+                // always decremented -- even if an exception fires mid-loop. Forgetting this
                 // would leave the Editor in a frozen "editing" state requiring a restart.
                 AssetDatabase.StopAssetEditing();
             }
 
             // ── Build the ASM-Lite wrapper menu using in-memory slot references ──
             // StopAssetEditing() has processed the batch; in-memory ScriptableObject
-            // references are valid — no LoadAssetAtPath reload needed.
+            // references are valid -- no LoadAssetAtPath reload needed.
             var presetsMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
             presetsMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int slot = 1; slot <= slotCount; slot++)
@@ -779,7 +954,7 @@ namespace ASMLite.Editor
                 });
             }
             AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
-            // presetsMenu in-memory reference remains valid — no reload needed.
+            // presetsMenu in-memory reference remains valid -- no reload needed.
 
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
@@ -788,7 +963,7 @@ namespace ASMLite.Editor
             {
                 new VRCExpressionsMenu.Control
                 {
-                    name    = "ASM-Lite",
+                    name    = "Settings Manager",
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = presetsMenu,
                     icon    = iconPresets,
@@ -807,7 +982,7 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Maps a VRCExpressionParameters ValueType to the corresponding
-        /// AnimatorControllerParameterType. Uses ValueType (not ParameterType) —
+        /// AnimatorControllerParameterType. Uses ValueType (not ParameterType) --
         /// the enum is on VRCExpressionParameters, not on the parameter struct.
         /// </summary>
         private static AnimatorControllerParameterType MapValueType(VRCExpressionParameters.ValueType vt)
@@ -854,11 +1029,11 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Resolves the icon for a given slot based on the component's iconMode.
-        ///   SameColor  — all slots use the single gear icon at selectedGearIndex.
-        ///   MultiColor — each slot cycles through GearIconPaths by index.
-        ///   Custom     — uses the user-supplied texture from customIcons[slot-1],
+        ///   SameColor  -- all slots use the single gear icon at selectedGearIndex.
+        ///   MultiColor -- each slot cycles through GearIconPaths by index.
+        ///   Custom     -- uses the user-supplied texture from customIcons[slot-1],
         ///                falling back to <paramref name="fallback"/> if null/out-of-range.
-        ///   default    — returns <paramref name="fallback"/>.
+        ///   default    -- returns <paramref name="fallback"/>.
         /// All LoadAssetAtPath calls are expected to run before StartAssetEditing.
         /// </summary>
         private static Texture2D ResolveSlotIcon(ASMLiteComponent component, int slot, Texture2D fallback)

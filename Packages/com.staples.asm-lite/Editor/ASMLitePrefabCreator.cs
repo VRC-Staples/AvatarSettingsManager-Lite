@@ -8,7 +8,7 @@ using UnityEngine;
 namespace ASMLite.Editor
 {
     /// <summary>
-    /// ASMLitePrefabCreator — editor utility that builds the ASM-Lite prefab.
+    /// ASMLitePrefabCreator -- editor utility that builds the ASM-Lite prefab.
     ///
     /// Run via: ASM-Lite ▶ Create Prefab
     ///
@@ -19,12 +19,12 @@ namespace ASMLite.Editor
     ///     GeneratedAssets/ and has Global Parameters set to '*'.
     ///
     /// Both VRCFury and FullController are 'internal' in the VRCFury package, so this
-    /// script uses reflection to access them — this is intentional and is the
+    /// script uses reflection to access them -- this is intentional and is the
     /// standard pattern for third-party tooling that integrates with VRCFury.
     /// </summary>
     public static class ASMLitePrefabCreator
     {
-        // Asset paths — see ASMLiteAssetPaths for centralized constants.
+        // Asset paths -- see ASMLiteAssetPaths for centralized constants.
 
         // Unity fileID for the primary object in each asset type.
         private const long AnimatorControllerFileID = 9100000L;
@@ -89,11 +89,11 @@ namespace ASMLite.Editor
             var prms         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
 
             if (fxController == null)
-                Debug.LogWarning($"[ASM-Lite] Stub FX controller not found at {ASMLiteAssetPaths.FXController} — FullController will have no controller reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub FX controller not found at {ASMLiteAssetPaths.FXController} -- FullController will have no controller reference.");
             if (menu == null)
-                Debug.LogWarning($"[ASM-Lite] Stub menu not found at {ASMLiteAssetPaths.Menu} — FullController will have no menu reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub menu not found at {ASMLiteAssetPaths.Menu} -- FullController will have no menu reference.");
             if (prms == null)
-                Debug.LogWarning($"[ASM-Lite] Stub params not found at {ASMLiteAssetPaths.ExprParams} — FullController will have no params reference.");
+                Debug.LogWarning($"[ASM-Lite] Stub params not found at {ASMLiteAssetPaths.ExprParams} -- FullController will have no params reference.");
 
             // ── Locate VRCFury types via reflection ──────────────────────────
             Type vrcfuryType        = FindType("VF.Model.VRCFury");
@@ -114,7 +114,7 @@ namespace ASMLite.Editor
 
             if (s_fullControllerType == null)
             {
-                Debug.LogError("[ASM-Lite] VF.Model.Feature.FullController not found — VRCFury may be an unexpected version.");
+                Debug.LogError("[ASM-Lite] VF.Model.Feature.FullController not found -- VRCFury may be an unexpected version.");
                 return;
             }
 
@@ -239,7 +239,7 @@ namespace ASMLite.Editor
                 }
                 catch (ReflectionTypeLoadException)
                 {
-                    // Expected for assemblies that cannot be fully loaded — skip silently.
+                    // Expected for assemblies that cannot be fully loaded -- skip silently.
                 }
                 catch (Exception ex)
                 {
