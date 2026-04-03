@@ -41,7 +41,7 @@ namespace ASMLite.Editor
         private int _discoveredParamCount = -1;
 
         // Pending icon mode — shown before the prefab is added, applied on add.
-        private IconMode _pendingIconMode = IconMode.SameColor;
+        private IconMode _pendingIconMode = IconMode.MultiColor;
 
         // Pending gear index — shown before the prefab is added, applied on add.
         private int _pendingSelectedGearIndex = 0;
