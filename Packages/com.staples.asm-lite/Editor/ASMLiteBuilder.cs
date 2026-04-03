@@ -45,7 +45,7 @@ namespace ASMLite.Editor
         private const string IconSavePath    = "Packages/com.staples.asm-lite/Icons/Save.png";
         private const string IconLoadPath    = "Packages/com.staples.asm-lite/Icons/Load.png";
         private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
-        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/Gears/BlueGear.png";
+        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/SlidersIcon.png";
 
         // ─── Reflection cache -- VRCFuryBuilder.RunMain ───────────────────────
 
