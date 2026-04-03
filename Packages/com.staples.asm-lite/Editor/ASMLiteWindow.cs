@@ -60,6 +60,24 @@ namespace ASMLite.Editor
         // Icons foldout — collapsed by default (progressive disclosure)
         private bool _showIconSettings = false;
 
+        // ── Wheel Preview Cache ───────────────────────────────────────────────
+
+        // Resolved gear textures for the current settings. Rebuilt whenever
+        // mode, color index, slot count, or custom icons change.
+        private Texture2D[] _previewGearTextures;
+        private Texture2D   _previewSaveIcon;
+        private Texture2D   _previewLoadIcon;
+        private Texture2D   _previewClearIcon;
+
+        // Signature of the last preview build — used to detect staleness.
+        private int    _previewSlotCount      = -1;
+        private int    _previewIconMode       = -1;
+        private int    _previewGearIndex      = -1;
+        private int    _previewActionIconMode = -1;
+
+        // Fallback grey square drawn when a custom icon slot is unassigned.
+        private Texture2D _previewFallback;
+
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
@@ -119,6 +137,8 @@ namespace ASMLite.Editor
                     {
                         DrawIconMode();
                         DrawActionIcons();
+                        EditorGUILayout.Space(8);
+                        DrawWheelPreview();
                     }
                     EditorGUILayout.Space(8);
                     DrawStatus();
@@ -455,6 +475,244 @@ namespace ASMLite.Editor
                     else { _pendingCustomClearIcon = newClear; }
                 }
             }
+        }
+
+        // ── Wheel Preview ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resolves and caches the icon textures used by the preview wheel.
+        /// Exits immediately if the settings signature is unchanged.
+        /// </summary>
+        private void RefreshPreviewCache(
+            int slotCount, IconMode iconMode, int gearIndex,
+            ActionIconMode actionIconMode,
+            Texture2D[] customIcons, Texture2D customSave, Texture2D customLoad, Texture2D customClear)
+        {
+            int modeInt       = (int)iconMode;
+            int actionModeInt = (int)actionIconMode;
+
+            bool dirty = _previewSlotCount      != slotCount
+                      || _previewIconMode       != modeInt
+                      || _previewGearIndex      != gearIndex
+                      || _previewActionIconMode != actionModeInt;
+
+            if (!dirty && _previewGearTextures != null
+                && _previewGearTextures.Length == slotCount)
+            {
+                if (iconMode == IconMode.Custom && customIcons != null)
+                {
+                    for (int i = 0; i < slotCount; i++)
+                    {
+                        var expected = (i < customIcons.Length) ? customIcons[i] : null;
+                        if (_previewGearTextures[i] != expected) { dirty = true; break; }
+                    }
+                }
+                if (actionIconMode == ActionIconMode.Custom
+                    && (_previewSaveIcon  != customSave
+                     || _previewLoadIcon  != customLoad
+                     || _previewClearIcon != customClear))
+                    dirty = true;
+            }
+            else dirty = true;
+
+            if (!dirty) return;
+
+            if (_previewFallback == null)
+            {
+                _previewFallback = new Texture2D(1, 1);
+                _previewFallback.SetPixel(0, 0, new Color(0.35f, 0.35f, 0.35f));
+                _previewFallback.Apply();
+            }
+
+            _previewGearTextures = new Texture2D[slotCount];
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                Texture2D tex = null;
+                switch (iconMode)
+                {
+                    case IconMode.SameColor:
+                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                            ASMLiteAssetPaths.GearIconPaths[gearIndex]);
+                        break;
+                    case IconMode.MultiColor:
+                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                            ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length]);
+                        break;
+                    case IconMode.Custom:
+                        int idx = slot - 1;
+                        if (customIcons != null && idx < customIcons.Length)
+                            tex = customIcons[idx];
+                        break;
+                }
+                _previewGearTextures[slot - 1] = tex != null ? tex : _previewFallback;
+            }
+
+            if (actionIconMode == ActionIconMode.Custom)
+            {
+                _previewSaveIcon  = customSave  != null ? customSave  : _previewFallback;
+                _previewLoadIcon  = customLoad  != null ? customLoad  : _previewFallback;
+                _previewClearIcon = customClear != null ? customClear : _previewFallback;
+            }
+            else
+            {
+                _previewSaveIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Packages/com.staples.asm-lite/Icons/Save.png")  ?? _previewFallback;
+                _previewLoadIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Packages/com.staples.asm-lite/Icons/Load.png")  ?? _previewFallback;
+                _previewClearIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                    "Packages/com.staples.asm-lite/Icons/Reset.png") ?? _previewFallback;
+            }
+
+            _previewSlotCount      = slotCount;
+            _previewIconMode       = modeInt;
+            _previewGearIndex      = gearIndex;
+            _previewActionIconMode = actionModeInt;
+        }
+
+        /// <summary>
+        /// Draws a VRC-style radial menu preview: main slot wheel and inset
+        /// Save/Load/Clear sub-wheel for slot 1.
+        /// </summary>
+        private void DrawWheelPreview()
+        {
+            var component = GetOrRefreshComponent();
+
+            int            slotCount   = component ? component.slotCount        : _pendingSlotCount;
+            IconMode       iconMode    = component ? component.iconMode          : _pendingIconMode;
+            int            gearIndex   = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
+            ActionIconMode actionMode  = component ? component.actionIconMode    : _pendingActionIconMode;
+            Texture2D[]    customIcons = component ? component.customIcons       : _pendingCustomIcons;
+            Texture2D      customSave  = component ? component.customSaveIcon    : _pendingCustomSaveIcon;
+            Texture2D      customLoad  = component ? component.customLoadIcon    : _pendingCustomLoadIcon;
+            Texture2D      customClear = component ? component.customClearIcon   : _pendingCustomClearIcon;
+
+            RefreshPreviewCache(slotCount, iconMode, gearIndex, actionMode,
+                customIcons, customSave, customLoad, customClear);
+
+            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Approximate representation of how your menus will appear in VRChat.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(6);
+
+            float availWidth = EditorGUIUtility.currentViewWidth - 32f;
+            float mainSize   = Mathf.Clamp(availWidth * 0.52f, 160f, 240f);
+            float subSize    = Mathf.Round(mainSize * 0.46f);
+            float rowHeight  = mainSize;
+
+            Rect rowRect = GUILayoutUtility.GetRect(availWidth, rowHeight + 4f);
+
+            Rect mainRect = new Rect(
+                rowRect.x + availWidth * 0.22f - mainSize * 0.5f,
+                rowRect.y,
+                mainSize, mainSize);
+
+            Rect subRect = new Rect(
+                rowRect.x + availWidth * 0.60f,
+                rowRect.y + (mainSize - subSize) * 0.5f,
+                subSize, subSize);
+
+            if (Event.current.type != EventType.Repaint)
+                return;
+
+            DrawRadialWheel(mainRect, _previewGearTextures, slotCount, label: null);
+
+            var actionIcons  = new[] { _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
+            var actionLabels = new[] { "Save", "Load", "Clear" };
+            DrawRadialWheel(subRect, actionIcons, 3, label: "Slot 1", actionLabels: actionLabels);
+
+            var origHandles = Handles.color;
+            Handles.color = new Color(1f, 1f, 1f, 0.18f);
+            Handles.DrawLine(
+                new Vector3(mainRect.xMax, mainRect.center.y),
+                new Vector3(subRect.xMin,  subRect.center.y));
+            Handles.color = origHandles;
+        }
+
+        /// <summary>
+        /// Draws one circular radial wheel. Icons at equal angular intervals,
+        /// VRC-style dark background, divider lines, optional centre label.
+        /// </summary>
+        private void DrawRadialWheel(Rect rect, Texture2D[] icons, int count,
+            string label, string[] actionLabels = null)
+        {
+            if (icons == null || count == 0) return;
+
+            float cx = rect.center.x;
+            float cy = rect.center.y;
+            float r  = rect.width * 0.5f;
+
+            var origColor = GUI.color;
+
+            // Dark background.
+            GUI.color = new Color(0.09f, 0.11f, 0.15f, 1f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = origColor;
+
+            // Outer ring border.
+            Handles.color = new Color(0.45f, 0.48f, 0.55f, 0.7f);
+            Handles.DrawWireDisc(new Vector3(cx, cy, 0f), Vector3.forward, r - 1f);
+
+            // Centre hub.
+            float centerR = r * 0.12f;
+            Handles.color = new Color(0.25f, 0.28f, 0.34f, 1f);
+            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, centerR);
+
+            // Segment dividers.
+            float angleStep = 360f / count;
+            Handles.color = new Color(0.45f, 0.48f, 0.55f, 0.35f);
+            for (int i = 0; i < count; i++)
+            {
+                float a = Mathf.Deg2Rad * (i * angleStep - 90f);
+                Handles.DrawLine(
+                    new Vector3(cx + Mathf.Cos(a) * centerR,  cy + Mathf.Sin(a) * centerR,  0f),
+                    new Vector3(cx + Mathf.Cos(a) * (r - 1f), cy + Mathf.Sin(a) * (r - 1f), 0f));
+            }
+
+            // Centre label.
+            if (!string.IsNullOrEmpty(label))
+            {
+                var centreStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    normal    = { textColor = new Color(0.7f, 0.75f, 0.82f) },
+                    fontSize  = Mathf.Max(7, Mathf.RoundToInt(r * 0.18f))
+                };
+                GUI.Label(new Rect(cx - centerR, cy - centerR, centerR * 2f, centerR * 2f),
+                    label, centreStyle);
+            }
+
+            // Icons.
+            float iconRingRadius = r * 0.62f;
+            float iconSize       = r * 0.36f;
+            float halfIcon       = iconSize * 0.5f;
+
+            var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.UpperCenter,
+                normal    = { textColor = new Color(0.85f, 0.88f, 0.92f) },
+                fontSize  = Mathf.Max(7, Mathf.RoundToInt(iconSize * 0.28f))
+            };
+
+            for (int i = 0; i < count; i++)
+            {
+                float angleRad = Mathf.Deg2Rad * (i * angleStep - 90f);
+                float ix = cx + Mathf.Cos(angleRad) * iconRingRadius;
+                float iy = cy + Mathf.Sin(angleRad) * iconRingRadius;
+
+                Rect iconRect = new Rect(ix - halfIcon, iy - halfIcon, iconSize, iconSize);
+                var tex = (i < icons.Length && icons[i] != null) ? icons[i] : _previewFallback;
+                GUI.color = Color.white;
+                GUI.DrawTexture(iconRect, tex, ScaleMode.ScaleToFit, alphaBlend: true);
+
+                if (actionLabels != null && i < actionLabels.Length)
+                {
+                    Rect lblRect = new Rect(ix - iconSize, iy + halfIcon + 1f, iconSize * 2f, 14f);
+                    GUI.Label(lblRect, actionLabels[i], labelStyle);
+                }
+            }
+
+            GUI.color = origColor;
         }
 
         private void DrawStatus()
