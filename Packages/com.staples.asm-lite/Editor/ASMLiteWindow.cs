@@ -56,7 +56,7 @@ namespace ASMLite.Editor
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
-        private const float  BannerAspect = 1200f / 300f; // 4 : 1
+        private const float  BannerAspect = 1200f / 320f; // 15 : 4
 
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
