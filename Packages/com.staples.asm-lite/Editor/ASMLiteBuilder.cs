@@ -637,121 +637,41 @@ namespace ASMLite.Editor
         /// Only legacy backup params are preserved. Legacy control params are not kept.
         /// If a generated backup name exists, generated wins and legacy is ignored.
         /// </summary>
-        internal static List<VRCExpressionParameters.Parameter> BuildExpressionParamsWithLegacyPreservation(
+        internal static List<string> BuildBackupParamNamesWithLegacyPreservation(
             int slotCount,
-            List<VRCExpressionParameters.Parameter> avatarParams,
-            ControlScheme scheme,
-            VRCExpressionParameters.Parameter[] existingParams)
+            List<string> avatarParamNames,
+            string[] existingParamNames)
         {
-            // Calculate total count based on scheme and current avatar schema.
-            int controlParamCount = (scheme == ControlScheme.SafeBool) ? (slotCount * 3) : 1;
-            int totalCount = controlParamCount + (slotCount * avatarParams.Count);
-            var paramList = new List<VRCExpressionParameters.Parameter>(totalCount);
+            var names = new List<string>(slotCount * avatarParamNames.Count);
+            var seen = new HashSet<string>();
 
-            // Control params: synced triggers, not saved.
-            if (scheme == ControlScheme.SafeBool)
-            {
-                for (int slot = 1; slot <= slotCount; slot++)
-                {
-                    paramList.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = $"ASMLite_S{slot}_Save",
-                        valueType     = VRCExpressionParameters.ValueType.Bool,
-                        defaultValue  = 0f,
-                        saved         = false,
-                        networkSynced = true,
-                    });
-                    paramList.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = $"ASMLite_S{slot}_Load",
-                        valueType     = VRCExpressionParameters.ValueType.Bool,
-                        defaultValue  = 0f,
-                        saved         = false,
-                        networkSynced = true,
-                    });
-                    paramList.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = $"ASMLite_S{slot}_Clear",
-                        valueType     = VRCExpressionParameters.ValueType.Bool,
-                        defaultValue  = 0f,
-                        saved         = false,
-                        networkSynced = true,
-                    });
-                }
-            }
-            else
-            {
-                paramList.Add(new VRCExpressionParameters.Parameter
-                {
-                    name          = "ASMLite_Ctrl",
-                    valueType     = VRCExpressionParameters.ValueType.Int,
-                    defaultValue  = 0f,
-                    saved         = false,
-                    networkSynced = true,
-                });
-            }
-
-            // Current backup schema: saved local params per slot.
+            // Current backup schema first.
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                foreach (var p in avatarParams)
+                foreach (var paramName in avatarParamNames)
                 {
-                    paramList.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = $"ASMLite_Bak_S{slot}_{p.name}",
-                        valueType     = p.valueType,
-                        defaultValue  = p.defaultValue,
-                        saved         = true,
-                        networkSynced = false,
-                    });
+                    string name = $"ASMLite_Bak_S{slot}_{paramName}";
+                    if (seen.Add(name))
+                        names.Add(name);
                 }
             }
 
-            // Deduplicate generated names and create lookup for legacy preservation.
-            var seen = new HashSet<string>();
-            var merged = new List<VRCExpressionParameters.Parameter>(paramList.Count);
-            foreach (var p in paramList)
+            // Preserve legacy backup keys not present in current schema.
+            if (existingParamNames != null)
             {
-                if (seen.Add(p.name))
-                    merged.Add(p);
-                else
-                    Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from generated output: '{p.name}'");
-            }
-
-            // Preserve legacy backup params that are no longer in the generated schema.
-            int preservedLegacyCount = 0;
-            if (existingParams != null)
-            {
-                foreach (var existing in existingParams)
+                foreach (var existingName in existingParamNames)
                 {
-                    if (string.IsNullOrWhiteSpace(existing.name))
+                    if (string.IsNullOrWhiteSpace(existingName))
                         continue;
-                    if (!existing.name.StartsWith("ASMLite_Bak_"))
+                    if (!existingName.StartsWith("ASMLite_Bak_"))
                         continue;
-                    if (!seen.Add(existing.name))
-                        continue;
-
-                    // Keep existing type/default and force backup persistence flags.
-                    merged.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = existing.name,
-                        valueType     = existing.valueType,
-                        defaultValue  = existing.defaultValue,
-                        saved         = true,
-                        networkSynced = false,
-                    });
-                    preservedLegacyCount++;
+                    if (seen.Add(existingName))
+                        names.Add(existingName);
                 }
             }
 
-#if ASM_LITE_VERBOSE
-            if (preservedLegacyCount > 0)
-                Debug.Log($"[ASM-Lite] Preserved {preservedLegacyCount} legacy backup parameter(s) during schema rebuild.");
-#endif
-
-            return merged;
+            return names;
         }
-
         /// <summary>
         /// Writes the following into the managed VRCExpressionParameters asset:
         ///   SafeBool scheme:
@@ -776,11 +696,119 @@ namespace ASMLite.Editor
                 return;
             }
 
-            var merged = BuildExpressionParamsWithLegacyPreservation(
+            // Calculate total count based on scheme and current avatar schema.
+            int controlParamCount = (scheme == ControlScheme.SafeBool) ? (slotCount * 3) : 1;
+            int totalCount = controlParamCount + (slotCount * avatarParams.Count);
+            var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
+
+            // Control params: synced triggers, not saved.
+            if (scheme == ControlScheme.SafeBool)
+            {
+                for (int slot = 1; slot <= slotCount; slot++)
+                {
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Save",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Load",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_S{slot}_Clear",
+                        valueType     = VRCExpressionParameters.ValueType.Bool,
+                        defaultValue  = 0f,
+                        saved         = false,
+                        networkSynced = true,
+                    });
+                }
+            }
+            else
+            {
+                generated.Add(new VRCExpressionParameters.Parameter
+                {
+                    name          = "ASMLite_Ctrl",
+                    valueType     = VRCExpressionParameters.ValueType.Int,
+                    defaultValue  = 0f,
+                    saved         = false,
+                    networkSynced = true,
+                });
+            }
+
+            // Use stable merge of backup key names (current schema + legacy backup keys).
+            var backupNames = BuildBackupParamNamesWithLegacyPreservation(
                 slotCount,
-                avatarParams,
-                scheme,
-                paramsAsset.parameters);
+                avatarParams.Select(p => p.name).ToList(),
+                paramsAsset.parameters?.Select(p => p?.name).ToArray());
+
+            var byName = new Dictionary<string, VRCExpressionParameters.Parameter>(StringComparer.Ordinal);
+            foreach (var p in avatarParams)
+                byName[p.name] = p;
+
+            int preservedLegacyCount = 0;
+            foreach (var name in backupNames)
+            {
+                const string prefix = "ASMLite_Bak_S";
+                int prefixLen = prefix.Length;
+
+                int firstUnderscore = name.IndexOf('_', prefixLen);
+                if (firstUnderscore < 0)
+                    continue;
+
+                string sourceParamName = name.Substring(firstUnderscore + 1);
+                if (byName.TryGetValue(sourceParamName, out var source))
+                {
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = name,
+                        valueType     = source.valueType,
+                        defaultValue  = source.defaultValue,
+                        saved         = true,
+                        networkSynced = false,
+                    });
+                }
+                else
+                {
+                    var existing = paramsAsset.parameters?.FirstOrDefault(p => p != null && p.name == name);
+                    if (existing != null)
+                    {
+                        generated.Add(new VRCExpressionParameters.Parameter
+                        {
+                            name          = existing.name,
+                            valueType     = existing.valueType,
+                            defaultValue  = existing.defaultValue,
+                            saved         = true,
+                            networkSynced = false,
+                        });
+                        preservedLegacyCount++;
+                    }
+                }
+            }
+
+#if ASM_LITE_VERBOSE
+            if (preservedLegacyCount > 0)
+                Debug.Log($"[ASM-Lite] Preserved {preservedLegacyCount} legacy backup parameter(s) during schema rebuild.");
+#endif
+
+            // Final dedup by name as a last guard against stale duplicates on disk.
+            var seen = new HashSet<string>();
+            var merged = new List<VRCExpressionParameters.Parameter>(generated.Count);
+            foreach (var p in generated)
+            {
+                if (seen.Add(p.name))
+                    merged.Add(p);
+                else
+                    Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from generated output: '{p.name}'");
+            }
 
             paramsAsset.parameters = merged.ToArray();
 

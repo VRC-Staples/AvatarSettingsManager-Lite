@@ -233,100 +233,49 @@ namespace ASMLite.Tests.Editor
         // ── Expression param schema preservation ─────────────────────────────
 
         [Test]
-        public void BuildExpressionParamsWithLegacyPreservation_KeepsLegacyBackups_OnSlotExpansion()
+        public void BuildBackupParamNamesWithLegacyPreservation_KeepsLegacyBackups_OnSlotExpansion()
         {
-            var avatarParams = new List<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter>
+            var avatarParamNames = new List<string> { "Hat", "Hue" };
+            var existingNames = new[]
             {
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "Hat", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 0f, saved = false, networkSynced = true
-                },
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "Hue", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float,
-                    defaultValue = 0.5f, saved = false, networkSynced = true
-                },
+                "ASMLite_Bak_S1_Hat",
+                "ASMLite_Bak_S2_Hue",
+                "ASMLite_Bak_S1_LegacyRemovedParam"
             };
 
-            // Existing from old 2-slot build plus one legacy key that should survive.
-            var existing = new[]
-            {
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ASMLite_Bak_S1_Hat", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 1f, saved = true, networkSynced = false
-                },
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ASMLite_Bak_S2_Hue", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float,
-                    defaultValue = 0.75f, saved = true, networkSynced = false
-                },
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ASMLite_Bak_S1_LegacyRemovedParam", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Int,
-                    defaultValue = 3f, saved = true, networkSynced = false
-                }
-            };
-
-            var result = ASMLiteBuilder.BuildExpressionParamsWithLegacyPreservation(
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
                 slotCount: 3,
-                avatarParams: avatarParams,
-                scheme: ControlScheme.SafeBool,
-                existingParams: existing);
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
 
-            // Current schema keys should exist for new slot.
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S3_Hat"));
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S3_Hue"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hue"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hue"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_LegacyRemovedParam"));
 
-            // Existing slot keys remain present by stable naming.
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S1_Hat"));
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S2_Hue"));
-
-            // Legacy removed key is preserved.
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S1_LegacyRemovedParam"));
-
-            // No duplicates by name.
-            var duplicateCount = result.GroupBy(p => p.name).Count(g => g.Count() > 1);
+            var duplicateCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
             Assert.AreEqual(0, duplicateCount);
         }
 
         [Test]
-        public void BuildExpressionParamsWithLegacyPreservation_DoesNotKeepLegacyControlParams()
+        public void BuildBackupParamNamesWithLegacyPreservation_IgnoresLegacyControlParams()
         {
-            var avatarParams = new List<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter>
+            var avatarParamNames = new List<string> { "ToggleA" };
+            var existingNames = new[]
             {
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ToggleA", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 0f
-                }
+                "ASMLite_S1_Save",
+                "ASMLite_Bak_S1_Obsolete"
             };
 
-            // Simulate previous SafeBool schema while switching to CompactInt.
-            var existing = new[]
-            {
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ASMLite_S1_Save", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 0f, saved = false, networkSynced = true
-                },
-                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
-                {
-                    name = "ASMLite_Bak_S1_Obsolete", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float,
-                    defaultValue = 0.25f, saved = true, networkSynced = false
-                }
-            };
-
-            var result = ASMLiteBuilder.BuildExpressionParamsWithLegacyPreservation(
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
                 slotCount: 1,
-                avatarParams: avatarParams,
-                scheme: ControlScheme.CompactInt,
-                existingParams: existing);
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
 
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Ctrl"), "Current CompactInt control param should exist");
-            Assert.IsFalse(result.Any(p => p.name == "ASMLite_S1_Save"), "Legacy SafeBool control param should not be preserved");
-            Assert.IsTrue(result.Any(p => p.name == "ASMLite_Bak_S1_Obsolete"), "Legacy backup should be preserved");
+            Assert.IsFalse(result.Contains("ASMLite_S1_Save"), "Legacy SafeBool control key should not be preserved");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Obsolete"), "Legacy backup key should be preserved");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleA"), "Current backup key should be present");
         }
     }
 }
