@@ -9,7 +9,7 @@ namespace ASMLite.Tests.Editor
 {
     /// <summary>
     /// Regression tests for ASMLiteBuilder public surface.
-    /// These are EditMode tests -- no Play mode or asset pipeline required.
+    /// These are EditMode tests: no Play mode or asset pipeline required.
     /// </summary>
     [TestFixture]
     public class ASMLiteBuilderTests
@@ -139,7 +139,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void CompactInt_Encoding_IdleValue_IsZero()
         {
-            // Value 0 = idle -- no action in progress.
+            // Value 0 = idle: no action in progress.
             // All encoded action values must be > 0.
             for (int slot = 1; slot <= 8; slot++)
             {
@@ -169,65 +169,23 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── SafeBool parameter name convention ────────────────────────────────
+        // ── Shared control parameter naming ─────────────────────────────────
 
         [Test]
-        [TestCase(1, "ASMLite_S1_Save", "ASMLite_S1_Load", "ASMLite_S1_Clear")]
-        [TestCase(4, "ASMLite_S4_Save", "ASMLite_S4_Load", "ASMLite_S4_Clear")]
-        [TestCase(8, "ASMLite_S8_Save", "ASMLite_S8_Load", "ASMLite_S8_Clear")]
-        public void SafeBool_ParameterNames_MatchExpectedFormat(
-            int slot, string expectedSave, string expectedLoad, string expectedClear)
+        public void ControlParam_Name_IsASMLiteCtrl()
         {
-            string save  = $"ASMLite_S{slot}_Save";
-            string load  = $"ASMLite_S{slot}_Load";
-            string clear = $"ASMLite_S{slot}_Clear";
-
-            Assert.AreEqual(expectedSave,  save);
-            Assert.AreEqual(expectedLoad,  load);
-            Assert.AreEqual(expectedClear, clear);
+            const string controlParam = "ASMLite_Ctrl";
+            Assert.AreEqual("ASMLite_Ctrl", controlParam);
         }
 
-        [Test]
-        public void SafeBool_ParameterNames_AllHaveASMLitePrefix()
-        {
-            for (int slot = 1; slot <= 8; slot++)
-            {
-                Assert.IsTrue($"ASMLite_S{slot}_Save".StartsWith("ASMLite_"));
-                Assert.IsTrue($"ASMLite_S{slot}_Load".StartsWith("ASMLite_"));
-                Assert.IsTrue($"ASMLite_S{slot}_Clear".StartsWith("ASMLite_"));
-            }
-        }
-
-        // ── Synced bit count calculation ──────────────────────────────────────
+        // ── Synced bit cost for ASM-Lite control triggers ───────────────────
 
         [Test]
-        [TestCase(ControlScheme.CompactInt, 1, 8)]
-        [TestCase(ControlScheme.CompactInt, 8, 8)]
-        [TestCase(ControlScheme.SafeBool,   1, 3)]
-        [TestCase(ControlScheme.SafeBool,   2, 6)]
-        [TestCase(ControlScheme.SafeBool,   8, 24)]
-        public void SyncedBits_MatchExpectedValues(ControlScheme scheme, int slotCount, int expectedBits)
+        public void SyncedBits_ControlTriggers_AreZero()
         {
-            int bits = scheme == ControlScheme.CompactInt
-                ? 8
-                : 3 * slotCount;
-
-            Assert.AreEqual(expectedBits, bits,
-                $"Scheme={scheme}, slots={slotCount}");
-        }
-
-        [Test]
-        public void SyncedBits_NeverExceed256ForAnyValidConfig()
-        {
-            foreach (ControlScheme scheme in System.Enum.GetValues(typeof(ControlScheme)))
-            {
-                for (int slots = 1; slots <= 8; slots++)
-                {
-                    int bits = scheme == ControlScheme.CompactInt ? 8 : 3 * slots;
-                    Assert.LessOrEqual(bits, 256,
-                        $"Scheme={scheme}, slots={slots} exceeds 256 synced bits");
-                }
-            }
+            // Control trigger params are local-only (networkSynced=false).
+            int bits = 0;
+            Assert.AreEqual(0, bits);
         }
 
         // ── Expression param schema preservation ─────────────────────────────

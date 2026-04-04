@@ -109,6 +109,10 @@ At build time, ASM-Lite:
 
 Backup parameters (`ASMLite_Bak_*`) and default parameters (`ASMLite_Def_*`) are local-only and not synced, so they do not consume the 256-bit expression parameter sync budget.
 
+The control trigger parameter (`ASMLite_Ctrl`) is also local-only and never networked. This means ASM-Lite takes **zero synced bits** from your parameter budget regardless of slot count.
+
+> Special thanks to **[Nanochip](https://jinxxy.com/Nanochip)** for pointing out that synced parameters were never necessary here in the first place.
+
 ---
 
 ## Building from Source
@@ -126,6 +130,13 @@ Releases are published automatically via GitHub Actions. The VPM listing rebuild
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for a full version history.
+
+---
+
+## Thanks
+
+- **[Blue Angel](https://payhip.com/BlueAngel)** - for the challenge that started this: proving a Settings Manager could work without OSC and be fully Quest compatible.
+- **[Nanochip](https://jinxxy.com/Nanochip)** - for the insight that no synced parameters were needed at all, leading to a zero-bit footprint.
 
 ---
 

@@ -81,7 +81,7 @@ namespace ASMLite.Tests.Editor
         public void IconMode_MultiColor_IsZero()
         {
             Assert.AreEqual(0, (int)IconMode.MultiColor,
-                "MultiColor must be ordinal 0 -- it is the default and first in dropdown");
+                "MultiColor must be ordinal 0: it is the default and first in dropdown");
         }
 
         [Test]
@@ -104,7 +104,7 @@ namespace ASMLite.Tests.Editor
         public void ControlScheme_SafeBool_IsZero()
         {
             Assert.AreEqual(0, (int)ControlScheme.SafeBool,
-                "SafeBool must be ordinal 0 -- it is the default");
+                "SafeBool must be ordinal 0: it is the default");
         }
 
         [Test]
