@@ -302,5 +302,40 @@ namespace ASMLite.Editor
             list.Add(item);
         }
 
+        /// <summary>
+        /// Returns true if the given GameObject has a VRCFury FullController component
+        /// whose <c>prms</c> list is non-empty. A non-empty prms list means the prefab
+        /// instance was created by an older version of ASM-Lite that registered
+        /// expression parameters via VRCFury's merge path, causing double-registration
+        /// and 2 extra synced parameters in the avatar.
+        ///
+        /// Returns false if VRCFury is not installed, the component is not present,
+        /// or the prms list is already empty (current behaviour).
+        /// </summary>
+        public static bool HasStalePrmsEntry(GameObject go)
+        {
+            if (go == null) return false;
+
+            EnsureReflectionCache();
+            if (s_fullControllerType == null) return false;
+
+            Type vrcfuryType = FindType("VF.Model.VRCFury");
+            if (vrcfuryType == null) return false;
+
+            var vrcfuryComp = go.GetComponent(vrcfuryType);
+            if (vrcfuryComp == null) return false;
+
+            if (s_contentField == null) return false;
+            object content = s_contentField.GetValue(vrcfuryComp);
+            if (content == null || !s_fullControllerType.IsInstanceOfType(content)) return false;
+
+            FieldInfo prmsField = s_fullControllerType.GetField(
+                "prms", BindingFlags.Public | BindingFlags.Instance);
+            if (prmsField == null) return false;
+
+            var list = prmsField.GetValue(content) as IList;
+            return list != null && list.Count > 0;
+        }
+
     }
 }
