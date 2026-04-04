@@ -39,18 +39,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void DefaultControlScheme_IsSafeBool()
-        {
-            var go = new GameObject("TestAvatar");
-            var component = go.AddComponent<ASMLiteComponent>();
-
-            Assert.AreEqual(ControlScheme.SafeBool, component.controlScheme,
-                "Default controlScheme should be SafeBool");
-
-            Object.DestroyImmediate(go);
-        }
-
-        [Test]
         public void DefaultActionIconMode_IsDefault()
         {
             var go = new GameObject("TestAvatar");
@@ -96,22 +84,6 @@ namespace ASMLite.Tests.Editor
         {
             Assert.AreEqual(2, (int)IconMode.Custom,
                 "Custom must be ordinal 2");
-        }
-
-        // ── ControlScheme enum ordinals ───────────────────────────────────────
-
-        [Test]
-        public void ControlScheme_SafeBool_IsZero()
-        {
-            Assert.AreEqual(0, (int)ControlScheme.SafeBool,
-                "SafeBool must be ordinal 0: it is the default");
-        }
-
-        [Test]
-        public void ControlScheme_CompactInt_IsOne()
-        {
-            Assert.AreEqual(1, (int)ControlScheme.CompactInt,
-                "CompactInt must be ordinal 1");
         }
 
         // ── ActionIconMode enum ordinals ──────────────────────────────────────

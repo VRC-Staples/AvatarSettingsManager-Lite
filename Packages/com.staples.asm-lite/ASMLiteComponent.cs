@@ -32,17 +32,6 @@ namespace ASMLite
     }
 
     /// <summary>
-    /// Controls how ASM-Lite encodes slot control parameters.
-    /// SafeBool  : 3 synced Bool parameters per slot (simplest, costs 3×slotCount bits).
-    /// CompactInt: 1 shared synced Int for all slots (costs 8 bits regardless of slot count).
-    /// </summary>
-    public enum ControlScheme
-    {
-        SafeBool   = 0,
-        CompactInt = 1,
-    }
-
-    /// <summary>
     /// ASM-Lite component. Add this to an avatar root (or any child GameObject) to
     /// enable the ASM-Lite slot system. Implements IEditorOnly so the VRChat SDK
     /// strips the component from the build, and IPreprocessCallbackBehaviour so the
@@ -80,12 +69,6 @@ namespace ASMLite
         /// </summary>
         [SerializeField]
         public Texture2D[] customIcons = new Texture2D[0];
-
-        /// <summary>
-        /// Which control parameter encoding scheme to use for synced slot operations.
-        /// </summary>
-        [SerializeField]
-        public ControlScheme controlScheme = ControlScheme.SafeBool;
 
         /// <summary>
         /// Which icon set to use for the Save, Load, and Clear Preset action buttons.
