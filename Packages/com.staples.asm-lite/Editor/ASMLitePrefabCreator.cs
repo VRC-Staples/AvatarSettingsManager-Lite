@@ -198,7 +198,7 @@ namespace ASMLite.Editor
                 (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
                 ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
                 ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
-                ", globalParams=[\"*\"]");
+                ", globalParams=[]");
 #endif
 
             // ── Save as prefab ───────────────────────────────────────────────
