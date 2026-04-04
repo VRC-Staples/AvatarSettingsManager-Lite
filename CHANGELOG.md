@@ -4,6 +4,14 @@ All notable changes to ASM-Lite are documented here.
 
 ---
 
+## [1.0.6] - 2026-04-04
+
+### Fixed
+- Removed the `prms` (expression parameters) entry from the VRCFury FullController in the prefab. Expression parameters are written directly by `ASMLiteBuilder` at preprocess order -10; having VRCFury also merge the same params asset via FullController caused a double-registration that produced 2 extra synced parameters in the avatar's expression parameter list. The parameters asset (`ASMLite_Params.asset`) is retained on disk and still populated at build time - VRCFury no longer reads it.
+- Rebuild ASM-Lite now detects stale `prms` entries on existing prefab instances (from pre-1.0.5 installs) and automatically replaces the prefab before baking. All settings (slot count, icon mode, custom icons) are preserved across the migration. The replacement is undoable as a single operation.
+
+---
+
 ## [1.0.5] - 2026-04-04
 
 ### Changed
