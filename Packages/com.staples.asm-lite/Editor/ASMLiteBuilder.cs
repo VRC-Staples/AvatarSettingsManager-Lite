@@ -515,9 +515,21 @@ namespace ASMLite.Editor
             var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
             var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
 
+            var seenDriverParams = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < avatarParams.Count; i++)
             {
                 var p = avatarParams[i];
+                if (p == null || string.IsNullOrWhiteSpace(p.name))
+                    continue;
+
+                // Guard against duplicate-discovered parameter names. Duplicate names
+                // can cause VRCAvatarParameterDriver parameter assignment to throw.
+                if (!seenDriverParams.Add(p.name))
+                {
+                    Debug.LogWarning($"[ASM-Lite] Duplicate discovered parameter skipped in slot driver: '{p.name}'");
+                    continue;
+                }
+
                 saveParams.Add(new VRC_AvatarParameterDriver.Parameter
                 {
                     type   = VRC_AvatarParameterDriver.ChangeType.Copy,
