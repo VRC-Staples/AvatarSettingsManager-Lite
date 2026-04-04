@@ -187,8 +187,8 @@ namespace ASMLite.Editor
                 AppendToList(fullController, s_fullControllerType, "prms", entry);
             }
 
-            // Configure globalParams = ["*"]
-            SetGlobalParams(fullController, s_fullControllerType, "*");
+            // globalParams intentionally left empty: all ASM-Lite parameters are
+            // local-only (networkSynced=false) and must not be promoted to global scope.
 
             // Assign content via cached field
             s_contentField?.SetValue(vrcfuryComp, fullController);
@@ -325,19 +325,5 @@ namespace ASMLite.Editor
             list.Add(item);
         }
 
-        /// <summary>
-        /// Sets globalParams on the FullController to a single-entry list containing
-        /// the given pattern (typically "*" to make all parameters global).
-        /// </summary>
-        private static void SetGlobalParams(object fullController, Type fullControllerType, string pattern)
-        {
-            FieldInfo field = fullControllerType.GetField("globalParams",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (field == null) return;
-
-            var list = field.GetValue(fullController) as IList ?? new List<string>();
-            list.Add(pattern);
-            field.SetValue(fullController, list);
-        }
     }
 }
