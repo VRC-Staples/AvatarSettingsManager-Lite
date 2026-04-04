@@ -959,12 +959,12 @@ namespace ASMLite.Editor
             if (component == null)
                 return;
 
-            // Check for stale prms entry from pre-1.0.6 prefab instances. If present,
+            // Check for stale prms entry from pre-1.0.5 prefab instances. If present,
             // destroy the old instance and re-add a fresh prefab so the double-path
             // that produces 2 extra synced parameters is removed before baking.
             if (ASMLitePrefabCreator.HasStalePrmsEntry(component.gameObject))
             {
-                Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.6). Replacing with current prefab to remove the double-registration path.");
+                Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
 
                 // Capture settings before destroying the instance.
                 int savedSlotCount          = component.slotCount;
