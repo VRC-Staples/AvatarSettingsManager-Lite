@@ -13,8 +13,8 @@ namespace ASMLite.Editor
     ///   • Avatar hierarchy picker
     ///   • Slot count configuration (editable before add; locked after)
     ///   • Status / diagnostics panel
-    ///   • "Add ASM-Lite Prefab" button -- adds prefab and immediately bakes assets
-    ///   • "Rebuild ASM-Lite" button -- re-bakes when prefab already present
+    ///   • "Add ASM-Lite Prefab" button: adds prefab and immediately bakes assets
+    ///   • "Rebuild ASM-Lite" button: re-bakes when prefab already present
     /// </summary>
     public class ASMLiteWindow : EditorWindow
     {
@@ -23,16 +23,13 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
-        // Pending slot count -- shown before the prefab is added, applied on add.
+        // Pending slot count: shown before the prefab is added, applied on add.
         private int _pendingSlotCount = 3;
 
-        // Pending control scheme -- shown before the prefab is added, applied on add.
-        private ControlScheme _pendingControlScheme = ControlScheme.SafeBool;
-
-        // Cached component reference -- rebuilt when avatar or scene changes.
+        // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
 
-        // Cached LINQ Count() result -- avoids per-repaint enumeration.
+        // Cached LINQ Count() result: avoids per-repaint enumeration.
         // -1 means invalid; recomputed lazily in DrawStatus.
         private int _cachedCustomParamCount = -1;
 
@@ -40,25 +37,23 @@ namespace ASMLite.Editor
         // -1 means no build has run yet this session.
         private int _discoveredParamCount = -1;
 
-        // Pending icon mode -- shown before the prefab is added, applied on add.
+        // Pending icon mode: shown before the prefab is added, applied on add.
         private IconMode _pendingIconMode = IconMode.MultiColor;
 
-        // Pending gear index -- shown before the prefab is added, applied on add.
+        // Pending gear index: shown before the prefab is added, applied on add.
         private int _pendingSelectedGearIndex = 0;
 
-        // Pending custom icons -- shown before the prefab is added, applied on add.
+        // Pending custom icons: shown before the prefab is added, applied on add.
         private Texture2D[] _pendingCustomIcons = new Texture2D[3];
 
-        // Pending action icon mode -- shown before the prefab is added, applied on add.
+        // Pending action icon mode: shown before the prefab is added, applied on add.
         private ActionIconMode _pendingActionIconMode = ActionIconMode.Default;
 
-        // Pending custom action icons -- used when _pendingActionIconMode is Custom.
+        // Pending custom action icons: used when _pendingActionIconMode is Custom.
         private Texture2D _pendingCustomSaveIcon;
         private Texture2D _pendingCustomLoadIcon;
         private Texture2D _pendingCustomClearIcon;
 
-        // Icons foldout -- collapsed by default (progressive disclosure)
-        private bool _showIconSettings = false;
 
         // ── Wheel Preview Cache ───────────────────────────────────────────────
 
@@ -70,7 +65,7 @@ namespace ASMLite.Editor
         private Texture2D   _previewClearIcon;
         private Texture2D   _previewBackIcon;
 
-        // Signature of the last preview build -- used to detect staleness.
+        // Signature of the last preview build: used to detect staleness.
         private int    _previewSlotCount      = -1;
         private int    _previewIconMode       = -1;
         private int    _previewGearIndex      = -1;
@@ -96,14 +91,6 @@ namespace ASMLite.Editor
         private static readonly GUIContent s_slotCountLabelPending =
             new GUIContent("Slot Count",
                 "How many preset slots to add. Each slot lets you save and load a full set of avatar settings.");
-
-        private static readonly GUIContent s_schemeLabelActive =
-            new GUIContent("Control Scheme",
-                "How slot buttons are wired up. SafeBool is simpler; CompactInt saves sync budget on avatars with lots of slots.");
-
-        private static readonly GUIContent s_schemeLabelPending =
-            new GUIContent("Control Scheme",
-                "How slot buttons will be wired up. SafeBool is simpler; CompactInt saves sync budget on avatars with lots of slots.");
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -138,15 +125,7 @@ namespace ASMLite.Editor
                     EditorGUILayout.Space(8);
                     DrawSettings();
                     SectionSeparator();
-                    _showIconSettings = EditorGUILayout.Foldout(
-                        _showIconSettings, "Icon Settings", toggleOnLabelClick: true);
-                    if (_showIconSettings)
-                    {
-                        DrawIconMode();
-                        DrawActionIcons();
-                        EditorGUILayout.Space(8);
-                        DrawWheelPreview();
-                    }
+                    DrawIconSettingsSection();
                     SectionSeparator();
                     DrawStatus();
                     EditorGUILayout.Space(16);
@@ -186,7 +165,7 @@ namespace ASMLite.Editor
 
         private void DrawHeader()
         {
-            // Load banner texture once -- null after domain reload until first draw.
+            // Load banner texture once: null after domain reload until first draw.
             if (_bannerTexture == null)
                 _bannerTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(BannerPath);
 
@@ -212,7 +191,7 @@ namespace ASMLite.Editor
                 // Fallback when banner hasn't been imported yet.
                 EditorGUILayout.Space(6);
                 EditorGUILayout.LabelField(".Staples. ASM-Lite", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField("Avatar Settings Manager -- Lite Edition", EditorStyles.miniLabel);
+                EditorGUILayout.LabelField("Avatar Settings Manager: Lite Edition", EditorStyles.miniLabel);
             }
         }
 
@@ -254,11 +233,11 @@ namespace ASMLite.Editor
 
             var component = GetOrRefreshComponent();
 
-            // Use the Unity-aware null check (operator bool) -- a C# != null check
+            // Use the Unity-aware null check (operator bool): a C# != null check
             // passes for destroyed UnityEngine.Objects, which would throw on field access.
             if (component)
             {
-                // Prefab is present -- slot count still editable, but a rebuild
+                // Prefab is present: slot count still editable, but a rebuild
                 // is needed to apply changes to the generated assets.
                 int newSlot = EditorGUILayout.IntSlider(
                     s_slotCountLabelActive,
@@ -277,43 +256,39 @@ namespace ASMLite.Editor
             }
             else
             {
-                // No prefab yet -- user can configure before adding.
+                // No prefab yet: user can configure before adding.
                 _pendingSlotCount = EditorGUILayout.IntSlider(
                     s_slotCountLabelPending,
                     _pendingSlotCount, 1, 8);
             }
 
-            // ── Control scheme ──
-            if (component)
-            {
-                var newScheme = (ControlScheme)EditorGUILayout.EnumPopup(
-                    s_schemeLabelActive, component.controlScheme);
-                if (newScheme != component.controlScheme)
-                {
-                    Undo.RecordObject(component, "Change ASM-Lite Control Scheme");
-                    component.controlScheme = newScheme;
-                    EditorUtility.SetDirty(component);
-                }
-            }
-            else
-            {
-                _pendingControlScheme = (ControlScheme)EditorGUILayout.EnumPopup(
-                    s_schemeLabelPending, _pendingControlScheme);
-            }
 
-            // Scheme description HelpBox -- resolve from whichever source is active
-            var activeScheme = component ? component.controlScheme : _pendingControlScheme;
-            string schemeDesc = activeScheme == ControlScheme.CompactInt
-                ? "Compact (1 shared Int): Uses a single synced Int parameter for all slots.\nMaximum parameter budget savings -- recommended for avatars with many other synced parameters."
-                : "Safe (3 bools/slot): Uses 3 synced Bool parameters per slot.\nSimplest setup -- recommended for avatars with a small parameter budget.";
-            EditorGUILayout.HelpBox(schemeDesc, MessageType.None);
+        }
+
+        private void DrawIconSettingsSection()
+        {
+            EditorGUILayout.LabelField("Icon Settings", EditorStyles.boldLabel);
+            EditorGUILayout.Space(6);
+
+            EditorGUILayout.BeginVertical("box");
+            DrawIconMode();
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(6);
+
+            EditorGUILayout.BeginVertical("box");
+            DrawActionIcons();
+            EditorGUILayout.EndVertical();
+
+            EditorGUILayout.Space(8);
+            DrawWheelPreview();
         }
 
         private void DrawIconMode()
         {
             var component = GetOrRefreshComponent();
 
-            EditorGUILayout.LabelField("Icons", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Slot Icons", EditorStyles.miniBoldLabel);
 
             // Determine current mode and slot count based on whether component exists
             int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
@@ -385,7 +360,7 @@ namespace ASMLite.Editor
                 case IconMode.MultiColor:
                 {
                     EditorGUILayout.HelpBox(
-                        "Each slot gets a unique gear color.\nSlots 1\u20134: Blue, Red, Green, Purple\nSlots 5\u20138: Cyan, Orange, Pink, Yellow",
+                        "Each slot gets a unique gear color.\nSlots 1-4: Blue, Red, Green, Purple\nSlots 5-8: Cyan, Orange, Pink, Yellow",
                         MessageType.None);
                     break;
                 }
@@ -422,12 +397,14 @@ namespace ASMLite.Editor
         /// <summary>
         /// Draws the Action Icons section. Allows the user to choose between the
         /// bundled Save/Load/Clear Preset icons (Default) or custom Texture2D icons
-        /// (Custom). Custom icons apply globally -- the same three textures are used
+        /// (Custom). Custom icons apply globally: the same three textures are used
         /// across all slot submenus.
         /// </summary>
         private void DrawActionIcons()
         {
             var component = GetOrRefreshComponent();
+
+            EditorGUILayout.LabelField("Action Icons", EditorStyles.miniBoldLabel);
 
             ActionIconMode currentMode = component ? component.actionIconMode : _pendingActionIconMode;
 
@@ -613,9 +590,9 @@ namespace ASMLite.Editor
                 _previewBackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
                     "Packages/com.staples.asm-lite/Icons/BackArrow.png") ?? _previewFallback;
 
-            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
             EditorGUILayout.LabelField(
-                "Approximate representation of how your menus will appear in VRChat.",
+                "Preview of generated menu icon placement.",
                 EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(4);
 
@@ -698,7 +675,7 @@ namespace ASMLite.Editor
             var origColor   = GUI.color;
             var origHandles = Handles.color;
 
-            // Background fill (full circle approximated by square -- Handles clips it).
+            // Background fill (full circle approximated by square: Handles clips it).
             GUI.color = colorMain;
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = origColor;
@@ -707,7 +684,7 @@ namespace ASMLite.Editor
             Handles.color = colorBorder;
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
-            // Segment dividers -- 2px lines between icons, offset by half a step.
+            // Segment dividers: 2px lines between icons, offset by half a step.
             float angleStep = 360f / count;
             Handles.color = new Color(colorBorder.r, colorBorder.g, colorBorder.b, 0.55f);
             for (int i = 0; i < count; i++)
@@ -772,7 +749,7 @@ namespace ASMLite.Editor
                 {
                     if (_discoveredParamCount >= 0)
                     {
-                        // Post-build count -- includes VRCFury Toggle/FullController params.
+                        // Post-build count: includes VRCFury Toggle/FullController params.
                         EditorGUILayout.HelpBox(
                             $"✓ {_discoveredParamCount} custom parameter(s) backed up across " +
                             $"{component.slotCount} slot(s).",
@@ -790,7 +767,7 @@ namespace ASMLite.Editor
                             }
 
                             EditorGUILayout.HelpBox(
-                                $"✓ {_cachedCustomParamCount} custom parameter(s) detected -- rebuild to include VRCFury parameters.",
+                                $"✓ {_cachedCustomParamCount} custom parameter(s) detected: rebuild to include VRCFury parameters.",
                                 MessageType.Info);
                         }
                         else
@@ -803,7 +780,7 @@ namespace ASMLite.Editor
                 }
                 catch (System.Exception)
                 {
-                    // Asset is mid-reimport -- show a neutral message and wait for
+                    // Asset is mid-reimport: show a neutral message and wait for
                     // the next repaint when it will be stable again.
                     EditorGUILayout.HelpBox(
                         "⚠ Expression parameters are currently being imported. Please wait.",
@@ -814,12 +791,7 @@ namespace ASMLite.Editor
                         Repaint();
                 }
 
-                int syncedBits = component.controlScheme == ControlScheme.CompactInt
-                    ? 8
-                    : 3 * component.slotCount;
-                EditorGUILayout.HelpBox(
-                    $"ASM-Lite uses {syncedBits} / 256 synced bits",
-                    MessageType.Info);
+
             }
             else
             {
@@ -871,7 +843,7 @@ namespace ASMLite.Editor
             {
                 if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
                 {
-                    // Defer past the current OnGUI pass -- CreatePrefab calls
+                    // Defer past the current OnGUI pass: CreatePrefab calls
                     // AssetDatabase.Refresh() which can trigger re-entrant layout
                     // events and leave BeginScrollView unmatched.
                     EditorApplication.delayCall += AddPrefabToAvatar;
@@ -881,7 +853,7 @@ namespace ASMLite.Editor
 
         // ── Logic ─────────────────────────────────────────────────────────────
 
-        // Per-frame component cache -- refreshed once per OnGUI call, not once per draw section.
+        // Per-frame component cache: refreshed once per OnGUI call, not once per draw section.
         private int _lastRefreshFrame = -1;
 
         private ASMLiteComponent GetOrRefreshComponent()
@@ -893,7 +865,7 @@ namespace ASMLite.Editor
             }
 
             // Refresh once per editor frame. Multiple Draw* calls in the same OnGUI
-            // invocation reuse the cached result -- avoids 3× GetComponentInChildren
+            // invocation reuse the cached result: avoids 3× GetComponentInChildren
             // per repaint and ensures consistent state within a single frame.
             int frame = Time.frameCount;
             if (frame != _lastRefreshFrame)
@@ -945,7 +917,6 @@ namespace ASMLite.Editor
             if (component != null)
             {
                 component.slotCount = _pendingSlotCount;
-                component.controlScheme = _pendingControlScheme;
                 component.iconMode = _pendingIconMode;
                 component.selectedGearIndex = _pendingSelectedGearIndex;
                 component.actionIconMode = _pendingActionIconMode;
@@ -1039,7 +1010,6 @@ namespace ASMLite.Editor
             if (existing != null)
             {
                 _pendingSlotCount = existing.slotCount;
-                _pendingControlScheme = existing.controlScheme;
                 _pendingIconMode = existing.iconMode;
                 _pendingSelectedGearIndex = existing.selectedGearIndex;
                 _pendingActionIconMode = existing.actionIconMode;

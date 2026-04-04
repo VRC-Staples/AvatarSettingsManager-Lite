@@ -5,7 +5,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// Regression tests for ASMLiteAssetPaths -- verifies array sizes, path
+    /// Regression tests for ASMLiteAssetPaths: verifies array sizes, path
     /// format consistency, and alignment with enum definitions.
     /// ASMLiteAssetPaths is internal to ASMLite.Editor; tests live in the
     /// same assembly family via the test asmdef reference.
@@ -21,7 +21,7 @@ namespace ASMLite.Tests.Editor
         public void GearIconPaths_HasExactlyEightEntries()
         {
             Assert.AreEqual(8, ASMLiteAssetPaths.GearIconPaths.Length,
-                "GearIconPaths must have 8 entries -- one per gear color");
+                "GearIconPaths must have 8 entries: one per gear color");
         }
 
         [Test]
