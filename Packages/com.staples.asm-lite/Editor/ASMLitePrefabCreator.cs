@@ -1,3 +1,6 @@
+// Add ASM_LITE_VERBOSE to Edit > Project Settings > Player > Scripting Define Symbols
+// to enable verbose build logging throughout this file.
+
 using System;
 using System.Collections;
 using System.Collections.Generic;

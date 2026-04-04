@@ -13,12 +13,15 @@ namespace ASMLite.Editor
         internal const string Prefab        = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
         internal const string GeneratedDir  = "Packages/com.staples.asm-lite/GeneratedAssets";
 
-        // ─── Gear icon assets ─────────────────────────────────────────────────
+        // ─── Action and menu icon paths ───────────────────────────────────────
 
-        /// <summary>
-        /// Package-relative path to the folder containing the built-in gear icons.
-        /// </summary>
-        internal const string GearsDir = "Packages/com.staples.asm-lite/Icons/Gears";
+        internal const string IconSave     = "Packages/com.staples.asm-lite/Icons/Save.png";
+        internal const string IconLoad     = "Packages/com.staples.asm-lite/Icons/Load.png";
+        internal const string IconReset    = "Packages/com.staples.asm-lite/Icons/Reset.png";
+        internal const string IconPresets  = "Packages/com.staples.asm-lite/Icons/SlidersIcon.png";
+        internal const string IconBackArrow = "Packages/com.staples.asm-lite/Icons/BackArrow.png";
+
+        // ─── Gear icon assets ─────────────────────────────────────────────────
 
         /// <summary>
         /// Ordered list of package-relative paths to the built-in gear PNG icons.

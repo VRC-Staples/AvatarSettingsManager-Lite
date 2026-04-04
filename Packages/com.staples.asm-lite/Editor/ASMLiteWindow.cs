@@ -552,11 +552,11 @@ namespace ASMLite.Editor
             else
             {
                 _previewSaveIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Packages/com.staples.asm-lite/Icons/Save.png")  ?? _previewFallback;
+                    ASMLiteAssetPaths.IconSave)  ?? _previewFallback;
                 _previewLoadIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Packages/com.staples.asm-lite/Icons/Load.png")  ?? _previewFallback;
+                    ASMLiteAssetPaths.IconLoad)  ?? _previewFallback;
                 _previewClearIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Packages/com.staples.asm-lite/Icons/Reset.png") ?? _previewFallback;
+                    ASMLiteAssetPaths.IconReset) ?? _previewFallback;
             }
 
             _previewSlotCount      = slotCount;
@@ -588,7 +588,7 @@ namespace ASMLite.Editor
             // Load back arrow once.
             if (_previewBackIcon == null)
                 _previewBackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    "Packages/com.staples.asm-lite/Icons/BackArrow.png") ?? _previewFallback;
+                    ASMLiteAssetPaths.IconBackArrow) ?? _previewFallback;
 
             EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
             EditorGUILayout.LabelField(
