@@ -178,16 +178,6 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("ASMLite_Ctrl", controlParam);
         }
 
-        // ── Synced bit cost for ASM-Lite control triggers ───────────────────
-
-        [Test]
-        public void SyncedBits_ControlTriggers_AreZero()
-        {
-            // Control trigger params are local-only (networkSynced=false).
-            int bits = 0;
-            Assert.AreEqual(0, bits);
-        }
-
         // ── Expression param schema preservation ─────────────────────────────
 
         [Test]
