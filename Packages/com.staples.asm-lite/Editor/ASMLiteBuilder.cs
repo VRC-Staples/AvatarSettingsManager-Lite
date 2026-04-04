@@ -1,3 +1,6 @@
+// Add ASM_LITE_VERBOSE to Edit > Project Settings > Player > Scripting Define Symbols
+// to enable verbose build logging throughout this file.
+
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -35,15 +38,6 @@ namespace ASMLite.Editor
     /// </summary>
     public static class ASMLiteBuilder
     {
-        // ─── Asset paths: see ASMLiteAssetPaths for centralized constants ───
-
-        // ─── Icon paths ───────────────────────────────────────────────────────
-
-        private const string IconSavePath    = "Packages/com.staples.asm-lite/Icons/Save.png";
-        private const string IconLoadPath    = "Packages/com.staples.asm-lite/Icons/Load.png";
-        private const string IconResetPath   = "Packages/com.staples.asm-lite/Icons/Reset.png";
-        private const string IconPresetsPath = "Packages/com.staples.asm-lite/Icons/SlidersIcon.png";
-
         // ─── Reflection cache: VRCFuryBuilder.RunMain ───────────────────────
 
         private static MethodInfo s_vrcfuryRunMain;
@@ -232,6 +226,15 @@ namespace ASMLite.Editor
         /// </summary>
         public static int Build(ASMLiteComponent component)
         {
+            // 0. Validate configuration -- catches bad state from non-window entry points
+            //    (e.g. OnPreprocess during avatar upload where the window slider is bypassed).
+            string validationError = Validate(component);
+            if (validationError != null)
+            {
+                Debug.LogError(validationError);
+                return -1;
+            }
+
             // 1. Find avatar descriptor
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avDesc == null)
@@ -278,17 +281,6 @@ namespace ASMLite.Editor
 #endif
 
             return discoveredParams.Count;
-        }
-
-        /// <summary>
-        /// Removes any previously generated assets. Currently a no-op; reserved for
-        /// future cleanup passes if slot count changes between builds.
-        /// </summary>
-        public static void CleanupGeneratedAssets(ASMLiteComponent component)
-        {
-#if ASM_LITE_VERBOSE
-            Debug.Log($"[ASM-Lite] CleanupGeneratedAssets called for '{component.gameObject.name}': no cleanup required (in-place mutation model).");
-#endif
         }
 
         /// <summary>
@@ -707,13 +699,13 @@ namespace ASMLite.Editor
 
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
-            var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPresetsPath);
+            var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
 
             // Resolve action icons: use component's custom icons when actionIconMode is Custom,
             // falling back to the bundled defaults for any that are null.
-            Texture2D bundledSave  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSavePath);
-            Texture2D bundledLoad  = AssetDatabase.LoadAssetAtPath<Texture2D>(IconLoadPath);
-            Texture2D bundledReset = AssetDatabase.LoadAssetAtPath<Texture2D>(IconResetPath);
+            Texture2D bundledSave  = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
+            Texture2D bundledLoad  = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
+            Texture2D bundledReset = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
 
             Texture2D iconSave, iconLoad, iconReset;
             if (component.actionIconMode == ActionIconMode.Custom)
@@ -730,7 +722,7 @@ namespace ASMLite.Editor
             }
 
             if (iconSave == null)
-                Debug.LogWarning("[ASM-Lite] Save icon not found at " + IconSavePath + ": controls will have no icon.");
+                Debug.LogWarning("[ASM-Lite] Save icon not found at " + ASMLiteAssetPaths.IconSave + ": controls will have no icon.");
 
             // ── Build per-slot icon array BEFORE StartAssetEditing ───────────
             var slotIcons = new Texture2D[slotCount];
