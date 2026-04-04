@@ -39,10 +39,8 @@ namespace ASMLite.Editor
         private static Type      s_fullControllerType;
         private static Type      s_controllerEntryType;
         private static Type      s_menuEntryType;
-        private static Type      s_paramsEntryType;
         private static FieldInfo s_controllerField;
         private static FieldInfo s_menuField;
-        private static FieldInfo s_paramsField;
         private static FieldInfo s_contentField;
 
         // ── EnsureReflectionCache (R025, R024) ────────────────────────────────
@@ -58,15 +56,11 @@ namespace ASMLite.Editor
                 "ControllerEntry", BindingFlags.Public | BindingFlags.NonPublic);
             s_menuEntryType       = s_fullControllerType.GetNestedType(
                 "MenuEntry",        BindingFlags.Public | BindingFlags.NonPublic);
-            s_paramsEntryType     = s_fullControllerType.GetNestedType(
-                "ParamsEntry",      BindingFlags.Public | BindingFlags.NonPublic);
 
             s_controllerField = s_controllerEntryType?.GetField(
                 "controller", BindingFlags.Public | BindingFlags.Instance);
             s_menuField       = s_menuEntryType?.GetField(
                 "menu",        BindingFlags.Public | BindingFlags.Instance);
-            s_paramsField     = s_paramsEntryType?.GetField(
-                "parameters",  BindingFlags.Public | BindingFlags.Instance);
 
             Type vrcfuryType = FindType("VF.Model.VRCFury");
             s_contentField   = vrcfuryType?.GetField(
@@ -89,20 +83,16 @@ namespace ASMLite.Editor
             // ── Load stub assets ─────────────────────────────────────────────
             var fxController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(ASMLiteAssetPaths.FXController);
             var menu         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
-            var prms         = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
 
             if (fxController == null)
                 Debug.LogWarning($"[ASM-Lite] Stub FX controller not found at {ASMLiteAssetPaths.FXController}: FullController will have no controller reference.");
             if (menu == null)
                 Debug.LogWarning($"[ASM-Lite] Stub menu not found at {ASMLiteAssetPaths.Menu}: FullController will have no menu reference.");
-            if (prms == null)
-                Debug.LogWarning($"[ASM-Lite] Stub params not found at {ASMLiteAssetPaths.ExprParams}: FullController will have no params reference.");
 
             // ── Locate VRCFury types via reflection ──────────────────────────
             Type vrcfuryType        = FindType("VF.Model.VRCFury");
             Type guidControllerType = FindType("VF.Model.GuidController");
             Type guidMenuType       = FindType("VF.Model.GuidMenu");
-            Type guidParamsType     = FindType("VF.Model.GuidParams");
 
             if (vrcfuryType == null)
             {
@@ -171,24 +161,11 @@ namespace ASMLite.Editor
                 AppendToList(fullController, s_fullControllerType, "menus", entry);
             }
 
-            // Configure prms list
-            if (s_paramsEntryType != null && prms != null)
-            {
-                object entry = Activator.CreateInstance(s_paramsEntryType);
-
-                if (s_paramsField != null && guidParamsType != null)
-                {
-                    object guidPrms = CreateGuidWrapper(guidParamsType, prms,
-                        ASMLiteAssetPaths.ExprParams, MonoBehaviourFileID);
-                    if (guidPrms != null)
-                        s_paramsField.SetValue(entry, guidPrms);
-                }
-
-                AppendToList(fullController, s_fullControllerType, "prms", entry);
-            }
-
             // globalParams intentionally left empty: all ASM-Lite parameters are
             // local-only (networkSynced=false) and must not be promoted to global scope.
+            // Expression parameters are written directly by ASMLiteBuilder at preprocess
+            // order -10 and must not be re-merged by VRCFury via a prms reference --
+            // that double-path would cause duplicate synced parameters to appear.
 
             // Assign content via cached field
             s_contentField?.SetValue(vrcfuryComp, fullController);
@@ -197,7 +174,7 @@ namespace ASMLite.Editor
             Debug.Log("[ASM-Lite] FullController configured: controller=" +
                 (fxController != null ? ASMLiteAssetPaths.FXController : "null") +
                 ", menu=" + (menu != null ? ASMLiteAssetPaths.Menu : "null") +
-                ", params=" + (prms != null ? ASMLiteAssetPaths.ExprParams : "null") +
+                ", params=none (written directly by ASMLiteBuilder at preprocess order -10)" +
                 ", globalParams=[]");
 #endif
 
