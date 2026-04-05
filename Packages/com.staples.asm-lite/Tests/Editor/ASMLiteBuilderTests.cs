@@ -225,5 +225,158 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Obsolete"), "Legacy backup key should be preserved");
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleA"), "Current backup key should be present");
         }
+
+        // ── P01-P06: BuildBackupParamNamesWithLegacyPreservation edge cases ──
+
+        // P01: slot decrease -- S3/S4 legacy backups preserved when slotCount drops to 2
+        [Test]
+        public void P01_BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved()
+        {
+            var avatarParamNames = new List<string> { "Hat", "Hue" };
+            var existingNames = new[]
+            {
+                "ASMLite_Bak_S1_Hat",
+                "ASMLite_Bak_S1_Hue",
+                "ASMLite_Bak_S2_Hat",
+                "ASMLite_Bak_S2_Hue",
+                "ASMLite_Bak_S3_Hat",
+                "ASMLite_Bak_S3_Hue",
+                "ASMLite_Bak_S4_Hat",
+                "ASMLite_Bak_S4_Hue",
+            };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 2,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
+
+            // Current schema (slots 1-2) must be present.
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hue"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hue"));
+
+            // S3/S4 backups (now outside active slot range) preserved as legacy.
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hat"), "S3 legacy backup must be preserved");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hue"), "S3 legacy backup must be preserved");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S4_Hat"), "S4 legacy backup must be preserved");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S4_Hue"), "S4 legacy backup must be preserved");
+
+            // No duplicates.
+            var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
+            Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
+        }
+
+        // P02: null existingParamNames -- first build, no prior asset
+        [Test]
+        public void P02_BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly()
+        {
+            var avatarParamNames = new List<string> { "ToggleHat", "HairHue" };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 2,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: null);
+
+            Assert.AreEqual(4, result.Count, "2 slots x 2 params = 4 entries");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleHat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_HairHue"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_ToggleHat"));
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_HairHue"));
+        }
+
+        // P03: empty existingParamNames array -- same as first build, no crash
+        [Test]
+        public void P03_BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly()
+        {
+            var avatarParamNames = new List<string> { "ToggleHat" };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 1,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: new string[0]);
+
+            Assert.AreEqual(1, result.Count, "1 slot x 1 param = 1 entry");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleHat"));
+        }
+
+        // P04: duplicate names in existingParamNames -- result must deduplicate
+        [Test]
+        public void P04_BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped()
+        {
+            var avatarParamNames = new List<string> { "Hat" };
+            // Stale asset contains the same entry twice.
+            var existingNames = new[]
+            {
+                "ASMLite_Bak_S1_OldParam",
+                "ASMLite_Bak_S1_OldParam",  // duplicate
+            };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 1,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
+
+            var oldParamOccurrences = result.Count(n => n == "ASMLite_Bak_S1_OldParam");
+            Assert.AreEqual(1, oldParamOccurrences, "Duplicate existing entry must appear exactly once");
+
+            // No duplicates anywhere.
+            var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
+            Assert.AreEqual(0, dupeCount, "Result must not contain any duplicate names");
+        }
+
+        // P05: empty avatarParamNames -- avatar has no expression params
+        [Test]
+        public void P05_BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty()
+        {
+            var avatarParamNames = new List<string>();
+            var existingNames = new[]
+            {
+                "ASMLite_Bak_S1_OldParam",
+            };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 2,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
+
+            // No current-schema entries (no avatar params to back up).
+            Assert.AreEqual(0, result.Count(n => n.StartsWith("ASMLite_Bak_S1_") && n != "ASMLite_Bak_S1_OldParam"),
+                "No current schema entries expected when avatarParamNames is empty");
+
+            // Legacy backup still preserved.
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_OldParam"), "Legacy backup must be preserved even with empty avatar params");
+        }
+
+        // P06: mixed collision -- legacy backups that match the current schema are not duplicated;
+        //      legacy backups for removed params (not in current schema) are appended.
+        [Test]
+        public void P06_BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates()
+        {
+            var avatarParamNames = new List<string> { "ActiveParam" };
+            var existingNames = new[]
+            {
+                // Collides with current schema -- must appear exactly once.
+                "ASMLite_Bak_S1_ActiveParam",
+                // Does not collide -- legacy removed param, must be appended.
+                "ASMLite_Bak_S1_RemovedParam",
+            };
+
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 1,
+                avatarParamNames: avatarParamNames,
+                existingParamNames: existingNames);
+
+            // Current schema entry present once.
+            var activeCount = result.Count(n => n == "ASMLite_Bak_S1_ActiveParam");
+            Assert.AreEqual(1, activeCount, "Current schema name must appear exactly once (no dup from existing)");
+
+            // Legacy removed param appended.
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_RemovedParam"), "Legacy removed param must be preserved");
+
+            // No duplicates.
+            var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
+            Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
+        }
     }
 }

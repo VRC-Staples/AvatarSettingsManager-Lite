@@ -6,9 +6,9 @@ A lightweight prefab that adds Save, Load, and Clear Preset for expression param
 
 ## Overview
 
-ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu with no extra tools needed.
+ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu.
 
-Drop the prefab onto your avatar, configure your slot count and icon style, and click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters and directly injects the FX animator layers, expression parameters, and menu entries into the avatar non-destructively.
+You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters and directly injects the FX animator layers, expression parameters, and menu entries into the avatar non-destructively.
 
 ---
 
