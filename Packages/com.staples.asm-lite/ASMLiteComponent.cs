@@ -158,7 +158,8 @@ namespace ASMLite
             }
             catch (TargetInvocationException ex)
             {
-                Debug.LogError("[ASM-Lite] Build failed.");
+                // Emit a single linked console entry so stack trace and message
+                // appear together and double-click-to-source works correctly.
                 Debug.LogException(ex.InnerException ?? ex);
                 return false;
             }

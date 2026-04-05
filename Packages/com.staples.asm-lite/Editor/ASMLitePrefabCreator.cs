@@ -36,6 +36,25 @@ namespace ASMLite.Editor
         // ── Reflection cache (R025) ───────────────────────────────────────────
         private static readonly Dictionary<string, Type> s_typeCache = new Dictionary<string, Type>();
         private static bool      s_reflInitialized;
+
+        /// <summary>
+        /// Clears the reflection and type caches after a domain reload so stale
+        /// Type objects from the old AppDomain are never reused.
+        /// </summary>
+        [InitializeOnLoadMethod]
+        private static void ClearCaches()
+        {
+            s_typeCache.Clear();
+            s_reflInitialized     = false;
+            s_fullControllerType  = null;
+            s_controllerEntryType = null;
+            s_menuEntryType       = null;
+            s_paramsEntryType     = null;
+            s_controllerField     = null;
+            s_menuField           = null;
+            s_paramsField         = null;
+            s_contentField        = null;
+        }
         private static Type      s_fullControllerType;
         private static Type      s_controllerEntryType;
         private static Type      s_menuEntryType;
@@ -49,28 +68,41 @@ namespace ASMLite.Editor
         private static void EnsureReflectionCache()
         {
             if (s_reflInitialized) return;
-            s_reflInitialized = true;
 
-            s_fullControllerType = FindType("VF.Model.Feature.FullController");
-            if (s_fullControllerType == null) return;
+            // Resolve all fields before committing the initialized flag.
+            // If any lookup fails (e.g. VRCFury not yet loaded), leave the flag
+            // false so the next call retries rather than permanently poisoning the cache.
+            var fullControllerType = FindType("VF.Model.Feature.FullController");
+            if (fullControllerType == null) return;
 
-            s_controllerEntryType = s_fullControllerType.GetNestedType(
+            var controllerEntryType = fullControllerType.GetNestedType(
                 "ControllerEntry", BindingFlags.Public | BindingFlags.NonPublic);
-            s_menuEntryType       = s_fullControllerType.GetNestedType(
+            var menuEntryType       = fullControllerType.GetNestedType(
                 "MenuEntry",        BindingFlags.Public | BindingFlags.NonPublic);
-            s_paramsEntryType     = s_fullControllerType.GetNestedType(
+            var paramsEntryType     = fullControllerType.GetNestedType(
                 "ParamsEntry",      BindingFlags.Public | BindingFlags.NonPublic);
 
-            s_controllerField = s_controllerEntryType?.GetField(
+            var controllerField = controllerEntryType?.GetField(
                 "controller", BindingFlags.Public | BindingFlags.Instance);
-            s_menuField       = s_menuEntryType?.GetField(
+            var menuField       = menuEntryType?.GetField(
                 "menu",        BindingFlags.Public | BindingFlags.Instance);
-            s_paramsField     = s_paramsEntryType?.GetField(
+            var paramsField     = paramsEntryType?.GetField(
                 "parameters",  BindingFlags.Public | BindingFlags.Instance);
 
             Type vrcfuryType = FindType("VF.Model.VRCFury");
-            s_contentField   = vrcfuryType?.GetField(
+            var contentField   = vrcfuryType?.GetField(
                 "content", BindingFlags.Public | BindingFlags.Instance);
+
+            // Commit to the cache only after all lookups succeed.
+            s_fullControllerType  = fullControllerType;
+            s_controllerEntryType = controllerEntryType;
+            s_menuEntryType       = menuEntryType;
+            s_paramsEntryType     = paramsEntryType;
+            s_controllerField     = controllerField;
+            s_menuField           = menuField;
+            s_paramsField         = paramsField;
+            s_contentField        = contentField;
+            s_reflInitialized     = true;
         }
 
         /// <summary>
@@ -190,8 +222,18 @@ namespace ASMLite.Editor
             // Configure globalParams = ["*"]
             SetGlobalParams(fullController, s_fullControllerType, "*");
 
-            // Assign content via cached field
-            s_contentField?.SetValue(vrcfuryComp, fullController);
+            // Assign content via cached field -- guard required: a null field means
+            // VF.Model.VRCFury.content was not found during reflection init, which
+            // produces a broken prefab with an empty VRCFury component. Abort and
+            // report rather than silently emit a prefab that looks valid but fails at upload.
+            if (s_contentField == null)
+            {
+                Debug.LogError("[ASM-Lite] 'content' field not found on VF.Model.VRCFury. " +
+                    "Prefab NOT saved -- VRCFury version may be incompatible.");
+                UnityEngine.Object.DestroyImmediate(go);
+                return;
+            }
+            s_contentField.SetValue(vrcfuryComp, fullController);
 
 #if ASM_LITE_VERBOSE
             Debug.Log("[ASM-Lite] FullController configured: controller=" +
@@ -240,9 +282,16 @@ namespace ASMLite.Editor
                         return t;
                     }
                 }
-                catch (ReflectionTypeLoadException)
+                catch (ReflectionTypeLoadException rtle)
                 {
-                    // Expected for assemblies that cannot be fully loaded: skip silently.
+                    // Partially-loadable assemblies are expected; log under verbose flag.
+#if ASM_LITE_VERBOSE
+                    Debug.LogWarning($"[ASM-Lite] Partial load of '{asm.GetName().Name}': " +
+                        string.Join(", ", System.Array.ConvertAll(
+                            rtle.LoaderExceptions, e => e?.Message ?? "null")));
+#else
+                    _ = rtle;
+#endif
                 }
                 catch (Exception ex)
                 {
@@ -274,10 +323,23 @@ namespace ASMLite.Editor
                 FieldInfo objRefField = GetBaseField(wrapperType, "objRef");
                 FieldInfo idField     = GetBaseField(wrapperType, "id");
 
-                objRefField?.SetValue(instance, asset);
+                // Both fields are required -- a GuidWrapper with either field missing
+                // produces a broken asset reference that fails silently on domain reload.
+                if (objRefField == null)
+                {
+                    Debug.LogError($"[ASM-Lite] 'objRef' field not found on {wrapperType.Name} hierarchy. VRCFury version may be incompatible.");
+                    return null;
+                }
+                if (idField == null)
+                {
+                    Debug.LogError($"[ASM-Lite] 'id' field not found on {wrapperType.Name} hierarchy. VRCFury version may be incompatible.");
+                    return null;
+                }
+
+                objRefField.SetValue(instance, asset);
 
                 // 'id' format used by VRCFury: "<guid>:<fileID>"
-                idField?.SetValue(instance, $"{guid}:{fileID}");
+                idField.SetValue(instance, $"{guid}:{fileID}");
 
                 return instance;
             }
