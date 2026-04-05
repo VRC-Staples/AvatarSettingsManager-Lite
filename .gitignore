@@ -46,3 +46,6 @@ tmp/
 
 # ── GSD baseline (auto-generated) ──
 .gsd-id
+
+# ── Unity Test Project for regression tests.
+Test Project/
