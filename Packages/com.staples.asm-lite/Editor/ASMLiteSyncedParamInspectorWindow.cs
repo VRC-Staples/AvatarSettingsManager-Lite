@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -20,7 +19,7 @@ namespace ASMLite.Editor
         private int _totalParams;
         private int _syncedParams;
         private string _assetPath;
-        private readonly List<string> _syncedNames = new List<string>();
+        private readonly List<string> _syncedNames = new List<string>(32);
 
         [MenuItem("Tools/.Staples./Synced Param Inspector")] 
         public static void Open()
@@ -137,8 +136,9 @@ namespace ASMLite.Editor
             if (parameters == null)
                 return;
 
-            foreach (var p in parameters.Where(p => p != null && !string.IsNullOrEmpty(p.name)))
+            foreach (var p in parameters)
             {
+                if (p == null || string.IsNullOrEmpty(p.name)) continue;
                 _totalParams++;
                 if (p.networkSynced)
                 {

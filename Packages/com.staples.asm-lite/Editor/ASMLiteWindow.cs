@@ -71,12 +71,39 @@ namespace ASMLite.Editor
         private int    _previewGearIndex      = -1;
         private int    _previewActionIconMode = -1;
 
+        // Cached arrays for the main wheel. Rebuilt only when slot count or icons change.
+        private Texture2D[] _mainWheelIcons;
+        private string[]    _mainWheelLabels;
+
+        // Sub-wheel arrays are invariant -- allocate once as static readonly.
+        private static readonly string[] s_subWheelLabels = { "Back", "Save", "Load", "Clear" };
+
         // Fallback grey square drawn when a custom icon slot is unassigned.
         private Texture2D _previewFallback;
+
+        // Bundled action icons: loaded once and held until domain reload.
+        // These paths never change at runtime so there is no reason to reload
+        // them on every preview cache invalidation.
+        private Texture2D _cachedIconSave;
+        private Texture2D _cachedIconLoad;
+        private Texture2D _cachedIconClear;
 
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
+
+        // ── Radial wheel style cache ──────────────────────────────────────────
+
+        // Colors declared once -- Color is a struct but declaring as static readonly
+        // makes the intent explicit and avoids accidental per-call reconstruction.
+        private static readonly Color s_wheelColorMain   = new Color(0.14f, 0.18f, 0.20f);
+        private static readonly Color s_wheelColorBorder = new Color(0.10f, 0.35f, 0.38f);
+        private static readonly Color s_wheelColorInner  = new Color(0.21f, 0.24f, 0.27f);
+        private static readonly Color s_separatorColor   = new Color(0.10f, 0.35f, 0.38f, 0.20f);
+
+        // GUIStyle cached across repaints. Rebuilt lazily when null (domain reload).
+        // Only fontSize is updated per call; cloning on every repaint is expensive.
+        private GUIStyle _radialLabelStyle;
         private const float  BannerAspect = 1200f / 520f; // slightly shorter so the UI, not the banner, remains dominant
 
         // Loaded once on first draw, never reloaded mid-session.
@@ -159,7 +186,7 @@ namespace ASMLite.Editor
         {
             EditorGUILayout.Space(6);
             Rect r = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(r, new Color(0.10f, 0.35f, 0.38f, 0.20f));
+            EditorGUI.DrawRect(r, s_separatorColor);
             EditorGUILayout.Space(6);
         }
 
@@ -551,12 +578,14 @@ namespace ASMLite.Editor
             }
             else
             {
-                _previewSaveIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    ASMLiteAssetPaths.IconSave)  ?? _previewFallback;
-                _previewLoadIcon  = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    ASMLiteAssetPaths.IconLoad)  ?? _previewFallback;
-                _previewClearIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                    ASMLiteAssetPaths.IconReset) ?? _previewFallback;
+                // Load once and hold -- these paths never change. The ??= null check
+                // also handles post-domain-reload resets (Unity clears instance fields).
+                _cachedIconSave  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
+                _cachedIconLoad  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
+                _cachedIconClear ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
+                _previewSaveIcon  = _cachedIconSave  ?? _previewFallback;
+                _previewLoadIcon  = _cachedIconLoad  ?? _previewFallback;
+                _previewClearIcon = _cachedIconClear ?? _previewFallback;
             }
 
             _previewSlotCount      = slotCount;
@@ -622,25 +651,32 @@ namespace ASMLite.Editor
                 return;
 
             // Main wheel: Back at top, then user slot icons.
-            var mainIcons  = new Texture2D[slotCount + 1];
-            var mainLabels = new string[slotCount + 1];
-            mainIcons[0]  = _previewBackIcon;
-            mainLabels[0] = "Back";
-            for (int i = 0; i < slotCount; i++)
+            // Rebuild cached arrays only when size or content changed (handled by
+            // RefreshPreviewCache above which sets _previewSlotCount when dirty).
+            if (_mainWheelIcons == null || _mainWheelIcons.Length != slotCount + 1
+                || _mainWheelLabels == null || _mainWheelLabels.Length != slotCount + 1)
             {
-                mainIcons[i + 1]  = _previewGearTextures[i];
-                mainLabels[i + 1] = $"Slot {i + 1}";
+                _mainWheelIcons  = new Texture2D[slotCount + 1];
+                _mainWheelLabels = new string[slotCount + 1];
+                _mainWheelLabels[0] = "Back";
+                for (int i = 0; i < slotCount; i++)
+                    _mainWheelLabels[i + 1] = $"Slot {i + 1}";
             }
-            DrawRadialWheel(mainRect, mainIcons, mainLabels);
+            _mainWheelIcons[0] = _previewBackIcon;
+            for (int i = 0; i < slotCount; i++)
+                _mainWheelIcons[i + 1] = _previewGearTextures[i];
+
+            DrawRadialWheel(mainRect, _mainWheelIcons, _mainWheelLabels);
 
             // Sub-wheel: Back at top, then Save/Load/Clear.
-            var subIcons  = new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
-            var subLabels = new[] { "Back", "Save", "Load", "Clear" };
-            DrawRadialWheel(subRect, subIcons, subLabels);
+            // Icon array must be rebuilt each repaint (action icons can change), but
+            // the label array is static readonly -- no per-frame allocation.
+            var subIcons = new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
+            DrawRadialWheel(subRect, subIcons, s_subWheelLabels);
 
             // Connector line.
             var origHandles = Handles.color;
-            Handles.color = new Color(0.1f, 0.35f, 0.38f, 0.6f);
+            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.6f);
             Handles.DrawLine(
                 new Vector3(mainRect.xMax, mainRect.center.y),
                 new Vector3(subRect.xMin,  subRect.center.y));
@@ -667,26 +703,21 @@ namespace ASMLite.Editor
             float iconSize   = rect.width * 0.22f;         // ~66px at 300
             float halfIcon   = iconSize * 0.5f;
 
-            // GM colors exactly.
-            var colorMain   = new Color(0.14f, 0.18f, 0.20f);
-            var colorBorder = new Color(0.10f, 0.35f, 0.38f);
-            var colorInner  = new Color(0.21f, 0.24f, 0.27f);
-
             var origColor   = GUI.color;
             var origHandles = Handles.color;
 
             // Background fill (full circle approximated by square: Handles clips it).
-            GUI.color = colorMain;
+            GUI.color = s_wheelColorMain;
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = origColor;
 
             // Outer ring.
-            Handles.color = colorBorder;
+            Handles.color = s_wheelColorBorder;
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
             // Segment dividers: 2px lines between icons, offset by half a step.
             float angleStep = 360f / count;
-            Handles.color = new Color(colorBorder.r, colorBorder.g, colorBorder.b, 0.55f);
+            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.55f);
             for (int i = 0; i < count; i++)
             {
                 float a = Mathf.Deg2Rad * (i * angleStep - 90f + angleStep * 0.5f);
@@ -696,18 +727,23 @@ namespace ASMLite.Editor
             }
 
             // Inner hub circle (RadialInner color, with teal border).
-            Handles.color = colorInner;
+            Handles.color = s_wheelColorInner;
             Handles.DrawSolidDisc(new Vector3(cx, cy), Vector3.forward, innerR);
-            Handles.color = colorBorder;
+            Handles.color = s_wheelColorBorder;
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, innerR);
 
             // Icons and labels.
-            var labelStyle = new GUIStyle(EditorStyles.miniLabel)
+            // Reuse cached GUIStyle -- only update fontSize (depends on scale).
+            if (_radialLabelStyle == null)
             {
-                alignment = TextAnchor.UpperCenter,
-                fontSize  = Mathf.Max(7, Mathf.RoundToInt(8f * scale)),
-                normal    = { textColor = new Color(1f, 1f, 1f, 0.82f) }
-            };
+                _radialLabelStyle = new GUIStyle(EditorStyles.miniLabel)
+                {
+                    alignment = TextAnchor.UpperCenter,
+                    normal    = { textColor = new Color(1f, 1f, 1f, 0.82f) }
+                };
+            }
+            _radialLabelStyle.fontSize = Mathf.Max(7, Mathf.RoundToInt(8f * scale));
+            var labelStyle = _radialLabelStyle;
 
             for (int i = 0; i < count; i++)
             {
@@ -763,7 +799,7 @@ namespace ASMLite.Editor
                             if (_cachedCustomParamCount < 0)
                             {
                                 _cachedCustomParamCount = exprParams.parameters
-                                    .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_"));
+                                    .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_", StringComparison.Ordinal));
                             }
 
                             EditorGUILayout.HelpBox(
@@ -778,17 +814,20 @@ namespace ASMLite.Editor
                         }
                     }
                 }
-                catch (System.Exception)
+                catch (System.Exception ex)
                 {
                     // Asset is mid-reimport: show a neutral message and wait for
                     // the next repaint when it will be stable again.
+                    // Log unexpected exceptions (non-reimport bugs would otherwise
+                    // be permanently hidden behind this UI message).
+                    if (Event.current.type == EventType.Layout)
+                    {
+                        Debug.LogWarning($"[ASM-Lite] Expression parameters draw failed: {ex.GetType().Name}: {ex.Message}");
+                        Repaint();
+                    }
                     EditorGUILayout.HelpBox(
                         "⚠ Expression parameters are currently being imported. Please wait.",
                         MessageType.Warning);
-                    // Gate Repaint on Layout to avoid a busy-spin loop when the
-                    // exception persists across multiple Repaint passes.
-                    if (Event.current.type == EventType.Layout)
-                        Repaint();
                 }
 
 

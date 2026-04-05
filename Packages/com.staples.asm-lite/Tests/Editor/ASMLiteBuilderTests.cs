@@ -174,8 +174,8 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void ControlParam_Name_IsASMLiteCtrl()
         {
-            const string controlParam = "ASMLite_Ctrl";
-            Assert.AreEqual("ASMLite_Ctrl", controlParam);
+            // Verify the production constant has the value the runtime and menus depend on.
+            Assert.AreEqual("ASMLite_Ctrl", ASMLiteBuilder.CtrlParam);
         }
 
         // ── Expression param schema preservation ─────────────────────────────
