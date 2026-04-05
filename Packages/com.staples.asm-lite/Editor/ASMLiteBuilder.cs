@@ -61,7 +61,7 @@ namespace ASMLite.Editor
         ///
         /// Returns an empty list (not null) if expressionParameters is unassigned.
         /// </summary>
-        private static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(VRCAvatarDescriptor avDesc)
+        internal static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(VRCAvatarDescriptor avDesc)
         {
             var exprParams = avDesc?.expressionParameters;
             if (exprParams?.parameters == null)
@@ -1207,7 +1207,7 @@ namespace ASMLite.Editor
         /// AnimatorControllerParameterType. Uses ValueType (not ParameterType) --
         /// the enum is on VRCExpressionParameters, not on the parameter struct.
         /// </summary>
-        private static AnimatorControllerParameterType MapValueType(VRCExpressionParameters.ValueType vt)
+        internal static AnimatorControllerParameterType MapValueType(VRCExpressionParameters.ValueType vt)
         {
             switch (vt)
             {
