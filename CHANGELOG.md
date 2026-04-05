@@ -4,6 +4,18 @@ All notable changes to ASM-Lite are documented here.
 
 ---
 
+## [1.0.6] - 2026-04-05
+
+### Fixed
+- Rezz glasses and other VRCFury Toggle parameters with VF-prefixed names (e.g. `VF135_Clothing/Rezz`) are now reliably backed up and restored. Previously, the clone-based parameter discovery could produce names that diverged from the actual runtime parameter names, causing Copy drivers to silently miss the affected parameters.
+
+### Changed
+- Parameter discovery no longer uses a pre-VRCFury clone build. ASM-Lite now reads `avDesc.expressionParameters` directly. `IPreprocessCallbackBehaviour` is invoked via `PreprocessCallbackBehaviours` (callbackOrder=-2048), which runs after VRCFury's main build (callbackOrder=int.MinValue), so the descriptor already contains all VRCFury-injected parameters at build time.
+- Removed `DiscoverParametersViaCloneBuild`, `StripVRCFuryComponentsByFeatureType`, `PatchVRCFuryToggleParamNames`, `WrapAsVFGameObject`, and the `VRCFuryBuilder.RunMain` reflection cache (~490 lines).
+- Removed unused `System.Reflection` import from `ASMLiteBuilder.cs`.
+
+---
+
 ## [1.0.5] - 2026-04-04
 
 ### Changed

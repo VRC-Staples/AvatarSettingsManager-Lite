@@ -4,10 +4,8 @@
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -18,10 +16,11 @@ namespace ASMLite.Editor
     /// <summary>
     /// ASMLiteBuilder: static editor utility for build-time asset generation.
     ///
-    /// Called from ASMLiteComponent.Preprocess() during the VRChat SDK avatar build
-    /// pipeline. Discovers all custom avatar parameters, generates 3 FX animator
-    /// slot layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
-    /// operations, and writes local control parameters plus local backup parameters to ASMLite_Params.asset.
+    /// Called from ASMLiteComponent.OnPreprocess() during the VRChat SDK avatar build
+    /// pipeline. Discovers all custom avatar parameters, generates FX animator slot
+    /// layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
+    /// operations, and writes local control parameters plus local backup parameters to
+    /// ASMLite_Params.asset.
     ///
     /// Control trigger model: one shared local Int param (ASMLite_Ctrl) for all slots,
     /// with encoded values (slot-1)*3+1/2/3 for Save/Load/Clear.
@@ -29,405 +28,44 @@ namespace ASMLite.Editor
     /// All generated content is written into the existing stub assets in-place,
     /// preserving their stable GUIDs.
     ///
-    /// Parameter discovery uses a dry-clone build: a temporary copy of the avatar
-    /// (minus ASM-Lite components) is instantiated, VRCFury's RunMain is invoked
-    /// on it via reflection, and the resulting merged expression parameters are
-    /// read back. This ensures VRCFury Toggle and FullController parameters (which
-    /// are injected at preprocess order 0, after ASM-Lite's order -10) are captured
-    /// correctly regardless of build order. The clone is destroyed immediately after.
+    /// Parameter discovery reads avDesc.expressionParameters directly. ASMLiteComponent
+    /// implements IPreprocessCallbackBehaviour, which the VRCSDK runs via the
+    /// PreprocessCallbackBehaviours hook (callbackOrder=-2048). VRCFury's main build
+    /// (VrcfAvatarPreprocessor) runs at callbackOrder=int.MinValue, so VRCFury has
+    /// already merged all Toggle and FullController parameters into expressionParameters
+    /// by the time Build() executes. No clone build is needed.
     /// </summary>
     public static class ASMLiteBuilder
     {
-        // ─── Reflection cache: VRCFuryBuilder.RunMain ───────────────────────
-
-        private static MethodInfo s_vrcfuryRunMain;
-        private static bool       s_vrcfuryRunMainSearched;
-
-        /// <summary>
-        /// Resolves VRCFuryBuilder.RunMain(VFGameObject) via reflection and caches it.
-        /// Returns null if VRCFury is not installed or the method signature changed.
-        /// </summary>
-        private static MethodInfo GetVRCFuryRunMain()
-        {
-            if (s_vrcfuryRunMainSearched)
-                return s_vrcfuryRunMain;
-
-            s_vrcfuryRunMainSearched = true;
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    var t = asm.GetType("VF.Builder.VRCFuryBuilder");
-                    if (t == null) continue;
-
-                    // RunMain(VFGameObject avatarObject): internal static
-                    var m = t.GetMethod("RunMain",
-                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                    if (m != null)
-                    {
-                        s_vrcfuryRunMain = m;
-                        break;
-                    }
-                }
-                catch (ReflectionTypeLoadException) { }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[ASM-Lite] Error scanning assembly for VRCFuryBuilder: {ex.Message}");
-                }
-            }
-
-            return s_vrcfuryRunMain;
-        }
-
         // ─── Public API ───────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Discovers the post-VRCFury parameter set for an avatar by running a
-        /// temporary clone build. Instantiates a scene copy of the avatar, removes
-        /// all ASMLiteComponent instances from it, calls VRCFury's RunMain on the
-        /// clone to let VRCFury inject its own parameters, then reads the merged
-        /// expressionParameters back. The clone is destroyed in a finally block.
-        ///
-        /// Returns the discovered parameters (excluding any ASMLite_ prefixed names),
-        /// or falls back to the avatar's base expression parameters if VRCFury is not
-        /// installed or the clone build throws.
-        ///
-        /// VFGameObject is VRCFury's internal scene-object wrapper. RunMain accepts
-        /// a VFGameObject but VFGameObject has an implicit cast from GameObject.
-        /// We pass the clone's root GameObject and rely on that cast via reflection.
-        /// </summary>
-        public static List<VRCExpressionParameters.Parameter> DiscoverParametersViaCloneBuild(
-            VRCAvatarDescriptor avDesc)
-        {
-            var runMain = GetVRCFuryRunMain();
-
-            if (runMain == null)
-            {
-                Debug.LogWarning("[ASM-Lite] VRCFuryBuilder.RunMain not found: falling back to base expression parameters. VRCFury Toggle/FullController parameters will not be discovered.");
-                return ReadBaseParams(avDesc);
-            }
-
-            GameObject clone = null;
-            try
-            {
-                // Instantiate a full copy of the avatar in the scene so RunMain has
-                // a valid scene object with all its component references intact.
-                clone = UnityEngine.Object.Instantiate(avDesc.gameObject);
-                clone.name = avDesc.gameObject.name + "__ASMLiteDiscovery";
-                clone.SetActive(false); // keep it invisible during the build
-
-                // Remove every ASMLiteComponent from the clone so ASM-Lite's own
-                // preprocess callback does not fire recursively on the clone.
-                foreach (var c in clone.GetComponentsInChildren<ASMLiteComponent>(includeInactive: true))
-                    UnityEngine.Object.DestroyImmediate(c);
-
-                // Strip VRCFury components whose feature is ArmatureLink from the clone
-                // before calling RunMain. ArmatureLink.Apply requires a humanoid rig
-                // binding that does not survive Instantiate() and throws "Hips bone could
-                // not be found because avatar's rig is not set to humanoid", aborting
-                // RunMain and causing ASM-Lite to fall back to base parameters (which
-                // contain no VRCFury Toggle params). ArmatureLink contributes no expression
-                // parameters, so removing these components from the discovery clone is safe.
-                StripVRCFuryComponentsByFeatureType(clone, "VF.Model.Feature.ArmatureLink");
-
-                // Patch Toggle paramOverride values on the clone AFTER Instantiate().
-                // paramOverride is [NonSerialized] on VRCFury Toggle -- Instantiate() only
-                // copies serialized fields, so the in-memory paramOverride values set on
-                // the live avatar by PatchVRCFuryToggleParamNames() do NOT carry through
-                // to the clone. Without this patch the clone's Toggles receive VF{N}_-
-                // prefixed names (e.g. VF121_Clothing/Rezz) instead of the stable names
-                // (e.g. Clothing_Rezz) that the FX driver Copy entries reference.
-                PatchVRCFuryToggleParamNames(clone);
-
-#if ASM_LITE_VERBOSE
-                Debug.Log($"[ASM-Lite] DiscoverParametersViaCloneBuild: running VRCFury on clone '{clone.name}'.");
-#endif
-
-                // RunMain(VFGameObject): VFGameObject has an implicit operator from
-                // GameObject, but since we're calling via reflection with object[], we
-                // pass the GameObject directly. VFGameObject's implicit cast is a static
-                // operator and MethodInfo.Invoke performs no implicit conversions, so we
-                // must wrap it manually via the VFGameObject type if it exists.
-                // Simplest safe path: find VFGameObject and call its implicit cast, or
-                // just pass the GameObject and let the runtime invoke the implicit op.
-                // In practice, passing a GameObject to a VFGameObject parameter via
-                // reflection works when VFGameObject defines `implicit operator VFGameObject(GameObject)`.
-                // We verify this works by checking for that operator and using it explicitly.
-                object cloneArg = WrapAsVFGameObject(clone);
-                runMain.Invoke(null, new[] { cloneArg });
-
-                // VRCFury has now merged all Toggle/FullController parameters into
-                // the clone's VRCAvatarDescriptor.expressionParameters.
-                var cloneDesc = clone.GetComponent<VRCAvatarDescriptor>();
-                return ReadBaseParams(cloneDesc);
-            }
-            catch (TargetInvocationException tie)
-            {
-                Debug.LogWarning($"[ASM-Lite] VRCFury clone build failed: falling back to base expression parameters.\n{(tie.InnerException ?? tie).Message}");
-                return ReadBaseParams(avDesc);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[ASM-Lite] DiscoverParametersViaCloneBuild failed: falling back to base expression parameters.\n{ex.Message}");
-                return ReadBaseParams(avDesc);
-            }
-            finally
-            {
-                if (clone != null)
-                    UnityEngine.Object.DestroyImmediate(clone);
-            }
-        }
 
         /// <summary>
-        /// Scans all VRCFury MonoBehaviours on the clone and destroys any whose
-        /// serialized <c>content</c> field is an instance of the named feature type.
+        /// Reads the final avatar parameter schema directly from the descriptor.
         ///
-        /// VRCFury uses one MonoBehaviour per feature (VF.Model.VRCFury), each carrying
-        /// a single <c>[SerializeReference] FeatureModel content</c> field. We locate
-        /// and destroy only the components whose feature matches <paramref name="featureTypeName"/>
-        /// so that other features (Toggle, FullController, etc.) survive for RunMain.
+        /// By the time Build() runs, VRCFury (callbackOrder=int.MinValue) has already
+        /// merged all Toggle and FullController parameters into avDesc.expressionParameters.
+        /// This method reads that merged set and filters out empty entries and any
+        /// ASMLite_-prefixed parameters to avoid self-referential backup loops.
         ///
-        /// Both the VRCFury type and the feature type are resolved via reflection so that
-        /// ASM-Lite does not take a hard compile-time dependency on VRCFury internals.
+        /// Returns an empty list (not null) if expressionParameters is unassigned.
         /// </summary>
-        private static void StripVRCFuryComponentsByFeatureType(GameObject root, string featureTypeName)
-        {
-            // Resolve VF.Model.VRCFury (the MonoBehaviour wrapper) via reflection.
-            Type vrcFuryType = null;
-            Type targetFeatureType = null;
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    if (vrcFuryType == null)
-                    {
-                        var t = asm.GetType("VF.Model.VRCFury");
-                        if (t != null) vrcFuryType = t;
-                    }
-                    if (targetFeatureType == null)
-                    {
-                        var t = asm.GetType(featureTypeName);
-                        if (t != null) targetFeatureType = t;
-                    }
-                    if (vrcFuryType != null && targetFeatureType != null)
-                        break;
-                }
-                catch (ReflectionTypeLoadException) { }
-            }
-
-            if (vrcFuryType == null)
-            {
-                Debug.LogWarning("[ASM-Lite] Could not resolve VF.Model.VRCFury type -- ArmatureLink strip skipped.");
-                return;
-            }
-            if (targetFeatureType == null)
-            {
-                Debug.LogWarning($"[ASM-Lite] Could not resolve feature type '{featureTypeName}' -- ArmatureLink strip skipped.");
-                return;
-            }
-
-            var contentField = vrcFuryType.GetField("content",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (contentField == null)
-            {
-                Debug.LogWarning("[ASM-Lite] Could not find VRCFury.content field -- ArmatureLink strip skipped.");
-                return;
-            }
-
-            // Collect matching components first to avoid modifying the array during iteration.
-            var toDestroy = new List<Component>();
-            foreach (var comp in root.GetComponentsInChildren(vrcFuryType, includeInactive: true))
-            {
-                try
-                {
-                    var feature = contentField.GetValue(comp);
-                    if (feature != null && targetFeatureType.IsInstanceOfType(feature))
-                        toDestroy.Add(comp);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[ASM-Lite] Error inspecting VRCFury component during ArmatureLink strip: {ex.Message}");
-                }
-            }
-
-            foreach (var comp in toDestroy)
-            {
-#if ASM_LITE_VERBOSE
-                Debug.Log($"[ASM-Lite] Stripped VRCFury ArmatureLink component from '{comp.gameObject.name}' on discovery clone.");
-#endif
-                UnityEngine.Object.DestroyImmediate(comp);
-            }
-        }
-
-        /// <summary>
-        /// Sets <c>paramOverride</c> on every VRCFury Toggle component under
-        /// <paramref name="root"/> that would otherwise receive a VF{N}_ prefixed name.
-        ///
-        /// VRCFury assigns a sequential feature number at build time and prefixes every
-        /// Toggle parameter with "VF{N}_" (ControllersService.cs:87). That number depends
-        /// on the count and order of all VRCFury features in the specific build, making it
-        /// unstable: the discovery clone (ArmatureLink stripped) and the real upload build
-        /// process different component sets, so the number drifts. ASM-Lite's Copy drivers
-        /// would then reference names that no longer exist in the live animator.
-        ///
-        /// <c>paramOverride</c> is <c>[NonSerialized]</c> on Toggle -- it is purely
-        /// in-memory, never saved to disk, never shown in the inspector, and resets to null
-        /// on every domain reload. Setting it is fully non-destructive. VRCFury's
-        /// <c>GetParamName()</c> checks it first and returns it with
-        /// <c>usePrefixOnParam=false</c>, bypassing the VF{N}_ prefix entirely.
-        ///
-        /// This method is called in <c>Build()</c> on the live avatar (at preprocess
-        /// order -10, before VRCFury runs at order 0). <c>Instantiate()</c> copies the
-        /// current in-memory object state, so the discovery clone inherits the overrides
-        /// without a separate patch pass.
-        ///
-        /// Toggles that already have <c>useGlobalParam=true</c> or a non-null
-        /// <c>paramOverride</c> are left untouched -- they already produce stable names.
-        ///
-        /// '/' in menu paths is replaced with '_': '/' is the menu hierarchy separator
-        /// and has no meaning in a VRChat parameter name.
-        /// </summary>
-        private static void PatchVRCFuryToggleParamNames(GameObject root)
-        {
-            // Resolve types via reflection -- VRCFury types are internal.
-            Type vrcFuryType = null;
-            Type toggleType  = null;
-
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    if (vrcFuryType == null)
-                    {
-                        var t = asm.GetType("VF.Model.VRCFury");
-                        if (t != null) vrcFuryType = t;
-                    }
-                    if (toggleType == null)
-                    {
-                        var t = asm.GetType("VF.Model.Feature.Toggle");
-                        if (t != null) toggleType = t;
-                    }
-                    if (vrcFuryType != null && toggleType != null) break;
-                }
-                catch (ReflectionTypeLoadException) { }
-            }
-
-            if (vrcFuryType == null || toggleType == null)
-            {
-                Debug.LogWarning("[ASM-Lite] Could not resolve VRCFury Toggle types -- toggle param name patching skipped. VRCFury Toggle parameters may not be discovered correctly.");
-                return;
-            }
-
-            var contentField       = vrcFuryType.GetField("content",       BindingFlags.Public | BindingFlags.Instance);
-            var nameField          = toggleType .GetField("name",           BindingFlags.Public | BindingFlags.Instance);
-            var paramOverrideField = toggleType .GetField("paramOverride",  BindingFlags.Public | BindingFlags.Instance);
-            var useGlobalParamField = toggleType.GetField("useGlobalParam", BindingFlags.Public | BindingFlags.Instance);
-
-            if (contentField == null || nameField == null || paramOverrideField == null || useGlobalParamField == null)
-            {
-                Debug.LogWarning("[ASM-Lite] Could not resolve required Toggle fields -- toggle param name patching skipped.");
-                return;
-            }
-
-            int patched = 0;
-            foreach (var comp in root.GetComponentsInChildren(vrcFuryType, includeInactive: true))
-            {
-                try
-                {
-                    var feature = contentField.GetValue(comp);
-                    if (feature == null || !toggleType.IsInstanceOfType(feature))
-                        continue;
-
-                    // Skip toggles that already produce a stable name.
-                    // paramOverride != null: already overridden by another system.
-                    // useGlobalParam = true: user has explicitly set a global param name.
-                    var existingOverride = (string)paramOverrideField.GetValue(feature);
-                    if (existingOverride != null)
-                        continue;
-
-                    var alreadyGlobal = (bool)useGlobalParamField.GetValue(feature);
-                    if (alreadyGlobal)
-                        continue;
-
-                    // Derive a stable parameter name from the menu path.
-                    // Replace '/' (menu hierarchy separator) with '_'.
-                    var menuPath = (string)nameField.GetValue(feature);
-                    if (string.IsNullOrWhiteSpace(menuPath))
-                        continue;
-
-                    var stableName = menuPath.Replace('/', '_');
-
-                    // Set paramOverride -- [NonSerialized], in-memory only, no scene dirtying.
-                    paramOverrideField.SetValue(feature, stableName);
-
-#if ASM_LITE_VERBOSE
-                    Debug.Log($"[ASM-Lite] Patched Toggle '{menuPath}' → paramOverride '{stableName}'.");
-#endif
-                    patched++;
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[ASM-Lite] Error patching VRCFury Toggle on '{comp.gameObject.name}': {ex.Message}");
-                }
-            }
-
-#if ASM_LITE_VERBOSE
-            if (patched > 0)
-                Debug.Log($"[ASM-Lite] Patched {patched} VRCFury Toggle(s) with stable paramOverride names.");
-#endif
-        }
-
-        /// <summary>
-        /// Attempts to wrap a GameObject as a VFGameObject by finding and invoking
-        /// VFGameObject's implicit operator. If VFGameObject is not found, returns
-        /// the GameObject directly (works when RunMain accepts a base type or when
-        /// the runtime can resolve the implicit cast).
-        /// </summary>
-        private static object WrapAsVFGameObject(GameObject go)
-        {
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    var t = asm.GetType("VF.Utils.VFGameObject");
-                    if (t == null) continue;
-
-                    // Look for: public static implicit operator VFGameObject(GameObject go)
-                    var op = t.GetMethod("op_Implicit",
-                        BindingFlags.Static | BindingFlags.Public,
-                        null,
-                        new[] { typeof(GameObject) },
-                        null);
-                    if (op != null)
-                        return op.Invoke(null, new object[] { go });
-
-                    break;
-                }
-                catch (ReflectionTypeLoadException) { }
-            }
-            // Fallback: pass the GameObject directly. RunMain will throw if it can't
-            // accept it, and the caller's catch will fall back to base params.
-            return go;
-        }
-
-        /// <summary>
-        /// Reads expression parameters from a VRCAvatarDescriptor, filtering out
-        /// empty names and any ASMLite_-prefixed parameters.
-        /// </summary>
-        private static List<VRCExpressionParameters.Parameter> ReadBaseParams(VRCAvatarDescriptor avDesc)
+        private static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(VRCAvatarDescriptor avDesc)
         {
             var exprParams = avDesc?.expressionParameters;
             var result = new List<VRCExpressionParameters.Parameter>();
             if (exprParams?.parameters == null)
                 return result;
 
+#if ASM_LITE_VERBOSE
+            Debug.Log($"[ASM-Lite] Reading final avatar params from '{UnityEditor.AssetDatabase.GetAssetPath(exprParams)}' ({exprParams.parameters.Length} entries).");
+#endif
+
             foreach (var p in exprParams.parameters)
             {
-                if (string.IsNullOrEmpty(p.name))
+                if (p == null || string.IsNullOrEmpty(p.name))
                     continue;
-                if (p.name.StartsWith("ASMLite_"))
+                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
                 {
                     Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}': already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
                     continue;
@@ -439,8 +77,7 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Entry point called during avatar build preprocessing.
-        /// Discovers custom avatar parameters via a temporary VRCFury clone build,
-        /// then generates all slot assets.
+        /// Reads the final avatar parameter schema and generates all slot assets.
         /// </summary>
         public static int Build(ASMLiteComponent component)
         {
@@ -466,24 +103,12 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 2. Patch VRCFury Toggle parameter names on the live avatar BEFORE discovery
-            //    and BEFORE VRCFury runs (ASM-Lite is order -10; VRCFury is order 0).
-            //    paramOverride is [NonSerialized] on Toggle -- it is in-memory only, never
-            //    saved to disk, and never shown in the inspector. Setting it here is fully
-            //    non-destructive: VRCFury reads it at order 0 and produces the stable name;
-            //    when the build ends the field resets to null with no persistent side effects.
-            //    This ensures the live avatar build (emulator + real upload) produces the
-            //    same stable parameter names that ASM-Lite's Copy drivers reference.
-            PatchVRCFuryToggleParamNames(avDesc.gameObject);
+            // 2. Read the final avatar parameter schema directly from the descriptor.
+            //    VRCFury (callbackOrder=int.MinValue) has already run by the time ASM-Lite
+            //    executes here via PreprocessCallbackBehaviours (callbackOrder=-2048).
+            //    avDesc.expressionParameters already contains all VRCFury-injected params.
+            var discoveredParams = GetFinalAvatarParams(avDesc);
 
-            // 3. Discover parameters via clone build so VRCFury Toggle and
-            //    FullController parameters are included even though VRCFury runs
-            //    after ASM-Lite in the preprocess order.
-            //    The clone inherits the in-memory paramOverride values set above because
-            //    Instantiate() copies the live object's current in-memory state.
-            var discoveredParams = DiscoverParametersViaCloneBuild(avDesc);
-
-            // 3. Log discovery
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");
 #endif
@@ -849,6 +474,9 @@ namespace ASMLite.Editor
             int totalCount = 1 + (slotCount * avatarParams.Count);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
 
+            // Control Int used by ASM-Lite's FX layers and menu buttons.
+            // Marked non-synced and non-saved so it does not consume network bits
+            // and does not persist across sessions.
             generated.Add(new VRCExpressionParameters.Parameter
             {
                 name          = "ASMLite_Ctrl",
