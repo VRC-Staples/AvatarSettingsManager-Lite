@@ -161,6 +161,8 @@ namespace ASMLite.Editor
         /// </summary>
         public static string Validate(ASMLiteComponent component)
         {
+            if (component == null)
+                return "[ASM-Lite] component is null.";
             if (component.slotCount < 1 || component.slotCount > 8)
                 return $"[ASM-Lite] slotCount must be between 1 and 8 (got {component.slotCount}).";
             return null;

@@ -120,6 +120,22 @@ namespace ASMLite.Tests.Editor
             Object.DestroyImmediate(go);
         }
 
+        // ── P09: customIcons default ──────────────────────────────────────────
+
+        [Test]
+        public void P09_CustomIcons_DefaultIsEmptyArray_NotNull()
+        {
+            var go = new GameObject("TestAvatar");
+            var component = go.AddComponent<ASMLiteComponent>();
+
+            Assert.IsNotNull(component.customIcons,
+                "customIcons must not be null by default");
+            Assert.AreEqual(0, component.customIcons.Length,
+                "customIcons must be empty (length 0) by default");
+
+            Object.DestroyImmediate(go);
+        }
+
         // ── IconMode default aligns with window pending field ─────────────────
 
         [Test]
