@@ -16,6 +16,16 @@ namespace ASMLite.Tests.Editor
     {
         // ── Validate() ────────────────────────────────────────────────────────
 
+        // P07: null component -- must not throw NullReferenceException
+        [Test]
+        public void P07_Validate_NullComponent_ReturnsError_NotNullReferenceException()
+        {
+            string result = null;
+            Assert.DoesNotThrow(() => result = ASMLiteBuilder.Validate(null),
+                "Validate(null) must not throw NullReferenceException");
+            Assert.IsNotNull(result, "Validate(null) must return a non-null error string");
+        }
+
         [Test]
         public void Validate_ReturnsNull_WhenSlotCountIsOne()
         {
