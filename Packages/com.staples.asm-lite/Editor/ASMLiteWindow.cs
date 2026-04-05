@@ -999,6 +999,68 @@ namespace ASMLite.Editor
             if (component == null)
                 return;
 
+            // Check for stale prms entry from pre-1.0.5 prefab instances. If present,
+            // destroy the old instance and re-add a fresh prefab so the double-path
+            // that produces 2 extra synced parameters is removed before baking.
+            if (ASMLitePrefabCreator.HasStalePrmsEntry(component.gameObject))
+            {
+                Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
+
+                // Capture settings before destroying the instance.
+                int savedSlotCount          = component.slotCount;
+                IconMode savedIconMode      = component.iconMode;
+                int savedGearIndex          = component.selectedGearIndex;
+                ActionIconMode savedActionIconMode = component.actionIconMode;
+                Texture2D savedCustomSave   = component.customSaveIcon;
+                Texture2D savedCustomLoad   = component.customLoadIcon;
+                Texture2D savedCustomClear  = component.customClearIcon;
+                Texture2D[] savedCustomIcons = component.customIcons != null
+                    ? (Texture2D[])component.customIcons.Clone() : new Texture2D[0];
+                Transform savedParent       = component.gameObject.transform.parent;
+
+                Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
+                int group = Undo.GetCurrentGroup();
+
+                Undo.DestroyObjectImmediate(component.gameObject);
+
+                ASMLitePrefabCreator.CreatePrefab();
+                var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+                if (prefabAsset == null)
+                {
+                    Debug.LogError("[ASM-Lite] Could not load refreshed prefab after migration. Aborting rebuild.");
+                    return;
+                }
+
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefabAsset, savedParent);
+                var newComponent = instance.GetComponent<ASMLiteComponent>();
+                if (newComponent != null)
+                {
+                    newComponent.slotCount         = savedSlotCount;
+                    newComponent.iconMode          = savedIconMode;
+                    newComponent.selectedGearIndex = savedGearIndex;
+                    newComponent.actionIconMode    = savedActionIconMode;
+                    newComponent.customSaveIcon    = savedCustomSave;
+                    newComponent.customLoadIcon    = savedCustomLoad;
+                    newComponent.customClearIcon   = savedCustomClear;
+                    newComponent.customIcons       = savedCustomIcons;
+                }
+
+                Undo.RegisterCreatedObjectUndo(instance, "Rebuild ASM-Lite (migration)");
+                Undo.CollapseUndoOperations(group);
+
+                _cachedComponent  = null;
+                _lastRefreshFrame = -1;
+                component = GetOrRefreshComponent();
+
+                if (component == null)
+                {
+                    Debug.LogError("[ASM-Lite] Could not find component after migration. Aborting rebuild.");
+                    return;
+                }
+
+                Debug.Log("[ASM-Lite] Migration complete. Continuing with bake.");
+            }
+
             try
             {
                 // Strip stale VRCFury FullController components from pre-1.0.5 prefabs.
