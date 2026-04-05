@@ -4,28 +4,23 @@ All notable changes to ASM-Lite are documented here.
 
 ---
 
-## [1.0.6] - 2026-04-05
+## [1.0.5] - 2026-04-05
 
 ### Fixed
-- Rezz glasses and other VRCFury Toggle parameters with VF-prefixed names (e.g. `VF135_Clothing/Rezz`) are now reliably backed up and restored. Previously, the clone-based parameter discovery could produce names that diverged from the actual runtime parameter names, causing Copy drivers to silently miss the affected parameters.
+- Menus and Save/Load/Clear actions now work correctly. Previously, VRCFury's FullController merged stale stub assets before ASM-Lite could populate them, causing a one-upload lag where the first upload always had empty menus and non-functional buttons. Additionally, removing `globalParams` from the FullController in an earlier fix caused all FX parameters to receive VF-prefixed names, breaking the menu-to-FX parameter binding entirely.
+- VRCFury Toggle parameters (e.g. `Clothing_Rezz`) are now reliably backed up and restored. The previous clone-based discovery could produce parameter names that diverged from the actual runtime names, causing Copy drivers to silently miss those parameters.
 
 ### Changed
-- Parameter discovery no longer uses a pre-VRCFury clone build. ASM-Lite now reads `avDesc.expressionParameters` directly. `IPreprocessCallbackBehaviour` is invoked via `PreprocessCallbackBehaviours` (callbackOrder=-2048), which runs after VRCFury's main build (callbackOrder=int.MinValue), so the descriptor already contains all VRCFury-injected parameters at build time.
-- Removed `DiscoverParametersViaCloneBuild`, `StripVRCFuryComponentsByFeatureType`, `PatchVRCFuryToggleParamNames`, `WrapAsVFGameObject`, and the `VRCFuryBuilder.RunMain` reflection cache (~490 lines).
-- Removed unused `System.Reflection` import from `ASMLiteBuilder.cs`.
-
----
-
-## [1.0.5] - 2026-04-04
-
-### Changed
-- Control trigger parameter (`ASMLite_Ctrl`) is now local-only and never synced. ASM-Lite takes zero synced bits from the expression parameter budget regardless of slot count.
+- ASM-Lite no longer uses a VRCFury FullController to inject content into the avatar. `Build()` now directly injects FX layers, expression parameters, and menu entries into the avatar descriptor at preprocess time (`callbackOrder=-2048`), after VRCFury has already merged its Toggle parameters. This eliminates the ordering dependency that caused stale content on first upload.
+- Prefab simplified: only contains `ASMLiteComponent`. The VRCFury component and all reflection-based VRCFury type wiring have been removed from `ASMLitePrefabCreator` (~350 lines removed).
+- Parameter discovery no longer uses a pre-VRCFury clone build. ASM-Lite reads `avDesc.expressionParameters` directly, which already contains all VRCFury-injected parameters by the time `Build()` runs.
+- Control trigger parameter (`ASMLite_Ctrl`) is local-only and never synced. ASM-Lite takes zero synced bits from the expression parameter budget regardless of slot count.
 - Removed the Safe Bool control scheme. All builds now use a single shared local Int trigger. The Control Scheme setting has been removed from the editor window.
-- Icon Settings section is always visible, no longer behind a foldout. Slot Icons and Action Icons are displayed in grouped boxes with a preview below.
-- Sub-section headings inside Icon Settings use reduced weight to improve visual hierarchy.
-- Normalized all double-hyphen separators in comments and strings to standard punctuation throughout the codebase.
+- Icon Settings section is always visible, no longer behind a foldout. Slot Icons and Action Icons are displayed in grouped boxes with a live preview below.
+- Removing the ASM-Lite prefab now cleans up injected FX layers, expression parameters, and menu entries from the avatar.
 
 ### Added
+- Auto-migration on Rebuild: stale VRCFury FullController components from pre-1.0.5 prefab instances are automatically detected and removed, preventing double-merged content and VF-prefixed parameter name conflicts.
 - Thanks section in README crediting Blue Angel and Nanochip.
 
 ---
@@ -99,7 +94,7 @@ All notable changes to ASM-Lite are documented here.
 
 ### Added
 - Save, Load, and Reset for expression parameter presets across up to 3 slots, all from the in-game expression menu.
-- Non-destructive VRCFury integration. ASM-Lite merges its generated FX layers and expression menu at build time without modifying any existing avatar assets.
+- Non-destructive integration. ASM-Lite merges its generated FX layers and expression menu at build time without modifying any existing avatar assets.
 - Configurable slot count (1-3) editable in the ASM-Lite editor window.
 - Backup parameters are local-only and not synced, so they do not consume the expression parameter sync budget.
 - VCC / VPM distribution via `https://vrc-staples.github.io/AvatarSettingsManager-Lite/index.json`.

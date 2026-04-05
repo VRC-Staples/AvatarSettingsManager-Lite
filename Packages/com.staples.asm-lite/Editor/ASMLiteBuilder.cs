@@ -4,6 +4,7 @@
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using System;
 using System.Collections.Generic;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
@@ -24,8 +25,10 @@ namespace ASMLite.Editor
     /// Control trigger model: one shared local Int param (ASMLite_Ctrl) for all slots,
     /// with encoded values (slot-1)*3+1/2/3 for Save/Load/Clear.
     ///
-    /// All generated content is written into the existing stub assets in-place,
-    /// preserving their stable GUIDs.
+    /// After generating stub assets (for editor preview/debug), Build() directly
+    /// injects the generated FX layers, expression parameters, and menu entries
+    /// into the live VRCAvatarDescriptor. This eliminates the one-upload-lag that
+    /// occurred when VRCFury's FullController read stale stubs before Build() ran.
     ///
     /// Parameter discovery reads avDesc.expressionParameters directly. ASMLiteComponent
     /// implements IPreprocessCallbackBehaviour, which the VRCSDK runs via the
@@ -128,18 +131,23 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 5-7. Generate assets.
+            // 5-7. Generate stub assets (editor preview / debug artifacts).
             PopulateFXController(discoveredParams, component.slotCount);
             PopulateExpressionParams(component.slotCount, discoveredParams);
             PopulateExpressionMenu(component);
 
-            // 8. Flush all dirty assets in one batch write, then force a synchronous
-            //    re-import so VRCFury reads the freshly written params: not the
-            //    stale in-memory state from a previous build session.
+            // 8. Flush stub assets to disk.
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            // 9. Log completion
+            // 9. Inject directly into the live avatar descriptor so the current
+            //    upload/play session uses the freshly generated content instead of
+            //    whatever VRCFury merged from stale stubs at int.MinValue.
+            InjectFXLayers(avDesc, discoveredParams, component.slotCount);
+            InjectExpressionParams(avDesc, component.slotCount, discoveredParams);
+            InjectExpressionMenu(avDesc, component);
+
+            // 10. Log completion
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
@@ -795,6 +803,399 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + ASM-Lite wrapper + {slotCount} slot menus + {slotCount} confirm menus.");
 #endif
+        }
+
+        // ─── Migration ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Removes any stale VRCFury (VF.Model.VRCFury) components from the
+        /// ASM-Lite prefab instance. Prior to 1.0.5, the prefab included a VRCFury
+        /// FullController to inject FX/menu/params into the avatar. That approach
+        /// was replaced by direct injection into the avatar descriptor. Old prefab
+        /// instances still carry the VRCFury component, which causes double-merged
+        /// content and VF-prefixed parameter names that break menu bindings.
+        ///
+        /// Called automatically during Rebuild. Safe to call multiple times.
+        /// </summary>
+        public static void MigrateStaleVRCFuryComponents(ASMLiteComponent component)
+        {
+            if (component == null) return;
+
+            var go = component.gameObject;
+            // Find VRCFury components by type name since we cannot reference the
+            // internal VF.Model.VRCFury type at compile time.
+            var allComponents = go.GetComponents<Component>();
+            int removedCount = 0;
+            foreach (var c in allComponents)
+            {
+                if (c == null) continue; // missing script
+                string typeName = c.GetType().FullName;
+                if (typeName == "VF.Model.VRCFury")
+                {
+                    UnityEngine.Object.DestroyImmediate(c);
+                    removedCount++;
+                }
+            }
+
+            if (removedCount > 0)
+            {
+                EditorUtility.SetDirty(go);
+                Debug.Log($"[ASM-Lite] Migration: removed {removedCount} stale VRCFury component(s) from '{go.name}'. Direct injection is now used instead.");
+            }
+        }
+
+        // ─── Direct injection into avatar descriptor ──────────────────────────
+
+        /// <summary>
+        /// Injects ASM-Lite FX layers and parameters directly into the avatar's
+        /// FX AnimatorController. Removes any previously injected ASMLite_ layers
+        /// and parameters first (idempotent). If the avatar has no custom FX
+        /// controller, the stub controller is assigned directly.
+        /// </summary>
+        private static void InjectFXLayers(VRCAvatarDescriptor avDesc, List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
+        {
+            // Find the FX layer in baseAnimationLayers (type == FX)
+            int fxIndex = -1;
+            for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
+            {
+                if (avDesc.baseAnimationLayers[i].type == VRCAvatarDescriptor.AnimLayerType.FX)
+                {
+                    fxIndex = i;
+                    break;
+                }
+            }
+
+            if (fxIndex < 0)
+            {
+                Debug.LogWarning("[ASM-Lite] No FX layer found in avatar descriptor. Cannot inject FX layers.");
+                return;
+            }
+
+            var fxLayer = avDesc.baseAnimationLayers[fxIndex];
+            var ctrl = fxLayer.animatorController as AnimatorController;
+
+            // If no custom FX controller exists, assign our stub directly
+            if (ctrl == null || fxLayer.isDefault)
+            {
+                var stubCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+                if (stubCtrl != null)
+                {
+                    fxLayer.isDefault = false;
+                    fxLayer.isEnabled = true;
+                    fxLayer.animatorController = stubCtrl;
+                    avDesc.baseAnimationLayers[fxIndex] = fxLayer;
+#if ASM_LITE_VERBOSE
+                    Debug.Log("[ASM-Lite] InjectFXLayers: assigned stub FX controller directly (no existing FX).");
+#endif
+                }
+                else
+                {
+                    Debug.LogError("[ASM-Lite] InjectFXLayers: stub FX controller not found.");
+                }
+                return;
+            }
+
+            // Remove existing ASMLite_ layers (iterate backwards)
+            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
+            {
+                if (ctrl.layers[i].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    ctrl.RemoveLayer(i);
+            }
+
+            // Drain ASMLite_ params (RemoveParameter modifies the array, so
+            // iterate until none remain rather than using index arithmetic).
+            bool removedAny;
+            do
+            {
+                removedAny = false;
+                foreach (var p in ctrl.parameters)
+                {
+                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                    {
+                        ctrl.RemoveParameter(p);
+                        removedAny = true;
+                        break;
+                    }
+                }
+            } while (removedAny);
+
+            // Add control parameter
+            ctrl.AddParameter(CtrlParam, AnimatorControllerParameterType.Int);
+
+            // Add discovered avatar parameters (needed for Copy driver sources)
+            var mappedTypes = new AnimatorControllerParameterType[avatarParams.Count];
+            for (int i = 0; i < avatarParams.Count; i++)
+                mappedTypes[i] = MapValueType(avatarParams[i].valueType);
+
+            var addedParams = new HashSet<string>(StringComparer.Ordinal);
+            addedParams.Add(CtrlParam);
+            for (int i = 0; i < avatarParams.Count; i++)
+            {
+                // Only add if not already present in the controller
+                bool alreadyExists = false;
+                foreach (var ep in ctrl.parameters)
+                {
+                    if (ep.name == avatarParams[i].name)
+                    {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+                if (!alreadyExists && addedParams.Add(avatarParams[i].name))
+                    ctrl.AddParameter(avatarParams[i].name, mappedTypes[i]);
+            }
+
+            // Add per-slot backup and default parameters
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                for (int i = 0; i < avatarParams.Count; i++)
+                {
+                    string bakName = $"ASMLite_Bak_S{slot}_{avatarParams[i].name}";
+                    if (addedParams.Add(bakName))
+                        ctrl.AddParameter(bakName, mappedTypes[i]);
+                }
+            }
+            for (int i = 0; i < avatarParams.Count; i++)
+            {
+                string defName = $"ASMLite_Def_{avatarParams[i].name}";
+                if (!addedParams.Add(defName))
+                    continue;
+
+                var acp = new AnimatorControllerParameter
+                {
+                    name = defName,
+                    type = mappedTypes[i]
+                };
+                switch (avatarParams[i].valueType)
+                {
+                    case VRCExpressionParameters.ValueType.Int:
+                        acp.defaultInt = (int)avatarParams[i].defaultValue;
+                        break;
+                    case VRCExpressionParameters.ValueType.Float:
+                        acp.defaultFloat = avatarParams[i].defaultValue;
+                        break;
+                    case VRCExpressionParameters.ValueType.Bool:
+                        acp.defaultBool = avatarParams[i].defaultValue != 0f;
+                        break;
+                }
+                ctrl.AddParameter(acp);
+            }
+
+            // Add slot layers
+            for (int slot = 1; slot <= slotCount; slot++)
+                AddSlotLayer(ctrl, slot, avatarParams);
+
+            EditorUtility.SetDirty(ctrl);
+
+#if ASM_LITE_VERBOSE
+            Debug.Log($"[ASM-Lite] InjectFXLayers: injected {slotCount} slot layers into avatar FX controller '{AssetDatabase.GetAssetPath(ctrl)}'.");
+#endif
+        }
+
+        /// <summary>
+        /// Injects ASM-Lite expression parameters directly into the avatar's
+        /// VRCExpressionParameters asset. Removes any previously injected ASMLite_
+        /// parameters first (idempotent).
+        /// </summary>
+        private static void InjectExpressionParams(VRCAvatarDescriptor avDesc, int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
+        {
+            var exprParams = avDesc.expressionParameters;
+            if (exprParams == null)
+            {
+                Debug.LogWarning("[ASM-Lite] InjectExpressionParams: no expressionParameters on avatar descriptor.");
+                return;
+            }
+
+            // Filter out any existing ASMLite_ entries
+            var existing = exprParams.parameters ?? new VRCExpressionParameters.Parameter[0];
+            var filtered = new List<VRCExpressionParameters.Parameter>(existing.Length);
+            foreach (var p in existing)
+            {
+                if (p == null || string.IsNullOrEmpty(p.name))
+                    continue;
+                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                    continue;
+                filtered.Add(p);
+            }
+
+            // Build ASMLite params to inject
+            var asmParams = new List<VRCExpressionParameters.Parameter>();
+
+            // Control Int
+            asmParams.Add(new VRCExpressionParameters.Parameter
+            {
+                name          = CtrlParam,
+                valueType     = VRCExpressionParameters.ValueType.Int,
+                defaultValue  = 0f,
+                saved         = false,
+                networkSynced = false,
+            });
+
+            // Backup params per slot
+            var byName = new Dictionary<string, VRCExpressionParameters.Parameter>(StringComparer.Ordinal);
+            foreach (var p in avatarParams)
+                byName[p.name] = p;
+
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                foreach (var p in avatarParams)
+                {
+                    asmParams.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_Bak_S{slot}_{p.name}",
+                        valueType     = p.valueType,
+                        defaultValue  = p.defaultValue,
+                        saved         = true,
+                        networkSynced = false,
+                    });
+                }
+            }
+
+            // Combine: existing non-ASMLite params + our generated params
+            filtered.AddRange(asmParams);
+
+            // Deduplicate
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var final = new List<VRCExpressionParameters.Parameter>(filtered.Count);
+            foreach (var p in filtered)
+            {
+                if (seen.Add(p.name))
+                    final.Add(p);
+            }
+
+            exprParams.parameters = final.ToArray();
+            EditorUtility.SetDirty(exprParams);
+
+#if ASM_LITE_VERBOSE
+            Debug.Log($"[ASM-Lite] InjectExpressionParams: {asmParams.Count} ASM-Lite params injected into avatar expression parameters.");
+#endif
+        }
+
+        /// <summary>
+        /// Injects the ASM-Lite "Settings Manager" submenu entry directly into the
+        /// avatar's VRCExpressionsMenu. Removes any previously injected entry first
+        /// (idempotent). The submenu references the generated presets menu asset.
+        /// </summary>
+        private static void InjectExpressionMenu(VRCAvatarDescriptor avDesc, ASMLiteComponent component)
+        {
+            var rootMenu = avDesc.expressionsMenu;
+            if (rootMenu == null)
+            {
+                Debug.LogWarning("[ASM-Lite] InjectExpressionMenu: no expressionsMenu on avatar descriptor.");
+                return;
+            }
+
+            if (rootMenu.controls == null)
+                rootMenu.controls = new List<VRCExpressionsMenu.Control>();
+
+            // Remove existing "Settings Manager" entry (idempotent)
+            rootMenu.controls.RemoveAll(c => c.name == "Settings Manager"
+                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
+
+            // Load the generated presets menu that PopulateExpressionMenu created
+            string presetsMenuPath = $"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset";
+            var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
+            if (presetsMenu == null)
+            {
+                Debug.LogError($"[ASM-Lite] InjectExpressionMenu: presets menu not found at '{presetsMenuPath}'. Was PopulateExpressionMenu called first?");
+                return;
+            }
+
+            // Check VRC menu control limit (8 max)
+            if (rootMenu.controls.Count >= 8)
+            {
+                Debug.LogError("[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add Settings Manager entry.");
+                return;
+            }
+
+            var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
+
+            rootMenu.controls.Add(new VRCExpressionsMenu.Control
+            {
+                name    = "Settings Manager",
+                type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                subMenu = presetsMenu,
+                icon    = iconPresets,
+            });
+
+            EditorUtility.SetDirty(rootMenu);
+
+#if ASM_LITE_VERBOSE
+            Debug.Log("[ASM-Lite] InjectExpressionMenu: 'Settings Manager' entry added to avatar expression menu.");
+#endif
+        }
+
+        /// <summary>
+        /// Removes all ASM-Lite injected content from the avatar's FX controller,
+        /// expression parameters, and expression menu. Called when removing the
+        /// ASM-Lite prefab from the avatar.
+        /// </summary>
+        public static void CleanUpAvatarAssets(VRCAvatarDescriptor avDesc)
+        {
+            if (avDesc == null) return;
+
+            // Clean FX controller
+            for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
+            {
+                if (avDesc.baseAnimationLayers[i].type != VRCAvatarDescriptor.AnimLayerType.FX)
+                    continue;
+
+                var ctrl = avDesc.baseAnimationLayers[i].animatorController as AnimatorController;
+                if (ctrl == null) break;
+
+                // Remove ASMLite_ layers
+                for (int j = ctrl.layers.Length - 1; j >= 0; j--)
+                {
+                    if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        ctrl.RemoveLayer(j);
+                }
+
+                // Remove ASMLite_ parameters (drain loop)
+                bool removed;
+                do
+                {
+                    removed = false;
+                    foreach (var p in ctrl.parameters)
+                    {
+                        if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                        {
+                            ctrl.RemoveParameter(p);
+                            removed = true;
+                            break;
+                        }
+                    }
+                } while (removed);
+
+                EditorUtility.SetDirty(ctrl);
+                break;
+            }
+
+            // Clean expression parameters
+            var exprParams = avDesc.expressionParameters;
+            if (exprParams != null && exprParams.parameters != null)
+            {
+                var filtered = new List<VRCExpressionParameters.Parameter>();
+                foreach (var p in exprParams.parameters)
+                {
+                    if (p == null || string.IsNullOrEmpty(p.name)) continue;
+                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                        continue;
+                    filtered.Add(p);
+                }
+                exprParams.parameters = filtered.ToArray();
+                EditorUtility.SetDirty(exprParams);
+            }
+
+            // Clean expression menu
+            var rootMenu = avDesc.expressionsMenu;
+            if (rootMenu != null && rootMenu.controls != null)
+            {
+                rootMenu.controls.RemoveAll(c => c.name == "Settings Manager"
+                    && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
+                EditorUtility.SetDirty(rootMenu);
+            }
+
+            AssetDatabase.SaveAssets();
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
