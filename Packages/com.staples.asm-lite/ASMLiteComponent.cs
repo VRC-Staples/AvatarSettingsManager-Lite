@@ -35,7 +35,7 @@ namespace ASMLite
     /// ASM-Lite component. Add this to an avatar root (or any child GameObject) to
     /// enable the ASM-Lite slot system. Implements IEditorOnly so the VRChat SDK
     /// strips the component from the build, and IPreprocessCallbackBehaviour so the
-    /// builder runs before VRCFury merges its generated assets.
+    /// VRChat SDK invokes the builder during the avatar build pipeline.
     /// </summary>
     [AddComponentMenu("ASM-Lite/ASM-Lite Component")]
     [DisallowMultipleComponent]
@@ -128,8 +128,11 @@ namespace ASMLite
         // ─── IPreprocessCallbackBehaviour ─────────────────────────────────────
 
         /// <summary>
-        /// PreprocessOrder 0 ensures this runs before VRCFury (which uses order 0 as
-        /// well but is registered later). Lower values run first.
+        /// PreprocessOrder controls ordering relative to other IPreprocessCallbackBehaviour
+        /// implementors on the avatar. The entire IPreprocessCallbackBehaviour phase runs
+        /// via PreprocessCallbackBehaviours (callbackOrder=-2048), which is after VRCFury's
+        /// main build (VrcfAvatarPreprocessor, callbackOrder=int.MinValue). Lower values
+        /// run earlier within the IPreprocessCallbackBehaviour phase.
         /// </summary>
         public int PreprocessOrder => -10;
 
