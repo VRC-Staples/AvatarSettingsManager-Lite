@@ -21,10 +21,10 @@ namespace ASMLite.Editor
         private string _assetPath;
         private readonly List<string> _syncedNames = new List<string>(32);
 
-        [MenuItem("Tools/.Staples./Synced Param Inspector")] 
+        [MenuItem("Tools/.Staples./Synced Param Inspector (Debug Tool)")]
         public static void Open()
         {
-            var win = GetWindow<ASMLiteSyncedParamInspectorWindow>(title: ".Staples. Synced Params");
+            var win = GetWindow<ASMLiteSyncedParamInspectorWindow>(title: ".Staples. Synced Params (Debug Tool)");
             win.minSize = new Vector2(420, 320);
             win.Show();
         }

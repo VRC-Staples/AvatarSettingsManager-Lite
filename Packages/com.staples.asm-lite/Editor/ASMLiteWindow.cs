@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using ASMLite;
 using UnityEditor;
@@ -1000,6 +1001,9 @@ namespace ASMLite.Editor
 
             try
             {
+                // Strip stale VRCFury FullController components from pre-1.0.5 prefabs.
+                ASMLiteBuilder.MigrateStaleVRCFuryComponents(component);
+
                 int count = ASMLiteBuilder.Build(component);
                 if (count >= 0)
                     _discoveredParamCount = count;
@@ -1020,6 +1024,10 @@ namespace ASMLite.Editor
         {
             if (component == null || component.gameObject == null)
                 return;
+
+            // Clean up injected FX layers, params, and menu entries from the avatar
+            if (_selectedAvatar != null)
+                ASMLiteBuilder.CleanUpAvatarAssets(_selectedAvatar);
 
             Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
             int group = Undo.GetCurrentGroup();
