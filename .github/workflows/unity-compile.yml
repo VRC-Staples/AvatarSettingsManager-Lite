@@ -38,9 +38,6 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Install Mono (net48 targeting pack)
-        run: sudo apt-get install -y mono-devel
-
       - name: Generate .csproj files
         env:
           UNITY_PATH: ci/unity-project/UnityManaged
