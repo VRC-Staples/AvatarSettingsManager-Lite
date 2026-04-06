@@ -1,0 +1,2 @@
+# Suppress info/style findings on upstream VRChat community workflow templates
+disable=SC2086,SC2129
