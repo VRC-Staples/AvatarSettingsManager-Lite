@@ -47,27 +47,18 @@ jobs:
           chmod +x ci/generate-csproj.sh
           ci/generate-csproj.sh
 
-      - name: Verify generated csproj and reference DLLs
+      - name: Compile assemblies
         run: |
-          echo "=== ASMLite.Runtime.csproj ==="
+          set +e
           cat ci/unity-project/ASMLite.Runtime.csproj
-          echo "=== DLL presence check ==="
-          for dll in \
-            ci/unity-project/UnityManaged/UnityEngine.dll \
-            ci/unity-project/UnityManaged/UnityEditor.dll \
-            ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll \
-            ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll \
-            ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll \
-            ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll; do
-            if [ -f "$dll" ]; then echo "OK: $dll"; else echo "MISSING: $dll"; fi
-          done
-
-      - name: Compile runtime assembly
-        run: >-
-          dotnet build ci/unity-project/ASMLite.Runtime.csproj
-          --nologo -v normal
-
-      - name: Compile editor assembly
-        run: >-
-          dotnet build ci/unity-project/ASMLite.Editor.csproj
-          --nologo -v normal
+          echo "---"
+          dotnet build ci/unity-project/ASMLite.Runtime.csproj --nologo -v minimal > /tmp/runtime-build.txt 2>&1
+          RT=$?
+          cat /tmp/runtime-build.txt
+          echo "Runtime exit: $RT"
+          if [ $RT -ne 0 ]; then exit $RT; fi
+          dotnet build ci/unity-project/ASMLite.Editor.csproj --nologo -v minimal > /tmp/editor-build.txt 2>&1
+          ET=$?
+          cat /tmp/editor-build.txt
+          echo "Editor exit: $ET"
+          exit $ET
