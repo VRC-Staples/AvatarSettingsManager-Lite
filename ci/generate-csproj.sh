@@ -20,7 +20,7 @@ echo "Generating ASMLite.Runtime.csproj"
 cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
@@ -45,7 +45,7 @@ echo "Generating ASMLite.Editor.csproj"
 cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
