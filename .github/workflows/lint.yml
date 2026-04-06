@@ -1,0 +1,53 @@
+---
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+permissions: { }
+
+jobs:
+  lint:
+    name: Super-Linter
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Super-Linter
+        uses: super-linter/super-linter/slim@v8.6.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          VALIDATE_ALL_CODEBASE: >-
+            ${{ github.event_name != 'pull_request' }}
+
+          FILTER_REGEX_INCLUDE: >-
+            .*(\.github|Packages/com\.staples\.asm-lite)/.*
+
+          VALIDATE_MARKDOWN: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITLEAKS: true
+
+          LINTER_RULES_PATH: .
+
+          SHELLCHECK_OPTS: >-
+            --exclude=SC2086 --exclude=SC2129

@@ -1,0 +1,72 @@
+---
+name: C# Compile Check
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "Packages/com.staples.asm-lite/**/*.cs"
+      - "ci/**"
+      - ".github/workflows/unity-compile.yml"
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "Packages/com.staples.asm-lite/**/*.cs"
+      - "ci/**"
+      - ".github/workflows/unity-compile.yml"
+
+permissions: { }
+
+jobs:
+  compile:
+    name: C# Compile (Unity 2022.3.22f1)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Generate .csproj files
+        env:
+          UNITY_PATH: ci/unity-project/UnityManaged
+          PACKAGE_PATH: Packages/com.staples.asm-lite
+          CI_PROJECT_PATH: ci/unity-project
+        run: |
+          chmod +x ci/generate-csproj.sh
+          ci/generate-csproj.sh
+
+      - name: Compile assemblies
+        run: |
+          set +e
+          cat ci/unity-project/ASMLite.Runtime.csproj > /tmp/runtime.csproj.txt
+          dotnet build ci/unity-project/ASMLite.Runtime.csproj --nologo -v diagnostic > /tmp/runtime-build.txt 2>&1
+          RT=$?
+          echo "Runtime exit: $RT" >> /tmp/runtime-build.txt
+          dotnet build ci/unity-project/ASMLite.Editor.csproj --nologo -v diagnostic > /tmp/editor-build.txt 2>&1
+          ET=$?
+          echo "Editor exit: $ET" >> /tmp/editor-build.txt
+          # Print tail of each for annotations
+          tail -50 /tmp/runtime-build.txt
+          exit $RT
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            /tmp/runtime.csproj.txt
+            /tmp/runtime-build.txt
+            /tmp/editor-build.txt

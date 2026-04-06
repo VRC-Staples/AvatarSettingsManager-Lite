@@ -1,14 +1,19 @@
 # ASM-Lite - Avatar Settings Manager Lite
 
+[![Unity Compile](https://img.shields.io/github/actions/workflow/status/VRC-Staples/AvatarSettingsManager-Lite/unity-compile.yml?branch=dev&label=unity%20compile)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/workflows/unity-compile.yml)
+[![Release](https://img.shields.io/github/v/release/VRC-Staples/AvatarSettingsManager-Lite?label=release)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/releases/latest)
+[![VPM Listing](https://img.shields.io/github/actions/workflow/status/VRC-Staples/AvatarSettingsManager-Lite/build-listing.yml?branch=dev&label=vpm%20listing)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/workflows/build-listing.yml)
+[![License](https://img.shields.io/github/license/VRC-Staples/AvatarSettingsManager-Lite)](LICENSE)
+
 A lightweight prefab that adds Save, Load, and Clear Preset for expression parameter presets on VRChat avatars.
 
 ---
 
 ## Overview
 
-ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu with no extra tools needed.
+ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu.
 
-Drop the prefab onto your avatar, configure your slot count and icon style, and click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters and directly injects the FX animator layers, expression parameters, and menu entries into the avatar non-destructively.
+You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters and directly injects the FX animator layers, expression parameters, and menu entries into the avatar non-destructively.
 
 ---
 
@@ -51,6 +56,7 @@ Drop the prefab onto your avatar, configure your slot count and icon style, and 
 3. Configure your settings (all options are available before adding the prefab):
    - **Slot Count** - number of preset slots (1-8).
    - **Icon Mode** - what icons appear in the expression menu for each slot (see below).
+   - **Action Icon Mode** - default bundled action icons or custom Save/Load/Clear icons.
 4. Click **Add ASM-Lite Prefab**.
 
 Once the prefab is added, two buttons appear:
@@ -84,6 +90,15 @@ Controls the icons displayed in the expression menu for each preset slot.
 | **Same Color** | All slots use one gear icon. Choose from Blue, Red, Green, Purple, Cyan, Orange, Pink, or Yellow. |
 | **Custom** | Assign your own Texture2D per slot. |
 
+### Action Icon Mode
+
+Controls the icons shown for **Save**, **Load**, and **Clear Preset** actions inside each slot menu.
+
+| Mode | Behavior |
+|---|---|
+| **Default** | Uses bundled action icons for Save, Load, and Clear Preset. |
+| **Custom** | Lets you assign custom Texture2D icons per action. If a custom icon is left unassigned, ASM-Lite falls back to the bundled default for that action. |
+
 ---
 
 ## How It Works
@@ -105,7 +120,7 @@ The control trigger parameter (`ASMLite_Ctrl`) is also local-only and never netw
 
 ## Upgrading from Earlier Versions
 
-If your avatar already has an ASM-Lite prefab from before 1.0.5, simply click **Rebuild ASM-Lite** in the editor window. The migration runs automatically: the stale VRCFury FullController component is removed from the prefab instance and replaced by the direct injection approach.
+If your avatar already has an ASM-Lite prefab from before 1.0.5, simply click **Rebuild ASM-Lite** in the editor window. The migration runs automatically: stale VRCFury FullController data from older prefab instances is removed and replaced by the direct injection approach.
 
 ---
 
@@ -117,7 +132,7 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 
 ## Releases
 
-Releases are published automatically via GitHub Actions. The VPM listing rebuilds automatically on each new release.
+Release artifacts are published through the **Build Release** GitHub Actions workflow (manual dispatch). The VPM listing rebuilds automatically when release events are published/updated.
 
 ---
 
