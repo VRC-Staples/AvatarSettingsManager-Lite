@@ -1,3 +1,4 @@
+---
 name: Lint
 
 on:
@@ -10,7 +11,7 @@ on:
       - main
       - dev
 
-permissions: {}
+permissions: { }
 
 jobs:
   lint:
@@ -34,21 +35,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          # Validate all files on push to main/dev; only changed files on PRs
-          VALIDATE_ALL_CODEBASE: ${{ github.event_name != 'pull_request' }}
+          VALIDATE_ALL_CODEBASE: >-
+            ${{ github.event_name != 'pull_request' }}
 
-          # Scope to files inside the package (ignore Test Project, Website, Logs)
-          FILTER_REGEX_INCLUDE: .*(\.github|Packages/com\.staples\.asm-lite)/.*
+          FILTER_REGEX_INCLUDE: >-
+            .*(\.github|Packages/com\.staples\.asm-lite)/.*
 
-          # Setting any VALIDATE_ to true makes all unset ones default to false.
-          # Only list the linters relevant to this codebase.
           VALIDATE_MARKDOWN: true
           VALIDATE_JSON: true
           VALIDATE_YAML: true
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_GITLEAKS: true
 
-          # Suppress SC2086 (quote variables) and SC2129 (redirect style)
-          # in actionlint's embedded shellcheck. These fire on upstream
-          # VRChat community workflow templates we do not own.
-          SHELLCHECK_OPTS: "--exclude=SC2086 --exclude=SC2129"
+          LINTER_RULES_PATH: .
+
+          SHELLCHECK_OPTS: >-
+            --exclude=SC2086 --exclude=SC2129
