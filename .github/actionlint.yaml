@@ -1,0 +1,6 @@
+# Suppress shellcheck info/style findings in workflow run steps.
+# SC2086 (double-quote to prevent globbing) and SC2129 (redirect style) are
+# style-level findings that fire on upstream community workflow templates.
+ignore:
+  - "SC2086"
+  - "SC2129"
