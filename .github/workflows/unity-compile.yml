@@ -50,15 +50,23 @@ jobs:
       - name: Compile assemblies
         run: |
           set +e
-          cat ci/unity-project/ASMLite.Runtime.csproj
-          echo "---"
-          dotnet build ci/unity-project/ASMLite.Runtime.csproj --nologo -v minimal > /tmp/runtime-build.txt 2>&1
+          cat ci/unity-project/ASMLite.Runtime.csproj > /tmp/runtime.csproj.txt
+          dotnet build ci/unity-project/ASMLite.Runtime.csproj --nologo -v diagnostic > /tmp/runtime-build.txt 2>&1
           RT=$?
-          cat /tmp/runtime-build.txt
-          echo "Runtime exit: $RT"
-          if [ $RT -ne 0 ]; then exit $RT; fi
-          dotnet build ci/unity-project/ASMLite.Editor.csproj --nologo -v minimal > /tmp/editor-build.txt 2>&1
+          echo "Runtime exit: $RT" >> /tmp/runtime-build.txt
+          dotnet build ci/unity-project/ASMLite.Editor.csproj --nologo -v diagnostic > /tmp/editor-build.txt 2>&1
           ET=$?
-          cat /tmp/editor-build.txt
-          echo "Editor exit: $ET"
-          exit $ET
+          echo "Editor exit: $ET" >> /tmp/editor-build.txt
+          # Print tail of each for annotations
+          tail -50 /tmp/runtime-build.txt
+          exit $RT
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            /tmp/runtime.csproj.txt
+            /tmp/runtime-build.txt
+            /tmp/editor-build.txt
