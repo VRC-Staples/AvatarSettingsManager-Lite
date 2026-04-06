@@ -66,6 +66,10 @@ jobs:
               "Super-Linter",
               "Lint / Super-Linter",
             ],
+            "test": [
+              "EditMode Tests",
+              "Unity Test Results / EditMode Tests",
+            ],
           }
 
           def api_get(path, accept):
