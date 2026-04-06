@@ -59,7 +59,8 @@ jobs:
           echo "Editor exit: $ET" >> /tmp/editor-build.txt
           # Print tail of each for annotations
           tail -50 /tmp/runtime-build.txt
-          exit $RT
+          tail -50 /tmp/editor-build.txt
+          exit $(( RT | ET ))
 
       - name: Upload build logs
         if: always()
