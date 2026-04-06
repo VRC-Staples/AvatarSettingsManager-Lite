@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
+using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using VRC.SDKBase;
 using ASMLite;
@@ -192,7 +193,7 @@ namespace ASMLite.Tests.Editor
 
             var sm        = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
             var saveState = FindState(sm, "SaveSlot1");
-            var driver    = saveState.GetComponent<VRCAvatarParameterDriver>();
+            var driver    = saveState.behaviours.OfType<VRCAvatarParameterDriver>().SingleOrDefault();
 
             Assert.IsNotNull(driver, "SaveSlot1 must have a VRCAvatarParameterDriver.");
 
@@ -219,7 +220,7 @@ namespace ASMLite.Tests.Editor
 
             var sm        = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
             var loadState = FindState(sm, "LoadSlot1");
-            var driver    = loadState.GetComponent<VRCAvatarParameterDriver>();
+            var driver    = loadState.behaviours.OfType<VRCAvatarParameterDriver>().SingleOrDefault();
 
             Assert.IsNotNull(driver, "LoadSlot1 must have a VRCAvatarParameterDriver.");
 
@@ -246,7 +247,7 @@ namespace ASMLite.Tests.Editor
 
             var sm         = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
             var resetState = FindState(sm, "ResetSlot1");
-            var driver     = resetState.GetComponent<VRCAvatarParameterDriver>();
+            var driver     = resetState.behaviours.OfType<VRCAvatarParameterDriver>().SingleOrDefault();
 
             Assert.IsNotNull(driver, "ResetSlot1 must have a VRCAvatarParameterDriver.");
 
@@ -276,7 +277,7 @@ namespace ASMLite.Tests.Editor
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
             {
                 var state  = FindState(sm, stateName);
-                var driver = state.GetComponent<VRCAvatarParameterDriver>();
+                var driver = state.behaviours.OfType<VRCAvatarParameterDriver>().SingleOrDefault();
                 Assert.IsNotNull(driver, $"{stateName} must have a VRCAvatarParameterDriver.");
 
                 var last = driver.parameters[driver.parameters.Count - 1];
@@ -303,7 +304,7 @@ namespace ASMLite.Tests.Editor
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
             {
                 var state  = FindState(sm, stateName);
-                var driver = state.GetComponent<VRCAvatarParameterDriver>();
+                var driver = state.behaviours.OfType<VRCAvatarParameterDriver>().SingleOrDefault();
                 Assert.IsNotNull(driver, $"{stateName} must have a VRCAvatarParameterDriver.");
                 Assert.IsTrue(driver.localOnly,
                     $"{stateName}: VRCAvatarParameterDriver.localOnly must be true.");
