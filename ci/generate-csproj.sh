@@ -5,14 +5,16 @@
 # CI_PROJECT_PATH: root of ci/unity-project
 set -euo pipefail
 
-UNITY_ENGINE_DLL="${UNITY_PATH}/UnityEngine.dll"
-UNITY_EDITOR_DLL="${UNITY_PATH}/UnityEditor.dll"
-VRC_SDK_BASE="${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
-VRC_SDK3A="${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
-VRC_SDK3A_EDITOR="${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
-VRC_DYNAMICS="${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
+REPO_ROOT="$(pwd)"
 
-OUT_DIR="${CI_PROJECT_PATH}"
+UNITY_ENGINE_DLL="${REPO_ROOT}/${UNITY_PATH}/UnityEngine.dll"
+UNITY_EDITOR_DLL="${REPO_ROOT}/${UNITY_PATH}/UnityEditor.dll"
+VRC_SDK_BASE="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
+VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
+VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
+VRC_DYNAMICS="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
+
+OUT_DIR="${REPO_ROOT}/${CI_PROJECT_PATH}"
 
 echo "Generating ASMLite.Runtime.csproj"
 cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
@@ -23,7 +25,7 @@ cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="${PACKAGE_PATH}/ASMLiteComponent.cs" />
+    <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/ASMLiteComponent.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -47,7 +49,7 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="${PACKAGE_PATH}/Editor/**/*.cs" />
+    <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -75,7 +77,7 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-  <ProjectReference Include="${OUT_DIR}/ASMLite.Runtime.csproj" />
+  <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />
 </Project>
 CSPROJ
 
