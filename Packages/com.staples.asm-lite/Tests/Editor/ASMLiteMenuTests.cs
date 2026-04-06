@@ -317,5 +317,88 @@ namespace ASMLite.Tests.Editor
                     $"A32: slot {slot} ClearConfirm value mismatch. Expected {expectedClear}, got {clearConfirm.value}.");
             }
         }
+
+        // ── A33 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A33_InjectExpressionMenuIsIdempotentAfterRepeatedBuild()
+        {
+            _ctx.Comp.slotCount = 1;
+
+            int firstResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(firstResult, 0,
+                $"A33: first Build() failed with result {firstResult}.");
+
+            int secondResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(secondResult, 0,
+                $"A33: second Build() failed with result {secondResult}.");
+
+            var rootMenu = _ctx.AvDesc.expressionsMenu;
+            Assert.IsNotNull(rootMenu, "A33: avDesc.expressionsMenu is null after repeated Build().");
+            Assert.IsNotNull(rootMenu.controls, "A33: root menu controls list is null after repeated Build().");
+
+            int settingsManagerCount = 0;
+            for (int i = 0; i < rootMenu.controls.Count; i++)
+            {
+                var control = rootMenu.controls[i];
+                if (control != null
+                    && control.name == "Settings Manager"
+                    && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
+                {
+                    settingsManagerCount++;
+                }
+            }
+
+            Assert.AreEqual(1, settingsManagerCount,
+                $"A33: expected exactly one Settings Manager root control after two Build() calls; rootCount={rootMenu.controls.Count}, settingsManagerCount={settingsManagerCount}.");
+        }
+
+        // ── A34 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A34_DoesNotInjectWhenRootMenuAlreadyHasEightControls()
+        {
+            var rootMenu = _ctx.AvDesc.expressionsMenu;
+            Assert.IsNotNull(rootMenu, "A34: avDesc.expressionsMenu is null before prefill.");
+
+            rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
+            for (int i = 0; i < 8; i++)
+            {
+                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = $"PreExisting_{i + 1}",
+                    type = VRCExpressionsMenu.Control.ControlType.Button,
+                });
+            }
+
+            Assert.IsNotNull(rootMenu.controls, "A34: prefill produced null controls list.");
+            Assert.AreEqual(8, rootMenu.controls.Count,
+                $"A34: setup failure, expected exactly 8 baseline controls before Build(), got {rootMenu.controls.Count}.");
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"A34: Build() failed with result {buildResult} in saturated-root scenario.");
+
+            var liveRootMenu = _ctx.AvDesc.expressionsMenu;
+            Assert.IsNotNull(liveRootMenu, "A34: avDesc.expressionsMenu is null after Build().");
+            Assert.IsNotNull(liveRootMenu.controls, "A34: root menu controls list is null after Build().");
+
+            int settingsManagerCount = 0;
+            for (int i = 0; i < liveRootMenu.controls.Count; i++)
+            {
+                var control = liveRootMenu.controls[i];
+                if (control != null
+                    && control.name == "Settings Manager"
+                    && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
+                {
+                    settingsManagerCount++;
+                }
+            }
+
+            Assert.AreEqual(8, liveRootMenu.controls.Count,
+                $"A34: root menu size changed unexpectedly. before=8, after={liveRootMenu.controls.Count}.");
+            Assert.AreEqual(0, settingsManagerCount,
+                $"A34: Settings Manager should not be injected when root is already full (8 controls). afterCount={liveRootMenu.controls.Count}, settingsManagerCount={settingsManagerCount}.");
+        }
     }
 }
