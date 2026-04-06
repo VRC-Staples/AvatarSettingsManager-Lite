@@ -1,0 +1,52 @@
+# Unity EditMode test runner — GameCI
+#
+# Required repo secrets:
+#   UNITY_LICENSE   — base64-encoded Unity license file content
+#   UNITY_EMAIL     — Unity account email
+#   UNITY_PASSWORD  — Unity account password
+#
+# Set these in Settings > Secrets and Variables > Actions before running.
+
+name: Unity Test Results
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+permissions: {}
+
+jobs:
+  test:
+    name: EditMode Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Cache Unity Library
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ci/unity-project/Library
+          key: Library-${{ hashFiles('ci/unity-project/Packages/**', 'ci/unity-project/ProjectSettings/**') }}
+          restore-keys: Library-
+      - name: Run EditMode Tests
+        id: tests
+        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9 # v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: ci/unity-project
+          testMode: editMode
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload NUnit results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: test-results
+          path: ${{ steps.tests.outputs.artifactsPath }}
