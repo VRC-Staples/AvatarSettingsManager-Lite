@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # Generates ASMLite.Editor.csproj and ASMLite.Runtime.csproj for compile checking.
-# Expects UNITY_PATH to point to the Unity editor Data/Managed directory.
-# Expects PACKAGE_PATH to point to the com.staples.asm-lite package root.
-# Expects CI_PROJECT_PATH to point to the ci/unity-project directory.
+# UNITY_PATH: directory containing UnityEngine.dll and UnityEditor.dll
+# PACKAGE_PATH: root of the com.staples.asm-lite package
+# CI_PROJECT_PATH: root of ci/unity-project
 set -euo pipefail
 
-UNITY_MANAGED="${UNITY_PATH}/Data/Managed"
-UNITY_ENGINE_DLL="${UNITY_MANAGED}/UnityEngine.dll"
-UNITY_EDITOR_DLL="${UNITY_MANAGED}/UnityEditor.dll"
-UNITY_EDITOR_ANIMATIONS="${UNITY_MANAGED}/UnityEditor.dll"
+UNITY_ENGINE_DLL="${UNITY_PATH}/UnityEngine.dll"
+UNITY_EDITOR_DLL="${UNITY_PATH}/UnityEditor.dll"
 VRC_SDK_BASE="${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
 VRC_SDK3A="${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
