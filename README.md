@@ -56,6 +56,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 3. Configure your settings (all options are available before adding the prefab):
    - **Slot Count** - number of preset slots (1-8).
    - **Icon Mode** - what icons appear in the expression menu for each slot (see below).
+   - **Action Icon Mode** - default bundled action icons or custom Save/Load/Clear icons.
 4. Click **Add ASM-Lite Prefab**.
 
 Once the prefab is added, two buttons appear:
@@ -89,6 +90,15 @@ Controls the icons displayed in the expression menu for each preset slot.
 | **Same Color** | All slots use one gear icon. Choose from Blue, Red, Green, Purple, Cyan, Orange, Pink, or Yellow. |
 | **Custom** | Assign your own Texture2D per slot. |
 
+### Action Icon Mode
+
+Controls the icons shown for **Save**, **Load**, and **Clear Preset** actions inside each slot menu.
+
+| Mode | Behavior |
+|---|---|
+| **Default** | Uses bundled action icons for Save, Load, and Clear Preset. |
+| **Custom** | Lets you assign custom Texture2D icons per action. If a custom icon is left unassigned, ASM-Lite falls back to the bundled default for that action. |
+
 ---
 
 ## How It Works
@@ -110,7 +120,7 @@ The control trigger parameter (`ASMLite_Ctrl`) is also local-only and never netw
 
 ## Upgrading from Earlier Versions
 
-If your avatar already has an ASM-Lite prefab from before 1.0.5, simply click **Rebuild ASM-Lite** in the editor window. The migration runs automatically: the stale VRCFury FullController component is removed from the prefab instance and replaced by the direct injection approach.
+If your avatar already has an ASM-Lite prefab from before 1.0.5, simply click **Rebuild ASM-Lite** in the editor window. The migration runs automatically: stale VRCFury FullController data from older prefab instances is removed and replaced by the direct injection approach.
 
 ---
 
@@ -122,7 +132,7 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 
 ## Releases
 
-Releases are published automatically via GitHub Actions. The VPM listing rebuilds automatically on each new release.
+Release artifacts are published through the **Build Release** GitHub Actions workflow (manual dispatch). The VPM listing rebuilds automatically when release events are published/updated.
 
 ---
 
