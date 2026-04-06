@@ -23,6 +23,7 @@ cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
     <TargetFramework>net48</TargetFramework>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/ASMLiteComponent.cs" />
@@ -47,6 +48,7 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
     <TargetFramework>net48</TargetFramework>
     <Nullable>disable</Nullable>
     <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
