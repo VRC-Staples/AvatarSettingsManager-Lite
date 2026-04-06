@@ -1,5 +1,10 @@
 # ASM-Lite - Avatar Settings Manager Lite
 
+[![Unity Compile](https://img.shields.io/github/actions/workflow/status/VRC-Staples/AvatarSettingsManager-Lite/unity-compile.yml?branch=dev&label=unity%20compile)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/workflows/unity-compile.yml)
+[![Release](https://img.shields.io/github/v/release/VRC-Staples/AvatarSettingsManager-Lite?label=release)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/releases/latest)
+[![VPM Listing](https://img.shields.io/github/actions/workflow/status/VRC-Staples/AvatarSettingsManager-Lite/build-listing.yml?branch=dev&label=vpm%20listing)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/workflows/build-listing.yml)
+[![License](https://img.shields.io/github/license/VRC-Staples/AvatarSettingsManager-Lite)](LICENSE)
+
 A lightweight prefab that adds Save, Load, and Clear Preset for expression parameter presets on VRChat avatars.
 
 ---
