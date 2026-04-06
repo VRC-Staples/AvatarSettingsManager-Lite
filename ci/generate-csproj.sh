@@ -22,8 +22,12 @@ cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <NoWarn>CS0649;CS0414</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/ASMLiteComponent.cs" />
@@ -47,8 +51,12 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <NoWarn>CS0649;CS0414</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
