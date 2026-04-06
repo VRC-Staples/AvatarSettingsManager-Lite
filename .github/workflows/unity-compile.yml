@@ -1,0 +1,58 @@
+---
+name: C# Compile Check
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "Packages/com.staples.asm-lite/**/*.cs"
+      - "ci/**"
+      - ".github/workflows/unity-compile.yml"
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "Packages/com.staples.asm-lite/**/*.cs"
+      - "ci/**"
+      - ".github/workflows/unity-compile.yml"
+
+permissions: { }
+
+jobs:
+  compile:
+    name: C# Compile (Unity 2022.3.22f1)
+    runs-on: ubuntu-latest
+
+    # Use the GameCI Unity image -- Unity is pre-installed, no license needed
+    # for running dotnet/Roslyn directly against the engine DLLs.
+    container:
+      image: unityci/editor:ubuntu-2022.3.22f1-linux-il2cpp-3
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate .csproj files
+        env:
+          UNITY_PATH: /opt/unity/Editor
+          PACKAGE_PATH: ${{ github.workspace }}/Packages/com.staples.asm-lite
+          CI_PROJECT_PATH: ${{ github.workspace }}/ci/unity-project
+        run: |
+          chmod +x ci/generate-csproj.sh
+          ci/generate-csproj.sh
+
+      - name: Compile runtime assembly
+        run: >-
+          dotnet build ci/unity-project/ASMLite.Runtime.csproj
+          --nologo -v minimal
+
+      - name: Compile editor assembly
+        run: >-
+          dotnet build ci/unity-project/ASMLite.Editor.csproj
+          --nologo -v minimal
