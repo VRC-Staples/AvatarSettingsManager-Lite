@@ -4,6 +4,19 @@ All notable changes to ASM-Lite are documented here.
 
 ---
 
+## [1.0.6] - 2026-04-06
+
+### Fixed
+- EditMode test compile stability improved in Unity batchmode by switching driver assertions in `ASMLiteFXControllerTests` to `VRC_AvatarParameterDriver`, removing a brittle direct dependency on `VRCAvatarParameterDriver` type resolution.
+- CI C# compile pipeline now resolves VRChat SDK dependencies consistently by ensuring required SDK plugin DLLs are tracked in the CI Unity project package tree.
+- Generated CI project files now disable default SDK compile globs to avoid pulling unrelated package sources into the compile check.
+
+### Changed
+- CI compile check targets `netstandard2.1` for generated projects and no longer depends on Mono setup in workflow.
+- README now includes workflow and release badges for compile status, VPM listing status, latest release, and license.
+
+---
+
 ## [1.0.5] - 2026-04-05
 
 ### Fixed

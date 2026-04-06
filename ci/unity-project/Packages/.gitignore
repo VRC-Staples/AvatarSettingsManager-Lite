@@ -1,0 +1,23 @@
+/*/
+com.vrchat.*/
+!com.vrchat.core.*/
+!com.vrchat.base/
+!com.vrchat.avatars/
+!vpm-manifest.json
+!manifest.json
+
+# Un-ignore only the DLLs needed for compile checking
+com.vrchat.base/*
+com.vrchat.base/**/*
+!com.vrchat.base/Runtime/
+!com.vrchat.base/Runtime/VRCSDK/
+!com.vrchat.base/Runtime/VRCSDK/Plugins/
+!com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll
+!com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll
+com.vrchat.avatars/*
+com.vrchat.avatars/**/*
+!com.vrchat.avatars/Runtime/
+!com.vrchat.avatars/Runtime/VRCSDK/
+!com.vrchat.avatars/Runtime/VRCSDK/Plugins/
+!com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll
+!com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll
