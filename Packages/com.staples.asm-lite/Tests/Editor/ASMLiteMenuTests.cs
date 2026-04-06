@@ -87,6 +87,41 @@ namespace ASMLite.Tests.Editor
             return presetControl;
         }
 
+        private enum TriggerActionKind
+        {
+            SaveConfirm = 1,
+            Load = 2,
+            ClearConfirm = 3,
+        }
+
+        private static float ExpectedCompactIntValue(int slotIndex, TriggerActionKind actionKind)
+            // CompactInt encoding contract: (slot-1)*3+N where N=1 SaveConfirm, 2 Load, 3 ClearConfirm.
+            => (slotIndex - 1) * 3 + (int)actionKind;
+
+        private static VRCExpressionsMenu.Control GetControlOrFail(
+            VRCExpressionsMenu menu,
+            string controlName,
+            VRCExpressionsMenu.Control.ControlType controlType,
+            string aid,
+            int slotIndex,
+            string actionKind)
+        {
+            Assert.IsNotNull(menu, $"{aid}: slot {slotIndex} {actionKind} lookup menu is null.");
+            Assert.IsNotNull(menu.controls,
+                $"{aid}: slot {slotIndex} {actionKind} lookup menu controls are null.");
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var candidate = menu.controls[i];
+                if (candidate.name == controlName && candidate.type == controlType)
+                    return candidate;
+            }
+
+            Assert.Fail(
+                $"{aid}: slot {slotIndex} could not resolve {actionKind} control '{controlName}' with type {controlType}.");
+            return null;
+        }
+
         // ── A26 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -196,6 +231,91 @@ namespace ASMLite.Tests.Editor
                 "A30: Load control must target ASMLite_Ctrl.");
             Assert.AreEqual(2f, load.value,
                 "A30: Load value for slot 1 must be encoded as 2.");
+        }
+
+        // ── A31 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots()
+        {
+            const int slotCount = 2;
+            var rootMenu = BuildAndGetRootMenu(slotCount, "A31");
+            var presetsMenu = GetPresetsMenu(rootMenu, "A31");
+
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                var slotMenu = GetPresetControl(presetsMenu, slot, "A31").subMenu;
+
+                var load = GetControlOrFail(slotMenu, "Load", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A31", slot, "Load");
+                Assert.IsNotNull(load.parameter,
+                    $"A31: slot {slot} Load parameter payload must exist.");
+                Assert.AreEqual("ASMLite_Ctrl", load.parameter.name,
+                    $"A31: slot {slot} Load must target ASMLite_Ctrl, got '{load.parameter.name ?? "<null>"}'.");
+
+                var save = GetControlOrFail(slotMenu, "Save", VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    "A31", slot, "Save");
+                Assert.IsNotNull(save.subMenu,
+                    $"A31: slot {slot} Save submenu reference is null.");
+                var saveConfirm = GetControlOrFail(save.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A31", slot, "SaveConfirm");
+                Assert.IsNotNull(saveConfirm.parameter,
+                    $"A31: slot {slot} SaveConfirm parameter payload must exist.");
+                Assert.AreEqual("ASMLite_Ctrl", saveConfirm.parameter.name,
+                    $"A31: slot {slot} SaveConfirm must target ASMLite_Ctrl, got '{saveConfirm.parameter.name ?? "<null>"}'.");
+
+                var clear = GetControlOrFail(slotMenu, "Clear Preset", VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    "A31", slot, "Clear");
+                Assert.IsNotNull(clear.subMenu,
+                    $"A31: slot {slot} Clear Preset submenu reference is null.");
+                var clearConfirm = GetControlOrFail(clear.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A31", slot, "ClearConfirm");
+                Assert.IsNotNull(clearConfirm.parameter,
+                    $"A31: slot {slot} ClearConfirm parameter payload must exist.");
+                Assert.AreEqual("ASMLite_Ctrl", clearConfirm.parameter.name,
+                    $"A31: slot {slot} ClearConfirm must target ASMLite_Ctrl, got '{clearConfirm.parameter.name ?? "<null>"}'.");
+            }
+        }
+
+        // ── A32 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots()
+        {
+            const int slotCount = 2;
+            var rootMenu = BuildAndGetRootMenu(slotCount, "A32");
+            var presetsMenu = GetPresetsMenu(rootMenu, "A32");
+
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                var slotMenu = GetPresetControl(presetsMenu, slot, "A32").subMenu;
+
+                var load = GetControlOrFail(slotMenu, "Load", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A32", slot, "Load");
+                float expectedLoad = ExpectedCompactIntValue(slot, TriggerActionKind.Load);
+                Assert.AreEqual(expectedLoad, load.value,
+                    $"A32: slot {slot} Load value mismatch. Expected {expectedLoad}, got {load.value}.");
+
+                var save = GetControlOrFail(slotMenu, "Save", VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    "A32", slot, "Save");
+                Assert.IsNotNull(save.subMenu,
+                    $"A32: slot {slot} Save submenu reference is null.");
+                var saveConfirm = GetControlOrFail(save.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A32", slot, "SaveConfirm");
+                float expectedSave = ExpectedCompactIntValue(slot, TriggerActionKind.SaveConfirm);
+                Assert.AreEqual(expectedSave, saveConfirm.value,
+                    $"A32: slot {slot} SaveConfirm value mismatch. Expected {expectedSave}, got {saveConfirm.value}.");
+
+                var clear = GetControlOrFail(slotMenu, "Clear Preset", VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    "A32", slot, "Clear");
+                Assert.IsNotNull(clear.subMenu,
+                    $"A32: slot {slot} Clear Preset submenu reference is null.");
+                var clearConfirm = GetControlOrFail(clear.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
+                    "A32", slot, "ClearConfirm");
+                float expectedClear = ExpectedCompactIntValue(slot, TriggerActionKind.ClearConfirm);
+                Assert.AreEqual(expectedClear, clearConfirm.value,
+                    $"A32: slot {slot} ClearConfirm value mismatch. Expected {expectedClear}, got {clearConfirm.value}.");
+            }
         }
     }
 }
