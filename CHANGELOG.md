@@ -6,14 +6,26 @@ All notable changes to ASM-Lite are documented here.
 
 ## [1.0.6] - 2026-04-06
 
+### Added
+- Unity EditMode test workflow (`unity-test.yml`) runs the full integration test suite via GameCI on push to `dev` and is required to pass before release.
+- Auto-tag workflow (`auto-tag.yml`) creates a version tag on `main` when `package.json` changes, replacing the manual dispatch release trigger.
+- Nightly prerelease workflow (`nightly.yml`) builds and publishes a prerelease from `dev` daily at 05:00 UTC and on every `dev` push.
+- Gitleaks secret-scan workflow (`secret-scan.yml`) runs weekly to detect committed credentials.
+- Fail-closed release gate enforces that compile, test, and listing checks all pass before the release artifact is published.
+- Dependabot config for GitHub Actions dependency updates.
+- `ci/verify-release-gate.ps1` and `ci/verify-shadow-project-hygiene.ps1` scripts for local gate validation.
+
 ### Fixed
 - EditMode test compile stability improved in Unity batchmode by switching driver assertions in `ASMLiteFXControllerTests` to `VRC_AvatarParameterDriver`, removing a brittle direct dependency on `VRCAvatarParameterDriver` type resolution.
 - CI C# compile pipeline now resolves VRChat SDK dependencies consistently by ensuring required SDK plugin DLLs are tracked in the CI Unity project package tree.
 - Generated CI project files now disable default SDK compile globs to avoid pulling unrelated package sources into the compile check.
+- Silent Editor build failure fixed by propagating both Runtime and Editor csproj exit codes via bitwise OR.
+- All `uses:` workflow action references SHA-pinned to prevent supply chain drift.
 
 ### Changed
 - CI compile check targets `netstandard2.1` for generated projects and no longer depends on Mono setup in workflow.
-- README now includes workflow and release badges for compile status, VPM listing status, latest release, and license.
+- README compile badge now tracks `main` branch. Unity Tests badge added.
+- `.mcp.json` removed from version control.
 
 ---
 
