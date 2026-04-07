@@ -1,5 +1,7 @@
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
@@ -375,6 +377,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(8, rootMenu.controls.Count,
                 $"A34: setup failure, expected exactly 8 baseline controls before Build(), got {rootMenu.controls.Count}.");
 
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("already has 8 controls"));
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(buildResult, 0,
                 $"A34: Build() failed with result {buildResult} in saturated-root scenario.");
