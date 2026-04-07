@@ -170,9 +170,12 @@ jobs:
             -password "$UNITY_PASSWORD" \
             -logFile /dev/stdout
 
+          # Remove stale Unity lockfile so unity-editor can open the project.
+          # The Temp/ dir is gitignored but may be checked out from prior runs.
+          rm -rf /github/workspace/ci/unity-project/Temp
+
           # Run tests against the shadow project.
           unity-editor \
-            -batchmode \
             -nographics \
             -logFile /github/workspace/artifacts/editmode.log \
             -projectPath ci/unity-project \
