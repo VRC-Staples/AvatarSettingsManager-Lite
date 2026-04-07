@@ -35,8 +35,9 @@ try {
     Assert-True -Condition (-not [string]::IsNullOrWhiteSpace($lockVersion)) -Message "Invariant failed: lockfile is missing dependencies.com.unity.test-framework.version in $lockPath"
     Assert-True -Condition ($manifestVersion -eq $lockVersion) -Message "Invariant failed: com.unity.test-framework mismatch. manifest=$manifestVersion lock=$lockVersion"
 
-    $null = & git check-ignore -q $lockRepoPath
-    Assert-True -Condition ($LASTEXITCODE -eq 0) -Message "Invariant failed: $lockRepoPath is not ignored. Add an ignore rule before running CI hygiene checks."
+    # packages-lock.json must be tracked so UPM does not need network access in CI.
+    $null = & git ls-files --error-unmatch $lockRepoPath
+    Assert-True -Condition ($LASTEXITCODE -eq 0) -Message "Invariant failed: $lockRepoPath is not tracked by git. It must be committed so UPM can resolve packages without network access in CI."
 
     foreach ($file in $requiredTrackedFiles) {
         $null = & git ls-files --error-unmatch $file
@@ -45,7 +46,7 @@ try {
 
     Write-Host "PASS: shadow project hygiene invariants hold."
     Write-Host "PASS: com.unity.test-framework manifest and lock both resolve to $manifestVersion"
-    Write-Host "PASS: lockfile ignore rule is active for $lockRepoPath"
+    Write-Host "PASS: packages-lock.json is tracked (required for offline UPM resolution in CI)"
     Write-Host "PASS: required VRChat SDK DLLs remain tracked"
     exit 0
 }
