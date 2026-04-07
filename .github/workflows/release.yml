@@ -180,6 +180,7 @@ jobs:
   tag-check:
     needs: config
     runs-on: ubuntu-latest
+    if: needs.config.outputs.config_package == 'true'
     permissions:
       contents: read
     outputs:
