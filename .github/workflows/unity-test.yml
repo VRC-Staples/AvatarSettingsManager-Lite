@@ -106,19 +106,92 @@ jobs:
           fi
 
       - name: Run EditMode Tests
-        id: tests
-        uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9 # v4
+        shell: bash
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-        with:
-          projectPath: ci/unity-project
-          customParameters: -projectPath ci/unity-project
-          testMode: editMode
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p artifacts CodeCoverage
+
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' ci/unity-project/ProjectSettings/ProjectVersion.txt)"
+          if [ -z "${UNITY_VERSION:-}" ]; then
+            echo "::error::Failed to read Unity version from ci/unity-project/ProjectSettings/ProjectVersion.txt"
+            exit 1
+          fi
+
+          UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
+
+          UNITY_SERIAL="$(python - <<'PY'
+          import base64
+          import os
+          import sys
+
+          license_text = os.environ.get("UNITY_LICENSE", "")
+          start_key = '<DeveloperData Value="'
+          end_key = '"/>'
+          start = license_text.find(start_key)
+          if start < 0:
+              raise SystemExit("UNITY_LICENSE missing <DeveloperData Value=...> entry")
+          start += len(start_key)
+          end = license_text.find(end_key, start)
+          if end < 0:
+              raise SystemExit("UNITY_LICENSE missing closing DeveloperData marker")
+          decoded = base64.b64decode(license_text[start:end]).decode('latin1')[4:]
+          sys.stdout.write(decoded)
+          PY
+          )"
+
+          if [ -z "${UNITY_SERIAL:-}" ]; then
+            echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
+            exit 1
+          fi
+
+          echo "::add-mask::${UNITY_SERIAL}"
+          echo "Using Unity image ${UNITY_IMAGE}"
+
+          docker run --rm \
+            --workdir /github/workspace \
+            --env UNITY_EMAIL \
+            --env UNITY_PASSWORD \
+            --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --volume "${GITHUB_WORKSPACE}:/github/workspace" \
+            "${UNITY_IMAGE}" \
+            /bin/bash -lc '
+              set -euo pipefail
+              mkdir -p /tmp/BlankProject /github/workspace/artifacts /github/workspace/CodeCoverage
+              return_license() {
+                unity-editor \
+                  -logFile /dev/stdout \
+                  -quit \
+                  -returnlicense \
+                  -username "$UNITY_EMAIL" \
+                  -password "$UNITY_PASSWORD" \
+                  -projectPath /tmp/BlankProject || true
+              }
+              trap return_license EXIT
+              unity-editor \
+                -logFile /dev/stdout \
+                -quit \
+                -serial "$UNITY_SERIAL" \
+                -username "$UNITY_EMAIL" \
+                -password "$UNITY_PASSWORD" \
+                -projectPath /tmp/BlankProject
+              unity-editor \
+                -logFile /github/workspace/artifacts/editmode.log \
+                -projectPath ci/unity-project \
+                -coverageResultsPath /github/workspace/CodeCoverage \
+                -runTests \
+                -testPlatform editmode \
+                -testResults /github/workspace/artifacts/editmode-results.xml \
+                -enableCodeCoverage \
+                -debugCodeOptimization \
+                -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+            '
       - name: Upload NUnit results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: test-results
-          path: ${{ steps.tests.outputs.artifactsPath }}
+          path: artifacts
