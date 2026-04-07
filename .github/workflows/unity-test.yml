@@ -12,8 +12,22 @@ name: Unity Test Results
 on:
   push:
     branches: [main, dev]
+    paths:
+      - "Packages/com.staples.asm-lite/**"
+      - "ci/unity-project/**"
+      - "ci/verify-release-gate.ps1"
+      - "ci/verify-shadow-project-hygiene.ps1"
+      - "ci/generate-csproj.sh"
+      - ".github/workflows/unity-test.yml"
   pull_request:
     branches: [main, dev]
+    paths:
+      - "Packages/com.staples.asm-lite/**"
+      - "ci/unity-project/**"
+      - "ci/verify-release-gate.ps1"
+      - "ci/verify-shadow-project-hygiene.ps1"
+      - "ci/generate-csproj.sh"
+      - ".github/workflows/unity-test.yml"
 
 permissions: {}
 
