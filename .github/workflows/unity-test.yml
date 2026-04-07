@@ -47,6 +47,21 @@ jobs:
           path: ci/unity-project/Library
           key: Library-${{ hashFiles('ci/unity-project/Packages/**', 'ci/unity-project/ProjectSettings/**') }}
           restore-keys: Library-
+      - name: Validate Unity license mode
+        shell: bash
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        run: |
+          if [ -z "${UNITY_LICENSE:-}" ]; then
+            echo "::error::UNITY_LICENSE is missing. Personal license mode requires a base64 encoded .ulf secret."
+            exit 1
+          fi
+
+          if [ -n "${UNITY_SERIAL:-}" ]; then
+            echo "::warning::UNITY_SERIAL is set. This repository uses personal license mode and forces UNITY_SERIAL to empty for test runs."
+          fi
+
       - name: Run EditMode Tests
         id: tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9 # v4
@@ -54,6 +69,7 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ""
         with:
           projectPath: ci/unity-project
           testMode: editMode
