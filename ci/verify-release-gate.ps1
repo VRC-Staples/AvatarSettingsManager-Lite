@@ -38,6 +38,7 @@ Assert-Regex '(?ms)^\s{4}needs:\s*\[\s*config\s*,\s*gate\s*\]\s*$' "Invariant fa
 
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"compile"\s*:\s*\[.*?"C# Compile \(Unity 2022\.3\.22f1\)".*?"C# Compile Check / C# Compile \(Unity 2022\.3\.22f1\)".*?\].*?\}' "Invariant failed: gate script must require the compile check aliases."
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?"Lint / Super-Linter".*?\].*?\}' "Invariant failed: gate script must require the lint check aliases."
+Assert-Regex '(?s)required_checks\s*=\s*\{.*?"test"\s*:\s*\[.*?"EditMode Tests".*?"Unity Test Results / EditMode Tests".*?\].*?\}' "Invariant failed: gate script must require the test check aliases."
 
 Assert-Regex '(?s)if\s+matched_name\s+is\s+None\s*:\s*blocking\.append\(' "Invariant failed: gate script must fail when a required check alias is missing."
 Assert-Regex '(?s)if\s+matched_value\.lower\(\)\s*!=\s*"success"\s*:\s*blocking\.append\(' "Invariant failed: gate script must enforce success verdicts, not only check-name presence."
