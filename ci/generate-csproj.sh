@@ -62,16 +62,12 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.CoreModule.dll</HintPath>
+    <Reference Include="UnityEngine">
+      <HintPath>${UNITY_ENGINE_DLL}</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.AnimationModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEditor.CoreModule">
-      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.CoreModule.dll</HintPath>
+    <Reference Include="UnityEditor">
+      <HintPath>${UNITY_EDITOR_DLL}</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="VRCSDKBase">
