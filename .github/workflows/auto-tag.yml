@@ -1,0 +1,125 @@
+name: Auto Tag Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Packages/com.staples.asm-lite/package.json'
+
+jobs:
+  auto-tag:
+    name: Auto tag new release version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve package version
+        id: version
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          package_path = pathlib.Path('Packages/com.staples.asm-lite/package.json')
+          if not package_path.exists():
+            raise SystemExit('Package manifest not found')
+          try:
+            data = json.loads(package_path.read_text())
+          except json.JSONDecodeError as exc:
+            raise SystemExit(f'Invalid package.json: {exc}')
+          version = str(data.get('version', '')).strip()
+          if not version:
+            raise SystemExit('Package version is empty')
+          output = os.environ['GITHUB_OUTPUT']
+          with open(output, 'a') as fh:
+            print(f'version={version}', file=fh)
+          print(f'::notice::Resolved package version {version}')
+          PY
+
+      - name: Decide if we should push a tag
+        id: decide
+        run: |
+          set -euo pipefail
+          VERSION=${{ steps.version.outputs.version }}
+          git fetch --prune --tags
+          python - <<'PY'
+          import itertools
+          import os
+          import re
+          import subprocess
+
+          version = os.environ['VERSION']
+          try:
+            version_parts = tuple(int(part) for part in version.split('.'))
+          except ValueError:
+            raise SystemExit(f'Invalid semantic version: {version}')
+
+          raw_tags = subprocess.run(['git', 'tag'], check=True, capture_output=True, text=True).stdout.splitlines()
+          semver_pattern = re.compile(r'^(?:v)?(\d+(?:\.\d+)*)$')
+
+          def normalize(parts, length):
+            if len(parts) < length:
+              return parts + (0,) * (length - len(parts))
+            return parts
+
+          parsed = []
+          for tag in raw_tags:
+            match = semver_pattern.match(tag.strip())
+            if not match:
+              continue
+            tag_version = tuple(int(part) for part in match.group(1).split('.'))
+            parsed.append((tag_version, tag))
+
+          latest_tag = ''
+          latest_parts = ()
+          if parsed:
+            latest_parts, latest_tag = max(parsed, key=lambda item: item[0])
+          comparison = 1
+          if latest_tag:
+            max_length = max(len(version_parts), len(latest_parts))
+            version_tuple = normalize(version_parts, max_length)
+            latest_tuple = normalize(latest_parts, max_length)
+            for ours, theirs in zip(version_tuple, latest_tuple):
+              if ours != theirs:
+                comparison = 1 if ours > theirs else -1
+                break
+            else:
+              comparison = 0
+          should_tag = comparison > 0 or not latest_tag
+
+          output = os.environ['GITHUB_OUTPUT']
+          with open(output, 'a') as fh:
+            print(f'latest_tag={latest_tag}', file=fh)
+            print(f'should_tag={"true" if should_tag else "false"}', file=fh)
+          print(f'::notice::Latest release tag: {latest_tag or "none"}')
+          if should_tag:
+            print(f'::notice::Will push tag {version}')
+          else:
+            print(f'::notice::Skipping tag push because {version} is not newer than {latest_tag}')
+          PY
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Skip tagging because version is not ahead
+        if: steps.decide.outputs.should_tag == 'false'
+        run: |
+          latest=${{ steps.decide.outputs.latest_tag }}
+          latest=${latest:-none}
+          echo "Skipping tag push because ${{ steps.version.outputs.version }} is not newer than latest release tag $latest."
+
+      - name: Create and push release tag
+        if: steps.decide.outputs.should_tag == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag "${{ steps.version.outputs.version }}"
+          git push origin "refs/tags/${{ steps.version.outputs.version }}"
