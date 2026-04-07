@@ -74,6 +74,10 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEditor.CoreModule">
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.CoreModule.dll</HintPath>
       <Private>false</Private>
