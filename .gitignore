@@ -11,11 +11,13 @@ Thumbs.db
 .gsd/
 .bg-shell/
 .artifacts/
+.mcp.json
 
 # Unity generated (not part of the package)
 Library/
 Temp/
 UserSettings/
+Logs/
 unity-export.log
 
 # VPM package — never ignore
