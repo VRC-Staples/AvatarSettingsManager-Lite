@@ -155,15 +155,15 @@ jobs:
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
           set -euo pipefail
           export HOME="${HOME:-/github/home}"
-          ACTIVATION_PROJECT="/github/workspace/tmp/activation-project"
-          TEST_PROJECT_PATH="/github/workspace/ci/unity-project"
+          ACTIVATION_PROJECT="tmp/activation-project"
+          TEST_PROJECT_PATH="ci/unity-project"
           mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
-          mkdir -p "${ACTIVATION_PROJECT}/ProjectSettings" "${ACTIVATION_PROJECT}/Packages"
+          mkdir -p "/github/workspace/${ACTIVATION_PROJECT}/ProjectSettings" "/github/workspace/${ACTIVATION_PROJECT}/Packages"
           UNITY_VERSION=$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
             /github/workspace/ci/unity-project/ProjectSettings/ProjectVersion.txt)
           printf 'm_EditorVersion: %s\nm_EditorVersionWithRevision: %s (unknown)\n' \
-            "$UNITY_VERSION" "$UNITY_VERSION" > "${ACTIVATION_PROJECT}/ProjectSettings/ProjectVersion.txt"
-          printf '%s\n' '{"dependencies":{}}' > "${ACTIVATION_PROJECT}/Packages/manifest.json"
+            "$UNITY_VERSION" "$UNITY_VERSION" > "/github/workspace/${ACTIVATION_PROJECT}/ProjectSettings/ProjectVersion.txt"
+          printf '%s\n' '{"dependencies":{}}' > "/github/workspace/${ACTIVATION_PROJECT}/Packages/manifest.json"
           return_license() {
             unity-editor \
               -logFile /dev/stdout \
