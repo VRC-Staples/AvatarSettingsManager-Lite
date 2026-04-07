@@ -52,9 +52,6 @@ jobs:
         shell: bash
         env:
           UNITY_LICENSE_SECRET: ${{ secrets.UNITY_LICENSE }}
-          UNITY_SERIAL_SECRET: ${{ secrets.UNITY_SERIAL }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
           set -euo pipefail
 
@@ -65,20 +62,6 @@ jobs:
             exit 1
           fi
 
-          if [ -z "${UNITY_EMAIL:-}" ]; then
-            echo "::error::UNITY_EMAIL is missing."
-            exit 1
-          fi
-
-          if [ -z "${UNITY_PASSWORD:-}" ]; then
-            echo "::error::UNITY_PASSWORD is missing."
-            exit 1
-          fi
-
-          if [ -n "${UNITY_SERIAL_SECRET:-}" ]; then
-            echo "::warning::UNITY_SERIAL is set in repository secrets. This workflow ignores that secret and derives the activation serial from UNITY_LICENSE locally."
-          fi
-
           UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' ci/unity-project/ProjectSettings/ProjectVersion.txt)"
           if [ -z "${UNITY_VERSION:-}" ]; then
             echo "::error::Failed to read Unity version from ci/unity-project/ProjectSettings/ProjectVersion.txt"
@@ -86,22 +69,24 @@ jobs:
           fi
 
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
-          SERIAL_FILE="$(mktemp)"
+          echo "Using Unity image ${UNITY_IMAGE}"
 
-          python - <<'PY' "$SERIAL_FILE"
+          LICENSE_DIR="${GITHUB_WORKSPACE}/.unity-license"
+          LICENSE_FILE="${LICENSE_DIR}/Unity_lic.ulf"
+          mkdir -p "${LICENSE_DIR}"
+
+          python - <<'PY' "${LICENSE_FILE}"
           import base64
           import os
           import sys
 
-          serial_path = sys.argv[1]
+          out_path = sys.argv[1]
           secret = os.environ.get("UNITY_LICENSE_SECRET", "")
 
           def looks_like_ulf(value: str) -> bool:
               return '<DeveloperData Value="' in value and '/>' in value
 
           normalized = secret
-          mode = "raw"
-
           if not looks_like_ulf(secret):
               try:
                   decoded = base64.b64decode(secret, validate=True).decode("utf-8")
@@ -109,81 +94,28 @@ jobs:
                   decoded = ""
               if looks_like_ulf(decoded):
                   normalized = decoded
-                  mode = "base64-decoded"
 
           if not looks_like_ulf(normalized):
-              print("::error::UNITY_LICENSE does not look like a Unity .ulf file. Store the raw .ulf contents in the secret.", file=sys.stderr)
+              print("::error::UNITY_LICENSE is not a valid .ulf file", file=sys.stderr)
               sys.exit(1)
 
-          start_key = '<DeveloperData Value="'
-          end_key = '"/>'
-          start = normalized.find(start_key)
-          if start < 0:
-              print("::error::UNITY_LICENSE missing <DeveloperData Value=...> entry", file=sys.stderr)
-              sys.exit(1)
-          start += len(start_key)
-          end = normalized.find(end_key, start)
-          if end < 0:
-              print("::error::UNITY_LICENSE missing closing DeveloperData marker", file=sys.stderr)
-              sys.exit(1)
-
-          decoded = base64.b64decode(normalized[start:end]).decode("latin1")[4:]
-          if not decoded:
-              print("::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE", file=sys.stderr)
-              sys.exit(1)
-
-          with open(serial_path, "w", encoding="utf-8") as fh:
-              fh.write(decoded)
-
-          print(f"UNITY_LICENSE format: {mode}")
-          if mode == "base64-decoded":
-              print("::warning::UNITY_LICENSE was base64-decoded at runtime. Store raw .ulf contents instead to avoid secret-format ambiguity.")
+          with open(out_path, "w", encoding="utf-8") as fh:
+              fh.write(normalized)
+          print("License file written.")
           PY
-
-          UNITY_SERIAL="$(tr -d '\r\n' < "$SERIAL_FILE")"
-          rm -f "$SERIAL_FILE"
-
-          if [ -z "${UNITY_SERIAL:-}" ]; then
-            echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
-            exit 1
-          fi
-
-          echo "::add-mask::${UNITY_SERIAL}"
-          echo "Using Unity image ${UNITY_IMAGE}"
 
           RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
           set -euo pipefail
           export HOME="${HOME:-/github/home}"
-          ACTIVATION_PROJECT="tmp/activation-project"
           TEST_PROJECT_PATH="ci/unity-project"
           mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
-          mkdir -p "/github/workspace/${ACTIVATION_PROJECT}/ProjectSettings" "/github/workspace/${ACTIVATION_PROJECT}/Packages"
-          UNITY_VERSION=$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
-            /github/workspace/ci/unity-project/ProjectSettings/ProjectVersion.txt)
-          printf 'm_EditorVersion: %s\nm_EditorVersionWithRevision: %s (unknown)\n' \
-            "$UNITY_VERSION" "$UNITY_VERSION" > "/github/workspace/${ACTIVATION_PROJECT}/ProjectSettings/ProjectVersion.txt"
-          printf '%s\n' '{"dependencies":{}}' > "/github/workspace/${ACTIVATION_PROJECT}/Packages/manifest.json"
-          return_license() {
-            unity-editor \
-              -logFile /dev/stdout \
-              -quit \
-              -returnlicense \
-              -username "$UNITY_EMAIL" \
-              -password "$UNITY_PASSWORD" \
-              -projectPath "${ACTIVATION_PROJECT}" || true
-          }
-          trap return_license EXIT
-          unity-editor \
-            -logFile /dev/stdout \
-            -quit \
-            -serial "$UNITY_SERIAL" \
-            -username "$UNITY_EMAIL" \
-            -password "$UNITY_PASSWORD" \
-            -projectPath "${ACTIVATION_PROJECT}"
+          UNITY_LICENSE_PATH="/root/.local/share/unity3d/Unity/Unity_lic.ulf"
+          mkdir -p "$(dirname "${UNITY_LICENSE_PATH}")"
+          cp /github/workspace/.unity-license/Unity_lic.ulf "${UNITY_LICENSE_PATH}"
           unity-editor \
             -logFile /github/workspace/artifacts/editmode.log \
-            -projectPath "$TEST_PROJECT_PATH" \
+            -projectPath "${TEST_PROJECT_PATH}" \
             -coverageResultsPath /github/workspace/CodeCoverage \
             -runTests \
             -testPlatform editmode \
@@ -194,10 +126,7 @@ jobs:
           RUNNER
           docker run --rm \
             --workdir /github/workspace \
-            --env HOME=/github/home \
-            --env UNITY_EMAIL \
-            --env UNITY_PASSWORD \
-            --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --env HOME=/root \
             --volume "${GITHUB_WORKSPACE}:/github/workspace" \
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
             "${UNITY_IMAGE}" \
