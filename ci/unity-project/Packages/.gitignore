@@ -6,18 +6,32 @@ com.vrchat.*/
 !vpm-manifest.json
 !manifest.json
 
-# Un-ignore only the DLLs needed for compile checking
+# Un-ignore only the DLLs and package.json needed for compile/test checking
 com.vrchat.base/*
 com.vrchat.base/**/*
+!com.vrchat.base/package.json
+!com.vrchat.base/package.json.meta
 !com.vrchat.base/Runtime/
 !com.vrchat.base/Runtime/VRCSDK/
 !com.vrchat.base/Runtime/VRCSDK/Plugins/
 !com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll
+!com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll.meta
 !com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll
+!com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll.meta
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll.meta
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Runtime.CompilerServices.Unsafe.dll
+!com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Runtime.CompilerServices.Unsafe.dll.meta
 com.vrchat.avatars/*
 com.vrchat.avatars/**/*
+!com.vrchat.avatars/package.json
+!com.vrchat.avatars/package.json.meta
 !com.vrchat.avatars/Runtime/
 !com.vrchat.avatars/Runtime/VRCSDK/
 !com.vrchat.avatars/Runtime/VRCSDK/Plugins/
 !com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll
+!com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll.meta
 !com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll
+!com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll.meta

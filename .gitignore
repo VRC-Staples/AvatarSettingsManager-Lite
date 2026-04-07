@@ -11,11 +11,13 @@ Thumbs.db
 .gsd/
 .bg-shell/
 .artifacts/
+.mcp.json
 
 # Unity generated (not part of the package)
 Library/
 Temp/
 UserSettings/
+Logs/
 unity-export.log
 
 # VPM package — never ignore
@@ -56,3 +58,4 @@ ci/unity-project/Temp/
 ci/unity-project/Logs/
 ci/unity-project/UserSettings/
 ci/unity-project/*.csproj
+# ci/unity-project/Packages/packages-lock.json is intentionally tracked (network not available in CI docker)

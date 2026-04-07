@@ -3,6 +3,9 @@ name: Build Release
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - '*'
 
 jobs:
 
@@ -20,18 +23,176 @@ jobs:
           echo "configPackage=false" >> $GITHUB_OUTPUT;
         fi
 
-  build:
+  gate:
     needs: config
     runs-on: ubuntu-latest
+    if: needs.config.outputs.config_package == 'true'
     permissions:
-      contents: write
+      contents: read
+      checks: read
+      statuses: read
+    steps:
+      - name: Validate compile and lint checks for release SHA
+        env:
+          REPO: ${{ github.repository }}
+          TARGET_SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import socket
+          import sys
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ.get("REPO", "").strip()
+          sha = os.environ.get("TARGET_SHA", "").strip()
+          token = os.environ.get("GITHUB_TOKEN", "").strip()
+
+          if not repo:
+            print("::error::Repository is empty; cannot evaluate checks.")
+            sys.exit(1)
+          if not sha:
+            print("::error::Resolved SHA is empty; cannot evaluate checks.")
+            sys.exit(1)
+          if not token:
+            print("::error::GITHUB_TOKEN is missing; cannot query commit checks.")
+            sys.exit(1)
+
+          required_checks = {
+            "compile": [
+              "C# Compile (Unity 2022.3.22f1)",
+              "C# Compile Check / C# Compile (Unity 2022.3.22f1)",
+            ],
+            "lint": [
+              "Super-Linter",
+              "Lint / Super-Linter",
+            ],
+            "test": [
+              "EditMode Tests",
+              "Unity Test Results / EditMode Tests",
+            ],
+          }
+
+          def api_get(path, accept):
+            url = f"https://api.github.com/repos/{repo}{path}"
+            req = urllib.request.Request(
+              url,
+              headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": accept,
+                "X-GitHub-Api-Version": "2022-11-28",
+              },
+            )
+            try:
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                body = resp.read().decode("utf-8")
+            except urllib.error.HTTPError as exc:
+              details = exc.read().decode("utf-8", errors="replace")
+              print(f"::error::GitHub API HTTP {exc.code} for {path}: {details[:800]}")
+              sys.exit(1)
+            except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+              print(f"::error::GitHub API timeout or transport error for {path}: {exc}")
+              sys.exit(1)
+
+            try:
+              return json.loads(body)
+            except json.JSONDecodeError as exc:
+              print(f"::error::Malformed JSON from {path}: {exc}")
+              print(f"::error::Response prefix: {body[:800]}")
+              sys.exit(1)
+
+          status_payload = api_get(
+            f"/commits/{sha}/status",
+            "application/vnd.github+json",
+          )
+          checks_payload = api_get(
+            f"/commits/{sha}/check-runs?per_page=100",
+            "application/vnd.github+json",
+          )
+
+          statuses = status_payload.get("statuses")
+          if not isinstance(statuses, list):
+            print("::error::Malformed commit status payload: missing statuses array.")
+            sys.exit(1)
+
+          check_runs = checks_payload.get("check_runs")
+          if not isinstance(check_runs, list):
+            print("::error::Malformed check-runs payload: missing check_runs array.")
+            sys.exit(1)
+
+          observed = {}
+
+          for entry in statuses:
+            context = entry.get("context")
+            state = entry.get("state")
+            if isinstance(context, str) and isinstance(state, str):
+              observed[context] = state
+
+          for run in check_runs:
+            name = run.get("name")
+            conclusion = run.get("conclusion")
+            status = run.get("status")
+            if not isinstance(name, str):
+              continue
+            if isinstance(conclusion, str):
+              observed[name] = conclusion
+            elif isinstance(status, str):
+              observed[name] = status
+
+          print(f"Target SHA: {sha}")
+          print("Required checks:")
+          for key, aliases in required_checks.items():
+            print(f"  {key}: {aliases[0]}")
+
+          print("Observed check conclusions:")
+          if observed:
+            for key in sorted(observed):
+              print(f"  {key}: {observed[key]}")
+          else:
+            print("  <none>")
+
+          blocking = []
+          for key, aliases in required_checks.items():
+            matched_name = None
+            matched_value = None
+            for alias in aliases:
+              val = observed.get(alias)
+              if isinstance(val, str):
+                matched_name = alias
+                matched_value = val
+                break
+            if matched_name is None:
+              blocking.append(f"missing required check for {key}: expected one of {aliases}")
+              continue
+            if matched_value.lower() != "success":
+              blocking.append(
+                f"required check {matched_name} is {matched_value}, expected success"
+              )
+
+          if blocking:
+            print("::error::Release gate blocked.")
+            for reason in blocking:
+              print(f"::error::{reason}")
+            sys.exit(1)
+
+          print("Gate passed: required compile and lint checks are success for target SHA.")
+          PY
+
+  tag-check:
+    needs: config
+    runs-on: ubuntu-latest
+    if: needs.config.outputs.config_package == 'true'
+    permissions:
+      contents: read
+    outputs:
+      release_version: ${{ steps.version.outputs.value }}
     env:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
-    if: needs.config.outputs.config_package == 'true'
     steps:
-
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Get Version
         id: version
@@ -40,11 +201,58 @@ jobs:
           file_path: "${{ env.packagePath }}/package.json"
           prop_path: "version"
 
+      - name: Check for existing release tag
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "::error::Failed to resolve package version for duplicate-tag guard."
+            exit 1
+          fi
+          echo "Duplicate tag guard checking refs/tags/${TAG} for existing entries."
+          api_url="https://api.github.com/repos/${{ github.repository }}/git/ref/tags/${TAG}"
+          http_status=$(curl -s -o /tmp/tag-check.json -w "%{http_code}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "${api_url}")
+          if [ "${http_status}" = "200" ]; then
+            echo "::error::Duplicate tag guard (R061) blocked release because refs/tags/${TAG} already exists."
+            cat /tmp/tag-check.json
+            exit 1
+          fi
+          if [ "${http_status}" != "404" ]; then
+            echo "::error::Unexpected HTTP ${http_status} checking ${api_url}."
+            cat /tmp/tag-check.json
+            exit 1
+          fi
+
+      - name: Skip duplicate tag guard for tag-triggered run
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "Duplicate tag guard skipped because workflow is running on ${GITHUB_REF}."
+
+  build:
+    needs: [config, gate, tag-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      packagePath: Packages/${{ vars.PACKAGE_NAME }}
+      release_version: ${{ needs.tag-check.outputs.release_version }}
+    if: needs.config.outputs.config_package == 'true'
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Set Environment Variables
         run: |
-          echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.zip" >> $GITHUB_ENV
-          echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
-          echo "version=${{ steps.version.outputs.value }}" >> $GITHUB_ENV
+          echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ env.release_version }}.zip" >> $GITHUB_ENV
+          echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ env.release_version }}.unitypackage" >> $GITHUB_ENV
+          echo "version=${{ env.release_version }}" >> $GITHUB_ENV
 
       - name: Create Package Zip
         working-directory: "${{ env.packagePath }}"
@@ -54,16 +262,22 @@ jobs:
         run: find "${{ env.packagePath }}/" -name \*.meta >> metaList
 
       - name: Create UnityPackage
-        uses: pCYSl5EDgo/create-unitypackage@v1.2.3
+        uses: pCYSl5EDgo/create-unitypackage@b5c57408698b1fab8b3a84d4b67f767b8b7c0be9 # v1.2.3
         with:
           package-path: ${{ env.unityPackage }}
           include-files: metaList
 
       - name: Create Tag
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         id: tag_version
         uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
         with:
           tag: "${{ env.version }}"
+
+      - name: Skip Create Tag for tag-triggered run
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "Create Tag step skipped because the workflow run was started by ${GITHUB_REF}."
 
       - name: Make Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844

@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 using System.Linq;
@@ -136,7 +138,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, asmLayerCount,
                 $"A46: expected 1 ASMLite_ layer for slotCount=1, got {asmLayerCount}.");
 
-            int expectedFxParams = 1 + discoveredExpected + (1 * discoveredExpected) + discoveredExpected;
+            int expectedFxParams = 1 + (1 * discoveredExpected) + discoveredExpected;
             int asmFxParamCount = CountASMLiteFxParams(_ctx.Ctrl);
             Assert.AreEqual(expectedFxParams, asmFxParamCount,
                 $"A46: FX ASMLite param count mismatch for slotCount=1. expected={expectedFxParams}, got {asmFxParamCount}.");
@@ -173,7 +175,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(8, asmLayerCount,
                 $"A47: expected 8 ASMLite_ layers for slotCount=8, got {asmLayerCount}.");
 
-            int expectedFxParams = 1 + discoveredExpected + (8 * discoveredExpected) + discoveredExpected;
+            int expectedFxParams = 1 + (8 * discoveredExpected) + discoveredExpected;
             int asmFxParamCount = CountASMLiteFxParams(_ctx.Ctrl);
             Assert.AreEqual(expectedFxParams, asmFxParamCount,
                 $"A47: FX ASMLite param count mismatch for slotCount=8. expected={expectedFxParams}, got {asmFxParamCount}.");
@@ -225,6 +227,7 @@ namespace ASMLite.Tests.Editor
             int beforeExprParams = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
             int beforeMenuControls = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
 
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("slotCount must be between"));
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
                 $"A49: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
