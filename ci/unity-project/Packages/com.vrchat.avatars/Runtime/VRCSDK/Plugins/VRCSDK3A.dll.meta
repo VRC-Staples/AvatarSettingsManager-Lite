@@ -1,0 +1,35 @@
+fileFormatVersion: 2
+guid: 67cc4cb7839cd3741b63733d5adf0442
+PluginImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  iconMap:
+    VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters: {fileID: 2800000, guid: b54460437079b5a4fb73ecebc0aef4dc, type: 3}
+    VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu: {fileID: 2800000, guid: 576142c89b11bc84e974b3740e480a63, type: 3}
+  executionOrder: {}
+  defineConstraints: []
+  isPreloaded: 0
+  isOverridable: 0
+  isExplicitlyReferenced: 0
+  validateReferences: 1
+  platformData:
+  - first:
+      Any: 
+    second:
+      enabled: 1
+      settings: {}
+  - first:
+      Editor: Editor
+    second:
+      enabled: 0
+      settings:
+        DefaultValueInitialized: true
+  - first:
+      Windows Store Apps: WindowsStoreApps
+    second:
+      enabled: 0
+      settings:
+        CPU: AnyCPU
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
