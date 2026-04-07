@@ -106,13 +106,15 @@ jobs:
 
           RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
-          set -euo pipefail
+          set -euxo pipefail
           export HOME="${HOME:-/github/home}"
           TEST_PROJECT_PATH="ci/unity-project"
           mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
           UNITY_LICENSE_PATH="/root/.local/share/unity3d/Unity/Unity_lic.ulf"
           mkdir -p "$(dirname "${UNITY_LICENSE_PATH}")"
+          ls -la /github/workspace/.unity-license/ || echo "license dir not found"
           cp /github/workspace/.unity-license/Unity_lic.ulf "${UNITY_LICENSE_PATH}"
+          echo "License installed at ${UNITY_LICENSE_PATH}"
           unity-editor \
             -logFile /github/workspace/artifacts/editmode.log \
             -projectPath "${TEST_PROJECT_PATH}" \
