@@ -87,7 +87,9 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-  <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />
+  </ItemGroup>
 </Project>
 CSPROJ
 
