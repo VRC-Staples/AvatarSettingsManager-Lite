@@ -183,6 +183,14 @@ jobs:
           # The Temp/ dir is gitignored but may be checked out from prior runs.
           rm -rf /github/workspace/ci/unity-project/Temp
 
+          # Evict XR/Oculus packages from the package cache. These are
+          # transitive deps of com.vrchat.base but require UnityEngine.AndroidJNI
+          # which is not present in the linux-il2cpp image. Without eviction,
+          # a stale cache restore re-introduces them despite the lockfile change.
+          rm -rf /github/workspace/ci/unity-project/Library/PackageCache/com.unity.xr.oculus* \
+                 /github/workspace/ci/unity-project/Library/PackageCache/com.unity.xr.management* \
+                 /github/workspace/ci/unity-project/Library/PackageCache/com.unity.xr.legacyinputhelpers*
+
           # Run tests against the shadow project.
           unity-editor \
             -nographics \
