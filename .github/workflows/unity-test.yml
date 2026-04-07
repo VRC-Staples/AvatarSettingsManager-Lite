@@ -86,16 +86,14 @@ jobs:
           fi
 
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
-          LICENSE_FILE="$(mktemp)"
           SERIAL_FILE="$(mktemp)"
 
-          python - <<'PY' "$LICENSE_FILE" "$SERIAL_FILE"
+          python - <<'PY' "$SERIAL_FILE"
           import base64
           import os
           import sys
 
-          license_path = sys.argv[1]
-          serial_path = sys.argv[2]
+          serial_path = sys.argv[1]
           secret = os.environ.get("UNITY_LICENSE_SECRET", "")
 
           def looks_like_ulf(value: str) -> bool:
@@ -134,8 +132,6 @@ jobs:
               print("::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE", file=sys.stderr)
               sys.exit(1)
 
-          with open(license_path, "w", encoding="utf-8") as fh:
-              fh.write(normalized)
           with open(serial_path, "w", encoding="utf-8") as fh:
               fh.write(decoded)
 
@@ -145,7 +141,7 @@ jobs:
           PY
 
           UNITY_SERIAL="$(tr -d '\r\n' < "$SERIAL_FILE")"
-          rm -f "$LICENSE_FILE" "$SERIAL_FILE"
+          rm -f "$SERIAL_FILE"
 
           if [ -z "${UNITY_SERIAL:-}" ]; then
             echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
@@ -166,7 +162,7 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               export HOME="${HOME:-/github/home}"
-              PROJECT_PATH="/github/workspace/ci/unity-project"
+              PROJECT_PATH="ci/unity-project"
               mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
               return_license() {
                 unity-editor \
