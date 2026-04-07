@@ -77,14 +77,13 @@ jobs:
             commits='- (no recent commits yet)'
           fi
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          cat <<EOF > release_notes.md
-## ⚠️ Nightly prerelease refresh
-Source: dev @ ${short_sha}
-Run URL: ${run_url}
-
-Recent commits:
-${commits}
-EOF
+          {
+            printf '## Nightly prerelease refresh\n'
+            printf 'Source: dev @ %s\n' "${short_sha}"
+            printf 'Run URL: %s\n' "${run_url}"
+            printf '\nRecent commits:\n'
+            printf '%s\n' "${commits}"
+          } > release_notes.md
           cat release_notes.md
 
       - name: Create nightly release

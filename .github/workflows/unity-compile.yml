@@ -19,7 +19,7 @@ on:
       - "ci/**"
       - ".github/workflows/unity-compile.yml"
 
-permissions: { }
+permissions: {}
 
 jobs:
   compile:

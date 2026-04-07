@@ -162,8 +162,13 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               export HOME="${HOME:-/github/home}"
-              PROJECT_PATH="ci/unity-project"
+              ACTIVATION_PROJECT="/tmp/activation-project"
+              TEST_PROJECT_PATH="ci/unity-project"
               mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
+              mkdir -p "${ACTIVATION_PROJECT}/ProjectSettings" "${ACTIVATION_PROJECT}/Packages"
+              UNITY_VERSION=$(awk -F": " "/^m_EditorVersion:/ { print \$2; exit }" /github/workspace/ci/unity-project/ProjectSettings/ProjectVersion.txt)
+              printf "m_EditorVersion: %s\nm_EditorVersionWithRevision: %s (unknown)\n" "$UNITY_VERSION" "$UNITY_VERSION" > "${ACTIVATION_PROJECT}/ProjectSettings/ProjectVersion.txt"
+              printf '{"dependencies":{}}\n' > "${ACTIVATION_PROJECT}/Packages/manifest.json"
               return_license() {
                 unity-editor \
                   -logFile /dev/stdout \
@@ -171,7 +176,7 @@ jobs:
                   -returnlicense \
                   -username "$UNITY_EMAIL" \
                   -password "$UNITY_PASSWORD" \
-                  -projectPath "$PROJECT_PATH" || true
+                  -projectPath "${ACTIVATION_PROJECT}" || true
               }
               trap return_license EXIT
               unity-editor \
@@ -180,10 +185,10 @@ jobs:
                 -serial "$UNITY_SERIAL" \
                 -username "$UNITY_EMAIL" \
                 -password "$UNITY_PASSWORD" \
-                -projectPath "$PROJECT_PATH"
+                -projectPath "${ACTIVATION_PROJECT}"
               unity-editor \
                 -logFile /github/workspace/artifacts/editmode.log \
-                -projectPath "$PROJECT_PATH" \
+                -projectPath "$TEST_PROJECT_PATH" \
                 -coverageResultsPath /github/workspace/CodeCoverage \
                 -runTests \
                 -testPlatform editmode \
