@@ -1,11 +1,11 @@
-# Unity EditMode test runner - GameCI
+# Unity EditMode test runner
 #
 # Required repo secrets:
-#   UNITY_LICENSE   - raw .ulf contents or base64-encoded .ulf contents
+#   UNITY_LICENSE   - raw .ulf file contents preferred; base64-wrapped .ulf accepted for legacy compatibility
 #   UNITY_EMAIL     - Unity account email
 #   UNITY_PASSWORD  - Unity account password
 #
-# The workflow normalizes UNITY_LICENSE before invoking GameCI.
+# The workflow normalizes UNITY_LICENSE, derives the serial locally, then runs the Unity editor container directly.
 # Set these in Settings > Secrets and Variables > Actions before running.
 
 name: Unity Test Results
@@ -60,7 +60,7 @@ jobs:
 
           secret = os.environ.get("UNITY_LICENSE_SECRET", "")
           if not secret:
-              print("::error::UNITY_LICENSE is missing. Provide raw .ulf contents or base64-encoded .ulf contents.", file=sys.stderr)
+              print("::error::UNITY_LICENSE is missing. Provide raw .ulf contents. Base64-wrapped .ulf is accepted only for legacy compatibility.", file=sys.stderr)
               sys.exit(1)
 
           def looks_like_ulf(value: str) -> bool:
@@ -79,10 +79,12 @@ jobs:
                   mode = "base64-decoded"
 
           if not looks_like_ulf(normalized):
-              print("::error::UNITY_LICENSE does not look like a Unity .ulf file. Store raw .ulf contents or base64-encoded .ulf contents.", file=sys.stderr)
+              print("::error::UNITY_LICENSE does not look like a Unity .ulf file. Store the raw .ulf contents in the secret.", file=sys.stderr)
               sys.exit(1)
 
           print(f"UNITY_LICENSE format: {mode}")
+          if mode == "base64-decoded":
+              print("::warning::UNITY_LICENSE was base64-decoded at runtime. Store raw .ulf contents instead to avoid secret-format ambiguity.")
 
           github_env = os.environ["GITHUB_ENV"]
           with open(github_env, "a", encoding="utf-8") as fh:
@@ -91,18 +93,30 @@ jobs:
               fh.write("\nEOF\n")
           PY
 
-      - name: Validate Unity license mode
+      - name: Validate Unity activation inputs
         shell: bash
         env:
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
           if [ -z "${UNITY_LICENSE:-}" ]; then
             echo "::error::UNITY_LICENSE normalization did not produce a value."
             exit 1
           fi
 
+          if [ -z "${UNITY_EMAIL:-}" ]; then
+            echo "::error::UNITY_EMAIL is missing."
+            exit 1
+          fi
+
+          if [ -z "${UNITY_PASSWORD:-}" ]; then
+            echo "::error::UNITY_PASSWORD is missing."
+            exit 1
+          fi
+
           if [ -n "${UNITY_SERIAL:-}" ]; then
-            echo "::warning::UNITY_SERIAL is set in repository secrets. This workflow ignores it. The pinned GameCI action derives a serial from UNITY_LICENSE internally for personal-license activation."
+            echo "::warning::UNITY_SERIAL is set in repository secrets. This workflow ignores that secret and derives the activation serial from UNITY_LICENSE locally."
           fi
 
       - name: Run EditMode Tests
