@@ -3,6 +3,9 @@ name: Build Release
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - '*'
 
 jobs:
 
@@ -199,6 +202,7 @@ jobs:
           prop_path: "version"
 
       - name: Check for existing release tag
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.version.outputs.value }}
@@ -208,6 +212,7 @@ jobs:
             echo "::error::Failed to resolve package version for duplicate-tag guard."
             exit 1
           fi
+          echo "Duplicate tag guard checking refs/tags/${TAG} for existing entries."
           api_url="https://api.github.com/repos/${{ github.repository }}/git/ref/tags/${TAG}"
           http_status=$(curl -s -o /tmp/tag-check.json -w "%{http_code}" \
             -H "Accept: application/vnd.github+json" \
@@ -223,6 +228,11 @@ jobs:
             cat /tmp/tag-check.json
             exit 1
           fi
+
+      - name: Skip duplicate tag guard for tag-triggered run
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "Duplicate tag guard skipped because workflow is running on ${GITHUB_REF}."
 
   build:
     needs: [config, gate, tag-check]
@@ -258,10 +268,16 @@ jobs:
           include-files: metaList
 
       - name: Create Tag
+        if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         id: tag_version
         uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
         with:
           tag: "${{ env.version }}"
+
+      - name: Skip Create Tag for tag-triggered run
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          echo "Create Tag step skipped because the workflow run was started by ${GITHUB_REF}."
 
       - name: Make Release
         uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
