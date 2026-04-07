@@ -177,16 +177,16 @@ jobs:
           print("Gate passed: required compile and lint checks are success for target SHA.")
           PY
 
-  build:
-    needs: [config, gate]
+  tag-check:
+    needs: config
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      release_version: ${{ steps.version.outputs.value }}
     env:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
-    if: needs.config.outputs.config_package == 'true'
     steps:
-
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -197,11 +197,51 @@ jobs:
           file_path: "${{ env.packagePath }}/package.json"
           prop_path: "version"
 
+      - name: Check for existing release tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAG}" ]; then
+            echo "::error::Failed to resolve package version for duplicate-tag guard."
+            exit 1
+          fi
+          api_url="https://api.github.com/repos/${{ github.repository }}/git/ref/tags/${TAG}"
+          http_status=$(curl -s -o /tmp/tag-check.json -w "%{http_code}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "${api_url}")
+          if [ "${http_status}" = "200" ]; then
+            echo "::error::Duplicate tag guard (R061) blocked release because refs/tags/${TAG} already exists."
+            cat /tmp/tag-check.json
+            exit 1
+          fi
+          if [ "${http_status}" != "404" ]; then
+            echo "::error::Unexpected HTTP ${http_status} checking ${api_url}."
+            cat /tmp/tag-check.json
+            exit 1
+          fi
+
+  build:
+    needs: [config, gate, tag-check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      packagePath: Packages/${{ vars.PACKAGE_NAME }}
+      release_version: ${{ needs.tag-check.outputs.release_version }}
+    if: needs.config.outputs.config_package == 'true'
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - name: Set Environment Variables
         run: |
-          echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.zip" >> $GITHUB_ENV
-          echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
-          echo "version=${{ steps.version.outputs.value }}" >> $GITHUB_ENV
+          echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ env.release_version }}.zip" >> $GITHUB_ENV
+          echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ env.release_version }}.unitypackage" >> $GITHUB_ENV
+          echo "version=${{ env.release_version }}" >> $GITHUB_ENV
 
       - name: Create Package Zip
         working-directory: "${{ env.packagePath }}"
