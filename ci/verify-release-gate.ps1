@@ -32,9 +32,12 @@ function Assert-Regex {
 Assert-Regex '(?ms)^\s{2}gate:\s*$' "Invariant failed: missing 'gate' job block under jobs."
 Assert-Regex '(?ms)^\s{4}needs:\s*config\s*$' "Invariant failed: gate job must declare 'needs: config'."
 Assert-Regex '(?ms)^\s{4}if:\s*needs\.config\.outputs\.config_package\s*==\s*''true''\s*$' "Invariant failed: gate job must be conditioned on config_package == 'true'."
+Assert-Regex '(?ms)^\s{2}tag-check:\s*$' "Invariant failed: missing 'tag-check' job block under jobs."
+Assert-Regex '(?ms)^\s{2}tag-check:\s*$.*?^\s{4}needs:\s*config\s*$' "Invariant failed: tag-check job must declare 'needs: config'."
+Assert-Regex '(?ms)^\s{2}tag-check:\s*$.*?^\s{4}if:\s*needs\.config\.outputs\.config_package\s*==\s*''true''\s*$' "Invariant failed: tag-check job must be conditioned on config_package == 'true'."
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
 Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job block."
-Assert-Regex '(?ms)^\s{4}needs:\s*\[\s*config\s*,\s*gate\s*\]\s*$' "Invariant failed: build job must depend on both config and gate via needs: [config, gate]."
+Assert-Regex '(?ms)^\s{4}needs:\s*\[\s*config\s*,\s*gate\s*,\s*tag-check\s*\]\s*$' "Invariant failed: build job must depend on config, gate, and tag-check via needs: [config, gate, tag-check]."
 
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"compile"\s*:\s*\[.*?"C# Compile \(Unity 2022\.3\.22f1\)".*?"C# Compile Check / C# Compile \(Unity 2022\.3\.22f1\)".*?\].*?\}' "Invariant failed: gate script must require the compile check aliases."
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?"Lint / Super-Linter".*?\].*?\}' "Invariant failed: gate script must require the lint check aliases."
