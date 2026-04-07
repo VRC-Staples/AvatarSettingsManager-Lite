@@ -162,8 +162,9 @@ jobs:
             /bin/bash -lc '
               set -euo pipefail
               export HOME="${HOME:-/github/home}"
-              PROJECT_PATH="ci/unity-project"
-              mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
+              ACTIVATION_PROJECT_PATH="tmp/BlankProject"
+              TEST_PROJECT_PATH="ci/unity-project"
+              mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage "$ACTIVATION_PROJECT_PATH"
               return_license() {
                 unity-editor \
                   -logFile /dev/stdout \
@@ -171,7 +172,7 @@ jobs:
                   -returnlicense \
                   -username "$UNITY_EMAIL" \
                   -password "$UNITY_PASSWORD" \
-                  -projectPath "$PROJECT_PATH" || true
+                  -projectPath "$ACTIVATION_PROJECT_PATH" || true
               }
               trap return_license EXIT
               unity-editor \
@@ -180,10 +181,10 @@ jobs:
                 -serial "$UNITY_SERIAL" \
                 -username "$UNITY_EMAIL" \
                 -password "$UNITY_PASSWORD" \
-                -projectPath "$PROJECT_PATH"
+                -projectPath "$ACTIVATION_PROJECT_PATH"
               unity-editor \
                 -logFile /github/workspace/artifacts/editmode.log \
-                -projectPath "$PROJECT_PATH" \
+                -projectPath "$TEST_PROJECT_PATH" \
                 -coverageResultsPath /github/workspace/CodeCoverage \
                 -runTests \
                 -testPlatform editmode \
