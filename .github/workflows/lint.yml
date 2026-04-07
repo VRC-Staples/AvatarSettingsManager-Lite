@@ -11,7 +11,7 @@ on:
       - main
       - dev
 
-permissions: { }
+permissions: {}
 
 jobs:
   lint:
@@ -25,13 +25,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Super-Linter
-        uses: super-linter/super-linter/slim@v8.6.0
+        uses: super-linter/super-linter/slim@9e863354e3ff62e0727d37183162c4a88873df41 # v8.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -48,6 +48,7 @@ jobs:
           VALIDATE_GITLEAKS: true
 
           LINTER_RULES_PATH: .
+          YAML_CONFIG_FILE: .yamllint.yml
 
           SHELLCHECK_OPTS: >-
             --exclude=SC2086 --exclude=SC2129

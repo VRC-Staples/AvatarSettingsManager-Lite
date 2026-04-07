@@ -22,15 +22,19 @@ cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <NoWarn>CS0649;CS0414</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/ASMLiteComponent.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UnityEngine">
-      <HintPath>${UNITY_ENGINE_DLL}</HintPath>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="VRCSDKBase">
@@ -47,19 +51,35 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>disable</Nullable>
-    <NoWarn>CS0649;CS0108;CS0414;CS1998</NoWarn>
+    <NoWarn>CS0649;CS0414</NoWarn>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UnityEngine">
-      <HintPath>${UNITY_ENGINE_DLL}</HintPath>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="UnityEditor">
-      <HintPath>${UNITY_EDITOR_DLL}</HintPath>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEditor.CoreModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="VRCSDKBase">
@@ -79,7 +99,9 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <Private>false</Private>
     </Reference>
   </ItemGroup>
-  <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />
+  <ItemGroup>
+    <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />
+  </ItemGroup>
 </Project>
 CSPROJ
 
