@@ -270,7 +270,7 @@ jobs:
       - name: Create Tag
         if: ${{ ! startsWith(github.ref, 'refs/tags/') }}
         id: tag_version
-        uses: rickstaa/action-create-tag@88dbf7ff6fe2405f8e8f6c6fdfd78829bc631f83
+        uses: rickstaa/action-create-tag@a1c7777fcb2fee4f19b0f283ba888afa11678b72
         with:
           tag: "${{ env.version }}"
 
