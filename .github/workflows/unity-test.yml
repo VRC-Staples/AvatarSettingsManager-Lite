@@ -1,12 +1,13 @@
 # Unity EditMode test runner
 #
 # Required repo secrets:
-#   UNITY_LICENSE   - raw .ulf file contents preferred; base64-wrapped .ulf accepted for legacy compatibility
+#   UNITY_LICENSE   - raw .ulf file contents preferred; base64-wrapped .ulf accepted
 #   UNITY_EMAIL     - Unity account email
 #   UNITY_PASSWORD  - Unity account password
 #
-# The workflow normalizes UNITY_LICENSE, derives the serial locally, then runs the Unity editor container directly.
-# Set these in Settings > Secrets and Variables > Actions before running.
+# Activation: serial is derived from UNITY_LICENSE and passed to unity-editor
+# via -batchmode -quit -serial (no -projectPath required per Unity docs).
+# Tests are run in a second unity-editor call with -projectPath.
 
 name: Unity Test Results
 
@@ -52,72 +53,129 @@ jobs:
         shell: bash
         env:
           UNITY_LICENSE_SECRET: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
           set -euo pipefail
 
           mkdir -p artifacts CodeCoverage
 
           if [ -z "${UNITY_LICENSE_SECRET:-}" ]; then
-            echo "::error::UNITY_LICENSE is missing. Provide raw .ulf contents. Base64-wrapped .ulf is accepted only for legacy compatibility."
+            echo "::error::UNITY_LICENSE is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_EMAIL:-}" ]; then
+            echo "::error::UNITY_EMAIL is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_PASSWORD:-}" ]; then
+            echo "::error::UNITY_PASSWORD is missing."
             exit 1
           fi
 
-          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' ci/unity-project/ProjectSettings/ProjectVersion.txt)"
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
+            ci/unity-project/ProjectSettings/ProjectVersion.txt)"
           if [ -z "${UNITY_VERSION:-}" ]; then
-            echo "::error::Failed to read Unity version from ci/unity-project/ProjectSettings/ProjectVersion.txt"
+            echo "::error::Failed to read Unity version from ProjectVersion.txt"
             exit 1
           fi
 
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
           echo "Using Unity image ${UNITY_IMAGE}"
 
-          LICENSE_DIR="${GITHUB_WORKSPACE}/.unity-license"
-          LICENSE_FILE="${LICENSE_DIR}/Unity_lic.ulf"
-          mkdir -p "${LICENSE_DIR}"
+          # Derive serial from the .ulf file (machine-independent — only the
+          # DeveloperData base64 segment is used, not machine bindings).
+          SERIAL_FILE="$(mktemp)"
+          python - <<'PY' "$SERIAL_FILE"
+          import base64, os, sys
 
-          python - <<'PY' "${LICENSE_FILE}"
-          import base64
-          import os
-          import sys
-
-          out_path = sys.argv[1]
+          serial_path = sys.argv[1]
           secret = os.environ.get("UNITY_LICENSE_SECRET", "")
 
-          def looks_like_ulf(value: str) -> bool:
-              return '<DeveloperData Value="' in value and '/>' in value
+          def looks_like_ulf(v):
+              return '<DeveloperData Value="' in v and '/>' in v
 
-          normalized = secret
+          norm = secret
           if not looks_like_ulf(secret):
               try:
-                  decoded = base64.b64decode(secret, validate=True).decode("utf-8")
+                  dec = base64.b64decode(secret, validate=True).decode("utf-8")
               except Exception:
-                  decoded = ""
-              if looks_like_ulf(decoded):
-                  normalized = decoded
+                  dec = ""
+              if looks_like_ulf(dec):
+                  norm = dec
+                  print("::warning::UNITY_LICENSE was base64-decoded at runtime.")
 
-          if not looks_like_ulf(normalized):
-              print("::error::UNITY_LICENSE is not a valid .ulf file", file=sys.stderr)
+          if not looks_like_ulf(norm):
+              print("::error::UNITY_LICENSE is not a valid .ulf file.", file=sys.stderr)
               sys.exit(1)
 
-          with open(out_path, "w", encoding="utf-8") as fh:
-              fh.write(normalized)
-          print("License file written.")
+          start_key = '<DeveloperData Value="'
+          end_key = '"/>'
+          s = norm.find(start_key)
+          if s < 0:
+              print("::error::Missing DeveloperData entry.", file=sys.stderr)
+              sys.exit(1)
+          s += len(start_key)
+          e = norm.find(end_key, s)
+          if e < 0:
+              print("::error::Missing DeveloperData closing marker.", file=sys.stderr)
+              sys.exit(1)
+
+          serial = base64.b64decode(norm[s:e]).decode("latin1")[4:]
+          if not serial:
+              print("::error::Failed to derive serial.", file=sys.stderr)
+              sys.exit(1)
+
+          with open(serial_path, "w", encoding="utf-8") as fh:
+              fh.write(serial)
           PY
 
+          UNITY_SERIAL="$(tr -d '\r\n' < "${SERIAL_FILE}")"
+          rm -f "${SERIAL_FILE}"
+
+          if [ -z "${UNITY_SERIAL:-}" ]; then
+            echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
+            exit 1
+          fi
+          echo "::add-mask::${UNITY_SERIAL}"
+
+          # Write the inner script to a temp file to avoid quoting issues
+          # and shellcheck false-positives on the docker run string.
           RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
-          set -euxo pipefail
-          export HOME="${HOME:-/github/home}"
-          TEST_PROJECT_PATH="ci/unity-project"
-          mkdir -p "$HOME" "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
-          UNITY_LICENSE_PATH="/root/.local/share/unity3d/Unity/Unity_lic.ulf"
-          mkdir -p "$(dirname "${UNITY_LICENSE_PATH}")"
-          ls -la /github/workspace/.unity-license/ || echo "license dir not found"
-          cp /github/workspace/.unity-license/Unity_lic.ulf "${UNITY_LICENSE_PATH}"
-          echo "License installed at ${UNITY_LICENSE_PATH}"
+          set -euo pipefail
+          export HOME="${HOME:-/root}"
+          mkdir -p "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
+
+          # Activate license. Per Unity docs, -batchmode -quit -serial does NOT
+          # require -projectPath. Adding it causes "Couldn't set project path"
+          # when the dir is minimal. Omitting it works correctly.
+          return_license() {
+            unity-editor \
+              -batchmode \
+              -quit \
+              -returnlicense \
+              -username "$UNITY_EMAIL" \
+              -password "$UNITY_PASSWORD" \
+              -logFile /dev/stdout || true
+          }
+          trap return_license EXIT
+
           unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -serial "$UNITY_SERIAL" \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
+            -logFile /dev/stdout
+
+          # Run tests against the shadow project.
+          unity-editor \
+            -batchmode \
+            -nographics \
             -logFile /github/workspace/artifacts/editmode.log \
-            -projectPath "${TEST_PROJECT_PATH}" \
+            -projectPath ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
             -runTests \
             -testPlatform editmode \
@@ -126,13 +184,17 @@ jobs:
             -debugCodeOptimization \
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
           RUNNER
+
           docker run --rm \
             --workdir /github/workspace \
             --env HOME=/root \
+            --env UNITY_EMAIL \
+            --env UNITY_PASSWORD \
+            --env UNITY_SERIAL="${UNITY_SERIAL}" \
             --volume "${GITHUB_WORKSPACE}:/github/workspace" \
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
             "${UNITY_IMAGE}" \
-            /bin/bash -l /tmp/unity-runner.sh
+            /bin/bash /tmp/unity-runner.sh
           rm -f "${RUNNER_SCRIPT}"
       - name: Upload NUnit results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
