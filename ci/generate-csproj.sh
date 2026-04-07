@@ -33,8 +33,8 @@ cat > "${OUT_DIR}/ASMLite.Runtime.csproj" <<CSPROJ
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/ASMLiteComponent.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UnityEngine">
-      <HintPath>${UNITY_ENGINE_DLL}</HintPath>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="VRCSDKBase">
@@ -62,11 +62,6 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="UnityEngine">
-      <HintPath>${UNITY_ENGINE_DLL}</HintPath>
-      <Private>false</Private>
-      <Aliases>UnityEngineFacade</Aliases>
-    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
@@ -78,11 +73,6 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
     <Reference Include="UnityEngine.IMGUIModule">
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.IMGUIModule.dll</HintPath>
       <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEditor">
-      <HintPath>${UNITY_EDITOR_DLL}</HintPath>
-      <Private>false</Private>
-      <Aliases>UnityEditorFacade</Aliases>
     </Reference>
     <Reference Include="UnityEditor.CoreModule">
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.CoreModule.dll</HintPath>
