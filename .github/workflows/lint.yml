@@ -48,6 +48,7 @@ jobs:
           VALIDATE_GITLEAKS: true
 
           LINTER_RULES_PATH: .
+          YAML_CONFIG_FILE: .yamllint.yml
 
           SHELLCHECK_OPTS: >-
             --exclude=SC2086 --exclude=SC2129

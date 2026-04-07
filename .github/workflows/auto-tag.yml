@@ -48,7 +48,7 @@ jobs:
         id: decide
         run: |
           set -euo pipefail
-          VERSION=${{ steps.version.outputs.version }}
+          export VERSION=${{ steps.version.outputs.version }}
           git fetch --prune --tags
           python - <<'PY'
           import itertools
