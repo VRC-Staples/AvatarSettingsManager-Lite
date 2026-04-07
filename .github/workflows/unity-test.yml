@@ -161,6 +161,9 @@ jobs:
           }
           trap return_license EXIT
 
+          # Unity 2022 may exit with SIGTRAP (133) on shutdown after activation
+          # even when activation succeeds. Allow non-zero exit and verify via log.
+          ACTIVATE_LOG="$(mktemp)"
           unity-editor \
             -batchmode \
             -quit \
@@ -168,7 +171,13 @@ jobs:
             -serial "$UNITY_SERIAL" \
             -username "$UNITY_EMAIL" \
             -password "$UNITY_PASSWORD" \
-            -logFile /dev/stdout
+            -logFile "${ACTIVATE_LOG}" || true
+          cat "${ACTIVATE_LOG}"
+          if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
+            echo "::error::License activation failed — 'Successfully activated' not found in log."
+            exit 1
+          fi
+          rm -f "${ACTIVATE_LOG}"
 
           # Remove stale Unity lockfile so unity-editor can open the project.
           # The Temp/ dir is gitignored but may be checked out from prior runs.
