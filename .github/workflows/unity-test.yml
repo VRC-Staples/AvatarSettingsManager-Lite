@@ -1,10 +1,11 @@
-# Unity EditMode test runner — GameCI
+# Unity EditMode test runner - GameCI
 #
 # Required repo secrets:
-#   UNITY_LICENSE   — base64-encoded Unity license file content
-#   UNITY_EMAIL     — Unity account email
-#   UNITY_PASSWORD  — Unity account password
+#   UNITY_LICENSE   - raw .ulf contents or base64-encoded .ulf contents
+#   UNITY_EMAIL     - Unity account email
+#   UNITY_PASSWORD  - Unity account password
 #
+# The workflow normalizes UNITY_LICENSE before invoking GameCI.
 # Set these in Settings > Secrets and Variables > Actions before running.
 
 name: Unity Test Results
@@ -47,29 +48,69 @@ jobs:
           path: ci/unity-project/Library
           key: Library-${{ hashFiles('ci/unity-project/Packages/**', 'ci/unity-project/ProjectSettings/**') }}
           restore-keys: Library-
+      - name: Normalize Unity license secret
+        shell: bash
+        env:
+          UNITY_LICENSE_SECRET: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          python - <<'PY'
+          import base64
+          import os
+          import sys
+
+          secret = os.environ.get("UNITY_LICENSE_SECRET", "")
+          if not secret:
+              print("::error::UNITY_LICENSE is missing. Provide raw .ulf contents or base64-encoded .ulf contents.", file=sys.stderr)
+              sys.exit(1)
+
+          def looks_like_ulf(value: str) -> bool:
+              return '<DeveloperData Value="' in value and '/>' in value
+
+          normalized = secret
+          mode = "raw"
+
+          if not looks_like_ulf(secret):
+              try:
+                  decoded = base64.b64decode(secret, validate=True).decode("utf-8")
+              except Exception:
+                  decoded = ""
+              if looks_like_ulf(decoded):
+                  normalized = decoded
+                  mode = "base64-decoded"
+
+          if not looks_like_ulf(normalized):
+              print("::error::UNITY_LICENSE does not look like a Unity .ulf file. Store raw .ulf contents or base64-encoded .ulf contents.", file=sys.stderr)
+              sys.exit(1)
+
+          print(f"UNITY_LICENSE format: {mode}")
+
+          github_env = os.environ["GITHUB_ENV"]
+          with open(github_env, "a", encoding="utf-8") as fh:
+              fh.write("UNITY_LICENSE<<EOF\n")
+              fh.write(normalized)
+              fh.write("\nEOF\n")
+          PY
+
       - name: Validate Unity license mode
         shell: bash
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         run: |
           if [ -z "${UNITY_LICENSE:-}" ]; then
-            echo "::error::UNITY_LICENSE is missing. Personal license mode requires a base64 encoded .ulf secret."
+            echo "::error::UNITY_LICENSE normalization did not produce a value."
             exit 1
           fi
 
           if [ -n "${UNITY_SERIAL:-}" ]; then
-            echo "::warning::UNITY_SERIAL is set. This repository uses personal license mode and forces UNITY_SERIAL to empty for test runs."
+            echo "::warning::UNITY_SERIAL is set in repository secrets. This workflow ignores it. The pinned GameCI action derives a serial from UNITY_LICENSE internally for personal-license activation."
           fi
 
       - name: Run EditMode Tests
         id: tests
         uses: game-ci/unity-test-runner@0ff419b913a3630032cbe0de48a0099b5a9f0ed9 # v4
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ""
         with:
           projectPath: ci/unity-project
           testMode: editMode
