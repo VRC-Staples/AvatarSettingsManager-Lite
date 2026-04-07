@@ -38,6 +38,9 @@ Assert-Regex '(?ms)^\s{2}tag-check:\s*$.*?^\s{4}if:\s*needs\.config\.outputs\.co
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
 Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job block."
 Assert-Regex '(?ms)^\s{4}needs:\s*\[\s*config\s*,\s*gate\s*,\s*tag-check\s*\]\s*$' "Invariant failed: build job must depend on config, gate, and tag-check via needs: [config, gate, tag-check]."
+Assert-Regex '(?ms)^on:\s*$.*?^\s{2}push:\s*$.*?^\s{4}tags:\s*$.*?^\s{6}-\s*''\*''\s*$' "Invariant failed: workflow must declare on.push.tags with wildcard tag trigger."
+Assert-Regex '(?ms)^\s{6}-\sname:\sCheck\sfor\sexisting\srelease\stag\s*$.*?^\s{8}if:\s*\$\{\{\s*!\s*startsWith\(github\.ref,\s*''refs/tags/''\)\s*\}\}\s*$' "Invariant failed: duplicate tag guard must skip only on tag-triggered refs via startsWith(github.ref, 'refs/tags/')."
+Assert-Regex '(?ms)^\s{6}-\sname:\sCreate\sTag\s*$.*?^\s{8}if:\s*\$\{\{\s*!\s*startsWith\(github\.ref,\s*''refs/tags/''\)\s*\}\}\s*$' "Invariant failed: Create Tag step must use the same tag-trigger guard condition as duplicate tag check."
 
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"compile"\s*:\s*\[.*?"C# Compile \(Unity 2022\.3\.22f1\)".*?"C# Compile Check / C# Compile \(Unity 2022\.3\.22f1\)".*?\].*?\}' "Invariant failed: gate script must require the compile check aliases."
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?"Lint / Super-Linter".*?\].*?\}' "Invariant failed: gate script must require the lint check aliases."
