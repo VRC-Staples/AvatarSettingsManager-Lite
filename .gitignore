@@ -9,6 +9,9 @@ Thumbs.db
 
 # GSD
 .gsd/
+.claude/
+.planning/
+claude.md
 .bg-shell/
 .artifacts/
 .mcp.json
