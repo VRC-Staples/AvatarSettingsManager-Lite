@@ -37,7 +37,6 @@ jobs:
   test:
     name: EditMode Tests
     runs-on: ubuntu-latest
-    if: ${{ github.actor != 'dependabot[bot]' }}
     permissions:
       contents: read
       checks: write
@@ -62,8 +61,8 @@ jobs:
           mkdir -p artifacts CodeCoverage
 
           if [ -z "${UNITY_LICENSE_SECRET:-}" ]; then
-            echo "::notice::UNITY_LICENSE is missing — skipping Unity tests (expected for Dependabot PRs)."
-            exit 0
+            echo "::error::UNITY_LICENSE is missing."
+            exit 1
           fi
           if [ -z "${UNITY_EMAIL:-}" ]; then
             echo "::error::UNITY_EMAIL is missing."
