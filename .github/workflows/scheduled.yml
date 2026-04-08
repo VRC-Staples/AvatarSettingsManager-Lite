@@ -1,0 +1,106 @@
+---
+name: Scheduled
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+    - cron: '0 6 * * 1'
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  nightly:
+    name: Nightly Prerelease
+    if: >-
+      vars.PACKAGE_NAME != '' && (github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 5 * * *')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      packagePath: Packages/${{ vars.PACKAGE_NAME }}
+      zipFile: ${{ vars.PACKAGE_NAME }}-nightly.zip
+      unityPackage: ${{ vars.PACKAGE_NAME }}-nightly.unitypackage
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Package Zip
+        working-directory: "${{ env.packagePath }}"
+        run: zip -r "${{ github.workspace }}/${{ env.zipFile }}" .
+
+      - name: Track Package Meta Files
+        run: find "${{ env.packagePath }}" -name \*.meta >> metaList
+
+      - name: Create UnityPackage
+        uses: pCYSl5EDgo/create-unitypackage@b5c57408698b1fab8b3a84d4b67f767b8b7c0be9 # v1.2.3
+        with:
+          package-path: ${{ env.unityPackage }}
+          include-files: metaList
+
+      - name: Delete nightly release if it exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view nightly >/dev/null 2>&1; then
+            gh release delete nightly --yes
+          else
+            echo "No existing nightly release to delete."
+          fi
+
+      - name: Remove nightly tag if it exists
+        run: |
+          set -euo pipefail
+          git push origin :refs/tags/nightly || echo "nightly tag not present"
+
+      - name: Build release notes
+        run: |
+          set -euo pipefail
+          short_sha=$(git rev-parse --short HEAD)
+          commits=$(git log -5 --pretty=format:'- %s' HEAD || true)
+          if [ -z "${commits}" ]; then
+            commits='- (no recent commits yet)'
+          fi
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            printf '## Nightly prerelease refresh\n'
+            printf 'Source: dev @ %s\n' "${short_sha}"
+            printf 'Run URL: %s\n' "${run_url}"
+            printf '\nRecent commits:\n'
+            printf '%s\n' "${commits}"
+          } > release_notes.md
+          cat release_notes.md
+
+      - name: Create nightly release
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          files: |
+            ${{ env.zipFile }}
+            ${{ env.unityPackage }}
+            ${{ env.packagePath }}/package.json
+          tag_name: nightly
+          name: nightly
+          prerelease: true
+          body_path: release_notes.md
+
+  secret-scan:
+    name: Secret Scan
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.schedule == '0 6 * * 1'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@cb7149b9b57195b609c63e8518d2c37cfc2e1596 # v2.3.9
