@@ -88,4 +88,3 @@ jobs:
           name: nightly
           prerelease: true
           body_path: release_notes.md
-
