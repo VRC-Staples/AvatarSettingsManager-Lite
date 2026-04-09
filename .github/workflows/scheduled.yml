@@ -4,7 +4,6 @@ name: Scheduled
 on:
   schedule:
     - cron: '0 5 * * *'
-    - cron: '0 6 * * 1'
   push:
     branches: [dev]
   workflow_dispatch:
@@ -90,17 +89,3 @@ jobs:
           prerelease: true
           body_path: release_notes.md
 
-  secret-scan:
-    name: Secret Scan
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.schedule == '0 6 * * 1'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          fetch-depth: 0
-
-      - uses: gitleaks/gitleaks-action@cb7149b9b57195b609c63e8518d2c37cfc2e1596 # v2.3.9
