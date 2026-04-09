@@ -45,6 +45,16 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 3. Open your avatar project in VCC and add **Avatar Settings Manager - Lite** from the package list.
 4. In Unity, open **Tools → .Staples. → ASM-Lite**, select your avatar, configure settings, and click **Add ASM-Lite Prefab**.
 
+### Developer Git Identity Guard
+
+Run this once after cloning to enable repository hooks:
+
+```bash
+bash ci/setup-git-hooks.sh
+```
+
+The hooks block commits that use banned personal identity metadata or blocked co-author trailers. CI also enforces the same checks on push and pull request.
+
 ---
 
 ## Usage
