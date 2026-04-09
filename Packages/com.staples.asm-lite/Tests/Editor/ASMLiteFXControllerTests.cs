@@ -13,8 +13,8 @@ namespace ASMLite.Tests.Editor
 {
     /// <summary>
     /// A05-A18: FX controller state machine invariants.
-    /// Integration category: each test calls Build() and inspects the live
-    /// avatar FX AnimatorController (ctx.Ctrl).
+    /// Integration category: each test calls Build() and inspects the generated
+    /// FX AnimatorController at ASMLiteAssetPaths.FXController.
     /// </summary>
     [TestFixture]
     public class ASMLiteFXControllerTests
@@ -24,6 +24,7 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
         }
 
@@ -54,6 +55,13 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
+        private static AnimatorController LoadGeneratedController(string aid)
+        {
+            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(ctrl, $"{aid}: generated FX controller must exist at '{ASMLiteAssetPaths.FXController}'.");
+            return ctrl;
+        }
+
         private static AnimatorStateMachine GetLayerSM(AnimatorController ctrl, string layerName)
         {
             var layer = ctrl.layers.FirstOrDefault(l => l.name == layerName);
@@ -78,9 +86,10 @@ namespace ASMLite.Tests.Editor
             int result = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(result, 0);
 
-            int layerCount = _ctx.Ctrl.layers.Count(l => l.name.StartsWith("ASMLite_"));
+            var genCtrl = LoadGeneratedController("A05");
+            int layerCount = genCtrl.layers.Count(l => l.name.StartsWith("ASMLite_"));
             Assert.AreEqual(2, layerCount,
-                "Should create exactly slotCount ASMLite_ layers in the FX controller.");
+                "Should create exactly slotCount ASMLite_ layers in the generated FX controller.");
         }
 
         // ── A06 ────────────────────────────────────────────────────────────────
@@ -92,9 +101,10 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
+            var genCtrl = LoadGeneratedController("A06");
             for (int slot = 1; slot <= 2; slot++)
             {
-                var sm = GetLayerSM(_ctx.Ctrl, $"ASMLite_Slot{slot}");
+                var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
                 Assert.AreEqual(4, sm.states.Length,
                     $"Slot {slot} layer should have exactly 4 states.");
             }
@@ -109,9 +119,10 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Float);
             ASMLiteBuilder.Build(_ctx.Comp);
 
+            var genCtrl = LoadGeneratedController("A07");
             for (int slot = 1; slot <= 2; slot++)
             {
-                var sm = GetLayerSM(_ctx.Ctrl, $"ASMLite_Slot{slot}");
+                var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
                 Assert.IsNotNull(sm.defaultState, $"Slot {slot}: defaultState is null.");
                 Assert.AreEqual("Idle", sm.defaultState.name,
                     $"Slot {slot}: defaultState should be named 'Idle'.");
@@ -127,9 +138,10 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
+            var genCtrl = LoadGeneratedController("A08");
             for (int slot = 1; slot <= 2; slot++)
             {
-                var sm = GetLayerSM(_ctx.Ctrl, $"ASMLite_Slot{slot}");
+                var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
                 foreach (var childState in sm.states)
                 {
                     Assert.IsFalse(childState.state.writeDefaultValues,
@@ -147,9 +159,10 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
+            var genCtrl = LoadGeneratedController("A09");
             for (int slot = 1; slot <= 2; slot++)
             {
-                var sm        = GetLayerSM(_ctx.Ctrl, $"ASMLite_Slot{slot}");
+                var sm        = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
                 var idleState = FindState(sm, "Idle");
 
                 int saveValue  = (slot - 1) * 3 + 1;
@@ -159,7 +172,6 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(3, idleState.transitions.Length,
                     $"Slot {slot} Idle should have 3 outgoing transitions.");
 
-                // Collect encoded values from all transitions (order not strictly required)
                 var condValues = idleState.transitions
                     .Select(t => t.conditions[0])
                     .ToArray();
@@ -191,7 +203,8 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var sm        = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
+            var genCtrl   = LoadGeneratedController("A10");
+            var sm        = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var saveState = FindState(sm, "SaveSlot1");
             var driver    = saveState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
 
@@ -218,7 +231,8 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyInt", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var sm        = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
+            var genCtrl   = LoadGeneratedController("A11");
+            var sm        = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var loadState = FindState(sm, "LoadSlot1");
             var driver    = loadState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
 
@@ -245,7 +259,8 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyBool", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var sm         = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
+            var genCtrl    = LoadGeneratedController("A12");
+            var sm         = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var resetState = FindState(sm, "ResetSlot1");
             var driver     = resetState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
 
@@ -272,7 +287,8 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var sm = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
+            var genCtrl = LoadGeneratedController("A13");
+            var sm = GetLayerSM(genCtrl, "ASMLite_Slot1");
 
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
             {
@@ -299,7 +315,8 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var sm = GetLayerSM(_ctx.Ctrl, "ASMLite_Slot1");
+            var genCtrl = LoadGeneratedController("A14");
+            var sm = GetLayerSM(genCtrl, "ASMLite_Slot1");
 
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
             {
@@ -321,16 +338,17 @@ namespace ASMLite.Tests.Editor
             int result = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(result, 0);
 
-            var paramNames = _ctx.Ctrl.parameters.Select(p => p.name).ToHashSet();
+            var genCtrl = LoadGeneratedController("A15");
+            var paramNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
 
             Assert.IsTrue(paramNames.Contains("ASMLite_Ctrl"),
-                "FX controller must contain 'ASMLite_Ctrl'.");
+                "Generated FX controller must contain 'ASMLite_Ctrl'.");
             Assert.IsTrue(paramNames.Contains("X"),
-                "FX controller must contain the avatar param 'X'.");
+                "Generated FX controller must contain the avatar param 'X'.");
             Assert.IsTrue(paramNames.Contains("ASMLite_Bak_S1_X"),
-                "FX controller must contain 'ASMLite_Bak_S1_X'.");
+                "Generated FX controller must contain 'ASMLite_Bak_S1_X'.");
             Assert.IsTrue(paramNames.Contains("ASMLite_Def_X"),
-                "FX controller must contain 'ASMLite_Def_X'.");
+                "Generated FX controller must contain 'ASMLite_Def_X'.");
         }
 
         // ── A16 ────────────────────────────────────────────────────────────────
@@ -340,8 +358,6 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
 
-            // Add two entries with the same name -- simulates a misconfigured params asset
-            var existing = _ctx.ParamsAsset.parameters ?? new VRCExpressionParameters.Parameter[0];
             _ctx.ParamsAsset.parameters = new[]
             {
                 new VRCExpressionParameters.Parameter { name = "DupParam", valueType = VRCExpressionParameters.ValueType.Int },
@@ -352,9 +368,10 @@ namespace ASMLite.Tests.Editor
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            int count = _ctx.Ctrl.parameters.Count(p => p.name == "DupParam");
+            var genCtrl = LoadGeneratedController("A16");
+            int count = genCtrl.parameters.Count(p => p.name == "DupParam");
             Assert.AreEqual(1, count,
-                "Dedup guard: duplicate avatar param name must appear only once in FX controller parameters.");
+                "Dedup guard: duplicate avatar param name must appear only once in generated FX controller parameters.");
         }
 
         // ── A17 ────────────────────────────────────────────────────────────────
@@ -365,15 +382,17 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
 
-            // Pre-inject a duplicate ASMLite_Bak_ parameter into the live controller
-            // to simulate a stale baked controller from a prior failed build.
-            _ctx.Ctrl.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
-            _ctx.Ctrl.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
+            // Pre-inject duplicates into the generated FX controller to simulate
+            // a stale asset from a prior broken build.
+            var genCtrlPre = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(genCtrlPre, "A17: generated FX controller must exist before pre-injection.");
+            genCtrlPre.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
+            genCtrlPre.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            // After Build(), no ASMLite_-prefixed parameter should appear more than once.
-            var asmParams = _ctx.Ctrl.parameters
+            var genCtrl = LoadGeneratedController("A17");
+            var asmParams = genCtrl.parameters
                 .Where(p => p.name.StartsWith("ASMLite_"))
                 .Select(p => p.name)
                 .ToList();
@@ -395,8 +414,6 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
 
-            // Add one param of each type with a non-zero default
-            var existing = _ctx.ParamsAsset.parameters ?? new VRCExpressionParameters.Parameter[0];
             _ctx.ParamsAsset.parameters = new[]
             {
                 new VRCExpressionParameters.Parameter
@@ -429,22 +446,89 @@ namespace ASMLite.Tests.Editor
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var paramsByName = _ctx.Ctrl.parameters.ToDictionary(p => p.name);
+            var genCtrl = LoadGeneratedController("A18");
+            var paramsByName = genCtrl.parameters.ToDictionary(p => p.name);
 
-            // Int default
             Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyInt"), "ASMLite_Def_MyInt not found.");
             Assert.AreEqual(7, paramsByName["ASMLite_Def_MyInt"].defaultInt,
                 "ASMLite_Def_MyInt.defaultInt should be 7.");
 
-            // Float default
             Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyFloat"), "ASMLite_Def_MyFloat not found.");
             Assert.AreEqual(0.5f, paramsByName["ASMLite_Def_MyFloat"].defaultFloat, 0.0001f,
                 "ASMLite_Def_MyFloat.defaultFloat should be 0.5.");
 
-            // Bool default
             Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyBool"), "ASMLite_Def_MyBool not found.");
             Assert.IsTrue(paramsByName["ASMLite_Def_MyBool"].defaultBool,
                 "ASMLite_Def_MyBool.defaultBool should be true (defaultValue=1).");
+        }
+
+        // ── A19 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var genCtrl = LoadGeneratedController("A19");
+            var ctrlParamEntries = genCtrl.parameters
+                .Where(p => p.name == "ASMLite_Ctrl")
+                .ToList();
+            Assert.AreEqual(1, ctrlParamEntries.Count,
+                "Generated FX controller should contain exactly one shared ASMLite_Ctrl parameter.");
+            Assert.AreEqual(AnimatorControllerParameterType.Int, ctrlParamEntries[0].type,
+                "ASMLite_Ctrl must remain an Int parameter in the generated FX controller.");
+
+            var forbiddenLegacyControlParams = new[]
+            {
+                "ASMLite_Save",
+                "ASMLite_Load",
+                "ASMLite_Clear",
+                "ASMLite_S1_Save",
+                "ASMLite_S1_Load",
+                "ASMLite_S1_Clear",
+            };
+
+            foreach (var forbiddenName in forbiddenLegacyControlParams)
+            {
+                Assert.IsFalse(genCtrl.parameters.Any(p => p.name == forbiddenName),
+                    $"Legacy control param '{forbiddenName}' must not be emitted in the generated FX controller.");
+            }
+        }
+
+        // ── A20 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var genCtrl = LoadGeneratedController("A20");
+            for (int slot = 1; slot <= 2; slot++)
+            {
+                var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
+
+                Assert.AreEqual(0, sm.anyStateTransitions.Length,
+                    $"Slot {slot} should not create Any State transitions (legacy SafeBool branch style).");
+
+                foreach (var stateName in new[] { "SaveSlot" + slot, "LoadSlot" + slot, "ResetSlot" + slot })
+                {
+                    var state = FindState(sm, stateName);
+                    foreach (var transition in state.transitions)
+                    {
+                        foreach (var condition in transition.conditions)
+                        {
+                            Assert.AreNotEqual(AnimatorConditionMode.If, condition.mode,
+                                $"Slot {slot} state '{stateName}' transition must not use bool If conditions.");
+                            Assert.AreNotEqual(AnimatorConditionMode.IfNot, condition.mode,
+                                $"Slot {slot} state '{stateName}' transition must not use bool IfNot conditions.");
+                        }
+                    }
+                }
+            }
         }
     }
 }

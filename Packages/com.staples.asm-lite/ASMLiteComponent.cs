@@ -133,12 +133,16 @@ namespace ASMLite
         /// via PreprocessCallbackBehaviours (callbackOrder=-2048), which is after VRCFury's
         /// main build (VrcfAvatarPreprocessor, callbackOrder=int.MinValue). Lower values
         /// run earlier within the IPreprocessCallbackBehaviour phase.
+        ///
+        /// ASM-Lite uses this callback to regenerate its stub assets so the prefab's
+        /// VRCFury FullController payload can consume those assets as the delivery path.
         /// </summary>
         public int PreprocessOrder => -10;
 
         /// <summary>
         /// Called by the VRChat SDK before avatar upload. Delegates to ASMLiteBuilder
-        /// to generate FX layers and populate expression parameters at build time.
+        /// to regenerate generated assets used by ASM-Lite's VRCFury FullController
+        /// delivery wiring.
         /// </summary>
         public bool OnPreprocess()
         {

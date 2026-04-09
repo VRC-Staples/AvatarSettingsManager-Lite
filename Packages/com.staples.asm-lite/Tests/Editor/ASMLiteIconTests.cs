@@ -43,8 +43,8 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            var rootMenu = _ctx.AvDesc.expressionsMenu;
-            Assert.IsNotNull(rootMenu, $"{aid}: avDesc.expressionsMenu is null after Build().");
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(rootMenu, $"{aid}: generated root menu is null after Build() at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(rootMenu.controls, $"{aid}: root menu controls list is null after Build().");
             Assert.GreaterOrEqual(rootMenu.controls.Count, 1,
                 $"{aid}: root menu controls are empty after Build().");

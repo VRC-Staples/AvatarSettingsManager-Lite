@@ -109,5 +109,28 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(result, "Result must not be null");
             Assert.AreEqual(0, result.Count, "Result must be an empty list");
         }
+
+        // A05: VF-scoped names are consumed as opaque identifiers (no renaming, no prefix stripping).
+        [Test]
+        public void A05_GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Internal", valueType = VRCExpressionParameters.ValueType.Int },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
+
+            Assert.AreEqual(2, result.Count,
+                "A05 regression guard: VF-prefixed names must not be silently dropped; only ASMLite_ names should be filtered.");
+            Assert.AreEqual("VF135_Clothing/Rezz", result[0].name,
+                "A05 regression guard: VF names must remain opaque/canonical and must not be renamed.");
+            Assert.AreEqual("VF135_Clothing/Hood", result[1].name,
+                "A05 regression guard: VF names must remain opaque/canonical and must not be renamed.");
+        }
     }
 }
