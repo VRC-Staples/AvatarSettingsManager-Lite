@@ -125,6 +125,16 @@ namespace ASMLite.Tests.Editor
             if (avatarGo != null)
                 Object.DestroyImmediate(avatarGo);
         }
+
+        public static void ResetGeneratedExprParams()
+        {
+            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            if (generatedExpr == null)
+                return;
+            generatedExpr.parameters = new VRCExpressionParameters.Parameter[0];
+            EditorUtility.SetDirty(generatedExpr);
+            AssetDatabase.SaveAssets();
+        }
     }
 
     /// <summary>

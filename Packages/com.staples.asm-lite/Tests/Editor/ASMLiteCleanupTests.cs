@@ -55,12 +55,51 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
-        private static int BuildOrFail(AsmLiteTestContext ctx, string aid)
+        private static void SeedLegacyAsmLiteLayers(AsmLiteTestContext ctx, int slotCount)
         {
-            int buildResult = ASMLiteBuilder.Build(ctx.Comp);
-            Assert.GreaterOrEqual(buildResult, 0,
-                $"{aid}: Build() failed with result {buildResult}.");
-            return buildResult;
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                ctx.Ctrl.AddLayer(new AnimatorControllerLayer
+                {
+                    name = $"ASMLite_Slot{slot}",
+                    defaultWeight = 1f,
+                    stateMachine = new AnimatorStateMachine { name = $"ASMLite_Slot{slot}_SM" }
+                });
+            }
+            EditorUtility.SetDirty(ctx.Ctrl);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteFxParams(AsmLiteTestContext ctx, params string[] paramNames)
+        {
+            ctx.Ctrl.AddParameter("ASMLite_Ctrl", AnimatorControllerParameterType.Int);
+            foreach (var name in paramNames)
+                ctx.Ctrl.AddParameter($"ASMLite_Bak_S1_{name}", AnimatorControllerParameterType.Float);
+            EditorUtility.SetDirty(ctx.Ctrl);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteExprParams(AsmLiteTestContext ctx, params string[] paramNames)
+        {
+            var existing = ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0];
+            var list = new System.Collections.Generic.List<VRCExpressionParameters.Parameter>(existing);
+            list.Add(new VRCExpressionParameters.Parameter { name = "ASMLite_Ctrl", valueType = VRCExpressionParameters.ValueType.Int });
+            foreach (var name in paramNames)
+                list.Add(new VRCExpressionParameters.Parameter { name = $"ASMLite_Bak_S1_{name}", valueType = VRCExpressionParameters.ValueType.Float });
+            ctx.AvDesc.expressionParameters.parameters = list.ToArray();
+            EditorUtility.SetDirty(ctx.AvDesc.expressionParameters);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteMenu(AsmLiteTestContext ctx)
+        {
+            ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
+            {
+                name = "Settings Manager",
+                type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+            });
+            EditorUtility.SetDirty(ctx.AvDesc.expressionsMenu);
+            AssetDatabase.SaveAssets();
         }
 
         private static int CountASMLiteLayers(AnimatorController ctrl)
@@ -103,7 +142,7 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 2;
             AddAvatarParam(_ctx, "MyInt", VRCExpressionParameters.ValueType.Int);
-            BuildOrFail(_ctx, "A35");
+            SeedLegacyAsmLiteLayers(_ctx, 2);
 
             int before = CountASMLiteLayers(_ctx.Ctrl);
             Assert.Greater(before, 0,
@@ -123,7 +162,7 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float);
-            BuildOrFail(_ctx, "A36");
+            SeedLegacyAsmLiteFxParams(_ctx, "MyFloat");
 
             int before = CountASMLiteFxParams(_ctx.Ctrl);
             Assert.Greater(before, 0,
@@ -143,7 +182,7 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyBool", VRCExpressionParameters.ValueType.Bool, 1f);
-            BuildOrFail(_ctx, "A37");
+            SeedLegacyAsmLiteExprParams(_ctx, "MyBool");
 
             int before = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
             Assert.Greater(before, 0,
@@ -163,7 +202,7 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
-            BuildOrFail(_ctx, "A38");
+            SeedLegacyAsmLiteMenu(_ctx);
 
             int before = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
             Assert.Greater(before, 0,
@@ -260,7 +299,8 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
-            BuildOrFail(_ctx, "A41");
+            SeedLegacyAsmLiteExprParams(_ctx, "MyParam");
+            SeedLegacyAsmLiteMenu(_ctx);
 
             Assert.Greater(CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), 0,
                 "A41: setup failure, expected ASMLite expression params before cleanup.");
@@ -285,7 +325,8 @@ namespace ASMLite.Tests.Editor
                 "A41: cleanup should still remove Settings Manager when FX controller is null.");
 
             // Re-seed for scenario 2: default FX layer flag with null controller
-            BuildOrFail(_ctx, "A41");
+            SeedLegacyAsmLiteExprParams(_ctx, "MyParam");
+            SeedLegacyAsmLiteMenu(_ctx);
             Assert.Greater(CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), 0,
                 "A41: re-seed failure, expected ASMLite expression params before default-FX cleanup.");
 
@@ -310,7 +351,10 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 2;
             AddAvatarParam(_ctx, "A54_Int", VRCExpressionParameters.ValueType.Int);
             AddAvatarParam(_ctx, "A54_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
-            BuildOrFail(_ctx, "A54");
+            SeedLegacyAsmLiteLayers(_ctx, 2);
+            SeedLegacyAsmLiteFxParams(_ctx, "A54_Int", "A54_Float");
+            SeedLegacyAsmLiteExprParams(_ctx, "A54_Int", "A54_Float");
+            SeedLegacyAsmLiteMenu(_ctx);
 
             var first = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_ctx.AvDesc);
             int firstTotalRemoved = first.FxLayersRemoved + first.FxParamsRemoved + first.ExprParamsRemoved + first.MenuControlsRemoved;

@@ -20,6 +20,7 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "VF01: fixture creation returned null context.");
         }

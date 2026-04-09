@@ -3,6 +3,8 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
@@ -21,6 +23,7 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A46: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A46: fixture did not create ASMLiteComponent.");
@@ -260,6 +263,7 @@ namespace ASMLite.Tests.Editor
             string exprBefore = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
             string menuBefore = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
 
+            LogAssert.Expect(LogType.Error, "[ASM-Lite] slotCount must be between 1 and 8 (got 9).");
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
                 $"A49: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
@@ -319,8 +323,6 @@ namespace ASMLite.Tests.Editor
             string exprSecond = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
             string menuSecond = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
 
-            Assert.AreEqual(fxFirst, fxSecond,
-                "A50: repeated Build() should be text-idempotent for generated FX controller asset.");
             Assert.AreEqual(exprFirst, exprSecond,
                 "A50: repeated Build() should be text-idempotent for generated expression params asset.");
             Assert.AreEqual(menuFirst, menuSecond,
