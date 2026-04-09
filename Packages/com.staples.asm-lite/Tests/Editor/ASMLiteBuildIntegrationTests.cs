@@ -1,18 +1,17 @@
+using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
-using UnityEngine;
-using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
-using System.Linq;
 
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A46-A50: Full Build() integration coverage across live injection surfaces.
+    /// A46-A50: Build() integration coverage anchored on generated-assets output.
     /// Verifies slot bounds, return-path contracts, invalid-slot rejection, and
-    /// repeated-build idempotency against avatar FX/params/menu targets.
+    /// repeated-build idempotency against generated FX/params/menu assets.
     /// </summary>
     [TestFixture]
     public class ASMLiteBuildIntegrationTests
@@ -26,7 +25,6 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(_ctx, "A46: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A46: fixture did not create ASMLiteComponent.");
             Assert.IsNotNull(_ctx.AvDesc, "A46: fixture did not create VRCAvatarDescriptor.");
-            Assert.IsNotNull(_ctx.Ctrl, "A46: fixture did not create FX AnimatorController.");
             Assert.IsNotNull(_ctx.AvDesc.expressionParameters,
                 "A46: fixture did not assign expressionParameters.");
             Assert.IsNotNull(_ctx.AvDesc.expressionsMenu,
@@ -71,6 +69,32 @@ namespace ASMLite.Tests.Editor
             return buildResult;
         }
 
+        private static AnimatorController LoadGeneratedFxController()
+        {
+            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(ctrl,
+                $"Generated FX controller missing at '{ASMLiteAssetPaths.FXController}'.");
+            return ctrl;
+        }
+
+        private static VRCExpressionParameters LoadGeneratedExprParams()
+        {
+            var expr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(expr,
+                $"Generated expression params missing at '{ASMLiteAssetPaths.ExprParams}'.");
+            Assert.IsNotNull(expr.parameters, "Generated expression params list must not be null.");
+            return expr;
+        }
+
+        private static VRCExpressionsMenu LoadGeneratedRootMenu()
+        {
+            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(menu,
+                $"Generated menu missing at '{ASMLiteAssetPaths.Menu}'.");
+            Assert.IsNotNull(menu.controls, "Generated root menu controls must not be null.");
+            return menu;
+        }
+
         private static int CountASMLiteLayers(AnimatorController ctrl)
             => ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
 
@@ -79,20 +103,14 @@ namespace ASMLite.Tests.Editor
                 && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
 
         private static int CountASMLiteExprParams(VRCExpressionParameters exprParams)
-        {
-            var items = exprParams?.parameters ?? new VRCExpressionParameters.Parameter[0];
-            return items.Count(p => p != null
+            => exprParams.parameters.Count(p => p != null
                 && p.name != null
                 && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
-        }
 
         private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
-        {
-            if (rootMenu?.controls == null) return 0;
-            return rootMenu.controls.Count(c => c != null
+            => rootMenu.controls.Count(c => c != null
                 && c.name == "Settings Manager"
                 && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
-        }
 
         private static int CountDiscoveredNonASMLiteParams(VRCExpressionParameters exprParams)
         {
@@ -117,10 +135,17 @@ namespace ASMLite.Tests.Editor
                 .GroupBy(p => p.name)
                 .Count(g => g.Count() > 1);
 
+        private static string ReadPackageAssetText(string assetPath)
+        {
+            var fullPath = Path.GetFullPath(assetPath);
+            Assert.IsTrue(File.Exists(fullPath), $"Expected generated asset file at '{fullPath}'.");
+            return File.ReadAllText(fullPath);
+        }
+
         // ── A46 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A46_Build_SlotCountOne_InjectsExpectedLiveArtifacts()
+        public void A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "A46_Int", VRCExpressionParameters.ValueType.Int, 3f);
@@ -134,29 +159,33 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(discoveredExpected, buildResult,
                 $"A46: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
 
-            int asmLayerCount = CountASMLiteLayers(_ctx.Ctrl);
+            var generatedCtrl = LoadGeneratedFxController();
+            var generatedExpr = LoadGeneratedExprParams();
+            var generatedMenu = LoadGeneratedRootMenu();
+
+            int asmLayerCount = CountASMLiteLayers(generatedCtrl);
             Assert.AreEqual(1, asmLayerCount,
                 $"A46: expected 1 ASMLite_ layer for slotCount=1, got {asmLayerCount}.");
 
-            int expectedFxParams = 1 + (1 * discoveredExpected) + discoveredExpected;
-            int asmFxParamCount = CountASMLiteFxParams(_ctx.Ctrl);
-            Assert.AreEqual(expectedFxParams, asmFxParamCount,
-                $"A46: FX ASMLite param count mismatch for slotCount=1. expected={expectedFxParams}, got {asmFxParamCount}.");
+            int expectedFxAsmParams = 1 + (1 * discoveredExpected) + discoveredExpected;
+            int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
+            Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
+                $"A46: generated FX ASMLite param count mismatch for slotCount=1. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
-            int expectedExprParams = 1 + (1 * discoveredExpected);
-            int asmExprParamCount = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            Assert.AreEqual(expectedExprParams, asmExprParamCount,
-                $"A46: expression ASMLite param count mismatch for slotCount=1. expected={expectedExprParams}, got {asmExprParamCount}.");
+            int expectedExprAsmParams = 1 + (1 * discoveredExpected);
+            int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
+            Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
+                $"A46: generated expression ASMLite param count mismatch for slotCount=1. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
-            int settingsManagerCount = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
-                $"A46: expected one Settings Manager control after Build(). got {settingsManagerCount}.");
+                $"A46: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
         }
 
         // ── A47 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A47_Build_SlotCountEight_InjectsExpectedLiveArtifacts()
+        public void A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts()
         {
             _ctx.Comp.slotCount = 8;
             AddParam(_ctx, "A47_Int", VRCExpressionParameters.ValueType.Int, 7f);
@@ -171,29 +200,33 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(discoveredExpected, buildResult,
                 $"A47: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
 
-            int asmLayerCount = CountASMLiteLayers(_ctx.Ctrl);
+            var generatedCtrl = LoadGeneratedFxController();
+            var generatedExpr = LoadGeneratedExprParams();
+            var generatedMenu = LoadGeneratedRootMenu();
+
+            int asmLayerCount = CountASMLiteLayers(generatedCtrl);
             Assert.AreEqual(8, asmLayerCount,
                 $"A47: expected 8 ASMLite_ layers for slotCount=8, got {asmLayerCount}.");
 
-            int expectedFxParams = 1 + (8 * discoveredExpected) + discoveredExpected;
-            int asmFxParamCount = CountASMLiteFxParams(_ctx.Ctrl);
-            Assert.AreEqual(expectedFxParams, asmFxParamCount,
-                $"A47: FX ASMLite param count mismatch for slotCount=8. expected={expectedFxParams}, got {asmFxParamCount}.");
+            int expectedFxAsmParams = 1 + (8 * discoveredExpected) + discoveredExpected;
+            int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
+            Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
+                $"A47: generated FX ASMLite param count mismatch for slotCount=8. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
-            int expectedExprParams = 1 + (8 * discoveredExpected);
-            int asmExprParamCount = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            Assert.AreEqual(expectedExprParams, asmExprParamCount,
-                $"A47: expression ASMLite param count mismatch for slotCount=8. expected={expectedExprParams}, got {asmExprParamCount}.");
+            int expectedExprAsmParams = 1 + (8 * discoveredExpected);
+            int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
+            Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
+                $"A47: generated expression ASMLite param count mismatch for slotCount=8. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
-            int settingsManagerCount = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
-                $"A47: expected one Settings Manager control after Build(). got {settingsManagerCount}.");
+                $"A47: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
         }
 
         // ── A48 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A48_Build_ReturnsDiscoveredNonASMLiteParamCount()
+        public void A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "A48_UserA", VRCExpressionParameters.ValueType.Int);
@@ -208,49 +241,45 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(discoveredExpected, buildResult,
                 $"A48: Build() must return discovered non-ASMLite param count. expected={discoveredExpected}, got {buildResult}.");
 
+            var generatedExpr = LoadGeneratedExprParams();
             int expectedExprParams = 1 + (_ctx.Comp.slotCount * discoveredExpected);
-            int asmExprParamCount = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
+            int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprParams, asmExprParamCount,
-                $"A48: expression ASMLite param count mismatch for return-path contract validation. expected={expectedExprParams}, got {asmExprParamCount}.");
+                $"A48: generated expression ASMLite param count mismatch for return-path contract validation. expected={expectedExprParams}, got {asmExprParamCount}.");
         }
 
         // ── A49 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A49_Build_InvalidSlotCount_ReturnsMinusOne_AndInjectsNothing()
+        public void A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged()
         {
             _ctx.Comp.slotCount = 9;
             AddParam(_ctx, "A49_User", VRCExpressionParameters.ValueType.Int);
 
-            int beforeLayers = CountASMLiteLayers(_ctx.Ctrl);
-            int beforeFxParams = CountASMLiteFxParams(_ctx.Ctrl);
-            int beforeExprParams = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            int beforeMenuControls = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            string fxBefore = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
+            string exprBefore = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string menuBefore = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
 
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("slotCount must be between"));
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
                 $"A49: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
 
-            int afterLayers = CountASMLiteLayers(_ctx.Ctrl);
-            int afterFxParams = CountASMLiteFxParams(_ctx.Ctrl);
-            int afterExprParams = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            int afterMenuControls = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            string fxAfter = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
+            string exprAfter = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string menuAfter = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
 
-            Assert.AreEqual(beforeLayers, afterLayers,
-                $"A49: invalid-slot Build() should not mutate FX layers. before={beforeLayers}, after={afterLayers}.");
-            Assert.AreEqual(beforeFxParams, afterFxParams,
-                $"A49: invalid-slot Build() should not mutate FX params. before={beforeFxParams}, after={afterFxParams}.");
-            Assert.AreEqual(beforeExprParams, afterExprParams,
-                $"A49: invalid-slot Build() should not mutate expression params. before={beforeExprParams}, after={afterExprParams}.");
-            Assert.AreEqual(beforeMenuControls, afterMenuControls,
-                $"A49: invalid-slot Build() should not mutate expression menu controls. before={beforeMenuControls}, after={afterMenuControls}.");
+            Assert.AreEqual(fxBefore, fxAfter,
+                "A49: invalid-slot Build() should not mutate generated FX controller asset.");
+            Assert.AreEqual(exprBefore, exprAfter,
+                "A49: invalid-slot Build() should not mutate generated expression params asset.");
+            Assert.AreEqual(menuBefore, menuAfter,
+                "A49: invalid-slot Build() should not mutate generated menu asset.");
         }
 
         // ── A50 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A50_RepeatedBuild_IsIdempotentAcrossLiveInjectionSurfaces()
+        public void A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces()
         {
             _ctx.Comp.slotCount = 3;
             AddParam(_ctx, "A50_Int", VRCExpressionParameters.ValueType.Int, 2f);
@@ -260,10 +289,18 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(2, firstResult,
                 $"A50: setup failure, first Build() should discover exactly 2 params, got {firstResult}.");
 
-            int firstLayers = CountASMLiteLayers(_ctx.Ctrl);
-            int firstFxParams = CountASMLiteFxParams(_ctx.Ctrl);
-            int firstExprParams = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            int firstMenuControls = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            string fxFirst = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
+            string exprFirst = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string menuFirst = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
+
+            var firstCtrl = LoadGeneratedFxController();
+            var firstExpr = LoadGeneratedExprParams();
+            var firstMenu = LoadGeneratedRootMenu();
+
+            int firstLayers = CountASMLiteLayers(firstCtrl);
+            int firstFxParams = CountASMLiteFxParams(firstCtrl);
+            int firstExprParams = CountASMLiteExprParams(firstExpr);
+            int firstMenuControls = CountSettingsManagerControls(firstMenu);
 
             Assert.Greater(firstLayers, 0,
                 $"A50: setup failure, expected ASMLite layers after first Build(), got {firstLayers}.");
@@ -278,10 +315,25 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(firstResult, secondResult,
                 $"A50: repeated Build() return mismatch. first={firstResult}, second={secondResult}.");
 
-            int secondLayers = CountASMLiteLayers(_ctx.Ctrl);
-            int secondFxParams = CountASMLiteFxParams(_ctx.Ctrl);
-            int secondExprParams = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
-            int secondMenuControls = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
+            string fxSecond = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
+            string exprSecond = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string menuSecond = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
+
+            Assert.AreEqual(fxFirst, fxSecond,
+                "A50: repeated Build() should be text-idempotent for generated FX controller asset.");
+            Assert.AreEqual(exprFirst, exprSecond,
+                "A50: repeated Build() should be text-idempotent for generated expression params asset.");
+            Assert.AreEqual(menuFirst, menuSecond,
+                "A50: repeated Build() should be text-idempotent for generated menu asset.");
+
+            var secondCtrl = LoadGeneratedFxController();
+            var secondExpr = LoadGeneratedExprParams();
+            var secondMenu = LoadGeneratedRootMenu();
+
+            int secondLayers = CountASMLiteLayers(secondCtrl);
+            int secondFxParams = CountASMLiteFxParams(secondCtrl);
+            int secondExprParams = CountASMLiteExprParams(secondExpr);
+            int secondMenuControls = CountSettingsManagerControls(secondMenu);
 
             Assert.AreEqual(firstLayers, secondLayers,
                 $"A50: ASMLite layer count changed across repeated Build(). first={firstLayers}, second={secondLayers}.");
@@ -292,8 +344,8 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, secondMenuControls,
                 $"A50: repeated Build() must keep exactly one Settings Manager control. got {secondMenuControls}.");
 
-            int duplicateFxNames = CountDuplicateFxParamNames(_ctx.Ctrl);
-            int duplicateExprNames = CountDuplicateExprParamNames(_ctx.AvDesc.expressionParameters);
+            int duplicateFxNames = CountDuplicateFxParamNames(secondCtrl);
+            int duplicateExprNames = CountDuplicateExprParamNames(secondExpr);
             Assert.AreEqual(0, duplicateFxNames,
                 $"A50: repeated Build() introduced duplicate ASMLite FX param names. duplicateGroups={duplicateFxNames}.");
             Assert.AreEqual(0, duplicateExprNames,

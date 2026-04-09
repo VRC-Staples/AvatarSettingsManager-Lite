@@ -1,15 +1,14 @@
 using NUnit.Framework;
 using UnityEditor;
-using UnityEngine;
-using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A26-A30: Expression menu hierarchy integration invariants.
-    /// These tests call Build() and assert menu graph shape through control/subMenu references.
+    /// A26-A34: Generated expression-menu hierarchy invariants.
+    /// These tests call Build() and assert menu graph shape through the managed
+    /// generated menu asset (ASMLiteAssetPaths.Menu).
     /// </summary>
     [TestFixture]
     public class ASMLiteMenuTests
@@ -22,8 +21,10 @@ namespace ASMLite.Tests.Editor
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A26: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A26: fixture did not create ASMLiteComponent.");
-            Assert.IsNotNull(_ctx.AvDesc, "A26: fixture did not create VRCAvatarDescriptor.");
-            Assert.IsNotNull(_ctx.AvDesc.expressionsMenu, "A26: fixture did not assign expressionsMenu.");
+
+            var generatedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(generatedRoot,
+                $"A26: generated root menu asset missing at '{ASMLiteAssetPaths.Menu}'.");
         }
 
         [TearDown]
@@ -44,9 +45,9 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            var rootMenu = _ctx.AvDesc.expressionsMenu;
-            Assert.IsNotNull(rootMenu, $"{aid}: avDesc.expressionsMenu is null after Build().");
-            Assert.IsNotNull(rootMenu.controls, $"{aid}: root menu controls list is null after Build().");
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(rootMenu, $"{aid}: generated root menu is null after Build().");
+            Assert.IsNotNull(rootMenu.controls, $"{aid}: generated root menu controls list is null after Build().");
             return rootMenu;
         }
 
@@ -224,7 +225,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("Load", load.name,
                 "A30: second slot control must be Load.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.Button, load.type,
-                "A30: Load control must be Button (direct action)." );
+                "A30: Load control must be Button (direct action).");
             Assert.IsNull(load.subMenu,
                 "A30: Load control must not reference a submenu.");
             Assert.IsNotNull(load.parameter,
@@ -323,7 +324,7 @@ namespace ASMLite.Tests.Editor
         // ── A33 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A33_InjectExpressionMenuIsIdempotentAfterRepeatedBuild()
+        public void A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild()
         {
             _ctx.Comp.slotCount = 1;
 
@@ -335,9 +336,9 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(secondResult, 0,
                 $"A33: second Build() failed with result {secondResult}.");
 
-            var rootMenu = _ctx.AvDesc.expressionsMenu;
-            Assert.IsNotNull(rootMenu, "A33: avDesc.expressionsMenu is null after repeated Build().");
-            Assert.IsNotNull(rootMenu.controls, "A33: root menu controls list is null after repeated Build().");
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(rootMenu, "A33: generated root menu is null after repeated Build().");
+            Assert.IsNotNull(rootMenu.controls, "A33: generated root menu controls list is null after repeated Build().");
 
             int settingsManagerCount = 0;
             for (int i = 0; i < rootMenu.controls.Count; i++)
@@ -358,50 +359,42 @@ namespace ASMLite.Tests.Editor
         // ── A34 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A34_DoesNotInjectWhenRootMenuAlreadyHasEightControls()
+        public void A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper()
         {
-            var rootMenu = _ctx.AvDesc.expressionsMenu;
-            Assert.IsNotNull(rootMenu, "A34: avDesc.expressionsMenu is null before prefill.");
+            var generatedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(generatedRoot, "A34: generated root menu is null before stale prefill.");
 
-            rootMenu.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
+            generatedRoot.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int i = 0; i < 8; i++)
             {
-                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                generatedRoot.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name = $"PreExisting_{i + 1}",
+                    name = $"StalePreExisting_{i + 1}",
                     type = VRCExpressionsMenu.Control.ControlType.Button,
                 });
             }
+            EditorUtility.SetDirty(generatedRoot);
+            AssetDatabase.SaveAssets();
 
-            Assert.IsNotNull(rootMenu.controls, "A34: prefill produced null controls list.");
-            Assert.AreEqual(8, rootMenu.controls.Count,
-                $"A34: setup failure, expected exactly 8 baseline controls before Build(), got {rootMenu.controls.Count}.");
-
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("already has 8 controls"));
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(buildResult, 0,
-                $"A34: Build() failed with result {buildResult} in saturated-root scenario.");
+                $"A34: Build() failed with result {buildResult} in stale-root normalization scenario.");
 
-            var liveRootMenu = _ctx.AvDesc.expressionsMenu;
-            Assert.IsNotNull(liveRootMenu, "A34: avDesc.expressionsMenu is null after Build().");
-            Assert.IsNotNull(liveRootMenu.controls, "A34: root menu controls list is null after Build().");
+            var refreshedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(refreshedRoot, "A34: generated root menu is null after Build().");
+            Assert.IsNotNull(refreshedRoot.controls, "A34: generated root menu controls list is null after Build().");
+            Assert.AreEqual(1, refreshedRoot.controls.Count,
+                $"A34: saturated-root regression guard failed; generated root should be normalized to a single wrapper control. got {refreshedRoot.controls.Count}.");
+            Assert.IsFalse(refreshedRoot.controls.Exists(c => c != null && c.name != null && c.name.StartsWith("StalePreExisting_")),
+                "A34: saturated-root regression guard failed; stale pre-existing controls must be removed on rebuild.");
 
-            int settingsManagerCount = 0;
-            for (int i = 0; i < liveRootMenu.controls.Count; i++)
-            {
-                var control = liveRootMenu.controls[i];
-                if (control != null
-                    && control.name == "Settings Manager"
-                    && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu)
-                {
-                    settingsManagerCount++;
-                }
-            }
-
-            Assert.AreEqual(8, liveRootMenu.controls.Count,
-                $"A34: root menu size changed unexpectedly. before=8, after={liveRootMenu.controls.Count}.");
-            Assert.AreEqual(0, settingsManagerCount,
-                $"A34: Settings Manager should not be injected when root is already full (8 controls). afterCount={liveRootMenu.controls.Count}, settingsManagerCount={settingsManagerCount}.");
+            var settingsControl = refreshedRoot.controls[0];
+            Assert.AreEqual("Settings Manager", settingsControl.name,
+                "A34: normalized generated root control must be named 'Settings Manager'.");
+            Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.SubMenu, settingsControl.type,
+                "A34: normalized generated root control must be a SubMenu.");
+            Assert.IsNotNull(settingsControl.subMenu,
+                "A34: normalized generated root Settings Manager control must reference the presets submenu.");
         }
     }
 }

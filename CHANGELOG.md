@@ -4,6 +4,13 @@ All notable changes to ASM-Lite are documented here.
 
 ---
 
+## [Unreleased]
+
+### Changed
+- Reverted delivery architecture from direct avatar-descriptor injection back to generated-assets + VRCFury FullController wiring. Build now regenerates managed FX, expression parameter, and menu assets for deterministic VF pickup at upload time.
+- Preserved the shared single-Int control model: `ASMLite_Ctrl` remains the only control trigger, encoding Save/Load/Clear as `(slot-1)*3+1/2/3`.
+- Preserved local-only parameter behavior after the revert: `ASMLite_Ctrl`, backup (`ASMLite_Bak_*`), and default (`ASMLite_Def_*`) parameters remain non-synced and continue to consume zero expression sync bits.
+
 ## [1.0.6] - 2026-04-06
 
 ### Added
@@ -36,7 +43,7 @@ All notable changes to ASM-Lite are documented here.
 - VRCFury Toggle parameters (e.g. `Clothing_Rezz`) are now reliably backed up and restored. The previous clone-based discovery could produce parameter names that diverged from the actual runtime names, causing Copy drivers to silently miss those parameters.
 
 ### Changed
-- ASM-Lite no longer uses a VRCFury FullController to inject content into the avatar. `Build()` now directly injects FX layers, expression parameters, and menu entries into the avatar descriptor at preprocess time (`callbackOrder=-2048`), after VRCFury has already merged its Toggle parameters. This eliminates the ordering dependency that caused stale content on first upload.
+- (Historical for 1.0.5; superseded by the Unreleased revert.) ASM-Lite temporarily removed VRCFury FullController delivery and directly injected FX layers, expression parameters, and menu entries into the avatar descriptor at preprocess time (`callbackOrder=-2048`) after VRCFury had merged Toggle parameters. This was later reverted back to generated-assets + FullController delivery.
 - Prefab simplified: only contains `ASMLiteComponent`. The VRCFury component and all reflection-based VRCFury type wiring have been removed from `ASMLitePrefabCreator` (~350 lines removed).
 - Parameter discovery no longer uses a pre-VRCFury clone build. ASM-Lite reads `avDesc.expressionParameters` directly, which already contains all VRCFury-injected parameters by the time `Build()` runs.
 - Control trigger parameter (`ASMLite_Ctrl`) is local-only and never synced. ASM-Lite takes zero synced bits from the expression parameter budget regardless of slot count.

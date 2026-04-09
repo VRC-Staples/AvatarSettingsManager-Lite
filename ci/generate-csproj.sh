@@ -5,10 +5,13 @@
 # CI_PROJECT_PATH: root of ci/unity-project
 set -euo pipefail
 
-REPO_ROOT="$(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-UNITY_ENGINE_DLL="${REPO_ROOT}/${UNITY_PATH}/UnityEngine.dll"
-UNITY_EDITOR_DLL="${REPO_ROOT}/${UNITY_PATH}/UnityEditor.dll"
+UNITY_PATH="${UNITY_PATH:-ci/unity-project/UnityManaged}"
+PACKAGE_PATH="${PACKAGE_PATH:-Packages/com.staples.asm-lite}"
+CI_PROJECT_PATH="${CI_PROJECT_PATH:-ci/unity-project}"
+
 VRC_SDK_BASE="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"

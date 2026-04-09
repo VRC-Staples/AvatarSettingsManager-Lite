@@ -56,7 +56,7 @@ namespace ASMLite.Editor
             ConfigureVRCFuryFullController(go);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, ASMLiteAssetPaths.Prefab);
-            Object.DestroyImmediate(go);
+            UnityEngine.Object.DestroyImmediate(go);
 
             if (prefab != null)
             {

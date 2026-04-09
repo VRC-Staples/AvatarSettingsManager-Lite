@@ -13,7 +13,7 @@ A lightweight prefab that adds Save, Load, and Clear Preset for expression param
 
 ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu.
 
-You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters and directly injects the FX animator layers, expression parameters, and menu entries into the avatar non-destructively.
+You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, regenerates its managed FX/parameter/menu assets, and delivers them through the prefab's VRCFury FullController wiring.
 
 ---
 
@@ -103,12 +103,12 @@ Controls the icons shown for **Save**, **Load**, and **Clear Preset** actions in
 
 ## How It Works
 
-At build time, ASM-Lite runs via `IPreprocessCallbackBehaviour` after VRCFury has already merged all Toggle and FullController parameters into the avatar descriptor. It then:
+At build time, ASM-Lite runs via `IPreprocessCallbackBehaviour` after VRCFury has merged avatar parameters into the descriptor snapshot used for discovery. It then:
 
-1. **Discovers parameters** - reads all expression parameters directly from `avDesc.expressionParameters`, which already contains VRCFury-injected parameters at this point. Any parameter prefixed with `ASMLite_` is skipped to avoid self-referential loops.
-2. **Generates FX layers** - creates an animator layer per slot with Idle, SaveSlot, LoadSlot, and ResetSlot states backed by `VRCAvatarParameterDriver` Copy and Set operations.
+1. **Discovers parameters** - reads expression parameters from `avDesc.expressionParameters` and skips any `ASMLite_`-prefixed entries to avoid self-referential loops.
+2. **Generates managed assets** - rebuilds the managed FX controller, expression-parameter asset, and menu assets in `GeneratedAssets` using the discovered schema.
 3. **Builds the expression menu** - generates the nested `Settings Manager → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear.
-4. **Injects directly** - adds the generated layers, parameters, and menu entry directly into the avatar descriptor in-memory. This ensures the current upload always receives fresh content regardless of what VRCFury may have merged from stub assets earlier in the pipeline.
+4. **Delivers through VRCFury FullController** - the prefab's FullController wiring references those generated assets, so the current upload consumes the freshly rebuilt payload instead of stale content.
 
 Backup parameters (`ASMLite_Bak_*`) and default parameters (`ASMLite_Def_*`) are local-only and not synced, so they do not consume the 256-bit expression parameter sync budget.
 
@@ -120,7 +120,7 @@ The control trigger parameter (`ASMLite_Ctrl`) is also local-only and never netw
 
 ## Upgrading from Earlier Versions
 
-If your avatar already has an ASM-Lite prefab from before 1.0.5, simply click **Rebuild ASM-Lite** in the editor window. The migration runs automatically: stale VRCFury FullController data from older prefab instances is removed and replaced by the direct injection approach.
+If your avatar already has an ASM-Lite prefab from earlier direct-injection builds, click **Rebuild ASM-Lite** in the editor window. Rebuild normalizes stale VRCFury components, refreshes generated assets, and keeps the prefab on the generated-assets + VRCFury FullController delivery path.
 
 ---
 

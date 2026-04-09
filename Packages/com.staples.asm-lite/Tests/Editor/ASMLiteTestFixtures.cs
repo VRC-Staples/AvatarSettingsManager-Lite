@@ -86,6 +86,38 @@ namespace ASMLite.Tests.Editor
             };
         }
 
+        public static void AddExpressionParam(
+            AsmLiteTestContext ctx,
+            string name,
+            VRCExpressionParameters.ValueType valueType,
+            float defaultValue = 0f,
+            bool saved = true,
+            bool networkSynced = true)
+        {
+            var existing = ctx.ParamsAsset.parameters ?? new VRCExpressionParameters.Parameter[0];
+            var updated = new VRCExpressionParameters.Parameter[existing.Length + 1];
+            existing.CopyTo(updated, 0);
+            updated[existing.Length] = new VRCExpressionParameters.Parameter
+            {
+                name = name,
+                valueType = valueType,
+                defaultValue = defaultValue,
+                saved = saved,
+                networkSynced = networkSynced,
+            };
+
+            ctx.ParamsAsset.parameters = updated;
+            EditorUtility.SetDirty(ctx.ParamsAsset);
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void SetExpressionParams(AsmLiteTestContext ctx, params VRCExpressionParameters.Parameter[] parameters)
+        {
+            ctx.ParamsAsset.parameters = parameters ?? new VRCExpressionParameters.Parameter[0];
+            EditorUtility.SetDirty(ctx.ParamsAsset);
+            AssetDatabase.SaveAssets();
+        }
+
         public static void TearDownTestAvatar(GameObject avatarGo)
         {
             AssetDatabase.DeleteAsset(TempDir);
