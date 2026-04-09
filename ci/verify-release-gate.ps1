@@ -55,9 +55,12 @@ Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"test"\s*:\s*\[.*?"EditMode Tests".*?"Unity Test Results / EditMode Tests".*?\].*?\}' "Invariant failed: gate script must require the test check aliases."
 
 # --- Gate script: fail-closed logic ---
-Assert-Regex '(?s)if\s+matched_name\s+is\s+None\s*:\s*blocking\.append\(' "Invariant failed: gate script must fail when a required check alias is missing."
-Assert-Regex '(?s)if\s+matched_value\.lower\(\)\s*!=\s*"success"\s*:\s*blocking\.append\(' "Invariant failed: gate script must enforce success verdicts, not only check-name presence."
+Assert-Regex '(?s)pending_states\s*=\s*\{.*?"queued".*?"in_progress".*?"pending".*?\}' "Invariant failed: gate script must define pending states for check polling."
+Assert-Regex '(?s)if\s+matched_name\s+is\s+None\s*:\s*pending\.append\(' "Invariant failed: gate script must treat missing required aliases as pending while polling."
+Assert-Regex '(?s)if\s+value\s*==\s*"success"\s*:\s*continue.*?if\s+value\s+in\s+pending_states\s*:\s*pending\.append\(.*?else\s*:\s*blocking\.append\(' "Invariant failed: gate script must classify check outcomes into success/pending/blocking."
+Assert-Regex '(?s)while\s+True\s*:\s*.*?pending,\s*blocking\s*=\s*classify\(observed\)' "Invariant failed: gate script must poll check state until terminal outcome."
 Assert-Regex '(?s)if\s+blocking\s*:\s*print\("::error::Release gate blocked\."\)\s*.*?sys\.exit\(1\)' "Invariant failed: gate script must fail closed when blocking reasons exist."
+Assert-Regex '(?s)if\s+remaining\s*<=\s*0\s*:\s*print\("::error::Release gate timed out waiting for required checks\."\)\s*.*?sys\.exit\(1\)' "Invariant failed: gate script must timeout and fail when required checks never complete."
 
 if ($failures.Count -gt 0) {
   Write-Host "Release gate invariant check: FAILED"

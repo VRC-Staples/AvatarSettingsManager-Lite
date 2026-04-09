@@ -246,81 +246,132 @@ jobs:
               print(f"::error::Response prefix: {body[:800]}")
               sys.exit(1)
 
-          status_payload = api_get(
-            f"/commits/{sha}/status",
-            "application/vnd.github+json",
-          )
-          checks_payload = api_get(
-            f"/commits/{sha}/check-runs?per_page=100",
-            "application/vnd.github+json",
-          )
+          import time
 
-          statuses = status_payload.get("statuses")
-          if not isinstance(statuses, list):
-            print("::error::Malformed commit status payload: missing statuses array.")
-            sys.exit(1)
+          max_wait_seconds = 1800
+          poll_interval_seconds = 20
 
-          check_runs = checks_payload.get("check_runs")
-          if not isinstance(check_runs, list):
-            print("::error::Malformed check-runs payload: missing check_runs array.")
-            sys.exit(1)
+          pending_states = {
+            "queued",
+            "in_progress",
+            "pending",
+            "requested",
+            "waiting",
+          }
 
-          observed = {}
+          def read_observed_checks():
+            status_payload = api_get(
+              f"/commits/{sha}/status",
+              "application/vnd.github+json",
+            )
+            checks_payload = api_get(
+              f"/commits/{sha}/check-runs?per_page=100",
+              "application/vnd.github+json",
+            )
 
-          for entry in statuses:
-            context = entry.get("context")
-            state = entry.get("state")
-            if isinstance(context, str) and isinstance(state, str):
-              observed[context] = state
+            statuses = status_payload.get("statuses")
+            if not isinstance(statuses, list):
+              print("::error::Malformed commit status payload: missing statuses array.")
+              sys.exit(1)
 
-          for run in check_runs:
-            name = run.get("name")
-            conclusion = run.get("conclusion")
-            status = run.get("status")
-            if not isinstance(name, str):
-              continue
-            if isinstance(conclusion, str):
-              observed[name] = conclusion
-            elif isinstance(status, str):
-              observed[name] = status
+            check_runs = checks_payload.get("check_runs")
+            if not isinstance(check_runs, list):
+              print("::error::Malformed check-runs payload: missing check_runs array.")
+              sys.exit(1)
+
+            observed = {}
+
+            for entry in statuses:
+              context = entry.get("context")
+              state = entry.get("state")
+              if isinstance(context, str) and isinstance(state, str):
+                observed[context] = state
+
+            for run in check_runs:
+              name = run.get("name")
+              conclusion = run.get("conclusion")
+              status = run.get("status")
+              if not isinstance(name, str):
+                continue
+              if isinstance(conclusion, str):
+                observed[name] = conclusion
+              elif isinstance(status, str):
+                observed[name] = status
+
+            return observed
+
+          def classify(observed):
+            pending = []
+            blocking = []
+
+            for key, aliases in required_checks.items():
+              matched_name = None
+              matched_value = None
+              for alias in aliases:
+                val = observed.get(alias)
+                if isinstance(val, str):
+                  matched_name = alias
+                  matched_value = val
+                  break
+
+              if matched_name is None:
+                pending.append(f"waiting for required check for {key}: expected one of {aliases}")
+                continue
+
+              value = matched_value.strip().lower()
+              if value == "success":
+                continue
+
+              if value in pending_states:
+                pending.append(f"required check {matched_name} is {matched_value}")
+              else:
+                blocking.append(f"required check {matched_name} is {matched_value}, expected success")
+
+            return pending, blocking
 
           print(f"Target SHA: {sha}")
           print("Required checks:")
           for key, aliases in required_checks.items():
             print(f"  {key}: {aliases[0]}")
 
-          print("Observed check conclusions:")
-          if observed:
-            for key in sorted(observed):
-              print(f"  {key}: {observed[key]}")
-          else:
-            print("  <none>")
+          deadline = time.time() + max_wait_seconds
+          attempt = 0
 
-          blocking = []
-          for key, aliases in required_checks.items():
-            matched_name = None
-            matched_value = None
-            for alias in aliases:
-              val = observed.get(alias)
-              if isinstance(val, str):
-                matched_name = alias
-                matched_value = val
-                break
-            if matched_name is None:
-              blocking.append(f"missing required check for {key}: expected one of {aliases}")
-              continue
-            if matched_value.lower() != "success":
-              blocking.append(
-                f"required check {matched_name} is {matched_value}, expected success"
-              )
+          while True:
+            attempt += 1
+            observed = read_observed_checks()
 
-          if blocking:
-            print("::error::Release gate blocked.")
-            for reason in blocking:
-              print(f"::error::{reason}")
-            sys.exit(1)
+            print(f"Check poll attempt #{attempt}")
+            print("Observed check conclusions:")
+            if observed:
+              for key in sorted(observed):
+                print(f"  {key}: {observed[key]}")
+            else:
+              print("  <none>")
 
-          print("Gate passed: required compile and lint checks are success for target SHA.")
+            pending, blocking = classify(observed)
+
+            if not pending and not blocking:
+              print("Gate passed: required compile, lint, and test checks are success for target SHA.")
+              break
+
+            if blocking:
+              print("::error::Release gate blocked.")
+              for reason in blocking:
+                print(f"::error::{reason}")
+              sys.exit(1)
+
+            now = time.time()
+            remaining = int(deadline - now)
+            if remaining <= 0:
+              print("::error::Release gate timed out waiting for required checks.")
+              for reason in pending:
+                print(f"::error::{reason}")
+              sys.exit(1)
+
+            sleep_for = poll_interval_seconds if remaining > poll_interval_seconds else remaining
+            print(f"Pending checks still running; waiting {sleep_for}s ({remaining}s remaining).")
+            time.sleep(sleep_for)
           PY
 
   build:
