@@ -10,6 +10,8 @@ All notable changes to ASM-Lite are documented here.
 - Reverted delivery architecture from direct avatar-descriptor injection back to generated-assets + VRCFury FullController wiring. Build now regenerates managed FX, expression parameter, and menu assets for deterministic VF pickup at upload time.
 - Preserved the shared single-Int control model: `ASMLite_Ctrl` remains the only control trigger, encoding Save/Load/Clear as `(slot-1)*3+1/2/3`.
 - Preserved local-only parameter behavior after the revert: `ASMLite_Ctrl`, backup (`ASMLite_Bak_*`), and default (`ASMLite_Def_*`) parameters remain non-synced and continue to consume zero expression sync bits.
+- Pruned stale governance and planning artifacts: removed superseded direct-injection guidance from `.gsd/KNOWLEDGE.md`, removed stale milestone-scope out-of-scope requirements from `.gsd/REQUIREMENTS.md`, and condensed `.gsd/DECISIONS.md` to active governing decisions.
+- Updated README wording to match current generated-assets plus VRCFury delivery and legacy cleanup behavior.
 
 ## [1.0.6] - 2026-04-06
 

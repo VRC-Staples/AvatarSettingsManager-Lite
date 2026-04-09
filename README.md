@@ -61,7 +61,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 
 Once the prefab is added, two buttons appear:
 - **Rebuild ASM-Lite** - regenerates all assets after changing slot count or icon settings.
-- **Remove Prefab** - removes the ASM-Lite prefab from the avatar hierarchy and cleans up any injected FX layers, parameters, and menu entries.
+- **Remove Prefab** - removes the ASM-Lite prefab from the avatar hierarchy and cleans up ASM-Lite managed state, including legacy direct-injection remnants on older avatars.
 
 ### In-Game
 
