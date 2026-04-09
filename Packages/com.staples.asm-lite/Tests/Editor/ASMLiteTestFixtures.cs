@@ -4,6 +4,7 @@ using UnityEditor.Animations;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite;
+using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {

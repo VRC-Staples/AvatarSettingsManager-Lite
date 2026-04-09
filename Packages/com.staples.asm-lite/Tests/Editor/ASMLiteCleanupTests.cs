@@ -102,6 +102,14 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
+        private static int BuildOrFail(AsmLiteTestContext ctx, string aid)
+        {
+            int buildResult = ASMLiteBuilder.Build(ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"{aid}: Build() failed with result {buildResult}.");
+            return buildResult;
+        }
+
         private static int CountASMLiteLayers(AnimatorController ctrl)
             => ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
 
