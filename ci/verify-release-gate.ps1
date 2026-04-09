@@ -29,23 +29,32 @@ function Assert-Regex {
   }
 }
 
+# --- Job structure ---
+Assert-Regex '(?ms)^\s{2}setup:\s*$' "Invariant failed: missing 'setup' job block under jobs."
 Assert-Regex '(?ms)^\s{2}gate:\s*$' "Invariant failed: missing 'gate' job block under jobs."
-Assert-Regex '(?ms)^\s{4}needs:\s*config\s*$' "Invariant failed: gate job must declare 'needs: config'."
-Assert-Regex '(?ms)^\s{4}if:\s*needs\.config\.outputs\.config_package\s*==\s*''true''\s*$' "Invariant failed: gate job must be conditioned on config_package == 'true'."
-Assert-Regex '(?ms)^\s{2}tag-check:\s*$' "Invariant failed: missing 'tag-check' job block under jobs."
-Assert-Regex '(?ms)^\s{2}tag-check:\s*$.*?^\s{4}needs:\s*config\s*$' "Invariant failed: tag-check job must declare 'needs: config'."
-Assert-Regex '(?ms)^\s{2}tag-check:\s*$.*?^\s{4}if:\s*needs\.config\.outputs\.config_package\s*==\s*''true''\s*$' "Invariant failed: tag-check job must be conditioned on config_package == 'true'."
-Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
-Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job block."
-Assert-Regex '(?ms)^\s{4}needs:\s*\[\s*config\s*,\s*gate\s*,\s*tag-check\s*\]\s*$' "Invariant failed: build job must depend on config, gate, and tag-check via needs: [config, gate, tag-check]."
-Assert-Regex '(?ms)^on:\s*$.*?^\s{2}push:\s*$.*?^\s{4}tags:\s*$.*?^\s{6}-\s*''\*''\s*$' "Invariant failed: workflow must declare on.push.tags with wildcard tag trigger."
-Assert-Regex '(?ms)^\s{6}-\sname:\sCheck\sfor\sexisting\srelease\stag\s*$.*?^\s{8}if:\s*\$\{\{\s*!\s*startsWith\(github\.ref,\s*''refs/tags/''\)\s*\}\}\s*$' "Invariant failed: duplicate tag guard must skip only on tag-triggered refs via startsWith(github.ref, 'refs/tags/')."
-Assert-Regex '(?ms)^\s{6}-\sname:\sCreate\sTag\s*$.*?^\s{8}if:\s*\$\{\{\s*!\s*startsWith\(github\.ref,\s*''refs/tags/''\)\s*\}\}\s*$' "Invariant failed: Create Tag step must use the same tag-trigger guard condition as duplicate tag check."
+Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job block under jobs."
 
+# --- Gate job: must depend on setup and fire only when should_release is true ---
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}needs:\s*\[\s*setup\s*\]\s*$' "Invariant failed: gate job must declare 'needs: [setup]'."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}if:\s*needs\.setup\.outputs\.should_release\s*==\s*''true''\s*$' "Invariant failed: gate job must be conditioned on needs.setup.outputs.should_release == 'true'."
+
+# --- Gate job: must evaluate checks for the exact release SHA ---
+Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
+
+# --- Build job: must depend on both setup AND gate (fail-closed) ---
+Assert-Regex '(?ms)^\s{2}build:\s*$.*?^\s{4}needs:\s*\[\s*setup\s*,\s*gate\s*\]\s*$' "Invariant failed: build job must depend on setup and gate via needs: [setup, gate]."
+Assert-Regex '(?ms)^\s{2}build:\s*$.*?^\s{4}if:\s*needs\.setup\.outputs\.should_release\s*==\s*''true''\s*$' "Invariant failed: build job must be conditioned on needs.setup.outputs.should_release == 'true'."
+
+# --- Duplicate tag guard and Create Tag: conditioned on create_tag output ---
+Assert-Regex '(?ms)^\s{6}-\s*name:\s*Check\s+for\s+existing\s+release\s+tag\s*$.*?^\s{8}if:\s*needs\.setup\.outputs\.create_tag\s*==\s*''true''\s*$' "Invariant failed: duplicate tag guard step must be conditioned on needs.setup.outputs.create_tag == 'true'."
+Assert-Regex '(?ms)^\s{6}-\s*name:\s*Create\s+Tag\s*$.*?^\s{8}if:\s*needs\.setup\.outputs\.create_tag\s*==\s*''true''\s*$' "Invariant failed: Create Tag step must be conditioned on needs.setup.outputs.create_tag == 'true'."
+
+# --- Gate script: required check aliases ---
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"compile"\s*:\s*\[.*?"C# Compile \(Unity 2022\.3\.22f1\)".*?"C# Compile Check / C# Compile \(Unity 2022\.3\.22f1\)".*?\].*?\}' "Invariant failed: gate script must require the compile check aliases."
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?"Lint / Super-Linter".*?\].*?\}' "Invariant failed: gate script must require the lint check aliases."
 Assert-Regex '(?s)required_checks\s*=\s*\{.*?"test"\s*:\s*\[.*?"EditMode Tests".*?"Unity Test Results / EditMode Tests".*?\].*?\}' "Invariant failed: gate script must require the test check aliases."
 
+# --- Gate script: fail-closed logic ---
 Assert-Regex '(?s)if\s+matched_name\s+is\s+None\s*:\s*blocking\.append\(' "Invariant failed: gate script must fail when a required check alias is missing."
 Assert-Regex '(?s)if\s+matched_value\.lower\(\)\s*!=\s*"success"\s*:\s*blocking\.append\(' "Invariant failed: gate script must enforce success verdicts, not only check-name presence."
 Assert-Regex '(?s)if\s+blocking\s*:\s*print\("::error::Release gate blocked\."\)\s*.*?sys\.exit\(1\)' "Invariant failed: gate script must fail closed when blocking reasons exist."

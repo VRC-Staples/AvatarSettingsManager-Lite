@@ -10,10 +10,10 @@ Thumbs.db
 # GSD
 .gsd/
 .claude/
-.planning/
 claude.md
 .bg-shell/
 .artifacts/
+artifacts/
 .mcp.json
 
 # Unity generated (not part of the package)
