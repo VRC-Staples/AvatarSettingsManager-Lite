@@ -14,28 +14,23 @@ using VRC.SDKBase;
 namespace ASMLite.Editor
 {
     /// <summary>
-    /// ASMLiteBuilder: static editor utility for build-time asset generation.
+    /// ASMLiteBuilder: static editor utility for build-time generated-asset output.
     ///
     /// Called from ASMLiteComponent.OnPreprocess() during the VRChat SDK avatar build
-    /// pipeline. Discovers all custom avatar parameters, generates FX animator slot
-    /// layers with Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy
-    /// operations, and writes local control parameters plus local backup parameters to
-    /// ASMLite_Params.asset.
+    /// pipeline. Discovers avatar parameters, generates FX animator slot layers with
+    /// Save/Load/Clear Preset states using VRCAvatarParameterDriver Copy operations,
+    /// and writes local control plus backup parameter assets under GeneratedAssets.
     ///
     /// Control trigger model: one shared local Int param (ASMLite_Ctrl) for all slots,
     /// with encoded values (slot-1)*3+1/2/3 for Save/Load/Clear.
     ///
-    /// After generating stub assets (for editor preview/debug), Build() directly
-    /// injects the generated FX layers, expression parameters, and menu entries
-    /// into the live VRCAvatarDescriptor. This eliminates the one-upload-lag that
-    /// occurred when VRCFury's FullController read stale stubs before Build() ran.
+    /// Normal Build() flow ends after generated assets are rebuilt and saved.
+    /// Runtime application is handled by downstream VRCFury FullController wiring,
+    /// not by direct descriptor mutation in this method.
     ///
-    /// Parameter discovery reads avDesc.expressionParameters directly. ASMLiteComponent
-    /// implements IPreprocessCallbackBehaviour, which the VRCSDK runs via the
-    /// PreprocessCallbackBehaviours hook (callbackOrder=-2048). VRCFury's main build
-    /// (VrcfAvatarPreprocessor) runs at callbackOrder=int.MinValue, so VRCFury has
-    /// already merged all Toggle and FullController parameters into expressionParameters
-    /// by the time Build() executes. No clone build is needed.
+    /// Parameter discovery reads avDesc.expressionParameters and consumes names as
+    /// opaque canonical identifiers (no renaming), while filtering empty entries and
+    /// ASMLite_-prefixed names to avoid self-referential backup loops.
     /// </summary>
     public static class ASMLiteBuilder
     {
@@ -52,12 +47,12 @@ namespace ASMLite.Editor
 
 
         /// <summary>
-        /// Reads the final avatar parameter schema directly from the descriptor.
+        /// Reads the final avatar parameter schema from the descriptor's expression
+        /// parameters snapshot.
         ///
-        /// By the time Build() runs, VRCFury (callbackOrder=int.MinValue) has already
-        /// merged all Toggle and FullController parameters into avDesc.expressionParameters.
-        /// This method reads that merged set and filters out empty entries and any
-        /// ASMLite_-prefixed parameters to avoid self-referential backup loops.
+        /// Names are consumed exactly as emitted (opaque canonical identifiers): no
+        /// renaming or prefix rewriting is applied. Empty entries and ASMLite_-prefixed
+        /// entries are filtered out to avoid self-referential backup loops.
         ///
         /// Returns an empty list (not null) if expressionParameters is unassigned.
         /// </summary>
@@ -115,10 +110,8 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 2. Read the final avatar parameter schema directly from the descriptor.
-            //    VRCFury (callbackOrder=int.MinValue) has already run by the time ASM-Lite
-            //    executes here via PreprocessCallbackBehaviours (callbackOrder=-2048).
-            //    avDesc.expressionParameters already contains all VRCFury-injected params.
+            // 2. Read the final avatar parameter schema from the descriptor snapshot.
+            //    Names are treated as opaque canonical VF output and are not rewritten.
             var discoveredParams = GetFinalAvatarParams(avDesc);
 
 #if ASM_LITE_VERBOSE
@@ -131,23 +124,16 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
-            // 5-7. Generate stub assets (editor preview / debug artifacts).
+            // 5-7. Generate stub assets (delivery source for VRCFury FullController).
             PopulateFXController(discoveredParams, component.slotCount);
             PopulateExpressionParams(component.slotCount, discoveredParams);
             PopulateExpressionMenu(component);
 
-            // 8. Flush stub assets to disk.
+            // 8. Flush generated assets to disk for downstream VF consumption.
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            // 9. Inject directly into the live avatar descriptor so the current
-            //    upload/play session uses the freshly generated content instead of
-            //    whatever VRCFury merged from stale stubs at int.MinValue.
-            InjectFXLayers(avDesc, discoveredParams, component.slotCount);
-            InjectExpressionParams(avDesc, component.slotCount, discoveredParams);
-            InjectExpressionMenu(avDesc, component);
-
-            // 10. Log completion
+            // 9. Log completion
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
@@ -810,14 +796,12 @@ namespace ASMLite.Editor
         // ─── Migration ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Removes any stale VRCFury (VF.Model.VRCFury) components from the
-        /// ASM-Lite prefab instance. Prior to 1.0.5, the prefab included a VRCFury
-        /// FullController to inject FX/menu/params into the avatar. That approach
-        /// was replaced by direct injection into the avatar descriptor. Old prefab
-        /// instances still carry the VRCFury component, which causes double-merged
-        /// content and VF-prefixed parameter names that break menu bindings.
+        /// Removes stale direct-injection-era VRCFury (VF.Model.VRCFury) components
+        /// from an ASM-Lite prefab instance.
         ///
-        /// Called automatically during Rebuild. Safe to call multiple times.
+        /// This migration helper exists for upgrading older prefab instances whose
+        /// serialized VF payload no longer matches current wiring. It is safe to call
+        /// multiple times.
         /// </summary>
         public static void MigrateStaleVRCFuryComponents(ASMLiteComponent component)
         {
@@ -842,11 +826,11 @@ namespace ASMLite.Editor
             if (removedCount > 0)
             {
                 EditorUtility.SetDirty(go);
-                Debug.Log($"[ASM-Lite] Migration: removed {removedCount} stale VRCFury component(s) from '{go.name}'. Direct injection is now used instead.");
+                Debug.Log($"[ASM-Lite] Migration: removed {removedCount} stale VRCFury component(s) from '{go.name}'.");
             }
         }
 
-        // ─── Direct injection into avatar descriptor ──────────────────────────
+        // ─── Legacy descriptor-injection helpers (retired from normal flow) ───
 
         /// <summary>
         /// Injects ASM-Lite FX layers and parameters directly into the avatar's
