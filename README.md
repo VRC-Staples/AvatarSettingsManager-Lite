@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/VRC-Staples/AvatarSettingsManager-Lite?label=release)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/releases/latest)
 [![VPM Listing](https://img.shields.io/github/actions/workflow/status/VRC-Staples/AvatarSettingsManager-Lite/release.yml?branch=main&label=vpm%20listing)](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/VRC-Staples/AvatarSettingsManager-Lite)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-join-5865F2?logo=discord&logoColor=white)](https://discord.gg/WyDmWdThXM)
 
 A lightweight prefab that adds Save, Load, and Clear Preset for expression parameter presets on VRChat avatars.
 
@@ -131,6 +132,8 @@ The control trigger parameter (`ASMLite_Ctrl`) is also local-only and never netw
 ## Upgrading from Earlier Versions
 
 If your avatar already has an ASM-Lite prefab from earlier direct-injection builds, click **Rebuild ASM-Lite** in the editor window. Rebuild normalizes stale VRCFury components, refreshes generated assets, and keeps the prefab on the generated-assets + VRCFury FullController delivery path.
+
+If you are upgrading from versions that may have an empty FullController parameter list, remove and re-add the ASM-Lite prefab once so the instance picks up the current prefab wiring where FullController `prms` references `ASMLite_Params`.
 
 ---
 

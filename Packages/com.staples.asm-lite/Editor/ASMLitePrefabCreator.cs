@@ -127,13 +127,29 @@ namespace ASMLite.Editor
             ok &= SetObjectReference(so, "content.menus.Array.data[0].menu.objRef", menu, required: true);
             ok &= SetString(so, "content.menus.Array.data[0].prefix", string.Empty, required: true);
 
-            ok &= EnsureArraySize(so, "content.prms", 0, required: true);
+            // VRCFury consumes FullController parameter registrations from prms.
+            // Keep this populated so merged menu controls (ASMLite_Ctrl triggers)
+            // always resolve against merged parameters at build time.
+            ok &= EnsureArraySize(so, "content.prms", 1, required: true);
+            ok &= SetAnyObjectReference(
+                so,
+                new[]
+                {
+                    "content.prms.Array.data[0].parameters.objRef", // expected schema
+                    "content.prms.Array.data[0].parameter.objRef",  // compatibility fallback
+                    "content.prms.Array.data[0].objRef",            // compatibility fallback
+                },
+                parameters,
+                required: true,
+                fieldLabel: "content.prms[0].parameters.objRef");
+
             ok &= EnsureArraySize(so, "content.smoothedPrms", 0, required: true);
             ok &= EnsureArraySize(so, "content.globalParams", 1, required: true);
             ok &= SetString(so, "content.globalParams.Array.data[0]", "*", required: true);
 
             ok &= SetObjectReference(so, "content.controller.objRef", fxController, required: true);
             ok &= SetObjectReference(so, "content.menu.objRef", menu, required: true);
+            // Keep the top-level field in sync as a compatibility mirror.
             ok &= SetObjectReference(so, "content.parameters.objRef", parameters, required: true);
 
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -185,6 +201,28 @@ namespace ASMLite.Editor
 
             prop.objectReferenceValue = value;
             return true;
+        }
+
+        private static bool SetAnyObjectReference(SerializedObject so, string[] candidatePaths, UnityEngine.Object value, bool required, string fieldLabel)
+        {
+            if (candidatePaths == null || candidatePaths.Length == 0)
+                return MissingField(fieldLabel, required);
+
+            for (int i = 0; i < candidatePaths.Length; i++)
+            {
+                var path = candidatePaths[i];
+                if (string.IsNullOrEmpty(path))
+                    continue;
+
+                var prop = so.FindProperty(path);
+                if (prop == null)
+                    continue;
+
+                prop.objectReferenceValue = value;
+                return true;
+            }
+
+            return MissingField(fieldLabel, required);
         }
 
         private static bool SetString(SerializedObject so, string path, string value, bool required)

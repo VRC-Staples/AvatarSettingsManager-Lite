@@ -89,7 +89,13 @@ MonoBehaviour:
             id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302:11400000
             objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
           prefix: 
-        prms: []
+        prms:
+        - parameters:
+            version: 1
+            fileID: 0
+            guid: 
+            id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303:11400000
+            objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
         smoothedPrms: []
         globalParams:
         - "*"

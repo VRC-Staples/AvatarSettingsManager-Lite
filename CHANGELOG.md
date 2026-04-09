@@ -6,6 +6,13 @@ All notable changes to ASM-Lite are documented here.
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-04-09
+
+### Fixed
+- Restored deterministic VRCFury FullController parameter wiring by repopulating `content.prms` with the generated `ASMLite_Params` reference during prefab creation.
+- Updated the shipped `ASM-Lite.prefab` FullController payload so `prms` includes the generated expression-parameters asset instead of an empty list.
+- Added prefab contract assertions to prevent regressions where FullController menu/controller references exist but parameter wiring is missing.
+
 ## [1.0.7] - 2026-04-09
 
 ### Changed

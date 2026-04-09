@@ -28,6 +28,10 @@ namespace ASMLite.Tests.Editor
                 "Prefab FullController must declare globalParams.");
             StringAssert.Contains("- \"*\"", yaml,
                 "Prefab FullController must bind wildcard global params to avoid VF-local name isolation.");
+            StringAssert.Contains("prms:", yaml,
+                "Prefab FullController must declare prms wiring.");
+            StringAssert.Contains("- parameters:", yaml,
+                "Prefab FullController prms must include at least one parameters entry.");
 
             StringAssert.Contains($"objRef: {{fileID: 9100000, guid: {fxGuid}, type: 2}}", yaml,
                 "Prefab must reference the generated FX controller asset.");
