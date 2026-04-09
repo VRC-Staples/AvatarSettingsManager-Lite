@@ -119,6 +119,14 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
+        public static GameObject CreateChild(GameObject parent, string name)
+        {
+            var child = new GameObject(name ?? "Child");
+            if (parent != null)
+                child.transform.SetParent(parent.transform);
+            return child;
+        }
+
         public static void TearDownTestAvatar(GameObject avatarGo)
         {
             AssetDatabase.DeleteAsset(TempDir);
