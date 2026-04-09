@@ -132,5 +132,28 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("VF135_Clothing/Hood", result[1].name,
                 "A05 regression guard: VF names must remain opaque/canonical and must not be renamed.");
         }
+
+        // A06: broker-enrolled ASM_VF names are opaque user params and must survive discovery unchanged.
+        [Test]
+        public void A06_GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "ASM_VF_Outfit_Hood__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "ASM_VF_Outfit_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Ctrl", valueType = VRCExpressionParameters.ValueType.Int },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
+
+            Assert.AreEqual(2, result.Count,
+                "A06 regression guard: ASM_VF broker names are source params and must not be filtered with ASMLite_ internals.");
+            Assert.AreEqual("ASM_VF_Outfit_Hood__Avatar_ASM_Lite", result[0].name,
+                "A06 regression guard: broker-assigned deterministic name must remain unchanged.");
+            Assert.AreEqual("ASM_VF_Outfit_Hat__Avatar_ASM_Lite", result[1].name,
+                "A06 regression guard: broker-assigned deterministic name must remain unchanged.");
+        }
     }
 }

@@ -12,4 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: -340790334, guid: 67cc4cb7839cd3741b63733d5adf0442, type: 3}
   m_Name: ASMLite_Menu
   m_EditorClassIdentifier: 
-  controls: []
+  Parameters: {fileID: 0}
+  controls:
+  - name: Settings Manager
+    icon: {fileID: 2800000, guid: 86b5f9cd98fc44cda7a0900f80377b9e, type: 3}
+    type: 103
+    parameter:
+      name: 
+    value: 1
+    style: 0
+    subMenu: {fileID: 11400000, guid: 326c79517a654ea479b4f102632f47f1, type: 2}
+    subParameters: []
+    labels: []

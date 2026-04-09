@@ -12,4 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: -1506855854, guid: 67cc4cb7839cd3741b63733d5adf0442, type: 3}
   m_Name: ASMLite_Params
   m_EditorClassIdentifier: 
-  parameters: []
+  isEmpty: 0
+  parameters:
+  - name: ASMLite_Ctrl
+    valueType: 0
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_ASM_VF_Outfit_Hood__Avatar_ASM_Lite
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0

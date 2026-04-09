@@ -143,6 +143,10 @@ namespace ASMLite
         /// Called by the VRChat SDK before avatar upload. Delegates to ASMLiteBuilder
         /// to regenerate generated assets used by ASM-Lite's VRCFury FullController
         /// delivery wiring.
+        ///
+        /// Note: deterministic VRCFury Toggle global-name enrollment runs earlier in the
+        /// build-request callback phase (ASMLiteToggleBuildRequestedCallback) and restores
+        /// source scene values via delayed broker cleanup after the request path completes.
         /// </summary>
         public bool OnPreprocess()
         {

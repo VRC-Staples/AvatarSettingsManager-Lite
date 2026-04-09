@@ -7,12 +7,22 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+if command -v cygpath >/dev/null 2>&1; then
+  REPO_ROOT="$(cygpath -w "${REPO_ROOT}")"
+fi
 
 UNITY_PATH="${UNITY_PATH:-Tools/ci/unity-project/UnityManaged}"
 PACKAGE_PATH="${PACKAGE_PATH:-Packages/com.staples.asm-lite}"
 CI_PROJECT_PATH="${CI_PROJECT_PATH:-Tools/ci/unity-project}"
 
 VRC_SDK_BASE="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
+VRC_SDK_BASE_EDITOR_PRIMARY="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase-Editor.dll"
+VRC_SDK_BASE_EDITOR_FALLBACK="${REPO_ROOT}/Test Project/Test Project Packages/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase-Editor.dll"
+if [[ -f "${VRC_SDK_BASE_EDITOR_PRIMARY}" ]]; then
+  VRC_SDK_BASE_EDITOR="${VRC_SDK_BASE_EDITOR_PRIMARY}"
+else
+  VRC_SDK_BASE_EDITOR="${VRC_SDK_BASE_EDITOR_FALLBACK}"
+fi
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
 VRC_DYNAMICS="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
@@ -89,6 +99,10 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <HintPath>${VRC_SDK_BASE}</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="VRCSDKBase.Editor">
+      <HintPath>${VRC_SDK_BASE_EDITOR}</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="VRC.SDK3A">
       <HintPath>${VRC_SDK3A}</HintPath>
       <Private>false</Private>
@@ -111,4 +125,3 @@ CSPROJ
 echo "Done. Build with:"
 echo "  dotnet build ${OUT_DIR}/ASMLite.Runtime.csproj"
 echo "  dotnet build ${OUT_DIR}/ASMLite.Editor.csproj"
-"

@@ -229,5 +229,44 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "VF200_Mode/Accessory"),
                 "VF04 regression guard: dedupe path must preserve distinct sibling parameters.");
         }
+
+        [Test, Category("Integration")]
+        public void VF05_Regression_BrokerDeterministicNames_AreConsumedAsOpaqueSourceParams()
+        {
+            _ctx.Comp.slotCount = 1;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "ASM_VF_Outfit_Hood__Avatar_ASM_Lite",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "ASM_VF_Outfit_Hat__Avatar_ASM_Lite",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0.5f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, buildResult,
+                $"VF05: build should discover broker-assigned deterministic names as regular source params. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF05");
+            var generatedExpr = LoadGeneratedParams("VF05");
+
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated FX controller must preserve broker deterministic source names exactly.");
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated FX controller must preserve broker deterministic source names exactly.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+        }
     }
 }

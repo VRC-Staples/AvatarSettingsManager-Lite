@@ -6,8 +6,11 @@ using ASMLite.Editor;
 namespace VF.Model
 {
     // Test-local stub that intentionally matches migration predicate full name.
+    // Shared across tests that need VF.Model.VRCFury without hard dependency on VRCFury internals.
     internal class VRCFury : MonoBehaviour
     {
+        [SerializeReference] public object content;
+        public string untouchedMarker = "keep";
     }
 }
 
