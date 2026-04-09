@@ -831,7 +831,7 @@ namespace ASMLite.Editor
                         MessageType.Warning);
                 }
 
-
+                DrawToggleBrokerStatus();
             }
             else
             {
@@ -840,6 +840,25 @@ namespace ASMLite.Editor
                     "Configure settings above, then click \"Add ASM-Lite Prefab\".",
                     MessageType.Warning);
             }
+        }
+
+        private void DrawToggleBrokerStatus()
+        {
+            if (!ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var report))
+                return;
+
+            int totalAdjustments = report.PreflightCollisionAdjustments + report.CandidateCollisionAdjustments;
+            if (totalAdjustments > 0)
+            {
+                EditorGUILayout.HelpBox(
+                    $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) and adjusted deterministic assignments: preflight={report.PreflightCollisionAdjustments}, intra-candidate={report.CandidateCollisionAdjustments}.",
+                    MessageType.Warning);
+                return;
+            }
+
+            EditorGUILayout.HelpBox(
+                $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) with no deterministic suffix adjustments needed.",
+                MessageType.None);
         }
 
         private void DrawActionButton()
