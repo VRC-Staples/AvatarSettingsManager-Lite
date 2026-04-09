@@ -51,7 +51,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 Run this once after cloning to enable repository hooks:
 
 ```bash
-bash ci/setup-git-hooks.sh
+bash Tools/ci/setup-git-hooks.sh
 ```
 
 The hooks block commits that use banned personal identity metadata or blocked co-author trailers. CI also enforces the same checks on push and pull request.

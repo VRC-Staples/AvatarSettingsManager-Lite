@@ -2,17 +2,17 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
-$manifestPath = Join-Path $repoRoot 'ci/unity-project/Packages/manifest.json'
-$lockPath = Join-Path $repoRoot 'ci/unity-project/Packages/packages-lock.json'
-$lockRepoPath = 'ci/unity-project/Packages/packages-lock.json'
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot '../..')
+$manifestPath = Join-Path $repoRoot 'Tools/ci/unity-project/Packages/manifest.json'
+$lockPath = Join-Path $repoRoot 'Tools/ci/unity-project/Packages/packages-lock.json'
+$lockRepoPath = 'Tools/ci/unity-project/Packages/packages-lock.json'
 $requiredTrackedFiles = @(
-    'ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll',
-    'ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll.meta',
-    'ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll',
-    'ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll.meta',
-    'ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll',
-    'ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll.meta'
+    'Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll',
+    'Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll.meta',
+    'Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll',
+    'Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll.meta',
+    'Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll',
+    'Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll.meta'
 )
 
 function Assert-True {

@@ -32,7 +32,7 @@ All notable changes to ASM-Lite are documented here.
 - Gitleaks secret-scan workflow (`secret-scan.yml`) runs weekly to detect committed credentials.
 - Fail-closed release gate enforces that compile, test, and listing checks all pass before the release artifact is published.
 - Dependabot config for GitHub Actions dependency updates.
-- `ci/verify-release-gate.ps1` and `ci/verify-shadow-project-hygiene.ps1` scripts for local gate validation.
+- `Tools/ci/verify-release-gate.ps1` and `Tools/ci/verify-shadow-project-hygiene.ps1` scripts for local gate validation.
 
 ### Fixed
 - EditMode test compile stability improved in Unity batchmode by switching driver assertions in `ASMLiteFXControllerTests` to `VRC_AvatarParameterDriver`, removing a brittle direct dependency on `VRCAvatarParameterDriver` type resolution.

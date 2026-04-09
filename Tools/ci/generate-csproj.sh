@@ -2,15 +2,15 @@
 # Generates ASMLite.Editor.csproj and ASMLite.Runtime.csproj for compile checking.
 # UNITY_PATH: directory containing UnityEngine.dll and UnityEditor.dll
 # PACKAGE_PATH: root of the com.staples.asm-lite package
-# CI_PROJECT_PATH: root of ci/unity-project
+# CI_PROJECT_PATH: root of Tools/ci/unity-project
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-UNITY_PATH="${UNITY_PATH:-ci/unity-project/UnityManaged}"
+UNITY_PATH="${UNITY_PATH:-Tools/ci/unity-project/UnityManaged}"
 PACKAGE_PATH="${PACKAGE_PATH:-Packages/com.staples.asm-lite}"
-CI_PROJECT_PATH="${CI_PROJECT_PATH:-ci/unity-project}"
+CI_PROJECT_PATH="${CI_PROJECT_PATH:-Tools/ci/unity-project}"
 
 VRC_SDK_BASE="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
@@ -111,3 +111,4 @@ CSPROJ
 echo "Done. Build with:"
 echo "  dotnet build ${OUT_DIR}/ASMLite.Runtime.csproj"
 echo "  dotnet build ${OUT_DIR}/ASMLite.Editor.csproj"
+"
