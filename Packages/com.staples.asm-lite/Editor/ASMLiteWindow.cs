@@ -1063,14 +1063,17 @@ namespace ASMLite.Editor
 
             try
             {
-                // Strip stale VRCFury FullController components from pre-1.0.5 prefabs.
-                ASMLiteBuilder.MigrateStaleVRCFuryComponents(component);
+                // Rebuild-prep contract for the reverted VF delivery path:
+                // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
+                // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
+                //    so rebuild input reflects generated assets + VF wiring only.
+                var migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
 
                 int count = ASMLiteBuilder.Build(component);
                 if (count >= 0)
                     _discoveredParamCount = count;
                 AssetDatabase.Refresh();
-                Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}'.");
+                Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. migrationRemoved={migrationReport.StaleVrcFuryRemoved}, cleanupFxLayers={migrationReport.Cleanup.FxLayersRemoved}, cleanupFxParams={migrationReport.Cleanup.FxParamsRemoved}, cleanupExprParams={migrationReport.Cleanup.ExprParamsRemoved}, cleanupMenuControls={migrationReport.Cleanup.MenuControlsRemoved}.");
             }
             catch (System.Exception ex)
             {
@@ -1087,9 +1090,10 @@ namespace ASMLite.Editor
             if (component == null || component.gameObject == null)
                 return;
 
-            // Clean up injected FX layers, params, and menu entries from the avatar
+            // Remove-path cleanup strips only direct-injection-era descriptor remnants.
+            ASMLiteBuilder.CleanupReport removeCleanupReport = default;
             if (_selectedAvatar != null)
-                ASMLiteBuilder.CleanUpAvatarAssets(_selectedAvatar);
+                removeCleanupReport = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
 
             Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
             int group = Undo.GetCurrentGroup();
@@ -1102,7 +1106,7 @@ namespace ASMLite.Editor
             _cachedComponent  = null;
             _lastRefreshFrame = -1;
 
-            Debug.Log("[ASM-Lite] Prefab removed from avatar.");
+            Debug.Log($"[ASM-Lite] Prefab removed from avatar. cleanupFxLayers={removeCleanupReport.FxLayersRemoved}, cleanupFxParams={removeCleanupReport.FxParamsRemoved}, cleanupExprParams={removeCleanupReport.ExprParamsRemoved}, cleanupMenuControls={removeCleanupReport.MenuControlsRemoved}.");
             Repaint();
         }
 

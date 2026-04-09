@@ -446,5 +446,72 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(paramsByName["ASMLite_Def_MyBool"].defaultBool,
                 "ASMLite_Def_MyBool.defaultBool should be true (defaultValue=1).");
         }
+
+        // ── A19 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var ctrlParamEntries = _ctx.Ctrl.parameters
+                .Where(p => p.name == "ASMLite_Ctrl")
+                .ToList();
+            Assert.AreEqual(1, ctrlParamEntries.Count,
+                "FX controller should contain exactly one shared ASMLite_Ctrl parameter.");
+            Assert.AreEqual(AnimatorControllerParameterType.Int, ctrlParamEntries[0].type,
+                "ASMLite_Ctrl must remain an Int parameter in the FX controller.");
+
+            var forbiddenLegacyControlParams = new[]
+            {
+                "ASMLite_Save",
+                "ASMLite_Load",
+                "ASMLite_Clear",
+                "ASMLite_S1_Save",
+                "ASMLite_S1_Load",
+                "ASMLite_S1_Clear",
+            };
+
+            foreach (var forbiddenName in forbiddenLegacyControlParams)
+            {
+                Assert.IsFalse(_ctx.Ctrl.parameters.Any(p => p.name == forbiddenName),
+                    $"Legacy control param '{forbiddenName}' must not be emitted in the FX controller.");
+            }
+        }
+
+        // ── A20 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            for (int slot = 1; slot <= 2; slot++)
+            {
+                var sm = GetLayerSM(_ctx.Ctrl, $"ASMLite_Slot{slot}");
+
+                Assert.AreEqual(0, sm.anyStateTransitions.Length,
+                    $"Slot {slot} should not create Any State transitions (legacy SafeBool branch style).");
+
+                foreach (var stateName in new[] { "SaveSlot" + slot, "LoadSlot" + slot, "ResetSlot" + slot })
+                {
+                    var state = FindState(sm, stateName);
+                    foreach (var transition in state.transitions)
+                    {
+                        foreach (var condition in transition.conditions)
+                        {
+                            Assert.AreNotEqual(AnimatorConditionMode.If, condition.mode,
+                                $"Slot {slot} state '{stateName}' transition must not use bool If conditions.");
+                            Assert.AreNotEqual(AnimatorConditionMode.IfNot, condition.mode,
+                                $"Slot {slot} state '{stateName}' transition must not use bool IfNot conditions.");
+                        }
+                    }
+                }
+            }
+        }
     }
 }

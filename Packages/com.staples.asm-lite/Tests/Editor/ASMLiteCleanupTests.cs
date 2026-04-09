@@ -301,5 +301,36 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
                 "A41: cleanup should still remove Settings Manager when FX layer is default/unassigned.");
         }
+
+        // ── A54 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddAvatarParam(_ctx, "A54_Int", VRCExpressionParameters.ValueType.Int);
+            AddAvatarParam(_ctx, "A54_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
+            BuildOrFail(_ctx, "A54");
+
+            var first = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_ctx.AvDesc);
+            int firstTotalRemoved = first.FxLayersRemoved + first.FxParamsRemoved + first.ExprParamsRemoved + first.MenuControlsRemoved;
+            Assert.Greater(firstTotalRemoved, 0,
+                $"A54: first cleanup should remove legacy direct-injection-era state. fxLayers={first.FxLayersRemoved}, fxParams={first.FxParamsRemoved}, expr={first.ExprParamsRemoved}, menu={first.MenuControlsRemoved}.");
+
+            var second = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_ctx.AvDesc);
+            Assert.AreEqual(0, second.FxLayersRemoved,
+                $"A54: second cleanup should be a deterministic no-op for FX layers. removed={second.FxLayersRemoved}.");
+            Assert.AreEqual(0, second.FxParamsRemoved,
+                $"A54: second cleanup should be a deterministic no-op for FX params. removed={second.FxParamsRemoved}.");
+            Assert.AreEqual(0, second.ExprParamsRemoved,
+                $"A54: second cleanup should be a deterministic no-op for expression params. removed={second.ExprParamsRemoved}.");
+            Assert.AreEqual(0, second.MenuControlsRemoved,
+                $"A54: second cleanup should be a deterministic no-op for menu controls. removed={second.MenuControlsRemoved}.");
+
+            Assert.AreEqual(0, CountASMLiteLayers(_ctx.Ctrl), "A54: ASMLite FX layers must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountASMLiteFxParams(_ctx.Ctrl), "A54: ASMLite FX params must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), "A54: ASMLite expression params must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu), "A54: Settings Manager control must remain absent after repeated cleanup.");
+        }
     }
 }

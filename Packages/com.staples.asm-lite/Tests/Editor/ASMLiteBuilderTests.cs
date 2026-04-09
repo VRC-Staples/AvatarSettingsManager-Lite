@@ -223,6 +223,7 @@ namespace ASMLite.Tests.Editor
             var existingNames = new[]
             {
                 "ASMLite_S1_Save",
+                "ASMLite_Ctrl",
                 "ASMLite_Bak_S1_Obsolete"
             };
 
@@ -232,6 +233,7 @@ namespace ASMLite.Tests.Editor
                 existingParamNames: existingNames);
 
             Assert.IsFalse(result.Contains("ASMLite_S1_Save"), "Legacy SafeBool control key should not be preserved");
+            Assert.IsFalse(result.Contains("ASMLite_Ctrl"), "Legacy shared control key should not be preserved as a backup entry");
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Obsolete"), "Legacy backup key should be preserved");
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleA"), "Current backup key should be present");
         }
