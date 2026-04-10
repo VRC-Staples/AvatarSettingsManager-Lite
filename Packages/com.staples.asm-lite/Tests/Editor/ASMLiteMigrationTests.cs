@@ -10,6 +10,7 @@ namespace VF.Model
     internal class VRCFury : MonoBehaviour
     {
         [SerializeReference] public object content;
+        [SerializeReference] public object[] features;
         public string untouchedMarker = "keep";
     }
 }

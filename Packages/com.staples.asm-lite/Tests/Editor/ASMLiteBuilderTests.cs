@@ -390,5 +390,28 @@ namespace ASMLite.Tests.Editor
             var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
             Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
         }
+
+        [Test]
+        public void P07_BuildBackupParamNames_MalformedLegacyBackups_AreExcluded()
+        {
+            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
+                slotCount: 1,
+                avatarParamNames: new List<string> { "Current" },
+                existingParamNames: new[]
+                {
+                    "ASMLite_Bak_S1_ValidLegacy",
+                    "ASMLite_Bak_S_",
+                    "ASMLite_Bak_SA_NotANumber",
+                    "ASMLite_Bak_S2",
+                    "ASMLite_Bak_S0_ZeroSlot",
+                });
+
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Current"), "Current schema backup should be generated.");
+            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ValidLegacy"), "Valid legacy backup should still be preserved.");
+            Assert.IsFalse(result.Contains("ASMLite_Bak_S_"), "Malformed backup without slot/source should be dropped.");
+            Assert.IsFalse(result.Contains("ASMLite_Bak_SA_NotANumber"), "Malformed backup with non-numeric slot should be dropped.");
+            Assert.IsFalse(result.Contains("ASMLite_Bak_S2"), "Malformed backup without source segment should be dropped.");
+            Assert.IsFalse(result.Contains("ASMLite_Bak_S0_ZeroSlot"), "Malformed backup with slot 0 should be dropped.");
+        }
     }
 }

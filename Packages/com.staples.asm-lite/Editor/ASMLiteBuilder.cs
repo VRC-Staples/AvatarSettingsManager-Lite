@@ -77,6 +77,64 @@ namespace ASMLite.Editor
             internal bool AvatarDescriptorFound { get; }
         }
 
+        internal readonly struct LegacyAliasContinuityReport
+        {
+            internal LegacyAliasContinuityReport(int mappedCount, int mirroredCount, int unmatchedCount, int malformedCount)
+            {
+                MappedCount = mappedCount;
+                MirroredCount = mirroredCount;
+                UnmatchedCount = unmatchedCount;
+                MalformedCount = malformedCount;
+            }
+
+            internal int MappedCount { get; }
+            internal int MirroredCount { get; }
+            internal int UnmatchedCount { get; }
+            internal int MalformedCount { get; }
+        }
+
+        internal readonly struct LegacyAliasBinding
+        {
+            internal LegacyAliasBinding(int slot, string sourceParamName, string legacyBackupName)
+            {
+                Slot = slot;
+                SourceParamName = sourceParamName;
+                LegacyBackupName = legacyBackupName;
+            }
+
+            internal int Slot { get; }
+            internal string SourceParamName { get; }
+            internal string LegacyBackupName { get; }
+        }
+
+        internal readonly struct BackupNamePlan
+        {
+            internal BackupNamePlan(List<string> names, List<LegacyAliasBinding> legacyAliasBindings, LegacyAliasContinuityReport report)
+            {
+                Names = names;
+                LegacyAliasBindings = legacyAliasBindings;
+                Report = report;
+            }
+
+            internal List<string> Names { get; }
+            internal List<LegacyAliasBinding> LegacyAliasBindings { get; }
+            internal LegacyAliasContinuityReport Report { get; }
+        }
+
+        private readonly struct ParsedBackupName
+        {
+            internal ParsedBackupName(int slot, string sourceParamName)
+            {
+                Slot = slot;
+                SourceParamName = sourceParamName;
+            }
+
+            internal int Slot { get; }
+            internal string SourceParamName { get; }
+        }
+
+        private static LegacyAliasContinuityReport s_latestLegacyAliasReport;
+
         // ─── Public API ───────────────────────────────────────────────────────
 
 
@@ -158,9 +216,19 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No custom parameters discovered. FX layers will be generated with empty driver lists.");
             }
 
+            var legacyAliasPlan = BuildBackupNamePlan(
+                component.slotCount,
+                discoveredParams,
+                GetExistingGeneratedBackupNames(),
+                ASMLiteToggleNameBroker.GetLatestGlobalParamMappings());
+            s_latestLegacyAliasReport = legacyAliasPlan.Report;
+
+            Debug.Log(
+                $"[ASM-Lite] Legacy backup continuity: mapped={legacyAliasPlan.Report.MappedCount}, mirrored={legacyAliasPlan.Report.MirroredCount}, unmatched={legacyAliasPlan.Report.UnmatchedCount}, malformed={legacyAliasPlan.Report.MalformedCount}.");
+
             // 5-7. Generate stub assets (delivery source for VRCFury FullController).
-            PopulateFXController(discoveredParams, component.slotCount);
-            PopulateExpressionParams(component.slotCount, discoveredParams);
+            PopulateFXController(discoveredParams, component.slotCount, legacyAliasPlan.LegacyAliasBindings);
+            PopulateExpressionParams(discoveredParams, legacyAliasPlan.Names);
             PopulateExpressionMenu(component);
 
             // 8. Flush generated assets to disk for downstream VF consumption.
@@ -188,6 +256,11 @@ namespace ASMLite.Editor
             return null;
         }
 
+        internal static LegacyAliasContinuityReport GetLatestLegacyAliasContinuityReport()
+        {
+            return s_latestLegacyAliasReport;
+        }
+
         // ─── Private implementation ────────────────────────────────────────────
 
         /// <summary>
@@ -198,7 +271,10 @@ namespace ASMLite.Editor
         /// Generates control parameters and backup/default parameters in the managed FX controller.
         /// Uses one shared local control Int (ASMLite_Ctrl) for all slot actions.
         /// </summary>
-        private static void PopulateFXController(List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
+        private static void PopulateFXController(
+            List<VRCExpressionParameters.Parameter> avatarParams,
+            int slotCount,
+            List<LegacyAliasBinding> legacyAliasBindings)
         {
             var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
             if (ctrl == null)
@@ -260,6 +336,33 @@ namespace ASMLite.Editor
                 }
             }
 
+            if (legacyAliasBindings != null && legacyAliasBindings.Count > 0)
+            {
+                var typeBySource = new Dictionary<string, AnimatorControllerParameterType>(StringComparer.Ordinal);
+                for (int i = 0; i < avatarParams.Count; i++)
+                {
+                    var param = avatarParams[i];
+                    if (param == null || string.IsNullOrWhiteSpace(param.name))
+                        continue;
+
+                    if (!typeBySource.ContainsKey(param.name))
+                        typeBySource.Add(param.name, mappedTypes[i]);
+                }
+
+                for (int i = 0; i < legacyAliasBindings.Count; i++)
+                {
+                    var binding = legacyAliasBindings[i];
+                    if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
+                        continue;
+
+                    if (!typeBySource.TryGetValue(binding.SourceParamName, out var mappedType))
+                        continue;
+
+                    if (addedParams.Add(binding.LegacyBackupName))
+                        ctrl.AddParameter(binding.LegacyBackupName, mappedType);
+                }
+            }
+
             // Add default parameters (one set, not per-slot): ASMLite_Def_{paramName}
             for (int i = 0; i < avatarParams.Count; i++)
             {
@@ -296,7 +399,7 @@ namespace ASMLite.Editor
 
             // Generate one layer per slot.
             for (int slot = 1; slot <= slotCount; slot++)
-                AddSlotLayer(ctrl, slot, avatarParams);
+                AddSlotLayer(ctrl, slot, avatarParams, legacyAliasBindings);
 
             EditorUtility.SetDirty(ctrl);
             // SaveAssets is called once in Build() after all three Populate methods complete.
@@ -311,7 +414,11 @@ namespace ASMLite.Editor
         /// Uses a single shared control Int (ASMLite_Ctrl) with encoded values:
         /// Save=(slot-1)*3+1, Load=(slot-1)*3+2, Clear=(slot-1)*3+3.
         /// </summary>
-        private static void AddSlotLayer(AnimatorController ctrl, int slot, List<VRCExpressionParameters.Parameter> avatarParams)
+        private static void AddSlotLayer(
+            AnimatorController ctrl,
+            int slot,
+            List<VRCExpressionParameters.Parameter> avatarParams,
+            List<LegacyAliasBinding> legacyAliasBindings)
         {
             string slotName = $"ASMLite_Slot{slot}";
 
@@ -364,12 +471,17 @@ namespace ASMLite.Editor
             var loadDriver  = loadState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
             var resetDriver = resetState.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
 
-            // Pre-size all three lists and build in a single pass to avoid 3x iteration
-            var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
-            var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
-            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + 3);
+            // Pre-size all three lists and build in a single pass to avoid 3x iteration.
+            int slotAliasCount = CountLegacyAliasBindingsForSlot(slot, legacyAliasBindings);
+            var saveParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + slotAliasCount + 3);
+            var loadParams  = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + slotAliasCount + 3);
+            var resetParams = new List<VRC_AvatarParameterDriver.Parameter>(avatarParams.Count + slotAliasCount + 3);
 
             var seenDriverParams = new HashSet<string>(StringComparer.Ordinal);
+            var seenSavePairs = new HashSet<string>(StringComparer.Ordinal);
+            var seenLoadPairs = new HashSet<string>(StringComparer.Ordinal);
+            var seenResetPairs = new HashSet<string>(StringComparer.Ordinal);
+
             for (int i = 0; i < avatarParams.Count; i++)
             {
                 var p = avatarParams[i];
@@ -384,27 +496,27 @@ namespace ASMLite.Editor
                     continue;
                 }
 
-                saveParams.Add(new VRC_AvatarParameterDriver.Parameter
-                {
-                    type   = VRC_AvatarParameterDriver.ChangeType.Copy,
-                    source = p.name,
-                    name   = $"ASMLite_Bak_S{slot}_{p.name}",
-                });
-                loadParams.Add(new VRC_AvatarParameterDriver.Parameter
-                {
-                    type   = VRC_AvatarParameterDriver.ChangeType.Copy,
-                    source = $"ASMLite_Bak_S{slot}_{p.name}",
-                    name   = p.name,
-                });
+                string deterministicBackupName = $"ASMLite_Bak_S{slot}_{p.name}";
+                string defaultName = $"ASMLite_Def_{p.name}";
+
+                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName);
+                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name);
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
                 // Live avatar params are NOT touched: only the saved preset is cleared.
-                resetParams.Add(new VRC_AvatarParameterDriver.Parameter
-                {
-                    type   = VRC_AvatarParameterDriver.ChangeType.Copy,
-                    source = $"ASMLite_Def_{p.name}",
-                    name   = $"ASMLite_Bak_S{slot}_{p.name}",
-                });
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName);
+
+                AddLegacyAliasDriverCopiesForSlot(
+                    slot,
+                    p.name,
+                    defaultName,
+                    legacyAliasBindings,
+                    saveParams,
+                    seenSavePairs,
+                    loadParams,
+                    seenLoadPairs,
+                    resetParams,
+                    seenResetPairs);
             }
 
             // Zone B: trailing Set entries reset shared control Int back to idle (0)
@@ -448,6 +560,75 @@ namespace ASMLite.Editor
             AddExitTimeTransition(resetState, idleState);
         }
 
+        private static int CountLegacyAliasBindingsForSlot(int slot, List<LegacyAliasBinding> bindings)
+        {
+            if (bindings == null || bindings.Count == 0)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                if (bindings[i].Slot == slot)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static void AddLegacyAliasDriverCopiesForSlot(
+            int slot,
+            string sourceParamName,
+            string defaultName,
+            List<LegacyAliasBinding> bindings,
+            List<VRC_AvatarParameterDriver.Parameter> saveParams,
+            HashSet<string> seenSavePairs,
+            List<VRC_AvatarParameterDriver.Parameter> loadParams,
+            HashSet<string> seenLoadPairs,
+            List<VRC_AvatarParameterDriver.Parameter> resetParams,
+            HashSet<string> seenResetPairs)
+        {
+            if (bindings == null || bindings.Count == 0)
+                return;
+
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                var binding = bindings[i];
+                if (binding.Slot != slot)
+                    continue;
+                if (!string.Equals(binding.SourceParamName, sourceParamName, StringComparison.Ordinal))
+                    continue;
+                if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
+                    continue;
+
+                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName);
+                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName);
+            }
+        }
+
+        private static void AddDriverCopy(
+            List<VRC_AvatarParameterDriver.Parameter> target,
+            HashSet<string> seenPairs,
+            string source,
+            string destination)
+        {
+            if (target == null || seenPairs == null)
+                return;
+            if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(destination))
+                return;
+
+            string key = source + "\u001F" + destination;
+            if (!seenPairs.Add(key))
+                return;
+
+            target.Add(new VRC_AvatarParameterDriver.Parameter
+            {
+                type = VRC_AvatarParameterDriver.ChangeType.Copy,
+                source = source,
+                name = destination,
+            });
+        }
+
         /// <summary>
         /// Builds the expression parameter payload for ASM-Lite.
         ///
@@ -459,38 +640,170 @@ namespace ASMLite.Editor
         /// Only legacy backup params are preserved. Legacy control params are not kept.
         /// If a generated backup name exists, generated wins and legacy is ignored.
         /// </summary>
-        internal static List<string> BuildBackupParamNamesWithLegacyPreservation(
-            int slotCount,
-            List<string> avatarParamNames,
-            string[] existingParamNames)
+        private static bool TryParseBackupName(string backupName, out ParsedBackupName parsed)
         {
-            var names = new List<string>(slotCount * avatarParamNames.Count);
-            var seen = new HashSet<string>();
+            parsed = default;
 
+            if (string.IsNullOrWhiteSpace(backupName))
+                return false;
+
+            const string prefix = "ASMLite_Bak_S";
+            if (!backupName.StartsWith(prefix, StringComparison.Ordinal))
+                return false;
+
+            int slotStart = prefix.Length;
+            int underscoreIndex = backupName.IndexOf('_', slotStart);
+            if (underscoreIndex <= slotStart)
+                return false;
+
+            string slotSegment = backupName.Substring(slotStart, underscoreIndex - slotStart);
+            if (!int.TryParse(slotSegment, out int slot) || slot <= 0)
+                return false;
+
+            string source = backupName.Substring(underscoreIndex + 1);
+            if (string.IsNullOrWhiteSpace(source))
+                return false;
+
+            parsed = new ParsedBackupName(slot, source);
+            return true;
+        }
+
+        private static BackupNamePlan BuildBackupNamePlan(
+            int slotCount,
+            List<VRCExpressionParameters.Parameter> avatarParams,
+            string[] existingParamNames,
+            ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings)
+        {
+            var avatarParamNames = new List<string>(avatarParams.Count);
+            var avatarParamSet = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < avatarParams.Count; i++)
+            {
+                var param = avatarParams[i];
+                if (param == null || string.IsNullOrWhiteSpace(param.name))
+                    continue;
+
+                if (avatarParamSet.Add(param.name))
+                    avatarParamNames.Add(param.name);
+            }
+
+            var mappingByOriginal = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (brokerMappings != null)
+            {
+                for (int i = 0; i < brokerMappings.Length; i++)
+                {
+                    var mapping = brokerMappings[i];
+                    if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam))
+                        continue;
+                    if (string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                        continue;
+                    if (!mappingByOriginal.ContainsKey(mapping.OriginalGlobalParam))
+                        mappingByOriginal.Add(mapping.OriginalGlobalParam, mapping.AssignedGlobalParam);
+                }
+            }
+
+            var names = new List<string>(slotCount * avatarParamNames.Count);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                foreach (var paramName in avatarParamNames)
+                for (int i = 0; i < avatarParamNames.Count; i++)
                 {
-                    string name = $"ASMLite_Bak_S{slot}_{paramName}";
+                    string name = $"ASMLite_Bak_S{slot}_{avatarParamNames[i]}";
                     if (seen.Add(name))
                         names.Add(name);
                 }
             }
 
+            int mappedCount = 0;
+            int unmatchedCount = 0;
+            int malformedCount = 0;
+            var bindings = new List<LegacyAliasBinding>();
+            var seenBindings = new HashSet<string>(StringComparer.Ordinal);
+
             if (existingParamNames != null)
             {
-                foreach (var existingName in existingParamNames)
+                for (int i = 0; i < existingParamNames.Length; i++)
                 {
+                    string existingName = existingParamNames[i];
                     if (string.IsNullOrWhiteSpace(existingName))
                         continue;
                     if (!existingName.StartsWith("ASMLite_Bak_", StringComparison.Ordinal))
                         continue;
+
+                    if (!TryParseBackupName(existingName, out var parsed))
+                    {
+                        malformedCount++;
+                        continue;
+                    }
+
                     if (seen.Add(existingName))
                         names.Add(existingName);
+
+                    if (!mappingByOriginal.TryGetValue(parsed.SourceParamName, out string assignedSourceName) || string.IsNullOrWhiteSpace(assignedSourceName))
+                    {
+                        if (!avatarParamSet.Contains(parsed.SourceParamName))
+                            unmatchedCount++;
+                        continue;
+                    }
+
+                    if (!avatarParamSet.Contains(assignedSourceName))
+                    {
+                        unmatchedCount++;
+                        continue;
+                    }
+
+                    mappedCount++;
+                    string bindingKey = parsed.Slot + "\u001F" + assignedSourceName + "\u001F" + existingName;
+                    if (seenBindings.Add(bindingKey))
+                    {
+                        bindings.Add(new LegacyAliasBinding(parsed.Slot, assignedSourceName, existingName));
+                    }
                 }
             }
 
-            return names;
+            int mirroredCount = bindings.Count;
+            var report = new LegacyAliasContinuityReport(mappedCount, mirroredCount, unmatchedCount, malformedCount);
+            return new BackupNamePlan(names, bindings, report);
+        }
+
+        /// <summary>
+        /// Builds backup parameter names for generated + preserved valid legacy entries.
+        /// </summary>
+        internal static List<string> BuildBackupParamNamesWithLegacyPreservation(
+            int slotCount,
+            List<string> avatarParamNames,
+            string[] existingParamNames)
+        {
+            var avatarParams = new List<VRCExpressionParameters.Parameter>(avatarParamNames.Count);
+            for (int i = 0; i < avatarParamNames.Count; i++)
+            {
+                string name = avatarParamNames[i];
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                avatarParams.Add(new VRCExpressionParameters.Parameter
+                {
+                    name = name,
+                    valueType = VRCExpressionParameters.ValueType.Int,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = false,
+                });
+            }
+
+            return BuildBackupNamePlan(slotCount, avatarParams, existingParamNames, Array.Empty<ASMLiteToggleNameBroker.GlobalParamMapping>()).Names;
+        }
+
+        private static string[] GetExistingGeneratedBackupNames()
+        {
+            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            if (paramsAsset?.parameters == null)
+                return Array.Empty<string>();
+
+            var existing = new string[paramsAsset.parameters.Length];
+            for (int i = 0; i < paramsAsset.parameters.Length; i++)
+                existing[i] = paramsAsset.parameters[i]?.name;
+
+            return existing;
         }
 
         /// <summary>
@@ -500,7 +813,7 @@ namespace ASMLite.Editor
         /// Legacy backup params from prior schemas are preserved when not colliding
         /// with the current schema to avoid dropping existing user presets.
         /// </summary>
-        private static void PopulateExpressionParams(int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
+        private static void PopulateExpressionParams(List<VRCExpressionParameters.Parameter> avatarParams, List<string> backupNames)
         {
             var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             if (paramsAsset == null)
@@ -509,7 +822,7 @@ namespace ASMLite.Editor
                 return;
             }
 
-            int totalCount = 1 + (slotCount * avatarParams.Count);
+            int totalCount = 1 + (backupNames != null ? backupNames.Count : 0);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
 
             // Control Int used by ASM-Lite's FX layers and menu buttons.
@@ -524,23 +837,8 @@ namespace ASMLite.Editor
                 networkSynced = false,
             });
 
-            // Build name lists without LINQ materialization -- BuildBackupParamNamesWithLegacyPreservation
-            // only iterates each collection once, so no intermediate ToList/ToArray needed.
-            var avatarParamNamesList = new List<string>(avatarParams.Count);
-            foreach (var p in avatarParams) avatarParamNamesList.Add(p.name);
+            var resolvedBackupNames = backupNames ?? new List<string>();
 
-            string[] existingParamNames = null;
-            if (paramsAsset.parameters != null)
-            {
-                existingParamNames = new string[paramsAsset.parameters.Length];
-                for (int i = 0; i < paramsAsset.parameters.Length; i++)
-                    existingParamNames[i] = paramsAsset.parameters[i]?.name;
-            }
-
-            var backupNames = BuildBackupParamNamesWithLegacyPreservation(
-                slotCount,
-                avatarParamNamesList,
-                existingParamNames);
 
             var byName = new Dictionary<string, VRCExpressionParameters.Parameter>(StringComparer.Ordinal);
             foreach (var p in avatarParams)
@@ -559,7 +857,7 @@ namespace ASMLite.Editor
             }
 
             int preservedLegacyCount = 0;
-            foreach (var name in backupNames)
+            foreach (var name in resolvedBackupNames)
             {
                 const string prefix = "ASMLite_Bak_S";
                 int firstUnderscore = name.IndexOf('_', prefix.Length);
@@ -1043,7 +1341,7 @@ namespace ASMLite.Editor
 
             // Add slot layers
             for (int slot = 1; slot <= slotCount; slot++)
-                AddSlotLayer(ctrl, slot, avatarParams);
+                AddSlotLayer(ctrl, slot, avatarParams, legacyAliasBindings: null);
 
             EditorUtility.SetDirty(ctrl);
 

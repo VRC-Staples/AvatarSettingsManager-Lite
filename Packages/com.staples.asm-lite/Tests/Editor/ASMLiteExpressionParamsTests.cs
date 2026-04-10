@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.Animations;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase;
 using ASMLite.Editor;
 using System.Linq;
 
@@ -20,12 +22,16 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
         }
 
         [TearDown]
         public void TearDown()
         {
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx.AvatarGo);
         }
 
@@ -56,6 +62,26 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(stubAsset, "Generated VRCExpressionParameters asset must exist after Build().");
             Assert.IsNotNull(stubAsset.parameters, "Generated parameters must not be null after Build().");
             return stubAsset.parameters;
+        }
+
+        private static AnimatorController LoadGeneratedController()
+        {
+            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(ctrl, "Generated FX controller must exist after Build().");
+            return ctrl;
+        }
+
+        private static VRC_AvatarParameterDriver LoadSlotDriver(AnimatorController ctrl, string layerName, string stateName)
+        {
+            var layer = ctrl.layers.FirstOrDefault(l => l.name == layerName);
+            Assert.IsNotNull(layer.stateMachine, $"Expected layer '{layerName}' in generated controller.");
+
+            var state = layer.stateMachine.states.FirstOrDefault(s => s.state.name == stateName).state;
+            Assert.IsNotNull(state, $"Expected state '{stateName}' in layer '{layerName}'.");
+
+            var driver = state.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
+            Assert.IsNotNull(driver, $"Expected one VRCAvatarParameterDriver on state '{stateName}'.");
+            return driver;
         }
 
         // ── A19 ────────────────────────────────────────────────────────────────
@@ -254,6 +280,129 @@ namespace ASMLite.Tests.Editor
                 "Preserved legacy backups must be forced to saved=true.");
             Assert.IsFalse(legacy.networkSynced,
                 "Preserved legacy backups must be forced to networkSynced=false.");
+        }
+
+        [Test, Category("Integration")]
+        public void A26_MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset()
+        {
+            const string legacySource = "VF777_Menu/Hat";
+            const string legacyBackup = "ASMLite_Bak_S1_VF777_Menu/Hat";
+
+            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for legacy alias setup.");
+            stubAsset.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter
+                {
+                    name = legacyBackup,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                }
+            };
+            EditorUtility.SetDirty(stubAsset);
+            AssetDatabase.SaveAssets();
+
+            _ctx.Comp.slotCount = 1;
+
+            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
+            var toggle = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = false,
+                globalParam = legacySource,
+                menuPath = "Menu/Hat",
+                name = "Hat",
+            };
+            vf.content = toggle;
+
+            var enrollment = ASMLiteToggleNameBroker.EnrollForBuildRequest();
+            Assert.GreaterOrEqual(enrollment.EnrolledCount, 1, "Expected enrollment to emit at least one broker mapping for alias continuity.");
+
+            string deterministicSource = toggle.globalParam;
+            Assert.IsFalse(string.IsNullOrWhiteSpace(deterministicSource), "Enrollment should assign a deterministic global parameter name.");
+            string deterministicBackup = $"ASMLite_Bak_S1_{deterministicSource}";
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = deterministicSource,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var generatedParams = LoadGeneratedParams();
+            Assert.IsTrue(generatedParams.Any(p => p.name == legacyBackup),
+                "Mapped legacy backup key must remain present after deterministic enrollment.");
+            Assert.IsTrue(generatedParams.Any(p => p.name == deterministicBackup),
+                "Deterministic backup key must be generated alongside mapped legacy alias.");
+
+            var generatedCtrl = LoadGeneratedController();
+            var saveDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
+            var loadDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            var resetDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
+
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == deterministicBackup),
+                "Save driver must keep deterministic backup copy.");
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == legacyBackup),
+                "Save driver must mirror into mapped legacy backup alias.");
+
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicBackup && p.name == deterministicSource),
+                "Load driver must keep deterministic backup load path.");
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
+                "Load driver must keep mapped legacy backup load-compatible with deterministic source.");
+
+            string deterministicDefault = $"ASMLite_Def_{deterministicSource}";
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == deterministicBackup),
+                "Reset driver must keep deterministic backup clear path.");
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == legacyBackup),
+                "Reset driver must mirror clear path into mapped legacy backup alias.");
+
+            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
+            Assert.GreaterOrEqual(report.MappedCount, 1, "Mapped continuity report counter must include legacy alias mapping.");
+            Assert.GreaterOrEqual(report.MirroredCount, 1, "Mirrored continuity report counter must include mapped legacy alias.");
+            Assert.AreEqual(0, report.UnmatchedCount, "Mapped scenario should not increment unmatched counter.");
+        }
+
+        [Test, Category("Integration")]
+        public void A27_LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths()
+        {
+            const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+
+            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for unmatched alias setup.");
+            stubAsset.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = unmatchedLegacy, valueType = VRCExpressionParameters.ValueType.Float, defaultValue = 0.1f, saved = true, networkSynced = true },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S_", valueType = VRCExpressionParameters.ValueType.Float, defaultValue = 0.2f, saved = true, networkSynced = true },
+            };
+            EditorUtility.SetDirty(stubAsset);
+            AssetDatabase.SaveAssets();
+
+            AddParam(_ctx, deterministicSource, VRCExpressionParameters.ValueType.Float, 0.5f);
+            _ctx.Comp.slotCount = 1;
+
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var generatedCtrl = LoadGeneratedController();
+            var loadDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            Assert.IsFalse(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == unmatchedLegacy && p.name == deterministicSource),
+                "Unmatched legacy backup aliases must not be wired into deterministic load path.");
+
+            var generatedParams = LoadGeneratedParams();
+            Assert.IsTrue(generatedParams.Any(p => p.name == unmatchedLegacy),
+                "Unmatched but well-formed legacy backup should remain preserved.");
+            Assert.IsFalse(generatedParams.Any(p => p.name == "ASMLite_Bak_S_"),
+                "Malformed legacy backup names must be excluded from regenerated expression params.");
+
+            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
+            Assert.GreaterOrEqual(report.UnmatchedCount, 1, "Unmatched continuity counter must include aliases with no broker mapping.");
+            Assert.GreaterOrEqual(report.MalformedCount, 1, "Malformed continuity counter must include invalid legacy backup names.");
         }
     }
 }
