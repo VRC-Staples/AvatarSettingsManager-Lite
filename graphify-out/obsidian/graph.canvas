@@ -1,0 +1,4931 @@
+{
+  "nodes": [
+    {
+      "id": "g0",
+      "type": "group",
+      "label": "Toggle Name Broker",
+      "x": 0,
+      "y": 0,
+      "width": 1320,
+      "height": 1320,
+      "color": "1"
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildDeterministicGlobalName().md",
+      "x": 20,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_buildsceneobjectpath",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildSceneObjectPath().md",
+      "x": 220,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "type": "file",
+      "file": "graphify/obsidian/.ClearPendingRestoreState().md",
+      "x": 420,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "type": "file",
+      "file": "graphify/obsidian/.CollectCandidatesForComponent().md",
+      "x": 20,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "type": "file",
+      "file": "graphify/obsidian/.DiscoverEligibleToggleCandidates().md",
+      "x": 220,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "type": "file",
+      "file": "graphify/obsidian/.EnrollForBuildRequest().md",
+      "x": 420,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_escapejson",
+      "type": "file",
+      "file": "graphify/obsidian/.EscapeJson().md",
+      "x": 20,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_executedelayedrestorenowfortests",
+      "type": "file",
+      "file": "graphify/obsidian/.ExecuteDelayedRestoreNowForTests().md",
+      "x": 220,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "type": "file",
+      "file": "graphify/obsidian/.FindAsmLiteAvatarDescriptors().md",
+      "x": 420,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "type": "file",
+      "file": "graphify/obsidian/.FindPropertyBySuffix().md",
+      "x": 20,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findtypebyfullname",
+      "type": "file",
+      "file": "graphify/obsidian/.FindTypeByFullName()_1.md",
+      "x": 220,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_getpendingrestorepayloadfortests",
+      "type": "file",
+      "file": "graphify/obsidian/.GetPendingRestorePayloadForTests().md",
+      "x": 420,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope",
+      "type": "file",
+      "file": "graphify/obsidian/.HasAsmLiteScope().md",
+      "x": 20,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_haspendingrestorestate",
+      "type": "file",
+      "file": "graphify/obsidian/.HasPendingRestoreState().md",
+      "x": 220,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_istogglemanagedreference",
+      "type": "file",
+      "file": "graphify/obsidian/.IsToggleManagedReference().md",
+      "x": 420,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_onbuildrequested",
+      "type": "file",
+      "file": "graphify/obsidian/.OnBuildRequested().md",
+      "x": 20,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "type": "file",
+      "file": "graphify/obsidian/.OnDelayedRestore().md",
+      "x": 220,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "type": "file",
+      "file": "graphify/obsidian/.PersistPendingRestoreRecords().md",
+      "x": 420,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_queuedelayedrestore",
+      "type": "file",
+      "file": "graphify/obsidian/.QueueDelayedRestore().md",
+      "x": 20,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "type": "file",
+      "file": "graphify/obsidian/.ReadFirstNonEmptyString().md",
+      "x": 220,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "type": "file",
+      "file": "graphify/obsidian/.RestorePendingMutations().md",
+      "x": 420,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_sanitizepathtoken",
+      "type": "file",
+      "file": "graphify/obsidian/.SanitizePathToken().md",
+      "x": 20,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "type": "file",
+      "file": "graphify/obsidian/.SerializeMutationRecords().md",
+      "x": 220,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_setpendingrestorepayloadfortests",
+      "type": "file",
+      "file": "graphify/obsidian/.SetPendingRestorePayloadForTests().md",
+      "x": 420,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "type": "file",
+      "file": "graphify/obsidian/.TryDeserializeMutationRecords().md",
+      "x": 20,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "type": "file",
+      "file": "graphify/obsidian/.TryEnrollToggleCandidate().md",
+      "x": 220,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "type": "file",
+      "file": "graphify/obsidian/.TryResolveToggleProperties().md",
+      "x": 420,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "type": "file",
+      "file": "graphify/obsidian/.TryRestoreMutationRecord().md",
+      "x": 20,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_unescapejson",
+      "type": "file",
+      "file": "graphify/obsidian/.UnescapeJson().md",
+      "x": 220,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_5.md",
+      "x": 420,
+      "y": 800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteToggleBuildRequestedCallback.md",
+      "x": 20,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteToggleNameBroker.md",
+      "x": 220,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteToggleNameBroker.cs.md",
+      "x": 420,
+      "y": 880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_restoreentry",
+      "type": "file",
+      "file": "graphify/obsidian/RestoreEntry.md",
+      "x": 20,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglenamebroker_restorepayload",
+      "type": "file",
+      "file": "graphify/obsidian/RestorePayload.md",
+      "x": 220,
+      "y": 960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g1",
+      "type": "group",
+      "label": "FX Controller Tests",
+      "x": 1400,
+      "y": 0,
+      "width": 1100,
+      "height": 1020,
+      "color": "2"
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a05_build_createscorrectnumberofasmlitelayers",
+      "type": "file",
+      "file": "graphify/obsidian/.A05_Build_CreatesCorrectNumberOfASMLiteLayers().md",
+      "x": 1420,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a06_eachslotlayer_hasfourstates",
+      "type": "file",
+      "file": "graphify/obsidian/.A06_EachSlotLayer_HasFourStates().md",
+      "x": 1620,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a07_eachslotlayer_defaultstateisidle",
+      "type": "file",
+      "file": "graphify/obsidian/.A07_EachSlotLayer_DefaultStateIsIdle().md",
+      "x": 1820,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a08_allstates_writedefaultvaluesisfalse",
+      "type": "file",
+      "file": "graphify/obsidian/.A08_AllStates_WriteDefaultValuesIsFalse().md",
+      "x": 1420,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a09_idletransitions_usecorrectencodedvalues",
+      "type": "file",
+      "file": "graphify/obsidian/.A09_IdleTransitions_UseCorrectEncodedValues().md",
+      "x": 1620,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a10_savedriver_hascorrectcopyentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A10_SaveDriver_HasCorrectCopyEntries().md",
+      "x": 1820,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a11_loaddriver_hascorrectcopyentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A11_LoadDriver_HasCorrectCopyEntries().md",
+      "x": 1420,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a12_resetdriver_hascorrectcopyentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A12_ResetDriver_HasCorrectCopyEntries().md",
+      "x": 1620,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a13_alldrivers_endwithsetctrltozero",
+      "type": "file",
+      "file": "graphify/obsidian/.A13_AllDrivers_EndWithSetCtrlToZero().md",
+      "x": 1820,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a14_alldrivers_havelocalonlytrue",
+      "type": "file",
+      "file": "graphify/obsidian/.A14_AllDrivers_HaveLocalOnlyTrue().md",
+      "x": 1420,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a15_ctrlparameters_containallexpectedentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A15_CtrlParameters_ContainAllExpectedEntries().md",
+      "x": 1620,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a16_duplicateavatarparam_onlyoneentryinctrlparameters",
+      "type": "file",
+      "file": "graphify/obsidian/.A16_DuplicateAvatarParam_OnlyOneEntryInCtrlParameters().md",
+      "x": 1820,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a17_preexistingduplicateasmliteparams_drainedbeforebuild",
+      "type": "file",
+      "file": "graphify/obsidian/.A17_PreExistingDuplicateASMLiteParams_DrainedBeforeBuild().md",
+      "x": 1420,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a18_defparam_hascorrectdefaultvalues",
+      "type": "file",
+      "file": "graphify/obsidian/.A18_DefParam_HasCorrectDefaultValues().md",
+      "x": 1620,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a19_fxcontroller_usesonlyonesharedctrlparam_nolegacycontrolparams",
+      "type": "file",
+      "file": "graphify/obsidian/.A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams().md",
+      "x": 1820,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_a20_slotlayers_donotuseanystatesafeboolbranches",
+      "type": "file",
+      "file": "graphify/obsidian/.A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches().md",
+      "x": 1420,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_addparam",
+      "type": "file",
+      "file": "graphify/obsidian/.AddParam()_2.md",
+      "x": 1620,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_findstate",
+      "type": "file",
+      "file": "graphify/obsidian/.FindState().md",
+      "x": 1820,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_getlayersm",
+      "type": "file",
+      "file": "graphify/obsidian/.GetLayerSM().md",
+      "x": 1420,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_loadgeneratedcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedController().md",
+      "x": 1620,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_3.md",
+      "x": 1820,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_3.md",
+      "x": 1420,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_6.md",
+      "x": 1620,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests_asmlitefxcontrollertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteFXControllerTests.md",
+      "x": 1820,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitefxcontrollertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteFXControllerTests.cs.md",
+      "x": 1420,
+      "y": 720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g2",
+      "type": "group",
+      "label": "Cleanup Tests",
+      "x": 2580,
+      "y": 0,
+      "width": 1100,
+      "height": 920,
+      "color": "3"
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a35_cleanup_removesasmlitefxlayers",
+      "type": "file",
+      "file": "graphify/obsidian/.A35_Cleanup_RemovesASMLiteFxlayers().md",
+      "x": 2600,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a36_cleanup_removesasmlitefxparametersandctrlparam",
+      "type": "file",
+      "file": "graphify/obsidian/.A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam().md",
+      "x": 2800,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a37_cleanup_removesasmliteexpressionparametersandctrlparam",
+      "type": "file",
+      "file": "graphify/obsidian/.A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam().md",
+      "x": 3000,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a38_cleanup_removessettingsmanagerrootcontrol",
+      "type": "file",
+      "file": "graphify/obsidian/.A38_Cleanup_RemovesSettingsManagerRootControl().md",
+      "x": 2600,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a39_cleanup_preservesuserownedfxparamsandmenuentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A39_Cleanup_PreservesUserOwnedFxParamsAndMenuEntries().md",
+      "x": 2800,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a40_cleanup_nullavatardescriptor_doesnotthrow",
+      "type": "file",
+      "file": "graphify/obsidian/.A40_Cleanup_NullAvatarDescriptor_DoesNotThrow().md",
+      "x": 3000,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a41_cleanup_nullordefaultfxcontroller_doesnotthrowandstillcleansmenuandexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.A41_Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams().md",
+      "x": 2600,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_a54_cleanup_report_repeatedcallsbecomedeterministicnoops",
+      "type": "file",
+      "file": "graphify/obsidian/.A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps().md",
+      "x": 2800,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_addavatarparam",
+      "type": "file",
+      "file": "graphify/obsidian/.AddAvatarParam().md",
+      "x": 3000,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_buildorfail",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildOrFail()_1.md",
+      "x": 2600,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_countasmliteexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteExprParams()_1.md",
+      "x": 2800,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_countasmlitefxparams",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteFxParams()_1.md",
+      "x": 3000,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_countasmlitelayers",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteLayers()_1.md",
+      "x": 2600,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_countsettingsmanagercontrols",
+      "type": "file",
+      "file": "graphify/obsidian/.CountSettingsManagerControls()_1.md",
+      "x": 2800,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_findfxlayerindex",
+      "type": "file",
+      "file": "graphify/obsidian/.FindFxLayerIndex().md",
+      "x": 3000,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_seedlegacyasmliteexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.SeedLegacyAsmLiteExprParams().md",
+      "x": 2600,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_seedlegacyasmlitefxparams",
+      "type": "file",
+      "file": "graphify/obsidian/.SeedLegacyAsmLiteFxParams().md",
+      "x": 2800,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_seedlegacyasmlitelayers",
+      "type": "file",
+      "file": "graphify/obsidian/.SeedLegacyAsmLiteLayers().md",
+      "x": 3000,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_seedlegacyasmlitemenu",
+      "type": "file",
+      "file": "graphify/obsidian/.SeedLegacyAsmLiteMenu().md",
+      "x": 2600,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_1.md",
+      "x": 2800,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_1.md",
+      "x": 3000,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_3.md",
+      "x": 2600,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests_asmlitecleanuptests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteCleanupTests.md",
+      "x": 2800,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecleanuptests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteCleanupTests.cs.md",
+      "x": 3000,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g3",
+      "type": "group",
+      "label": "Core Build Logic",
+      "x": 3760,
+      "y": 0,
+      "width": 1100,
+      "height": 920,
+      "color": "4"
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_addconditiontransition",
+      "type": "file",
+      "file": "graphify/obsidian/.AddConditionTransition().md",
+      "x": 3780,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_addexittimetransition",
+      "type": "file",
+      "file": "graphify/obsidian/.AddExitTimeTransition().md",
+      "x": 3980,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "type": "file",
+      "file": "graphify/obsidian/.AddSlotLayer().md",
+      "x": 4180,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_build",
+      "type": "file",
+      "file": "graphify/obsidian/.Build().md",
+      "x": 3780,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_buildbackupparamnameswithlegacypreservation",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildBackupParamNamesWithLegacyPreservation().md",
+      "x": 3980,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassets",
+      "type": "file",
+      "file": "graphify/obsidian/.CleanUpAvatarAssets().md",
+      "x": 4180,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "type": "file",
+      "file": "graphify/obsidian/.CleanUpAvatarAssetsWithReport().md",
+      "x": 3780,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_getfinalavatarparams",
+      "type": "file",
+      "file": "graphify/obsidian/.GetFinalAvatarParams().md",
+      "x": 3980,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_injectexpressionmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.InjectExpressionMenu().md",
+      "x": 4180,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_injectexpressionparams",
+      "type": "file",
+      "file": "graphify/obsidian/.InjectExpressionParams().md",
+      "x": 3780,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "type": "file",
+      "file": "graphify/obsidian/.InjectFXLayers().md",
+      "x": 3980,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "type": "file",
+      "file": "graphify/obsidian/.MapValueType().md",
+      "x": 4180,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponents",
+      "type": "file",
+      "file": "graphify/obsidian/.MigrateStaleVRCFuryComponents().md",
+      "x": 3780,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "type": "file",
+      "file": "graphify/obsidian/.MigrateStaleVRCFuryComponentsWithReport().md",
+      "x": 3980,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.PopulateExpressionMenu().md",
+      "x": 4180,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "type": "file",
+      "file": "graphify/obsidian/.PopulateExpressionParams().md",
+      "x": 3780,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.PopulateFXController().md",
+      "x": 3980,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "type": "file",
+      "file": "graphify/obsidian/.PrepareRevertedDeliveryRebuild().md",
+      "x": 4180,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_resolvesloticon",
+      "type": "file",
+      "file": "graphify/obsidian/.ResolveSlotIcon().md",
+      "x": 3780,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder_validate",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate().md",
+      "x": 3980,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_1.md",
+      "x": 4180,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder_asmlitebuilder",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuilder.md",
+      "x": 3780,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuilder",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuilder.cs.md",
+      "x": 3980,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g4",
+      "type": "group",
+      "label": "Editor Window",
+      "x": 4940,
+      "y": 0,
+      "width": 1100,
+      "height": 920,
+      "color": "5"
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "type": "file",
+      "file": "graphify/obsidian/.AddPrefabToAvatar().md",
+      "x": 4960,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_bakeassets",
+      "type": "file",
+      "file": "graphify/obsidian/.BakeAssets().md",
+      "x": 5160,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawActionButton().md",
+      "x": 5360,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawactionicons",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawActionIcons().md",
+      "x": 4960,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawAvatarPicker().md",
+      "x": 5160,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawheader",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawHeader().md",
+      "x": 5360,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawiconmode",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawIconMode().md",
+      "x": 4960,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawIconSettingsSection().md",
+      "x": 5160,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawradialwheel",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawRadialWheel().md",
+      "x": 5360,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawsettings",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawSettings().md",
+      "x": 4960,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawstatus",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawStatus().md",
+      "x": 5160,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "type": "file",
+      "file": "graphify/obsidian/.DrawWheelPreview().md",
+      "x": 5360,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "type": "file",
+      "file": "graphify/obsidian/.GetOrRefreshComponent().md",
+      "x": 4960,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_ongui",
+      "type": "file",
+      "file": "graphify/obsidian/.OnGUI()_1.md",
+      "x": 5160,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_onselectionchange",
+      "type": "file",
+      "file": "graphify/obsidian/.OnSelectionChange()_1.md",
+      "x": 5360,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_open",
+      "type": "file",
+      "file": "graphify/obsidian/.Open()_1.md",
+      "x": 4960,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_refreshpreviewcache",
+      "type": "file",
+      "file": "graphify/obsidian/.RefreshPreviewCache().md",
+      "x": 5160,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_removeprefab",
+      "type": "file",
+      "file": "graphify/obsidian/.RemovePrefab().md",
+      "x": 5360,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_sectionseparator",
+      "type": "file",
+      "file": "graphify/obsidian/.SectionSeparator().md",
+      "x": 4960,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "type": "file",
+      "file": "graphify/obsidian/.SyncPendingSlotCountFromAvatar().md",
+      "x": 5160,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_6.md",
+      "x": 5360,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow_asmlitewindow",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteWindow.md",
+      "x": 4960,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitewindow",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteWindow.cs.md",
+      "x": 5160,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g5",
+      "type": "group",
+      "label": "Builder Unit Tests",
+      "x": 6120,
+      "y": 0,
+      "width": 1100,
+      "height": 920,
+      "color": "6"
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_buildbackupparamnameswithlegacypreservation_ignoreslegacycontrolparams",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildBackupParamNamesWithLegacyPreservation_IgnoresLegacyControlParams().md",
+      "x": 6140,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_buildbackupparamnameswithlegacypreservation_keepslegacybackups_onslotexpansion",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildBackupParamNamesWithLegacyPreservation_KeepsLegacyBackups_OnSlotExpansion().md",
+      "x": 6340,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_compactint_encoding_allvalues_areunique",
+      "type": "file",
+      "file": "graphify/obsidian/.CompactInt_Encoding_AllValues_AreUnique().md",
+      "x": 6540,
+      "y": 80,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_compactint_encoding_idlevalue_iszero",
+      "type": "file",
+      "file": "graphify/obsidian/.CompactInt_Encoding_IdleValue_IsZero().md",
+      "x": 6140,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_compactint_encoding_matchesknownvalues",
+      "type": "file",
+      "file": "graphify/obsidian/.CompactInt_Encoding_MatchesKnownValues().md",
+      "x": 6340,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_compactint_encoding_maxslot8_doesnotexceed255",
+      "type": "file",
+      "file": "graphify/obsidian/.CompactInt_Encoding_MaxSlot8_DoesNotExceed255().md",
+      "x": 6540,
+      "y": 160,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_controlparam_name_isasmlitectrl",
+      "type": "file",
+      "file": "graphify/obsidian/.ControlParam_Name_IsASMLiteCtrl().md",
+      "x": 6140,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p01_buildbackupparamnames_slotdecrease_legacyslotbackupspreserved",
+      "type": "file",
+      "file": "graphify/obsidian/.P01_BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved().md",
+      "x": 6340,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p02_buildbackupparamnames_nullexistingparamnames_returnscurrentschemaonly",
+      "type": "file",
+      "file": "graphify/obsidian/.P02_BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly().md",
+      "x": 6540,
+      "y": 240,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p03_buildbackupparamnames_emptyexistingparamnames_returnscurrentschemaonly",
+      "type": "file",
+      "file": "graphify/obsidian/.P03_BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly().md",
+      "x": 6140,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p04_buildbackupparamnames_duplicatesinexisting_resultisdeduped",
+      "type": "file",
+      "file": "graphify/obsidian/.P04_BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped().md",
+      "x": 6340,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p05_buildbackupparamnames_emptyavatarparamnames_returnslegacyonlyorempty",
+      "type": "file",
+      "file": "graphify/obsidian/.P05_BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty().md",
+      "x": 6540,
+      "y": 320,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p06_buildbackupparamnames_mixedcollision_currentschemawinsnoduplicates",
+      "type": "file",
+      "file": "graphify/obsidian/.P06_BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates().md",
+      "x": 6140,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_p07_validate_nullcomponent_returnserror_notnullreferenceexception",
+      "type": "file",
+      "file": "graphify/obsidian/.P07_Validate_NullComponent_ReturnsError_NotNullReferenceException().md",
+      "x": 6340,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnserror_forallinvalidslotcounts",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsError_ForAllInvalidSlotCounts().md",
+      "x": 6540,
+      "y": 400,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnserror_whenslotcountisnine",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsError_WhenSlotCountIsNine().md",
+      "x": 6140,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnserror_whenslotcountiszero",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsError_WhenSlotCountIsZero().md",
+      "x": 6340,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnsnull_forallvalidslotcounts",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsNull_ForAllValidSlotCounts().md",
+      "x": 6540,
+      "y": 480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnsnull_whenslotcountiseight",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsNull_WhenSlotCountIsEight().md",
+      "x": 6140,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests_validate_returnsnull_whenslotcountisone",
+      "type": "file",
+      "file": "graphify/obsidian/.Validate_ReturnsNull_WhenSlotCountIsOne().md",
+      "x": 6340,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_1.md",
+      "x": 6540,
+      "y": 560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests_asmlitebuildertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuilderTests.md",
+      "x": 6140,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuilderTests.cs.md",
+      "x": 6340,
+      "y": 640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g6",
+      "type": "group",
+      "label": "Build Integration Tests",
+      "x": 0,
+      "y": 1400,
+      "width": 1100,
+      "height": 920,
+      "color": "1"
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_a46_build_slotcountone_populatesexpectedgeneratedartifacts",
+      "type": "file",
+      "file": "graphify/obsidian/.A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts().md",
+      "x": 20,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_a47_build_slotcounteight_populatesexpectedgeneratedartifacts",
+      "type": "file",
+      "file": "graphify/obsidian/.A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts().md",
+      "x": 220,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_a48_build_returnsdiscoverednonasmliteparamcount_andwritesgeneratedschema",
+      "type": "file",
+      "file": "graphify/obsidian/.A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema().md",
+      "x": 420,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_a49_build_invalidslotcount_returnsminusone_andleavesgeneratedassetsunchanged",
+      "type": "file",
+      "file": "graphify/obsidian/.A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged().md",
+      "x": 20,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_a50_repeatedbuild_isidempotentacrossgeneratedassetsurfaces",
+      "type": "file",
+      "file": "graphify/obsidian/.A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces().md",
+      "x": 220,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_addparam",
+      "type": "file",
+      "file": "graphify/obsidian/.AddParam().md",
+      "x": 420,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_buildorfail",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildOrFail().md",
+      "x": 20,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countasmliteexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteExprParams().md",
+      "x": 220,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countasmlitefxparams",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteFxParams().md",
+      "x": 420,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countasmlitelayers",
+      "type": "file",
+      "file": "graphify/obsidian/.CountASMLiteLayers().md",
+      "x": 20,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countdiscoverednonasmliteparams",
+      "type": "file",
+      "file": "graphify/obsidian/.CountDiscoveredNonASMLiteParams().md",
+      "x": 220,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countduplicateexprparamnames",
+      "type": "file",
+      "file": "graphify/obsidian/.CountDuplicateExprParamNames().md",
+      "x": 420,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countduplicatefxparamnames",
+      "type": "file",
+      "file": "graphify/obsidian/.CountDuplicateFxParamNames().md",
+      "x": 20,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_countsettingsmanagercontrols",
+      "type": "file",
+      "file": "graphify/obsidian/.CountSettingsManagerControls().md",
+      "x": 220,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_loadgeneratedexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedExprParams().md",
+      "x": 420,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_loadgeneratedfxcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedFxController().md",
+      "x": 20,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_loadgeneratedrootmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedRootMenu().md",
+      "x": 220,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_readpackageassettext",
+      "type": "file",
+      "file": "graphify/obsidian/.ReadPackageAssetText().md",
+      "x": 420,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp().md",
+      "x": 20,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown().md",
+      "x": 220,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_2.md",
+      "x": 420,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests_asmlitebuildintegrationtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuildIntegrationTests.md",
+      "x": 20,
+      "y": 2040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitebuildintegrationtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteBuildIntegrationTests.cs.md",
+      "x": 220,
+      "y": 2040,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g7",
+      "type": "group",
+      "label": "Runtime Component",
+      "x": 1400,
+      "y": 1400,
+      "width": 1100,
+      "height": 820,
+      "color": "2"
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_a42_migration_collapsesduplicatevrcfurytypenamematches",
+      "type": "file",
+      "file": "graphify/obsidian/.A42_Migration_CollapsesDuplicateVRCFuryTypeNameMatches().md",
+      "x": 1420,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_a43_migration_preservesnontargetcomponentsinmixedset",
+      "type": "file",
+      "file": "graphify/obsidian/.A43_Migration_PreservesNonTargetComponentsInMixedSet().md",
+      "x": 1620,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_a44_migration_nullcomponent_doesnotthrow",
+      "type": "file",
+      "file": "graphify/obsidian/.A44_Migration_NullComponent_DoesNotThrow().md",
+      "x": 1820,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_a45_migration_repeatedcalls_areidempotentanddonotoverremove",
+      "type": "file",
+      "file": "graphify/obsidian/.A45_Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove().md",
+      "x": 1420,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_a55_rebuildprep_mixedlegacystate_removesonlyobsoleteartifacts",
+      "type": "file",
+      "file": "graphify/obsidian/.A55_RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts().md",
+      "x": 1620,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_fullnameornull",
+      "type": "file",
+      "file": "graphify/obsidian/.FullNameOrNull().md",
+      "x": 1820,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponent_asmlitecomponent_onpreprocess",
+      "type": "file",
+      "file": "graphify/obsidian/.OnPreprocess().md",
+      "x": 1420,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_6.md",
+      "x": 1620,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_6.md",
+      "x": 1820,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponent_asmlite",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.md",
+      "x": 1420,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_9.md",
+      "x": 1620,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponent_asmlitecomponent",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponent.md",
+      "x": 1820,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponent",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponent.cs.md",
+      "x": 1420,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_asmlitemigrationtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteMigrationTests.md",
+      "x": 1620,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteMigrationTests.cs.md",
+      "x": 1820,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponent_getbuildmethod",
+      "type": "file",
+      "file": "graphify/obsidian/GetBuildMethod().md",
+      "x": 1420,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ieditoronly",
+      "type": "file",
+      "file": "graphify/obsidian/IEditorOnly.md",
+      "x": 1620,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_ipreprocesscallbackbehaviour",
+      "type": "file",
+      "file": "graphify/obsidian/IPreprocessCallbackBehaviour.md",
+      "x": 1820,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_monobehaviour",
+      "type": "file",
+      "file": "graphify/obsidian/MonoBehaviour.md",
+      "x": 1420,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_vf_model",
+      "type": "file",
+      "file": "graphify/obsidian/VF.Model.md",
+      "x": 1620,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemigrationtests_vrcfury",
+      "type": "file",
+      "file": "graphify/obsidian/VRCFury.md",
+      "x": 1820,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g8",
+      "type": "group",
+      "label": "Asset Path Tests",
+      "x": 2580,
+      "y": 1400,
+      "width": 1100,
+      "height": 820,
+      "color": "3"
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_allcriticalpaths_startwithpackageprefix",
+      "type": "file",
+      "file": "graphify/obsidian/.AllCriticalPaths_StartWithPackagePrefix().md",
+      "x": 2600,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_exprparams_pathendswithassetextension",
+      "type": "file",
+      "file": "graphify/obsidian/.ExprParams_PathEndsWithAssetExtension().md",
+      "x": 2800,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_exprparams_pathisnonempty",
+      "type": "file",
+      "file": "graphify/obsidian/.ExprParams_PathIsNonEmpty().md",
+      "x": 3000,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_fxcontroller_pathendswithcontrollerextension",
+      "type": "file",
+      "file": "graphify/obsidian/.FXController_PathEndsWithControllerExtension().md",
+      "x": 2600,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_fxcontroller_pathisnonempty",
+      "type": "file",
+      "file": "graphify/obsidian/.FXController_PathIsNonEmpty().md",
+      "x": 2800,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_allpathsarenonempty",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_AllPathsAreNonEmpty().md",
+      "x": 3000,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_allpathsarepngfiles",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_AllPathsArePngFiles().md",
+      "x": 2600,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_allpathsareunique",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_AllPathsAreUnique().md",
+      "x": 2800,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_allpathsstartwithpackageprefix",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_AllPathsStartWithPackagePrefix().md",
+      "x": 3000,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_containsexpectedcolornames",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_ContainsExpectedColorNames().md",
+      "x": 2600,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_countmatchescolornamesinwindow",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_CountMatchesColorNamesInWindow().md",
+      "x": 2800,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_geariconpaths_hasexactlyeightentries",
+      "type": "file",
+      "file": "graphify/obsidian/.GearIconPaths_HasExactlyEightEntries().md",
+      "x": 3000,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_menu_pathendswithassetextension",
+      "type": "file",
+      "file": "graphify/obsidian/.Menu_PathEndsWithAssetExtension().md",
+      "x": 2600,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_menu_pathisnonempty",
+      "type": "file",
+      "file": "graphify/obsidian/.Menu_PathIsNonEmpty().md",
+      "x": 2800,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_p08_actioniconpaths_arenonempty_havepackageprefix_andpngextension",
+      "type": "file",
+      "file": "graphify/obsidian/.P08_ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension().md",
+      "x": 3000,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_prefab_pathendswithprefabextension",
+      "type": "file",
+      "file": "graphify/obsidian/.Prefab_PathEndsWithPrefabExtension().md",
+      "x": 2600,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests_prefab_pathisnonempty",
+      "type": "file",
+      "file": "graphify/obsidian/.Prefab_PathIsNonEmpty().md",
+      "x": 2800,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor.md",
+      "x": 3000,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests_asmliteassetpathstests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteAssetPathsTests.md",
+      "x": 2600,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpathstests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteAssetPathsTests.cs.md",
+      "x": 2800,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g9",
+      "type": "group",
+      "label": "Menu Tests",
+      "x": 3760,
+      "y": 1400,
+      "width": 1100,
+      "height": 820,
+      "color": "4"
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a26_rootcontainssinglesettingsmanagersubmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.A26_RootContainsSingleSettingsManagerSubmenu().md",
+      "x": 3780,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a27_presetsmenucountandnamesmatchslotcount",
+      "type": "file",
+      "file": "graphify/obsidian/.A27_PresetsMenuCountAndNamesMatchSlotCount().md",
+      "x": 3980,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a28_eachslotmenuhassaveloadclearwithexpectedcontroltypes",
+      "type": "file",
+      "file": "graphify/obsidian/.A28_EachSlotMenuHasSaveLoadClearWithExpectedControlTypes().md",
+      "x": 4180,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a29_saveconfirmsubmenuhassingleconfirmbuttonwithencodedvalue",
+      "type": "file",
+      "file": "graphify/obsidian/.A29_SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue().md",
+      "x": 3780,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a30_loadcontrolisdirectbuttonnotsubmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.A30_LoadControlIsDirectButtonNotSubmenu().md",
+      "x": 3980,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a31_alltriggerbuttonsbindasmlitectrlparameteracrossslots",
+      "type": "file",
+      "file": "graphify/obsidian/.A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots().md",
+      "x": 4180,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a32_alltriggerbuttonsuseexpectedcompactintvalueacrossslots",
+      "type": "file",
+      "file": "graphify/obsidian/.A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots().md",
+      "x": 3780,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a33_generatedexpressionmenu_isidempotentafterrepeatedbuild",
+      "type": "file",
+      "file": "graphify/obsidian/.A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild().md",
+      "x": 3980,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_a34_regression_saturatedgeneratedroot_dropsstalecontrolsandrestoressinglewrapper",
+      "type": "file",
+      "file": "graphify/obsidian/.A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper().md",
+      "x": 4180,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_buildandgetrootmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildAndGetRootMenu().md",
+      "x": 3780,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_expectedcompactintvalue",
+      "type": "file",
+      "file": "graphify/obsidian/.ExpectedCompactIntValue().md",
+      "x": 3980,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_getcontrolorfail",
+      "type": "file",
+      "file": "graphify/obsidian/.GetControlOrFail().md",
+      "x": 4180,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_getpresetcontrol",
+      "type": "file",
+      "file": "graphify/obsidian/.GetPresetControl().md",
+      "x": 3780,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_getpresetsmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.GetPresetsMenu().md",
+      "x": 3980,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_getsettingsmanagercontrol",
+      "type": "file",
+      "file": "graphify/obsidian/.GetSettingsManagerControl().md",
+      "x": 4180,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_5.md",
+      "x": 3780,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_5.md",
+      "x": 3980,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_8.md",
+      "x": 4180,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests_asmlitemenutests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteMenuTests.md",
+      "x": 3780,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitemenutests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteMenuTests.cs.md",
+      "x": 3980,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g10",
+      "type": "group",
+      "label": "Toggle Broker Tests",
+      "x": 4940,
+      "y": 1400,
+      "width": 1100,
+      "height": 820,
+      "color": "5"
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_8.md",
+      "x": 4960,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb01_sanitizepathtoken_normalizesmalformedinput",
+      "type": "file",
+      "file": "graphify/obsidian/.TB01_SanitizePathToken_NormalizesMalformedInput().md",
+      "x": 5160,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb02_builddeterministicglobalname_dedupescollisionswithinavatar",
+      "type": "file",
+      "file": "graphify/obsidian/.TB02_BuildDeterministicGlobalName_DedupesCollisionsWithinAvatar().md",
+      "x": 5360,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb03_discovery_failsclosedwhenreflectedtypemissing",
+      "type": "file",
+      "file": "graphify/obsidian/.TB03_Discovery_FailsClosedWhenReflectedTypeMissing().md",
+      "x": 4960,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb04_discovery_scopestoasmliteavatarandskipsnontogglecontent",
+      "type": "file",
+      "file": "graphify/obsidian/.TB04_Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent().md",
+      "x": 5160,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb05_discovery_handlesblankglobalnameboundaryandschemadrift",
+      "type": "file",
+      "file": "graphify/obsidian/.TB05_Discovery_HandlesBlankGlobalNameBoundaryAndSchemaDrift().md",
+      "x": 5360,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb06_mutation_updatesonlyserializedtoggleboolandstringfields",
+      "type": "file",
+      "file": "graphify/obsidian/.TB06_Mutation_UpdatesOnlySerializedToggleBoolAndStringFields().md",
+      "x": 4960,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb07_mutation_rejectsblankassignedglobalname",
+      "type": "file",
+      "file": "graphify/obsidian/.TB07_Mutation_RejectsBlankAssignedGlobalName().md",
+      "x": 5160,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb08_callback_enrollsonlyasmlitescopedavatars_andrestoresroundtrip",
+      "type": "file",
+      "file": "graphify/obsidian/.TB08_Callback_EnrollsOnlyAsmLiteScopedAvatars_AndRestoresRoundTrip().md",
+      "x": 5360,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb09_restore_clearsmalformedpayloadandfailsclosed",
+      "type": "file",
+      "file": "graphify/obsidian/.TB09_Restore_ClearsMalformedPayloadAndFailsClosed().md",
+      "x": 4960,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb10_restore_handlesmissinginstanceidsasunresolvedandcleansup",
+      "type": "file",
+      "file": "graphify/obsidian/.TB10_Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp().md",
+      "x": 5160,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_tb11_enrollment_duplicateinvocationpersession_restoresstalethenreenrolls",
+      "type": "file",
+      "file": "graphify/obsidian/.TB11_Enrollment_DuplicateInvocationPerSession_RestoresStaleThenReenrolls().md",
+      "x": 5360,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_8.md",
+      "x": 4960,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_14.md",
+      "x": 5160,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_asmlitetogglebrokertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteToggleBrokerTests.md",
+      "x": 5360,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteToggleBrokerTests.cs.md",
+      "x": 4960,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_brokentoggle",
+      "type": "file",
+      "file": "graphify/obsidian/BrokenToggle.md",
+      "x": 5160,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_nottoggle",
+      "type": "file",
+      "file": "graphify/obsidian/NotToggle.md",
+      "x": 5360,
+      "y": 1880,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_toggle",
+      "type": "file",
+      "file": "graphify/obsidian/Toggle.md",
+      "x": 4960,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetogglebrokertests_vf_model_feature",
+      "type": "file",
+      "file": "graphify/obsidian/VF.Model.Feature.md",
+      "x": 5160,
+      "y": 1960,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g11",
+      "type": "group",
+      "label": "Component Tests",
+      "x": 6120,
+      "y": 1400,
+      "width": 880,
+      "height": 620,
+      "color": "6"
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_actioniconmode_custom_isone",
+      "type": "file",
+      "file": "graphify/obsidian/.ActionIconMode_Custom_IsOne().md",
+      "x": 6140,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_actioniconmode_default_iszero",
+      "type": "file",
+      "file": "graphify/obsidian/.ActionIconMode_Default_IsZero().md",
+      "x": 6340,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_defaultactioniconmode_isdefault",
+      "type": "file",
+      "file": "graphify/obsidian/.DefaultActionIconMode_IsDefault().md",
+      "x": 6540,
+      "y": 1480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_defaulticonmode_ismulticolor",
+      "type": "file",
+      "file": "graphify/obsidian/.DefaultIconMode_IsMultiColor().md",
+      "x": 6140,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_defaultselectedgearindex_iszero",
+      "type": "file",
+      "file": "graphify/obsidian/.DefaultSelectedGearIndex_IsZero().md",
+      "x": 6340,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_defaultslotcount_isthree",
+      "type": "file",
+      "file": "graphify/obsidian/.DefaultSlotCount_IsThree().md",
+      "x": 6540,
+      "y": 1560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_iconmode_custom_istwo",
+      "type": "file",
+      "file": "graphify/obsidian/.IconMode_Custom_IsTwo().md",
+      "x": 6140,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_iconmode_defaultvalue_matcheswindowpendingdefault",
+      "type": "file",
+      "file": "graphify/obsidian/.IconMode_DefaultValue_MatchesWindowPendingDefault().md",
+      "x": 6340,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_iconmode_multicolor_iszero",
+      "type": "file",
+      "file": "graphify/obsidian/.IconMode_MultiColor_IsZero().md",
+      "x": 6540,
+      "y": 1640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_iconmode_samecolor_isone",
+      "type": "file",
+      "file": "graphify/obsidian/.IconMode_SameColor_IsOne().md",
+      "x": 6140,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_p09_customicons_defaultisemptyarray_notnull",
+      "type": "file",
+      "file": "graphify/obsidian/.P09_CustomIcons_DefaultIsEmptyArray_NotNull().md",
+      "x": 6340,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests_slotcount_canbesettoonethrougheight",
+      "type": "file",
+      "file": "graphify/obsidian/.SlotCount_CanBeSetToOneThroughEight().md",
+      "x": 6540,
+      "y": 1720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_4.md",
+      "x": 6140,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests_asmlitecomponenttests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponentTests.md",
+      "x": 6340,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenttests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponentTests.cs.md",
+      "x": 6540,
+      "y": 1800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g12",
+      "type": "group",
+      "label": "Expression Params Tests",
+      "x": 0,
+      "y": 2400,
+      "width": 880,
+      "height": 620,
+      "color": "1"
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a19_asmlitectrl_hascorrecttypeflags_andsingleinstance_ingeneratedasset",
+      "type": "file",
+      "file": "graphify/obsidian/.A19_ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset().md",
+      "x": 20,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a20_backupparams_havelocalonlyflags_ingeneratedasset",
+      "type": "file",
+      "file": "graphify/obsidian/.A20_BackupParams_HaveLocalOnlyFlags_InGeneratedAsset().md",
+      "x": 220,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a21_legacypreservation_higherslotbackupskeptingeneratedasset",
+      "type": "file",
+      "file": "graphify/obsidian/.A21_LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset().md",
+      "x": 420,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a22_generatedexpressionparams_noduplicateasmliteentries_afterrebuild",
+      "type": "file",
+      "file": "graphify/obsidian/.A22_GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild().md",
+      "x": 20,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a23_generatedschema_usesonlysharedctrl_nolegacysafeboolcontrols",
+      "type": "file",
+      "file": "graphify/obsidian/.A23_GeneratedSchema_UsesOnlySharedCtrl_NoLegacySafeBoolControls().md",
+      "x": 220,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a24_stalegeneratedctrlshape_isnormalizedonbuild",
+      "type": "file",
+      "file": "graphify/obsidian/.A24_StaleGeneratedCtrlShape_IsNormalizedOnBuild().md",
+      "x": 420,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_a25_legacybackupflags_areforcedtolocalonly_whenpreserved",
+      "type": "file",
+      "file": "graphify/obsidian/.A25_LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved().md",
+      "x": 20,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_addparam",
+      "type": "file",
+      "file": "graphify/obsidian/.AddParam()_1.md",
+      "x": 220,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_loadgeneratedparams",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedParams().md",
+      "x": 420,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_2.md",
+      "x": 20,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_2.md",
+      "x": 220,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_5.md",
+      "x": 420,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests_asmliteexpressionparamstests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteExpressionParamsTests.md",
+      "x": 20,
+      "y": 2800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteexpressionparamstests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteExpressionParamsTests.cs.md",
+      "x": 220,
+      "y": 2800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g13",
+      "type": "group",
+      "label": "Prefab Creator",
+      "x": 1400,
+      "y": 2400,
+      "width": 880,
+      "height": 620,
+      "color": "2"
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.ConfigureVRCFuryFullController().md",
+      "x": 1420,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_createprefab",
+      "type": "file",
+      "file": "graphify/obsidian/.CreatePrefab().md",
+      "x": 1620,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "type": "file",
+      "file": "graphify/obsidian/.EnsureArraySize().md",
+      "x": 1820,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_findtypebyfullname",
+      "type": "file",
+      "file": "graphify/obsidian/.FindTypeByFullName().md",
+      "x": 1420,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_hasstaleprmsentry",
+      "type": "file",
+      "file": "graphify/obsidian/.HasStalePrmsEntry().md",
+      "x": 1620,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "type": "file",
+      "file": "graphify/obsidian/.MissingField().md",
+      "x": 1820,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "type": "file",
+      "file": "graphify/obsidian/.SetAnyObjectReference().md",
+      "x": 1420,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "type": "file",
+      "file": "graphify/obsidian/.SetInt().md",
+      "x": 1620,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "type": "file",
+      "file": "graphify/obsidian/.SetObjectReference().md",
+      "x": 1820,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "type": "file",
+      "file": "graphify/obsidian/.SetString().md",
+      "x": 1420,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_3.md",
+      "x": 1620,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabCreator.md",
+      "x": 1820,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcreator",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabCreator.cs.md",
+      "x": 1420,
+      "y": 2800,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g14",
+      "type": "group",
+      "label": "VRCFury Pipeline Tests",
+      "x": 2580,
+      "y": 2400,
+      "width": 880,
+      "height": 520,
+      "color": "3"
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_loadgeneratedcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedController()_1.md",
+      "x": 2600,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_loadgeneratedparams",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadGeneratedParams()_1.md",
+      "x": 2800,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_9.md",
+      "x": 3000,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_9.md",
+      "x": 2600,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_vf01_build_writesgeneratedassets_butdoesnotmutatefixturedescriptorsurfaces",
+      "type": "file",
+      "file": "graphify/obsidian/.VF01_Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces().md",
+      "x": 2800,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_vf02_regression_stalefirstuploadschemalag_firstrebuildusescurrentdescriptorparamset",
+      "type": "file",
+      "file": "graphify/obsidian/.VF02_Regression_StaleFirstUploadSchemaLag_FirstRebuildUsesCurrentDescriptorParamSet().md",
+      "x": 3000,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_vf03_regression_vfpickupdrift_opaquevfnamesremainunrenamedingeneratedassets",
+      "type": "file",
+      "file": "graphify/obsidian/.VF03_Regression_VFPickupDrift_OpaqueVFNamesRemainUnrenamedInGeneratedAssets().md",
+      "x": 2600,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_vf04_regression_duplicatedescriptorparams_donotduplicategeneratedkeysorbreakbuild",
+      "type": "file",
+      "file": "graphify/obsidian/.VF04_Regression_DuplicateDescriptorParams_DoNotDuplicateGeneratedKeysOrBreakBuild().md",
+      "x": 2800,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests_vf05_regression_brokerdeterministicnames_areconsumedasopaquesourceparams",
+      "type": "file",
+      "file": "graphify/obsidian/.VF05_Regression_BrokerDeterministicNames_AreConsumedAsOpaqueSourceParams().md",
+      "x": 3000,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_15.md",
+      "x": 2600,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests_asmlitevrcfurypipelinetests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteVRCFuryPipelineTests.md",
+      "x": 2800,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitevrcfurypipelinetests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteVRCFuryPipelineTests.cs.md",
+      "x": 3000,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g15",
+      "type": "group",
+      "label": "Icon Tests",
+      "x": 3760,
+      "y": 2400,
+      "width": 880,
+      "height": 520,
+      "color": "4"
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_a51_multicolor_usesperslotgeariconbyslotindex",
+      "type": "file",
+      "file": "graphify/obsidian/.A51_MultiColor_UsesPerSlotGearIconBySlotIndex().md",
+      "x": 3780,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_a52_samecolor_usesselectedgeariconacrossallslots",
+      "type": "file",
+      "file": "graphify/obsidian/.A52_SameColor_UsesSelectedGearIconAcrossAllSlots().md",
+      "x": 3980,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_a53_custom_usescustomiconandfallsbacktopresetwhennulloroutofrange",
+      "type": "file",
+      "file": "graphify/obsidian/.A53_Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange().md",
+      "x": 4180,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_buildandgetpresetsmenu",
+      "type": "file",
+      "file": "graphify/obsidian/.BuildAndGetPresetsMenu().md",
+      "x": 3780,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_getpresetsloticonorfail",
+      "type": "file",
+      "file": "graphify/obsidian/.GetPresetSlotIconOrFail().md",
+      "x": 3980,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_loadiconorfail",
+      "type": "file",
+      "file": "graphify/obsidian/.LoadIconOrFail().md",
+      "x": 4180,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_4.md",
+      "x": 3780,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_4.md",
+      "x": 3980,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_7.md",
+      "x": 4180,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests_asmliteicontests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteIconTests.md",
+      "x": 3780,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteicontests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteIconTests.cs.md",
+      "x": 3980,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g16",
+      "type": "group",
+      "label": "Parameter Discovery Tests",
+      "x": 4940,
+      "y": 2400,
+      "width": 880,
+      "height": 520,
+      "color": "5"
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a01_getfinalavatarparams_filtersasmliteprefixedparams",
+      "type": "file",
+      "file": "graphify/obsidian/.A01_GetFinalAvatarParams_FiltersASMLitePrefixedParams().md",
+      "x": 4960,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a02_getfinalavatarparams_preservesnonasmliteparamsinorder",
+      "type": "file",
+      "file": "graphify/obsidian/.A02_GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder().md",
+      "x": 5160,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a03_getfinalavatarparams_skipsnullandemptynameentries",
+      "type": "file",
+      "file": "graphify/obsidian/.A03_GetFinalAvatarParams_SkipsNullAndEmptyNameEntries().md",
+      "x": 5360,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a04_getfinalavatarparams_returnsemptylist_whenexpressionparametersisnull",
+      "type": "file",
+      "file": "graphify/obsidian/.A04_GetFinalAvatarParams_ReturnsEmptyList_WhenExpressionParametersIsNull().md",
+      "x": 4960,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a05_getfinalavatarparams_preservesvfopaquecanonicalnameswithoutrenaming",
+      "type": "file",
+      "file": "graphify/obsidian/.A05_GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming().md",
+      "x": 5160,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_a06_getfinalavatarparams_preservesbrokerassignedasmvfnames",
+      "type": "file",
+      "file": "graphify/obsidian/.A06_GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames().md",
+      "x": 5360,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_setup",
+      "type": "file",
+      "file": "graphify/obsidian/.SetUp()_7.md",
+      "x": 4960,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests_teardown",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDown()_7.md",
+      "x": 5160,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_10.md",
+      "x": 5360,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests_asmliteparameterdiscoverytests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteParameterDiscoveryTests.md",
+      "x": 4960,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteparameterdiscoverytests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteParameterDiscoveryTests.cs.md",
+      "x": 5160,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g17",
+      "type": "group",
+      "label": "Test Fixtures",
+      "x": 6120,
+      "y": 2400,
+      "width": 880,
+      "height": 520,
+      "color": "6"
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_addexpressionparam",
+      "type": "file",
+      "file": "graphify/obsidian/.AddExpressionParam().md",
+      "x": 6140,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_createchild",
+      "type": "file",
+      "file": "graphify/obsidian/.CreateChild().md",
+      "x": 6340,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_createtestavatar",
+      "type": "file",
+      "file": "graphify/obsidian/.CreateTestAvatar().md",
+      "x": 6540,
+      "y": 2480,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_resetgeneratedexprparams",
+      "type": "file",
+      "file": "graphify/obsidian/.ResetGeneratedExprParams().md",
+      "x": 6140,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_setexpressionparams",
+      "type": "file",
+      "file": "graphify/obsidian/.SetExpressionParams().md",
+      "x": 6340,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures_teardowntestavatar",
+      "type": "file",
+      "file": "graphify/obsidian/.TearDownTestAvatar().md",
+      "x": 6540,
+      "y": 2560,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_13.md",
+      "x": 6140,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestfixtures",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteTestFixtures.md",
+      "x": 6340,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteTestFixtures.cs.md",
+      "x": 6540,
+      "y": 2640,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitetestfixtures_asmlitetestcontext",
+      "type": "file",
+      "file": "graphify/obsidian/AsmLiteTestContext.md",
+      "x": 6140,
+      "y": 2720,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g18",
+      "type": "group",
+      "label": "Icon System Assets",
+      "x": 0,
+      "y": 3100,
+      "width": 660,
+      "height": 420,
+      "color": "1"
+    },
+    {
+      "id": "n_asmlite_action_icons",
+      "type": "file",
+      "file": "graphify/obsidian/ASM-Lite Action Icons Set.md",
+      "x": 20,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_banner_image",
+      "type": "file",
+      "file": "graphify/obsidian/ASM-Lite Banner Image.md",
+      "x": 220,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlite_icon_system",
+      "type": "file",
+      "file": "graphify/obsidian/ASM-Lite Icon System.md",
+      "x": 420,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlite_package",
+      "type": "file",
+      "file": "graphify/obsidian/ASM-Lite VPM Package.md",
+      "x": 20,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_backarrow_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Back Arrow Icon.md",
+      "x": 220,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_load_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Load Action Icon.md",
+      "x": 420,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_reset_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Reset Action Icon.md",
+      "x": 20,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_save_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Save Action Icon.md",
+      "x": 220,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_slidersicon_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Sliders Settings Icon.md",
+      "x": 420,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g19",
+      "type": "group",
+      "label": "Synced Param Inspector",
+      "x": 1400,
+      "y": 3100,
+      "width": 660,
+      "height": 420,
+      "color": "2"
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_ongui",
+      "type": "file",
+      "file": "graphify/obsidian/.OnGUI().md",
+      "x": 1420,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_onselectionchange",
+      "type": "file",
+      "file": "graphify/obsidian/.OnSelectionChange().md",
+      "x": 1620,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_open",
+      "type": "file",
+      "file": "graphify/obsidian/.Open().md",
+      "x": 1820,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "type": "file",
+      "file": "graphify/obsidian/.Refresh().md",
+      "x": 1420,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_4.md",
+      "x": 1620,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteSyncedParamInspectorWindow.md",
+      "x": 1820,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitesyncedparaminspectorwindow",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteSyncedParamInspectorWindow.cs.md",
+      "x": 1420,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_editorwindow",
+      "type": "file",
+      "file": "graphify/obsidian/EditorWindow.md",
+      "x": 1620,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g20",
+      "type": "group",
+      "label": "Gear Icon Color Set",
+      "x": 2580,
+      "y": 3100,
+      "width": 660,
+      "height": 420,
+      "color": "3"
+    },
+    {
+      "id": "n_bluegear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Blue Gear Icon.md",
+      "x": 2600,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_cyangear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Cyan Gear Icon.md",
+      "x": 2800,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_greengear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Green Gear Icon.md",
+      "x": 3000,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_orangegear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Orange Gear Icon.md",
+      "x": 2600,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_pinkgear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Pink Gear Icon.md",
+      "x": 2800,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_purplegear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Purple Gear Icon.md",
+      "x": 3000,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_redgear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Red Gear Icon.md",
+      "x": 2600,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_yellowgear_icon",
+      "type": "file",
+      "file": "graphify/obsidian/Yellow Gear Icon.md",
+      "x": 2800,
+      "y": 3340,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g21",
+      "type": "group",
+      "label": "Prefab Wiring Tests",
+      "x": 3760,
+      "y": 3100,
+      "width": 660,
+      "height": 400,
+      "color": "4"
+    },
+    {
+      "id": "n_asmliteprefabwiringtests_asmliteprefabwiringtests_w01_prefab_usesgeneratedassetreferences_forfullcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.W01_Prefab_UsesGeneratedAssetReferences_ForFullController().md",
+      "x": 3780,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabwiringtests_asmliteprefabwiringtests_w02_hasstaleprmsentry_detectslegacyprmsnames_andignoresothernames",
+      "type": "file",
+      "file": "graphify/obsidian/.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames().md",
+      "x": 3980,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabwiringtests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_12.md",
+      "x": 4180,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabwiringtests_asmliteprefabwiringtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabWiringTests.md",
+      "x": 3780,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabwiringtests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabWiringTests.cs.md",
+      "x": 3980,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g22",
+      "type": "group",
+      "label": "Component Editor Inspector",
+      "x": 4940,
+      "y": 3100,
+      "width": 600,
+      "height": 400,
+      "color": "5"
+    },
+    {
+      "id": "n_asmlitecomponenteditor_asmlitecomponenteditor_oninspectorgui",
+      "type": "file",
+      "file": "graphify/obsidian/.OnInspectorGUI().md",
+      "x": 4960,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenteditor_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor_2.md",
+      "x": 5160,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenteditor_asmlitecomponenteditor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponentEditor.md",
+      "x": 5360,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmlitecomponenteditor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteComponentEditor.cs.md",
+      "x": 4960,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g23",
+      "type": "group",
+      "label": "Prefab Contract Tests",
+      "x": 6120,
+      "y": 3100,
+      "width": 600,
+      "height": 400,
+      "color": "6"
+    },
+    {
+      "id": "n_asmliteprefabcontracttests_asmliteprefabcontracttests_t02_prefab_usesgeneratedassetreferences_forfullcontroller",
+      "type": "file",
+      "file": "graphify/obsidian/.T02_Prefab_UsesGeneratedAssetReferences_ForFullController().md",
+      "x": 6140,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcontracttests_asmlite_tests_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Tests.Editor_11.md",
+      "x": 6340,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcontracttests_asmliteprefabcontracttests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabContractTests.md",
+      "x": 6540,
+      "y": 3180,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteprefabcontracttests",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLitePrefabContractTests.cs.md",
+      "x": 6140,
+      "y": 3260,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g24",
+      "type": "group",
+      "label": "Asset Paths Constants",
+      "x": 0,
+      "y": 3600,
+      "width": 600,
+      "height": 400,
+      "color": "1"
+    },
+    {
+      "id": "n_asmliteassetpaths_asmlite_editor",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLite.Editor.md",
+      "x": 20,
+      "y": 3680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpaths_asmliteassetpaths",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteAssetPaths.md",
+      "x": 220,
+      "y": 3680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "n_asmliteassetpaths",
+      "type": "file",
+      "file": "graphify/obsidian/ASMLiteAssetPaths.cs.md",
+      "x": 420,
+      "y": 3680,
+      "width": 180,
+      "height": 60
+    },
+    {
+      "id": "g25",
+      "type": "group",
+      "label": "Assembly Info",
+      "x": 1400,
+      "y": 3600,
+      "width": 600,
+      "height": 400,
+      "color": "2"
+    },
+    {
+      "id": "n_assemblyinfo",
+      "type": "file",
+      "file": "graphify/obsidian/AssemblyInfo.cs.md",
+      "x": 1420,
+      "y": 3680,
+      "width": 180,
+      "height": 60
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_asmlite",
+      "fromNode": "n_asmlitecomponent",
+      "toNode": "n_asmlitecomponent_asmlite",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_asmlitecomponent",
+      "fromNode": "n_asmlitecomponent",
+      "toNode": "n_asmlitecomponent_asmlitecomponent",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_getbuildmethod",
+      "fromNode": "n_asmlitecomponent",
+      "toNode": "n_asmlitecomponent_getbuildmethod",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_monobehaviour",
+      "fromNode": "n_asmlitecomponent_asmlitecomponent",
+      "toNode": "n_monobehaviour",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_ieditoronly",
+      "fromNode": "n_asmlitecomponent_asmlitecomponent",
+      "toNode": "n_ieditoronly",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_ipreprocesscallbackbehaviour",
+      "fromNode": "n_asmlitecomponent_asmlitecomponent",
+      "toNode": "n_ipreprocesscallbackbehaviour",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_asmlitecomponent_asmlitecomponent_asmlitecomponent_onpreprocess",
+      "fromNode": "n_asmlitecomponent_asmlitecomponent",
+      "toNode": "n_asmlitecomponent_asmlitecomponent_onpreprocess",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_monobehaviour_asmlitemigrationtests_vrcfury",
+      "fromNode": "n_monobehaviour",
+      "toNode": "n_asmlitemigrationtests_vrcfury",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponent_getbuildmethod_asmlitecomponent_asmlitecomponent_onpreprocess",
+      "fromNode": "n_asmlitecomponent_getbuildmethod",
+      "toNode": "n_asmlitecomponent_asmlitecomponent_onpreprocess",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteassetpaths_asmliteassetpaths_asmlite_editor",
+      "fromNode": "n_asmliteassetpaths",
+      "toNode": "n_asmliteassetpaths_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteassetpaths_asmliteassetpaths_asmliteassetpaths",
+      "fromNode": "n_asmliteassetpaths",
+      "toNode": "n_asmliteassetpaths_asmliteassetpaths",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlite_editor",
+      "fromNode": "n_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder",
+      "fromNode": "n_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_getfinalavatarparams",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_getfinalavatarparams",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_build",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_validate",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_validate",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_buildbackupparamnameswithlegacypreservation",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_buildbackupparamnameswithlegacypreservation",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponents",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponents",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_injectexpressionparams",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_injectexpressionparams",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_injectexpressionmenu",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_injectexpressionmenu",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_cleanupavatarassets",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassets",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_addconditiontransition",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addconditiontransition",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_addexittimetransition",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addexittimetransition",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_asmlitebuilder_asmlitebuilder_resolvesloticon",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_resolvesloticon",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_getfinalavatarparams_asmlitebuilder_asmlitebuilder_build",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_getfinalavatarparams",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_build_asmlitebuilder_asmlitebuilder_validate",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_validate",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_build_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_build_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_build_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_build",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_populatefxcontroller_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_populatefxcontroller_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_populatefxcontroller",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_addslotlayer_asmlitebuilder_asmlitebuilder_addconditiontransition",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addconditiontransition",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_addslotlayer_asmlitebuilder_asmlitebuilder_addexittimetransition",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_addexittimetransition",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_addslotlayer_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_addslotlayer",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_buildbackupparamnameswithlegacypreservation_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_buildbackupparamnameswithlegacypreservation",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionparams",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_populateexpressionmenu_asmlitebuilder_asmlitebuilder_resolvesloticon",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_populateexpressionmenu",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_resolvesloticon",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponents_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponents",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_migratestalevrcfurycomponentswithreport",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_preparereverteddeliveryrebuild",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_injectfxlayers_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_injectfxlayers",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_mapvaluetype",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitebuilder_asmlitebuilder_cleanupavatarassets_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "fromNode": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassets",
+      "toNode": "n_asmlitebuilder_asmlitebuilder_cleanupavatarassetswithreport",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponenteditor_asmlitecomponenteditor_asmlite_editor",
+      "fromNode": "n_asmlitecomponenteditor",
+      "toNode": "n_asmlitecomponenteditor_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponenteditor_asmlitecomponenteditor_asmlitecomponenteditor",
+      "fromNode": "n_asmlitecomponenteditor",
+      "toNode": "n_asmlitecomponenteditor_asmlitecomponenteditor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitecomponenteditor_asmlitecomponenteditor_asmlitecomponenteditor_asmlitecomponenteditor_oninspectorgui",
+      "fromNode": "n_asmlitecomponenteditor_asmlitecomponenteditor",
+      "toNode": "n_asmlitecomponenteditor_asmlitecomponenteditor_oninspectorgui",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmlite_editor",
+      "fromNode": "n_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator",
+      "fromNode": "n_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_hasstaleprmsentry",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_hasstaleprmsentry",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_createprefab",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_createprefab",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_findtypebyfullname",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_findtypebyfullname",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_createprefab_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_createprefab",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_findtypebyfullname",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_findtypebyfullname",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_configurevrcfuryfullcontroller",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_ensurearraysize",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_setobjectreference_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_setobjectreference",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_setanyobjectreference",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_setstring_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_setstring",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteprefabcreator_asmliteprefabcreator_setint_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "fromNode": "n_asmliteprefabcreator_asmliteprefabcreator_setint",
+      "toNode": "n_asmliteprefabcreator_asmliteprefabcreator_missingfield",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlite_editor",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_editorwindow",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_editorwindow",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_open",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_open",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_onselectionchange",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_onselectionchange",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_ongui",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_ongui",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_editorwindow_asmlitewindow_asmlitewindow",
+      "fromNode": "n_editorwindow",
+      "toNode": "n_asmlitewindow_asmlitewindow",
+      "label": "inherits [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_onselectionchange_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_onselectionchange",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_ongui_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "fromNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_ongui",
+      "toNode": "n_asmlitesyncedparaminspectorwindow_asmlitesyncedparaminspectorwindow_refresh",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlite_editor",
+      "fromNode": "n_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "fromNode": "n_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restorepayload",
+      "fromNode": "n_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_restorepayload",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restoreentry",
+      "fromNode": "n_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_restoreentry",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback",
+      "fromNode": "n_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_haspendingrestorestate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_haspendingrestorestate",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_setpendingrestorepayloadfortests",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_setpendingrestorepayloadfortests",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_getpendingrestorepayloadfortests",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_getpendingrestorepayloadfortests",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_executedelayedrestorenowfortests",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_executedelayedrestorenowfortests",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_sanitizepathtoken",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_sanitizepathtoken",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_queuedelayedrestore",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_queuedelayedrestore",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_istogglemanagedreference",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_istogglemanagedreference",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_escapejson",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_escapejson",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_unescapejson",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_unescapejson",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_buildsceneobjectpath",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_buildsceneobjectpath",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_asmlitetogglenamebroker_findtypebyfullname",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findtypebyfullname",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_hasasmlitescope",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findasmliteavatardescriptors",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_queuedelayedrestore",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_queuedelayedrestore",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_onbuildrequested",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_enrollforbuildrequest",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_onbuildrequested",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_clearpendingrestorestate",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_restorependingmutations",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_executedelayedrestorenowfortests_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_executedelayedrestorenowfortests",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_ondelayedrestore",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates_asmlitetogglenamebroker_asmlitetogglenamebroker_findtypebyfullname",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findtypebyfullname",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_discovereligibletogglecandidates",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_sanitizepathtoken_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_sanitizepathtoken",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_builddeterministicglobalname",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryenrolltogglecandidate",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryrestoremutationrecord",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_persistpendingrestorerecords",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords_asmlitetogglenamebroker_asmlitetogglenamebroker_escapejson",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_serializemutationrecords",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_escapejson",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords_asmlitetogglenamebroker_asmlitetogglenamebroker_unescapejson",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_trydeserializemutationrecords",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_unescapejson",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent_asmlitetogglenamebroker_asmlitetogglenamebroker_istogglemanagedreference",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_istogglemanagedreference",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent_asmlitetogglenamebroker_asmlitetogglenamebroker_buildsceneobjectpath",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_buildsceneobjectpath",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_collectcandidatesforcomponent",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_tryresolvetoggleproperties",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_findpropertybysuffix",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglenamebroker_readfirstnonemptystring",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_onbuildrequested",
+      "fromNode": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback",
+      "toNode": "n_asmlitetogglenamebroker_asmlitetogglebuildrequestedcallback_onbuildrequested",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlite_editor",
+      "fromNode": "n_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlite_editor",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow",
+      "fromNode": "n_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow",
+      "label": "contains [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_open",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_open",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_ongui",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_sectionseparator",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_sectionseparator",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawheader",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawheader",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawsettings",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawsettings",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawiconmode",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawiconmode",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawactionicons",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawactionicons",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_refreshpreviewcache",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_refreshpreviewcache",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawradialwheel",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawradialwheel",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawstatus",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawstatus",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_drawactionbutton",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_bakeassets",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_bakeassets",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_removeprefab",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_removeprefab",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_asmlitewindow_asmlitewindow_onselectionchange",
+      "fromNode": "n_asmlitewindow_asmlitewindow",
+      "toNode": "n_asmlitewindow_asmlitewindow_onselectionchange",
+      "label": "method [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawheader",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawheader",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawsettings",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawsettings",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_sectionseparator",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_sectionseparator",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawstatus",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawstatus",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_ongui_asmlitewindow_asmlitewindow_drawactionbutton",
+      "fromNode": "n_asmlitewindow_asmlitewindow_ongui",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawavatarpicker_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawavatarpicker",
+      "toNode": "n_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawsettings_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawsettings",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawiconsettingssection_asmlitewindow_asmlitewindow_drawiconmode",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawiconmode",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawiconsettingssection_asmlitewindow_asmlitewindow_drawactionicons",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawactionicons",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawiconsettingssection_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawiconsettingssection",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawiconmode_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawiconmode",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawactionicons_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawactionicons",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_refreshpreviewcache_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "fromNode": "n_asmlitewindow_asmlitewindow_refreshpreviewcache",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawwheelpreview_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawwheelpreview_asmlitewindow_asmlitewindow_drawradialwheel",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawwheelpreview",
+      "toNode": "n_asmlitewindow_asmlitewindow_drawradialwheel",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawstatus_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawstatus",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawactionbutton_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "toNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawactionbutton_asmlitewindow_asmlitewindow_bakeassets",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "toNode": "n_asmlitewindow_asmlitewindow_bakeassets",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_drawactionbutton_asmlitewindow_asmlitewindow_removeprefab",
+      "fromNode": "n_asmlitewindow_asmlitewindow_drawactionbutton",
+      "toNode": "n_asmlitewindow_asmlitewindow_removeprefab",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_getorrefreshcomponent_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "fromNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "toNode": "n_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_getorrefreshcomponent_asmlitewindow_asmlitewindow_bakeassets",
+      "fromNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "toNode": "n_asmlitewindow_asmlitewindow_bakeassets",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_getorrefreshcomponent_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "fromNode": "n_asmlitewindow_asmlitewindow_getorrefreshcomponent",
+      "toNode": "n_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_addprefabtoavatar_asmlitewindow_asmlitewindow_bakeassets",
+      "fromNode": "n_asmlitewindow_asmlitewindow_addprefabtoavatar",
+      "toNode": "n_asmlitewindow_asmlitewindow_bakeassets",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar_asmlitewindow_asmlitewindow_onselectionchange",
+      "fromNode": "n_asmlitewindow_asmlitewindow_syncpendingslotcountfromavatar",
+      "toNode": "n_asmlitewindow_asmlitewindow_onselectionchange",
+      "label": "calls [EXTRACTED]"
+    },
+    {
+      "id": "e_asmliteassetpathstests_asmliteassetpathstests_asmlite_tests_editor",
+      "fromNode": "n_asmliteassetpathstests",
+      "toNode": "n_asmliteassetpathstests_asmlite_tests_editor",
+      "label": "contains [EXTRACTED]"
+    }
+  ]
+}

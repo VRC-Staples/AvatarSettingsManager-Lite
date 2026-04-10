@@ -1,0 +1,13 @@
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\bin\Debug\netstandard2.1\ASMLite.Editor.deps.json
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\bin\Debug\netstandard2.1\ASMLite.Editor.dll
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\bin\Debug\netstandard2.1\ASMLite.Editor.pdb
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.csproj.AssemblyReference.cache
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.AssemblyInfoInputs.cache
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.AssemblyInfo.cs
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.csproj.CoreCompileInputs.cache
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.sourcelink.json
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.dll
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite.Editor.pdb
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\bin\Debug\netstandard2.1\ASMLite.Runtime.pdb
+C:\Users\Staples\Documents\GitHub\AvatarSettingsManager-Lite\Tools\ci\unity-project\obj\Debug\netstandard2.1\ASMLite..3353BE40.Up2Date

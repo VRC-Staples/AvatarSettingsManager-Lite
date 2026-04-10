@@ -1,0 +1,95 @@
+{
+  "version": 3,
+  "targets": {
+    ".NETStandard,Version=v2.1": {
+      "ASMLite.Runtime/1.0.0": {
+        "type": "project",
+        "framework": ".NETStandard,Version=v2.1",
+        "compile": {
+          "bin/placeholder/ASMLite.Runtime.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/ASMLite.Runtime.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ASMLite.Runtime/1.0.0": {
+      "type": "project",
+      "path": "ASMLite.Runtime.csproj",
+      "msbuildProject": "ASMLite.Runtime.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    ".NETStandard,Version=v2.1": [
+      "ASMLite.Runtime >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\Staples\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Editor.csproj",
+      "projectName": "ASMLite.Editor",
+      "projectPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Editor.csproj",
+      "packagesPath": "C:\\Users\\Staples\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\Staples\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "netstandard2.1"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "projectReferences": {
+            "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj": {
+              "projectPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "allWarningsAsErrors": true,
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      }
+    },
+    "frameworks": {
+      "netstandard2.1": {
+        "targetAlias": "netstandard2.1",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "NETStandard.Library": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.419\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

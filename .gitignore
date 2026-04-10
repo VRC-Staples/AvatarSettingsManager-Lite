@@ -15,6 +15,7 @@ claude.md
 .artifacts/
 artifacts/
 .mcp.json
+.githooks/
 
 # Unity generated (not part of the package)
 Library/
