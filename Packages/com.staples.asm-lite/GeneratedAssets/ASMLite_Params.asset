@@ -19,13 +19,13 @@ MonoBehaviour:
     saved: 0
     defaultValue: 0
     networkSynced: 0
-  - name: ASMLite_Bak_S1_ASM_VF_Outfit_Hood__Avatar_ASM_Lite
+  - name: ASMLite_Bak_S1_ASM_VF_Menu_Hat__TestAvatar
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF777_Menu/Hat
     valueType: 2
     saved: 1
     defaultValue: 1
-    networkSynced: 0
-  - name: ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite
-    valueType: 1
-    saved: 1
-    defaultValue: 0.5
     networkSynced: 0

@@ -155,5 +155,31 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("ASM_VF_Outfit_Hat__Avatar_ASM_Lite", result[1].name,
                 "A06 regression guard: broker-assigned deterministic name must remain unchanged.");
         }
+
+        // A07: deterministic live params remain discoverable while legacy backup aliases stay excluded from discovery.
+        [Test]
+        public void A07_GetFinalAvatarParams_UsesLiveDeterministicSources_NotPreservedLegacyBackupAliases()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "ASM_VF_Menu_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "FacialBlend", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S1_VF777_Menu/Hat", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Def_ASM_VF_Menu_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
+
+            Assert.AreEqual(2, result.Count,
+                "A07 regression guard: only live non-ASMLite source params should survive discovery when legacy aliases are present.");
+            Assert.AreEqual("ASM_VF_Menu_Hat__Avatar_ASM_Lite", result[0].name,
+                "A07 regression guard: deterministic source param must remain discoverable as the live source of truth.");
+            Assert.AreEqual("FacialBlend", result[1].name,
+                "A07 regression guard: non-VF sibling source params must remain discoverable alongside deterministic VF sources.");
+            Assert.IsFalse(result.Exists(p => p != null && p.name == "ASMLite_Bak_S1_VF777_Menu/Hat"),
+                "A07 regression guard: preserved legacy backup aliases must not be rediscovered as live avatar source params.");
+        }
     }
 }

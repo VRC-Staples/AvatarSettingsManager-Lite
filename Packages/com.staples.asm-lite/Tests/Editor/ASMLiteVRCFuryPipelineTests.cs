@@ -3,6 +3,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase;
 using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
@@ -20,6 +21,8 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
             ASMLiteTestFixtures.ResetGeneratedExprParams();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "VF01: fixture creation returned null context.");
@@ -28,6 +31,8 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
         }
 
@@ -44,6 +49,19 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(generatedExpr, $"{aid}: generated expression params must exist.");
             Assert.IsNotNull(generatedExpr.parameters, $"{aid}: generated expression params list must not be null.");
             return generatedExpr;
+        }
+
+        private static VRC_AvatarParameterDriver LoadSlotDriver(string aid, AnimatorController ctrl, string layerName, string stateName)
+        {
+            var layer = ctrl.layers.FirstOrDefault(l => l.name == layerName);
+            Assert.IsNotNull(layer.stateMachine, $"{aid}: expected layer '{layerName}' in generated controller.");
+
+            var state = layer.stateMachine.states.FirstOrDefault(s => s.state.name == stateName).state;
+            Assert.IsNotNull(state, $"{aid}: expected state '{stateName}' in layer '{layerName}'.");
+
+            var driver = state.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
+            Assert.IsNotNull(driver, $"{aid}: expected one VRCAvatarParameterDriver on state '{stateName}'.");
+            return driver;
         }
 
         [Test, Category("Integration")]
@@ -267,6 +285,106 @@ namespace ASMLite.Tests.Editor
                 "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
                 "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF06_Regression_DeterministicRebuild_PreservesMappedLegacyBackupAliasesForLoadContinuity()
+        {
+            const string legacySource = "VF777_Menu/Hat";
+            const string legacyBackup = "ASMLite_Bak_S1_VF777_Menu/Hat";
+
+            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(stubAsset, "VF06 setup: generated expression parameters asset must exist.");
+            stubAsset.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter
+                {
+                    name = legacyBackup,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                }
+            };
+            EditorUtility.SetDirty(stubAsset);
+            AssetDatabase.SaveAssets();
+
+            _ctx.Comp.slotCount = 1;
+
+            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
+            var toggle = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = false,
+                globalParam = legacySource,
+                menuPath = "Menu/Hat",
+                name = "Hat",
+            };
+            vf.content = toggle;
+
+            var enrollment = ASMLiteToggleNameBroker.EnrollForBuildRequest();
+            Assert.GreaterOrEqual(enrollment.EnrolledCount, 1,
+                "VF06 setup: expected deterministic broker enrollment before continuity build.");
+
+            string deterministicSource = toggle.globalParam;
+            Assert.IsFalse(string.IsNullOrWhiteSpace(deterministicSource),
+                "VF06 setup: enrollment should assign deterministic global parameter name.");
+            Assert.AreNotEqual(legacySource, deterministicSource,
+                "VF06 setup: deterministic source should not keep legacy VF{id}_ global name verbatim.");
+            string deterministicBackup = $"ASMLite_Bak_S1_{deterministicSource}";
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = deterministicSource,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                $"VF06: deterministic rebuild should discover one live deterministic source param. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF06");
+            var generatedExpr = LoadGeneratedParams("VF06");
+            var saveDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
+            var loadDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            var resetDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
+
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == deterministicSource),
+                "VF06 regression guard: generated FX controller must consume deterministic source param on rebuild.");
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == legacySource),
+                "VF06 regression guard: generated FX controller must not regress to legacy VF{id}_ source declaration after deterministic enrollment.");
+
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == deterministicBackup),
+                "VF06 regression guard: deterministic backup key must be generated from deterministic source.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == legacyBackup),
+                "VF06 regression guard: mapped legacy backup alias must remain preserved for preset continuity.");
+
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == deterministicBackup),
+                "VF06 regression guard: save path must keep deterministic backup copy.");
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == legacyBackup),
+                "VF06 regression guard: save path must mirror into mapped legacy backup alias.");
+
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicBackup && p.name == deterministicSource),
+                "VF06 regression guard: load path must keep deterministic backup source.");
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
+                "VF06 regression guard: load path must remain compatible with legacy mapped backup alias.");
+
+            string deterministicDefault = $"ASMLite_Def_{deterministicSource}";
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == deterministicBackup),
+                "VF06 regression guard: clear path must keep deterministic backup reset wiring.");
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == legacyBackup),
+                "VF06 regression guard: clear path must mirror mapped legacy alias reset wiring.");
+
+            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
+            Assert.GreaterOrEqual(report.MappedCount, 1,
+                "VF06 regression guard: continuity diagnostics must count mapped legacy aliases.");
+            Assert.GreaterOrEqual(report.MirroredCount, 1,
+                "VF06 regression guard: continuity diagnostics must count mirrored legacy aliases.");
+            Assert.AreEqual(0, report.UnmatchedCount,
+                "VF06 regression guard: mapped scenario should not report unmatched aliases.");
         }
     }
 }
