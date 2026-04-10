@@ -6,6 +6,24 @@ All notable changes to ASM-Lite are documented here.
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-04-10
+
+### Added
+- Deterministic VRCFury Toggle global-name enrollment via broker flow (`ASM_VF_*`) with fail-closed, serialized-field-scoped mutation and build-time restore lifecycle.
+- Passive broker diagnostics surfaced in editor status/reporting to expose enrollment, collision planning, restore outcomes, and continuity mapping counters.
+- Added a fail-closed CI verification script (`Tools/ci/verify-m010-contract-tests.py`) and workflow wiring to ensure critical regression test cases are present and passing in generated NUnit XML results.
+
+### Changed
+- Parameter discovery now includes broker-assigned global toggles even when they are not present in descriptor `expressionParameters`, preserving preset backup/load coverage for eligible `useGlobalParam` toggles.
+- Collision handling moved to deterministic planning with descriptor preflight reservation and order-invariant assignment behavior.
+- Legacy backup continuity now uses broker original→assigned identity mapping for safe alias mirroring, with explicit `mapped`/`mirrored`/`unmatched`/`malformed` accounting.
+- CI verification flow now runs explicit critical regression checks in addition to existing release-gate checks.
+- Added ignore rules for generated analysis output directories so generated artifacts are not accidentally tracked.
+
+### Fixed
+- Preset Save/Load continuity for legacy `VF{id}_` schemas after deterministic enrollment, including safe handling of malformed/unmatched legacy aliases without incorrect load-path wiring.
+- VRCFury dual-schema discovery compatibility (`content` and `features[]`) for Toggle candidate discovery under schema drift.
+
 ## [1.0.8] - 2026-04-09
 
 ### Fixed
