@@ -17,6 +17,12 @@ artifacts/
 .mcp.json
 .githooks/
 
+# Generated analysis outputs
+graphify-out/
+graphify-out.meta
+Packages/com.staples.asm-lite/graphify-out/
+Packages/com.staples.asm-lite/graphify-out.meta
+
 # Unity generated (not part of the package)
 Library/
 Temp/
