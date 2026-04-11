@@ -1109,6 +1109,7 @@ namespace ASMLite.Editor
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
             // is never broken.
             string effectiveRootControlName = ResolveEffectiveRootControlName(component);
+            Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
             rootMenu.controls = new List<VRCExpressionsMenu.Control>
             {
                 new VRCExpressionsMenu.Control
@@ -1116,7 +1117,7 @@ namespace ASMLite.Editor
                     name    = effectiveRootControlName,
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = presetsMenu,
-                    icon    = iconPresets,
+                    icon    = effectiveRootControlIcon,
                 }
             };
 
@@ -1477,13 +1478,14 @@ namespace ASMLite.Editor
             }
 
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
+            Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
 
             rootMenu.controls.Add(new VRCExpressionsMenu.Control
             {
                 name    = effectiveRootControlName,
                 type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                 subMenu = presetsMenu,
-                icon    = iconPresets,
+                icon    = effectiveRootControlIcon,
             });
 
             EditorUtility.SetDirty(rootMenu);
@@ -1616,6 +1618,19 @@ namespace ASMLite.Editor
 
             string trimmed = component.customRootName?.Trim();
             return string.IsNullOrWhiteSpace(trimmed) ? DefaultRootControlName : trimmed;
+        }
+
+        /// <summary>
+        /// Resolves the root wrapper menu control icon for generated/injected paths.
+        /// Uses the custom icon only when explicitly enabled and non-null; otherwise
+        /// falls back to the bundled presets icon contract.
+        /// </summary>
+        internal static Texture2D ResolveEffectiveRootControlIcon(ASMLiteComponent component, Texture2D fallbackIcon)
+        {
+            if (component == null || !component.useCustomRootIcon)
+                return fallbackIcon;
+
+            return component.customRootIcon != null ? component.customRootIcon : fallbackIcon;
         }
 
         /// <summary>

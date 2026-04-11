@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
@@ -53,6 +54,13 @@ namespace ASMLite.Tests.Editor
             return rootControl;
         }
 
+        private static Texture2D LoadIconOrFail(string path, string aid)
+        {
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            Assert.IsNotNull(icon, $"{aid}: expected icon asset at '{path}' but LoadAssetAtPath returned null.");
+            return icon;
+        }
+
         [Test, Category("Integration")]
         public void R081_DefaultRootName_WhenCustomToggleDisabled()
         {
@@ -100,6 +108,79 @@ namespace ASMLite.Tests.Editor
             var secondRootControl = BuildAndGetRootControl("R081-rebuild-second");
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, secondRootControl.name,
                 "R081: disabled toggle must restore default root name on repeated build.");
+        }
+
+        [Test, Category("Integration")]
+        public void R080_DefaultRootIcon_WhenCustomIconToggleDisabled()
+        {
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R080-default-icon-disabled");
+            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[1], "R080-default-icon-disabled");
+
+            var rootControl = BuildAndGetRootControl("R080-default-icon-disabled");
+            Assert.AreSame(fallbackIcon, rootControl.icon,
+                "R080: disabled custom root icon must fall back to bundled presets icon.");
+        }
+
+        [Test, Category("Integration")]
+        public void R080_CustomRootIcon_UsesExactTextureReference_WhenEnabled()
+        {
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "R080-custom-icon-enabled");
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = customIcon;
+
+            var rootControl = BuildAndGetRootControl("R080-custom-icon-enabled");
+            Assert.AreSame(customIcon, rootControl.icon,
+                "R080: enabled custom root icon must use the exact supplied Texture2D reference.");
+        }
+
+        [Test, Category("Integration")]
+        public void R084_CustomRootIconFallback_WhenEnabledButNull()
+        {
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R084-null-icon-fallback");
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = null;
+
+            var rootControl = BuildAndGetRootControl("R084-null-icon-fallback");
+            Assert.AreSame(fallbackIcon, rootControl.icon,
+                "R084: enabled custom icon toggle with null texture must fall back to bundled presets icon.");
+        }
+
+        [Test, Category("Integration")]
+        public void R080_CombinedNameAndIconOverride_AppliesTogetherWithoutWrapperDrift()
+        {
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[3], "R080-combined-name-icon");
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = "  Creator Settings  ";
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = customIcon;
+
+            var rootControl = BuildAndGetRootControl("R080-combined-name-icon");
+            Assert.AreEqual("Creator Settings", rootControl.name,
+                "R080: combined override must apply trimmed custom root name.");
+            Assert.AreSame(customIcon, rootControl.icon,
+                "R080: combined override must apply the custom root icon reference.");
+            Assert.IsNotNull(rootControl.subMenu,
+                "R080: combined override must preserve root submenu wiring.");
+        }
+
+        [Test, Category("Integration")]
+        public void R084_RepeatedBuild_CustomRootIconThenDisabledToggle_RestoresFallbackIcon()
+        {
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R084-rebuild-icon-fallback");
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[5], "R084-rebuild-icon-fallback");
+
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = customIcon;
+            var firstRootControl = BuildAndGetRootControl("R084-rebuild-icon-first");
+            Assert.AreSame(customIcon, firstRootControl.icon,
+                "R084: first build should apply custom root icon reference.");
+
+            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.customRootIcon = customIcon;
+            var secondRootControl = BuildAndGetRootControl("R084-rebuild-icon-second");
+            Assert.AreSame(fallbackIcon, secondRootControl.icon,
+                "R084: disabling root icon override must restore fallback icon on repeated build.");
         }
     }
 }
