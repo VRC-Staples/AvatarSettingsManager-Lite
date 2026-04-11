@@ -43,6 +43,8 @@ namespace ASMLite.Editor
         /// </summary>
         internal const string CtrlParam = "ASMLite_Ctrl";
 
+        internal const string DefaultRootControlName = "Settings Manager";
+
         internal readonly struct CleanupReport
         {
             internal CleanupReport(int fxLayersRemoved, int fxParamsRemoved, int exprParamsRemoved, int menuControlsRemoved, bool descriptorMissing)
@@ -1106,11 +1108,12 @@ namespace ASMLite.Editor
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
             // is never broken.
+            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
             rootMenu.controls = new List<VRCExpressionsMenu.Control>
             {
                 new VRCExpressionsMenu.Control
                 {
-                    name    = "Settings Manager",
+                    name    = effectiveRootControlName,
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = presetsMenu,
                     icon    = iconPresets,
@@ -1430,8 +1433,8 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Injects the ASM-Lite "Settings Manager" submenu entry directly into the
-        /// avatar's VRCExpressionsMenu. Removes any previously injected entry first
+        /// Injects the ASM-Lite root submenu entry directly into the avatar's
+        /// VRCExpressionsMenu. Removes any previously injected entry first
         /// (idempotent). The submenu references the generated presets menu asset.
         /// </summary>
         private static void InjectExpressionMenu(VRCAvatarDescriptor avDesc, ASMLiteComponent component)
@@ -1446,11 +1449,7 @@ namespace ASMLite.Editor
             if (rootMenu.controls == null)
                 rootMenu.controls = new List<VRCExpressionsMenu.Control>();
 
-            // Remove existing "Settings Manager" entry (idempotent)
-            rootMenu.controls.RemoveAll(c => c.name == "Settings Manager"
-                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
-
-            // Load the generated presets menu that PopulateExpressionMenu created
+            // Load the generated presets menu that PopulateExpressionMenu created.
             string presetsMenuPath = $"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset";
             var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
             if (presetsMenu == null)
@@ -1459,10 +1458,21 @@ namespace ASMLite.Editor
                 return;
             }
 
+            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
+
+            // Remove existing ASM-Lite root entries (idempotent), including stale names
+            // from toggle flips between custom and default root naming.
+            rootMenu.controls.RemoveAll(c =>
+                c != null
+                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                && (string.Equals(c.name, DefaultRootControlName, StringComparison.Ordinal)
+                    || string.Equals(c.name, effectiveRootControlName, StringComparison.Ordinal)
+                    || string.Equals(AssetDatabase.GetAssetPath(c.subMenu), presetsMenuPath, StringComparison.Ordinal)));
+
             // Check VRC menu control limit (8 max)
             if (rootMenu.controls.Count >= 8)
             {
-                Debug.LogError("[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add Settings Manager entry.");
+                Debug.LogError($"[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add {effectiveRootControlName} entry.");
                 return;
             }
 
@@ -1470,7 +1480,7 @@ namespace ASMLite.Editor
 
             rootMenu.controls.Add(new VRCExpressionsMenu.Control
             {
-                name    = "Settings Manager",
+                name    = effectiveRootControlName,
                 type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                 subMenu = presetsMenu,
                 icon    = iconPresets,
@@ -1479,7 +1489,7 @@ namespace ASMLite.Editor
             EditorUtility.SetDirty(rootMenu);
 
 #if ASM_LITE_VERBOSE
-            Debug.Log("[ASM-Lite] InjectExpressionMenu: 'Settings Manager' entry added to avatar expression menu.");
+            Debug.Log($"[ASM-Lite] InjectExpressionMenu: '{effectiveRootControlName}' entry added to avatar expression menu.");
 #endif
         }
 
@@ -1576,7 +1586,7 @@ namespace ASMLite.Editor
                     var control = rootMenu.controls[i];
                     if (control == null)
                         continue;
-                    if (control.name != "Settings Manager")
+                    if (control.name != DefaultRootControlName)
                         continue;
                     if (control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
                         continue;
@@ -1593,6 +1603,20 @@ namespace ASMLite.Editor
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resolves the root wrapper menu control name for generated/injected paths.
+        /// Uses the trimmed custom value only when explicitly enabled; otherwise falls
+        /// back to the baseline Settings Manager contract.
+        /// </summary>
+        internal static string ResolveEffectiveRootControlName(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultRootControlName;
+
+            string trimmed = component.customRootName?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultRootControlName : trimmed;
+        }
 
         /// <summary>
         /// Maps a VRCExpressionParameters ValueType to the corresponding
