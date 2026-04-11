@@ -166,6 +166,8 @@ namespace ASMLite.Editor
                     SectionSeparator();
                     DrawIconSettingsSection();
                     SectionSeparator();
+                    DrawCustomizeSection();
+                    SectionSeparator();
                     DrawStatus();
                     EditorGUILayout.Space(16);
                     DrawActionButton();
@@ -249,6 +251,7 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar = newAvatar;
                 _cachedComponent = null;
+                _lastRefreshFrame = -1;
                 _cachedCustomParamCount = -1;
                 _discoveredParamCount = -1;
 
@@ -321,6 +324,161 @@ namespace ASMLite.Editor
 
             EditorGUILayout.Space(8);
             DrawWheelPreview();
+        }
+
+        private static string[] ParseExcludedParameterNames(string rawValue)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+                return Array.Empty<string>();
+
+            return SanitizeExcludedParameterNames(
+                rawValue
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(v => v.Trim())
+                    .ToArray());
+        }
+
+        private void SetComponentBool(ASMLiteComponent component, string undoLabel, ref bool target, bool value)
+        {
+            if (target == value)
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentTexture(ASMLiteComponent component, string undoLabel, ref Texture2D target, Texture2D value)
+        {
+            if (target == value)
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentString(ASMLiteComponent component, string undoLabel, ref string target, string value)
+        {
+            string normalized = NormalizeOptionalString(value);
+            if (string.Equals(target, normalized, StringComparison.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = normalized;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentExcludedNames(ASMLiteComponent component, string undoLabel, string[] value)
+        {
+            string[] sanitized = SanitizeExcludedParameterNames(value);
+
+            if (component.excludedParameterNames != null && component.excludedParameterNames.SequenceEqual(sanitized, StringComparer.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            component.excludedParameterNames = sanitized;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void DrawCustomizeSection()
+        {
+            EditorGUILayout.LabelField("Customize", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "All customization options are opt-in. Leave toggles off to keep current ASM-Lite generated output behavior.",
+                MessageType.None);
+
+            var component = GetOrRefreshComponent();
+
+            EditorGUILayout.BeginVertical("box");
+
+            bool useCustomRootIcon = component ? component.useCustomRootIcon : _pendingUseCustomRootIcon;
+            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Override root icon", useCustomRootIcon);
+            if (component)
+                SetComponentBool(component, "Toggle ASM-Lite Root Icon Override", ref component.useCustomRootIcon, newUseCustomRootIcon);
+            else
+                _pendingUseCustomRootIcon = newUseCustomRootIcon;
+
+            using (new EditorGUI.DisabledScope(!newUseCustomRootIcon))
+            {
+                Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
+                Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
+                if (component)
+                    SetComponentTexture(component, "Change ASM-Lite Root Icon", ref component.customRootIcon, newRootIcon);
+                else
+                    _pendingCustomRootIcon = newRootIcon;
+            }
+
+            EditorGUILayout.Space(6);
+
+            bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
+            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Override root name", useCustomRootName);
+            if (component)
+                SetComponentBool(component, "Toggle ASM-Lite Root Name Override", ref component.useCustomRootName, newUseCustomRootName);
+            else
+                _pendingUseCustomRootName = newUseCustomRootName;
+
+            using (new EditorGUI.DisabledScope(!newUseCustomRootName))
+            {
+                string currentRootName = component ? NormalizeOptionalString(component.customRootName) : NormalizeOptionalString(_pendingCustomRootName);
+                string newRootName = EditorGUILayout.TextField("Root Name", currentRootName);
+                if (component)
+                    SetComponentString(component, "Change ASM-Lite Root Name", ref component.customRootName, newRootName);
+                else
+                    _pendingCustomRootName = NormalizeOptionalString(newRootName);
+            }
+
+            EditorGUILayout.Space(6);
+
+            bool useCustomInstallPath = component ? component.useCustomInstallPath : _pendingUseCustomInstallPath;
+            bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Override install path", useCustomInstallPath);
+            if (component)
+                SetComponentBool(component, "Toggle ASM-Lite Install Path Override", ref component.useCustomInstallPath, newUseCustomInstallPath);
+            else
+                _pendingUseCustomInstallPath = newUseCustomInstallPath;
+
+            using (new EditorGUI.DisabledScope(!newUseCustomInstallPath))
+            {
+                string currentInstallPath = component ? NormalizeOptionalString(component.customInstallPath) : NormalizeOptionalString(_pendingCustomInstallPath);
+                string newInstallPath = EditorGUILayout.TextField("Install Path", currentInstallPath);
+                if (component)
+                    SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, newInstallPath);
+                else
+                    _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+            }
+
+            EditorGUILayout.Space(6);
+
+            bool useParameterExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
+            bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Exclude parameter names", useParameterExclusions);
+            if (component)
+                SetComponentBool(component, "Toggle ASM-Lite Parameter Exclusions", ref component.useParameterExclusions, newUseParameterExclusions);
+            else
+                _pendingUseParameterExclusions = newUseParameterExclusions;
+
+            using (new EditorGUI.DisabledScope(!newUseParameterExclusions))
+            {
+                string[] currentExcludedNames = component
+                    ? SanitizeExcludedParameterNames(component.excludedParameterNames)
+                    : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+
+                string multilineValue = string.Join("\n", currentExcludedNames);
+                EditorGUILayout.LabelField("Excluded Parameter Names", EditorStyles.miniBoldLabel);
+                EditorGUILayout.LabelField("One parameter name per line. Blank and duplicate entries are ignored.", EditorStyles.wordWrappedMiniLabel);
+
+                EditorGUI.BeginChangeCheck();
+                string updatedMultilineValue = EditorGUILayout.TextArea(multilineValue, GUILayout.MinHeight(68f));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    string[] parsedNames = ParseExcludedParameterNames(updatedMultilineValue);
+                    if (component)
+                        SetComponentExcludedNames(component, "Change ASM-Lite Parameter Exclusions", parsedNames);
+                    else
+                        _pendingExcludedParameterNames = parsedNames;
+                }
+            }
+
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawIconMode()
@@ -1239,6 +1397,7 @@ namespace ASMLite.Editor
             {
                 _selectedAvatar  = descriptor;
                 _cachedComponent = null;
+                _lastRefreshFrame = -1;
                 _cachedCustomParamCount = -1;
                 _discoveredParamCount = -1;
                 SyncPendingSlotCountFromAvatar();
