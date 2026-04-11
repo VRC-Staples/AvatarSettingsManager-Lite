@@ -463,6 +463,9 @@ namespace ASMLite.Editor
             if (string.IsNullOrEmpty(fullName))
                 return null;
 
+            Type firstMatch = null;
+            Type nonTestMatch = null;
+
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
             for (int i = 0; i < assemblies.Length; i++)
             {
@@ -471,11 +474,25 @@ namespace ASMLite.Editor
                     continue;
 
                 var t = asm.GetType(fullName, throwOnError: false);
-                if (t != null)
+                if (t == null)
+                    continue;
+
+                firstMatch ??= t;
+
+                string asmName = asm.GetName()?.Name ?? string.Empty;
+                bool isTestAssembly = asmName.IndexOf("Test", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!isTestAssembly)
+                    nonTestMatch ??= t;
+
+                if (string.Equals(asmName, "VRCFury", StringComparison.Ordinal)
+                    || asmName.StartsWith("VRCFury.", StringComparison.Ordinal))
+                {
                     return t;
+                }
             }
 
-            return null;
+            return nonTestMatch ?? firstMatch;
         }
 
         private static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)

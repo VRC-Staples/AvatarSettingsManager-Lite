@@ -25,7 +25,8 @@ namespace ASMLite.Tests.Editor
                 "Prefab must include a VRCFury FullController payload.");
             StringAssert.Contains("globalParams:", yaml,
                 "Prefab FullController must declare globalParams.");
-            StringAssert.Contains("- \"*\"", yaml,
+            Assert.IsTrue(
+                yaml.Contains("- \"*\"") || yaml.Contains("- '*'"),
                 "Prefab FullController must bind wildcard global params to avoid VF-local name isolation.");
             StringAssert.Contains("prms:", yaml,
                 "Prefab FullController must declare prms wiring.");

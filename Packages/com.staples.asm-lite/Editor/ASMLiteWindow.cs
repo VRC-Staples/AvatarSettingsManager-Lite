@@ -3799,6 +3799,13 @@ namespace ASMLite.Editor
                 return false;
             }
 
+            var vf = FindLiveVrcFuryComponent(component);
+            if (vf == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
+                return false;
+            }
+
             if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))
             {
                 Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh install-path routing on '{component.gameObject.name}'.");
