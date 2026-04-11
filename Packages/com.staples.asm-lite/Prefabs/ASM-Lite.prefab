@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
-  - component: {fileID: 7660080534037735098}
+  - component: {fileID: 7187974968192381273}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -61,7 +61,7 @@ MonoBehaviour:
   customInstallPath: 
   useParameterExclusions: 0
   excludedParameterNames: []
---- !u!114 &7660080534037735098
+--- !u!114 &7187974968192381273
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -74,13 +74,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   content:
-    rid: 4657480930861514755
+    rid: 4657480930899525635
   features: []
   untouchedMarker: keep
   references:
     version: 2
     RefIds:
-    - rid: 4657480930861514755
+    - rid: 4657480930899525635
       type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}
       data:
         controllers:

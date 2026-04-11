@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ASMLite.Runtime")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+382186cf1f2a48e063dd9cdb4f616e18b86f129b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4e2539c4af716a8f3c509fc78d19ff16069bce32")]
 [assembly: System.Reflection.AssemblyProductAttribute("ASMLite.Runtime")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ASMLite.Runtime")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

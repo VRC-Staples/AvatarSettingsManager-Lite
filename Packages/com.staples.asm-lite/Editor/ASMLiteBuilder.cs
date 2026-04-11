@@ -135,6 +135,36 @@ namespace ASMLite.Editor
             internal string SourceParamName { get; }
         }
 
+        internal readonly struct ParameterExclusionReport
+        {
+            internal ParameterExclusionReport(
+                bool enabled,
+                int rawRequestedCount,
+                int requestedCount,
+                int matchedCount,
+                int ignoredSanitizationCount,
+                int ignoredStaleCount,
+                HashSet<string> canonicalExcludedNames)
+            {
+                Enabled = enabled;
+                RawRequestedCount = rawRequestedCount;
+                RequestedCount = requestedCount;
+                MatchedCount = matchedCount;
+                IgnoredSanitizationCount = ignoredSanitizationCount;
+                IgnoredStaleCount = ignoredStaleCount;
+                CanonicalExcludedNames = canonicalExcludedNames ?? new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            internal bool Enabled { get; }
+            internal int RawRequestedCount { get; }
+            internal int RequestedCount { get; }
+            internal int MatchedCount { get; }
+            internal int IgnoredSanitizationCount { get; }
+            internal int IgnoredStaleCount { get; }
+            internal HashSet<string> CanonicalExcludedNames { get; }
+            internal int IgnoredCount => IgnoredSanitizationCount + IgnoredStaleCount;
+        }
+
         private static LegacyAliasContinuityReport s_latestLegacyAliasReport;
 
         // ─── Public API ───────────────────────────────────────────────────────
@@ -152,11 +182,24 @@ namespace ASMLite.Editor
         /// </summary>
         internal static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(VRCAvatarDescriptor avDesc)
         {
+            return GetFinalAvatarParams(avDesc, null, out _);
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(
+            VRCAvatarDescriptor avDesc,
+            HashSet<string> excludedCanonicalNames,
+            out int matchedExclusionCount)
+        {
+            matchedExclusionCount = 0;
+
             var exprParams = avDesc?.expressionParameters;
             if (exprParams?.parameters == null)
                 return new List<VRCExpressionParameters.Parameter>();
 
             var result = new List<VRCExpressionParameters.Parameter>(exprParams.parameters.Length);
+            var matchedNames = excludedCanonicalNames != null && excludedCanonicalNames.Count > 0
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : null;
 
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Reading final avatar params from '{UnityEditor.AssetDatabase.GetAssetPath(exprParams)}' ({exprParams.parameters.Length} entries).");
@@ -171,9 +214,64 @@ namespace ASMLite.Editor
                     Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}': already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
                     continue;
                 }
+                if (matchedNames != null && excludedCanonicalNames.Contains(p.name))
+                {
+                    matchedNames.Add(p.name);
+                    continue;
+                }
+
                 result.Add(p);
             }
+
+            matchedExclusionCount = matchedNames?.Count ?? 0;
             return result;
+        }
+
+        internal static ParameterExclusionReport ResolveParameterExclusions(ASMLiteComponent component, int matchedCount)
+        {
+            if (component == null || !component.useParameterExclusions)
+                return new ParameterExclusionReport(enabled: false, rawRequestedCount: 0, requestedCount: 0, matchedCount: 0, ignoredSanitizationCount: 0, ignoredStaleCount: 0, canonicalExcludedNames: new HashSet<string>(StringComparer.Ordinal));
+
+            var rawNames = component.excludedParameterNames;
+            int rawRequestedCount = rawNames?.Length ?? 0;
+
+            var canonicalNames = new HashSet<string>(StringComparer.Ordinal);
+            int ignoredSanitizationCount = 0;
+
+            if (rawNames != null)
+            {
+                for (int i = 0; i < rawNames.Length; i++)
+                {
+                    string candidate = rawNames[i]?.Trim();
+                    if (string.IsNullOrWhiteSpace(candidate))
+                    {
+                        ignoredSanitizationCount++;
+                        continue;
+                    }
+
+                    if (!canonicalNames.Add(candidate))
+                    {
+                        ignoredSanitizationCount++;
+                    }
+                }
+            }
+
+            int clampedMatchedCount = matchedCount;
+            if (clampedMatchedCount < 0)
+                clampedMatchedCount = 0;
+            if (clampedMatchedCount > canonicalNames.Count)
+                clampedMatchedCount = canonicalNames.Count;
+
+            int ignoredStaleCount = canonicalNames.Count - clampedMatchedCount;
+
+            return new ParameterExclusionReport(
+                enabled: true,
+                rawRequestedCount: rawRequestedCount,
+                requestedCount: canonicalNames.Count,
+                matchedCount: clampedMatchedCount,
+                ignoredSanitizationCount: ignoredSanitizationCount,
+                ignoredStaleCount: ignoredStaleCount,
+                canonicalExcludedNames: canonicalNames);
         }
 
         /// <summary>
@@ -204,9 +302,39 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 2. Read the final avatar parameter schema from the descriptor snapshot.
+            // 2. Resolve canonical exclusion names once, then read the final avatar
+            //    parameter schema from the descriptor snapshot with exclusions applied.
             //    Names are treated as opaque canonical VF output and are not rewritten.
-            var discoveredParams = GetFinalAvatarParams(avDesc);
+            var exclusionReport = ResolveParameterExclusions(component, matchedCount: 0);
+            var discoveredParams = GetFinalAvatarParams(avDesc, exclusionReport.CanonicalExcludedNames, out int matchedExclusionCount);
+
+            if (exclusionReport.Enabled)
+            {
+                int clampedMatchedCount = matchedExclusionCount;
+                if (clampedMatchedCount < 0)
+                    clampedMatchedCount = 0;
+                if (clampedMatchedCount > exclusionReport.RequestedCount)
+                    clampedMatchedCount = exclusionReport.RequestedCount;
+
+                exclusionReport = new ParameterExclusionReport(
+                    enabled: true,
+                    rawRequestedCount: exclusionReport.RawRequestedCount,
+                    requestedCount: exclusionReport.RequestedCount,
+                    matchedCount: clampedMatchedCount,
+                    ignoredSanitizationCount: exclusionReport.IgnoredSanitizationCount,
+                    ignoredStaleCount: exclusionReport.RequestedCount - clampedMatchedCount,
+                    canonicalExcludedNames: exclusionReport.CanonicalExcludedNames);
+            }
+
+            if (!exclusionReport.Enabled)
+            {
+                Debug.Log("[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            }
+            else
+            {
+                Debug.Log(
+                    $"[ASM-Lite] Parameter exclusions: requested={exclusionReport.RequestedCount} (raw={exclusionReport.RawRequestedCount}), matched={exclusionReport.MatchedCount}, ignored={exclusionReport.IgnoredCount} (sanitized={exclusionReport.IgnoredSanitizationCount}, stale={exclusionReport.IgnoredStaleCount}).");
+            }
 
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");

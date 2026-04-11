@@ -17,6 +17,7 @@ namespace ASMLite.Tests.Editor
     {
         private GameObject _go;
         private VRCAvatarDescriptor _avDesc;
+        private ASMLiteComponent _component;
         private VRCExpressionParameters _exprParams;
 
         [SetUp]
@@ -24,6 +25,7 @@ namespace ASMLite.Tests.Editor
         {
             _go = new GameObject("TestAvatar");
             _avDesc = _go.AddComponent<VRCAvatarDescriptor>();
+            _component = _go.AddComponent<ASMLiteComponent>();
             _exprParams = null;
         }
 
@@ -180,6 +182,148 @@ namespace ASMLite.Tests.Editor
                 "A07 regression guard: non-VF sibling source params must remain discoverable alongside deterministic VF sources.");
             Assert.IsFalse(result.Exists(p => p != null && p.name == "ASMLite_Bak_S1_VF777_Menu/Hat"),
                 "A07 regression guard: preserved legacy backup aliases must not be rediscovered as live avatar source params.");
+        }
+
+        // A08: exclusions are opt-in; disabled toggle must leave discovery baseline-equivalent even with stale serialized names.
+        [Test]
+        public void A08_GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "Hat", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "Jacket", valueType = VRCExpressionParameters.ValueType.Bool },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            _component.useParameterExclusions = false;
+            _component.excludedParameterNames = new[] { "Hat", "GhostParam" };
+
+            var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc, report.CanonicalExcludedNames, out int matchedCount);
+
+            Assert.IsFalse(report.Enabled, "A08 regression guard: exclusion toggle must gate all filtering behavior.");
+            Assert.AreEqual(0, report.RequestedCount, "A08 regression guard: disabled exclusions should not build a canonical exclusion set.");
+            Assert.AreEqual(0, matchedCount, "A08 regression guard: disabled exclusions should never match discovered params.");
+            Assert.AreEqual(2, result.Count, "A08 regression guard: disabled exclusions must preserve baseline discovery output.");
+            Assert.AreEqual("Hat", result[0].name);
+            Assert.AreEqual("Jacket", result[1].name);
+        }
+
+        // A09: enabled exclusions must use exact ordinal matching (case-sensitive, opaque identifiers).
+        [Test]
+        public void A09_GetFinalAvatarParams_ExclusionsEnabled_UsesExactOrdinalNameMatching()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            _component.useParameterExclusions = true;
+            _component.excludedParameterNames = new[]
+            {
+                "VF135_Clothing/Rezz",
+                "vf135_clothing/rezz",
+            };
+
+            var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc, report.CanonicalExcludedNames, out int matchedCount);
+            var finalizedReport = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount);
+
+            Assert.IsTrue(report.Enabled);
+            Assert.AreEqual(2, report.RequestedCount, "A09 regression guard: canonical exclusions should retain distinct case-sensitive names.");
+            Assert.AreEqual(1, matchedCount, "A09 regression guard: only exact case-sensitive exclusion names should match.");
+            Assert.AreEqual(1, finalizedReport.IgnoredStaleCount, "A09 regression guard: non-matching case variants should be counted as stale exclusions.");
+            Assert.AreEqual(1, result.Count, "A09 regression guard: only the exact matching live parameter should be filtered.");
+            Assert.AreEqual("VF135_Clothing/Hood", result[0].name);
+        }
+
+        // A10: sanitization drops null/empty/whitespace and duplicate exclusions while retaining exact canonical names.
+        [Test]
+        public void A10_ResolveParameterExclusions_SanitizesMalformedAndDuplicateNames()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "Hat", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "Jacket", valueType = VRCExpressionParameters.ValueType.Bool },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            _component.useParameterExclusions = true;
+            _component.excludedParameterNames = new[]
+            {
+                null,
+                string.Empty,
+                " ",
+                "Hat",
+                "Hat",
+                " Hat ",
+                "GhostParam",
+            };
+
+            var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc, report.CanonicalExcludedNames, out int matchedCount);
+            var finalizedReport = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount);
+
+            Assert.AreEqual(7, report.RawRequestedCount);
+            Assert.AreEqual(2, report.RequestedCount, "A10 regression guard: canonical exclusions should contain only deduplicated non-empty names.");
+            Assert.AreEqual(5, report.IgnoredSanitizationCount, "A10 regression guard: null/empty/duplicate names should be attributed to sanitization.");
+            Assert.AreEqual(1, matchedCount, "A10 regression guard: only live discovered names should match exclusions.");
+            Assert.AreEqual(1, finalizedReport.IgnoredStaleCount, "A10 regression guard: exclusions absent from discovery should be counted as stale.");
+            Assert.AreEqual(1, result.Count, "A10 regression guard: exact matched exclusions must be removed from discovery output.");
+            Assert.AreEqual("Jacket", result[0].name);
+        }
+
+        // A11: when every discovered parameter is excluded, discovery returns an empty list (not null/error).
+        [Test]
+        public void A11_GetFinalAvatarParams_ExclusionsEnabled_AllParamsExcluded_ReturnsEmptyList()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = "ParamA", valueType = VRCExpressionParameters.ValueType.Int },
+                new VRCExpressionParameters.Parameter { name = "ParamB", valueType = VRCExpressionParameters.ValueType.Float },
+            };
+            _avDesc.expressionParameters = _exprParams;
+
+            _component.useParameterExclusions = true;
+            _component.excludedParameterNames = new[] { "ParamA", "ParamB" };
+
+            var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc, report.CanonicalExcludedNames, out int matchedCount);
+            var finalizedReport = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount);
+
+            Assert.AreEqual(2, matchedCount);
+            Assert.AreEqual(0, finalizedReport.IgnoredStaleCount);
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count, "A11 regression guard: all-excluded discovery should produce an empty list without throwing.");
+        }
+
+        // A12: zero discovered live params keeps enabled exclusions non-fatal and classifies all canonical names as stale.
+        [Test]
+        public void A12_GetFinalAvatarParams_ExclusionsEnabled_NoDiscoveredParams_ReportsStaleNames()
+        {
+            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            _exprParams.parameters = new VRCExpressionParameters.Parameter[0];
+            _avDesc.expressionParameters = _exprParams;
+
+            _component.useParameterExclusions = true;
+            _component.excludedParameterNames = new[] { "GhostA", "GhostB" };
+
+            var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
+            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc, report.CanonicalExcludedNames, out int matchedCount);
+            var finalizedReport = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount);
+
+            Assert.IsTrue(finalizedReport.Enabled);
+            Assert.AreEqual(2, finalizedReport.RequestedCount);
+            Assert.AreEqual(0, matchedCount);
+            Assert.AreEqual(2, finalizedReport.IgnoredStaleCount, "A12 regression guard: unresolved exclusions should be surfaced as stale when no live params exist.");
+            Assert.IsNotNull(result);
+            Assert.AreEqual(0, result.Count);
         }
     }
 }
