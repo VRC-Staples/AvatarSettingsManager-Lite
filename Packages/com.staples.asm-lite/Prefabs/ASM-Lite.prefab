@@ -10,7 +10,6 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
-  - component: {fileID: 4512845837695594957}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -46,87 +45,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   slotCount: 3
---- !u!114 &4512845837695594957
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2447387302260284102}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9e94e501a2d4c95bff3d5601013d923, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  version: 3
-  unityVersion: 2022.3.22f1
-  vrcfuryVersion: 1.1228.0
-  somethingIsBroken: 0
-  config:
-    features: []
-  content:
-    rid: 9066095209931341824
-  references:
-    version: 2
-    RefIds:
-    - rid: 9066095209931341824
-      type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
-      data:
-        version: 4
-        controllers:
-        - controller:
-            version: 1
-            fileID: 0
-            guid: 
-            id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301:9100000
-            objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
-          type: 5
-        menus:
-        - menu:
-            version: 1
-            fileID: 0
-            guid: 
-            id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302:11400000
-            objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
-          prefix: 
-        prms:
-        - parameters:
-            version: 1
-            fileID: 0
-            guid: 
-            id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303:11400000
-            objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
-        smoothedPrms: []
-        globalParams:
-        - "*"
-        allNonsyncedAreGlobal: 0
-        ignoreSaved: 0
-        toggleParam: 
-        rootObjOverride: {fileID: 0}
-        rootBindingsApplyToAvatar: 0
-        rewriteBindings: []
-        allowMissingAssets: 0
-        injectSpsDepthParam: 
-        injectSpsVelocityParam: 
-        controller:
-          version: 1
-          fileID: 0
-          guid: 
-          id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301:9100000
-          objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
-        menu:
-          version: 1
-          fileID: 0
-          guid: 
-          id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302:11400000
-          objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
-        parameters:
-          version: 1
-          fileID: 0
-          guid: 
-          id: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303:11400000
-          objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
-        submenu: 
-        removePrefixes: []
-        addPrefix: 
-        useSecurityForToggle: 0
+  iconMode: 0
+  selectedGearIndex: 0
+  customIcons: []
+  actionIconMode: 0
+  customSaveIcon: {fileID: 0}
+  customLoadIcon: {fileID: 0}
+  customClearIcon: {fileID: 0}
+  useCustomRootIcon: 0
+  customRootIcon: {fileID: 0}
+  useCustomRootName: 0
+  customRootName: 
+  useCustomInstallPath: 0
+  customInstallPath: 
+  useParameterExclusions: 0
+  excludedParameterNames: []

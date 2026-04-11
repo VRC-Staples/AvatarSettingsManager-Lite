@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ASMLite.Editor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f003ed11c83ec274ca5ba188aa9bdfc7e0f422bd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+98f89dd41e95f42a0ef546ef4c7d60fb7cdb04fc")]
 [assembly: System.Reflection.AssemblyProductAttribute("ASMLite.Editor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ASMLite.Editor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

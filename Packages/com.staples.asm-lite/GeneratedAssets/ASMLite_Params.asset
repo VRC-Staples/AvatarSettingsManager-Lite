@@ -13,19 +13,4 @@ MonoBehaviour:
   m_Name: ASMLite_Params
   m_EditorClassIdentifier: 
   isEmpty: 0
-  parameters:
-  - name: ASMLite_Ctrl
-    valueType: 0
-    saved: 0
-    defaultValue: 0
-    networkSynced: 0
-  - name: ASMLite_Bak_S1_ASM_VF_Menu_Hat__TestAvatar
-    valueType: 2
-    saved: 1
-    defaultValue: 0
-    networkSynced: 0
-  - name: ASMLite_Bak_S1_VF777_Menu/Hat
-    valueType: 2
-    saved: 1
-    defaultValue: 1
-    networkSynced: 0
+  parameters: []

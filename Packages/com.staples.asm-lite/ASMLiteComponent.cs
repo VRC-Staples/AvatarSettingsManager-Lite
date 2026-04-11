@@ -95,6 +95,54 @@ namespace ASMLite
         [SerializeField]
         public Texture2D customClearIcon;
 
+        /// <summary>
+        /// Enables custom root menu icon override for the generated ASM-Lite root control.
+        /// </summary>
+        [SerializeField]
+        public bool useCustomRootIcon = false;
+
+        /// <summary>
+        /// Optional custom root menu icon used when <see cref="useCustomRootIcon"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public Texture2D customRootIcon;
+
+        /// <summary>
+        /// Enables custom root menu name override for the generated ASM-Lite root control.
+        /// </summary>
+        [SerializeField]
+        public bool useCustomRootName = false;
+
+        /// <summary>
+        /// Optional custom root menu name used when <see cref="useCustomRootName"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customRootName = "";
+
+        /// <summary>
+        /// Enables custom install path override for generated ASM-Lite menu/assets.
+        /// </summary>
+        [SerializeField]
+        public bool useCustomInstallPath = false;
+
+        /// <summary>
+        /// Optional custom install path used when <see cref="useCustomInstallPath"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customInstallPath = "";
+
+        /// <summary>
+        /// Enables parameter exclusion filtering when building ASM-Lite backup/default parameter lists.
+        /// </summary>
+        [SerializeField]
+        public bool useParameterExclusions = false;
+
+        /// <summary>
+        /// Parameter names excluded from ASM-Lite backup/default parameter generation.
+        /// </summary>
+        [SerializeField]
+        public string[] excludedParameterNames = new string[0];
+
 #if UNITY_EDITOR
         // ─── Reflection cache ─────────────────────────────────────────────────
 

@@ -55,6 +55,17 @@ namespace ASMLite.Editor
         private Texture2D _pendingCustomLoadIcon;
         private Texture2D _pendingCustomClearIcon;
 
+        // Pending customization scaffold state: copied into new prefab instances
+        // and refreshed from the selected avatar component when present.
+        private bool _pendingUseCustomRootIcon = false;
+        private Texture2D _pendingCustomRootIcon;
+        private bool _pendingUseCustomRootName = false;
+        private string _pendingCustomRootName = string.Empty;
+        private bool _pendingUseCustomInstallPath = false;
+        private string _pendingCustomInstallPath = string.Empty;
+        private bool _pendingUseParameterExclusions = false;
+        private string[] _pendingExcludedParameterNames = Array.Empty<string>();
+
 
         // ── Wheel Preview Cache ───────────────────────────────────────────────
 
@@ -936,6 +947,78 @@ namespace ASMLite.Editor
             return _cachedComponent;
         }
 
+        private static Texture2D[] CloneTextures(Texture2D[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<Texture2D>();
+
+            var clone = new Texture2D[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string NormalizeOptionalString(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string[] SanitizeExcludedParameterNames(string[] names)
+        {
+            if (names == null || names.Length == 0)
+                return Array.Empty<string>();
+
+            return names
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Select(n => n.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            component.slotCount = _pendingSlotCount;
+            component.iconMode = _pendingIconMode;
+            component.selectedGearIndex = _pendingSelectedGearIndex;
+            component.actionIconMode = _pendingActionIconMode;
+            component.customSaveIcon = _pendingCustomSaveIcon;
+            component.customLoadIcon = _pendingCustomLoadIcon;
+            component.customClearIcon = _pendingCustomClearIcon;
+            component.customIcons = CloneTextures(_pendingCustomIcons);
+
+            component.useCustomRootIcon = _pendingUseCustomRootIcon;
+            component.customRootIcon = _pendingCustomRootIcon;
+            component.useCustomRootName = _pendingUseCustomRootName;
+            component.customRootName = NormalizeOptionalString(_pendingCustomRootName);
+            component.useCustomInstallPath = _pendingUseCustomInstallPath;
+            component.customInstallPath = NormalizeOptionalString(_pendingCustomInstallPath);
+            component.useParameterExclusions = _pendingUseParameterExclusions;
+            component.excludedParameterNames = SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+        }
+
+        private void CopyComponentCustomizationToPending(ASMLiteComponent component)
+        {
+            _pendingSlotCount = component.slotCount;
+            _pendingIconMode = component.iconMode;
+            _pendingSelectedGearIndex = component.selectedGearIndex;
+            _pendingActionIconMode = component.actionIconMode;
+            _pendingCustomSaveIcon = component.customSaveIcon;
+            _pendingCustomLoadIcon = component.customLoadIcon;
+            _pendingCustomClearIcon = component.customClearIcon;
+            _pendingCustomIcons = CloneTextures(component.customIcons);
+
+            _pendingUseCustomRootIcon = component.useCustomRootIcon;
+            _pendingCustomRootIcon = component.customRootIcon;
+            _pendingUseCustomRootName = component.useCustomRootName;
+            _pendingCustomRootName = NormalizeOptionalString(component.customRootName);
+            _pendingUseCustomInstallPath = component.useCustomInstallPath;
+            _pendingCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
+            _pendingUseParameterExclusions = component.useParameterExclusions;
+            _pendingExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
+        }
+
         private void AddPrefabToAvatar()
         {
             if (_selectedAvatar == null)
@@ -974,22 +1057,7 @@ namespace ASMLite.Editor
 
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
-            {
-                component.slotCount = _pendingSlotCount;
-                component.iconMode = _pendingIconMode;
-                component.selectedGearIndex = _pendingSelectedGearIndex;
-                component.actionIconMode = _pendingActionIconMode;
-                component.customSaveIcon  = _pendingCustomSaveIcon;
-                component.customLoadIcon  = _pendingCustomLoadIcon;
-                component.customClearIcon = _pendingCustomClearIcon;
-
-                // Resize and copy custom icons
-                if (_pendingCustomIcons != null)
-                {
-                    component.customIcons = new Texture2D[_pendingCustomIcons.Length];
-                    System.Array.Copy(_pendingCustomIcons, component.customIcons, _pendingCustomIcons.Length);
-                }
-            }
+                CopyPendingCustomizationToComponent(component);
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
@@ -1026,16 +1094,23 @@ namespace ASMLite.Editor
                 Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
 
                 // Capture settings before destroying the instance.
-                int savedSlotCount          = component.slotCount;
-                IconMode savedIconMode      = component.iconMode;
-                int savedGearIndex          = component.selectedGearIndex;
+                int savedSlotCount = component.slotCount;
+                IconMode savedIconMode = component.iconMode;
+                int savedGearIndex = component.selectedGearIndex;
                 ActionIconMode savedActionIconMode = component.actionIconMode;
-                Texture2D savedCustomSave   = component.customSaveIcon;
-                Texture2D savedCustomLoad   = component.customLoadIcon;
-                Texture2D savedCustomClear  = component.customClearIcon;
-                Texture2D[] savedCustomIcons = component.customIcons != null
-                    ? (Texture2D[])component.customIcons.Clone() : new Texture2D[0];
-                Transform savedParent       = component.gameObject.transform.parent;
+                Texture2D savedCustomSave = component.customSaveIcon;
+                Texture2D savedCustomLoad = component.customLoadIcon;
+                Texture2D savedCustomClear = component.customClearIcon;
+                Texture2D[] savedCustomIcons = CloneTextures(component.customIcons);
+                bool savedUseCustomRootIcon = component.useCustomRootIcon;
+                Texture2D savedCustomRootIcon = component.customRootIcon;
+                bool savedUseCustomRootName = component.useCustomRootName;
+                string savedCustomRootName = NormalizeOptionalString(component.customRootName);
+                bool savedUseCustomInstallPath = component.useCustomInstallPath;
+                string savedCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
+                bool savedUseParameterExclusions = component.useParameterExclusions;
+                string[] savedExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
+                Transform savedParent = component.gameObject.transform.parent;
 
                 Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
                 int group = Undo.GetCurrentGroup();
@@ -1054,14 +1129,22 @@ namespace ASMLite.Editor
                 var newComponent = instance.GetComponent<ASMLiteComponent>();
                 if (newComponent != null)
                 {
-                    newComponent.slotCount         = savedSlotCount;
-                    newComponent.iconMode          = savedIconMode;
+                    newComponent.slotCount = savedSlotCount;
+                    newComponent.iconMode = savedIconMode;
                     newComponent.selectedGearIndex = savedGearIndex;
-                    newComponent.actionIconMode    = savedActionIconMode;
-                    newComponent.customSaveIcon    = savedCustomSave;
-                    newComponent.customLoadIcon    = savedCustomLoad;
-                    newComponent.customClearIcon   = savedCustomClear;
-                    newComponent.customIcons       = savedCustomIcons;
+                    newComponent.actionIconMode = savedActionIconMode;
+                    newComponent.customSaveIcon = savedCustomSave;
+                    newComponent.customLoadIcon = savedCustomLoad;
+                    newComponent.customClearIcon = savedCustomClear;
+                    newComponent.customIcons = savedCustomIcons;
+                    newComponent.useCustomRootIcon = savedUseCustomRootIcon;
+                    newComponent.customRootIcon = savedCustomRootIcon;
+                    newComponent.useCustomRootName = savedUseCustomRootName;
+                    newComponent.customRootName = savedCustomRootName;
+                    newComponent.useCustomInstallPath = savedUseCustomInstallPath;
+                    newComponent.customInstallPath = savedCustomInstallPath;
+                    newComponent.useParameterExclusions = savedUseParameterExclusions;
+                    newComponent.excludedParameterNames = savedExcludedParameterNames;
                 }
 
                 Undo.RegisterCreatedObjectUndo(instance, "Rebuild ASM-Lite (migration)");
@@ -1140,22 +1223,7 @@ namespace ASMLite.Editor
         {
             var existing = GetOrRefreshComponent();
             if (existing != null)
-            {
-                _pendingSlotCount = existing.slotCount;
-                _pendingIconMode = existing.iconMode;
-                _pendingSelectedGearIndex = existing.selectedGearIndex;
-                _pendingActionIconMode = existing.actionIconMode;
-                _pendingCustomSaveIcon  = existing.customSaveIcon;
-                _pendingCustomLoadIcon  = existing.customLoadIcon;
-                _pendingCustomClearIcon = existing.customClearIcon;
-
-                // Sync custom icons array
-                if (existing.customIcons != null)
-                {
-                    _pendingCustomIcons = new Texture2D[existing.customIcons.Length];
-                    System.Array.Copy(existing.customIcons, _pendingCustomIcons, existing.customIcons.Length);
-                }
-            }
+                CopyComponentCustomizationToPending(existing);
         }
 
         private void OnSelectionChange()
