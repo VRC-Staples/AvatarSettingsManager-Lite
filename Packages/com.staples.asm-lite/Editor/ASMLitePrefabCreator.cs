@@ -51,9 +51,9 @@ namespace ASMLite.Editor
                 AssetDatabase.CreateFolder("Packages/com.staples.asm-lite", "Prefabs");
 
             var go = new GameObject("ASM-Lite");
-            go.AddComponent<ASMLiteComponent>();
+            var component = go.AddComponent<ASMLiteComponent>();
 
-            ConfigureVRCFuryFullController(go);
+            ConfigureVRCFuryFullController(go, component);
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, ASMLiteAssetPaths.Prefab);
             UnityEngine.Object.DestroyImmediate(go);
@@ -71,7 +71,7 @@ namespace ASMLite.Editor
             }
         }
 
-        private static void ConfigureVRCFuryFullController(GameObject root)
+        private static void ConfigureVRCFuryFullController(GameObject root, ASMLiteComponent component)
         {
             if (root == null)
                 return;
@@ -125,7 +125,7 @@ namespace ASMLite.Editor
 
             ok &= EnsureArraySize(so, "content.menus", 1, required: true);
             ok &= SetObjectReference(so, "content.menus.Array.data[0].menu.objRef", menu, required: true);
-            ok &= SetString(so, "content.menus.Array.data[0].prefix", string.Empty, required: true);
+            ok &= ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(so, component);
 
             // VRCFury consumes FullController parameter registrations from prms.
             // Keep this populated so merged menu controls (ASMLite_Ctrl triggers)

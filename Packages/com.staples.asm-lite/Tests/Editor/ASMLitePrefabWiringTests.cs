@@ -1,7 +1,8 @@
-using System.IO;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
@@ -10,35 +11,48 @@ namespace ASMLite.Tests.Editor
     public class ASMLitePrefabWiringTests
     {
         [Test, Category("Integration")]
-        public void W01_Prefab_UsesGeneratedAssetReferences_ForFullController()
+        public void W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController()
         {
-            var prefabPath = ASMLiteAssetPaths.Prefab;
-            var fullPath = Path.GetFullPath(prefabPath);
-            Assert.IsTrue(File.Exists(fullPath), $"Prefab file not found at '{fullPath}'.");
+            var go = new GameObject("W01_WiringRoot");
+            try
+            {
+                var component = go.AddComponent<ASMLiteComponent>();
 
-            var yaml = File.ReadAllText(fullPath);
+                var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(
+                    "ConfigureVRCFuryFullController",
+                    BindingFlags.Static | BindingFlags.NonPublic);
+                Assert.IsNotNull(configureMethod,
+                    "Expected ASMLitePrefabCreator.ConfigureVRCFuryFullController private method was not found.");
 
-            var fxGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.FXController);
-            var menuGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.Menu);
-            var paramsGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.ExprParams);
+                LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
 
-            StringAssert.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}", yaml,
-                "Prefab must include a VRCFury FullController payload.");
-            StringAssert.Contains("globalParams:", yaml,
-                "Prefab FullController must declare globalParams.");
-            StringAssert.Contains("- \"*\"", yaml,
-                "Prefab FullController must bind wildcard global params to avoid VF-local name isolation.");
-            StringAssert.Contains("prms:", yaml,
-                "Prefab FullController must declare prms wiring.");
-            StringAssert.Contains("- parameters:", yaml,
-                "Prefab FullController prms must include at least one parameters entry.");
+                Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { go, component }),
+                    "Prefab FullController wiring should not throw for the reflected VRCFury schema.");
 
-            StringAssert.Contains($"objRef: {{fileID: 9100000, guid: {fxGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated FX controller asset.");
-            StringAssert.Contains($"objRef: {{fileID: 11400000, guid: {menuGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated expressions menu asset.");
-            StringAssert.Contains($"objRef: {{fileID: 11400000, guid: {paramsGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated expression parameters asset.");
+                var vf = go.GetComponent<VF.Model.VRCFury>();
+                Assert.IsNotNull(vf,
+                    "Prefab FullController wiring should add VF.Model.VRCFury when reflected type is available.");
+
+                var so = new SerializedObject(vf);
+                so.Update();
+
+                var fxController = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.FXController);
+                var menu = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.Menu);
+                var parameters = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.ExprParams);
+
+                Assert.AreEqual(fxController, so.FindProperty("content.controllers.Array.data[0].controller.objRef")?.objectReferenceValue,
+                    "Prefab wiring must reference generated FX controller asset.");
+                Assert.AreEqual(menu, so.FindProperty("content.menus.Array.data[0].menu.objRef")?.objectReferenceValue,
+                    "Prefab wiring must reference generated expressions menu asset.");
+                Assert.AreEqual(parameters, so.FindProperty("content.prms.Array.data[0].parameters.objRef")?.objectReferenceValue,
+                    "Prefab wiring must reference generated expression parameters asset through prms.");
+                Assert.AreEqual("*", so.FindProperty("content.globalParams.Array.data[0]")?.stringValue,
+                    "Prefab wiring must keep wildcard global parameter enrollment.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
         }
 
         [Test]
