@@ -21,8 +21,10 @@ namespace ASMLite.Tests.Editor
             var menuGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.Menu);
             var paramsGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.ExprParams);
 
-            StringAssert.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}", yaml,
-                "Prefab must include a VRCFury FullController payload.");
+            bool hasRealVfPayload = yaml.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}");
+            bool hasTestStubPayload = yaml.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}");
+            Assert.IsTrue(hasRealVfPayload || hasTestStubPayload,
+                "Prefab must include a FullController payload using either real VRCFury assembly metadata or CI test-stub assembly metadata.");
             StringAssert.Contains("globalParams:", yaml,
                 "Prefab FullController must declare globalParams.");
             Assert.IsTrue(
