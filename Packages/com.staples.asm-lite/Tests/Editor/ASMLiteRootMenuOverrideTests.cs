@@ -7,7 +7,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// Integration coverage for generated root wrapper naming overrides.
+    /// Integration coverage for generated root wrapper custom naming behavior.
     /// Verifies effective-name resolution against the generated menu asset.
     /// </summary>
     [TestFixture]
@@ -65,7 +65,7 @@ namespace ASMLite.Tests.Editor
         public void R081_DefaultRootName_WhenCustomToggleDisabled()
         {
             _ctx.Comp.useCustomRootName = false;
-            _ctx.Comp.customRootName = "Creator Override";
+            _ctx.Comp.customRootName = "Creator Custom";
 
             var rootControl = BuildAndGetRootControl("R081-default-disabled");
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, rootControl.name,
@@ -147,7 +147,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void R080_CombinedNameAndIconOverride_AppliesTogetherWithoutWrapperDrift()
+        public void R080_CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift()
         {
             var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[3], "R080-combined-name-icon");
             _ctx.Comp.useCustomRootName = true;
@@ -157,11 +157,11 @@ namespace ASMLite.Tests.Editor
 
             var rootControl = BuildAndGetRootControl("R080-combined-name-icon");
             Assert.AreEqual("Creator Settings", rootControl.name,
-                "R080: combined override must apply trimmed custom root name.");
+                "R080: combined custom settings must apply trimmed custom root name.");
             Assert.AreSame(customIcon, rootControl.icon,
-                "R080: combined override must apply the custom root icon reference.");
+                "R080: combined custom settings must apply the custom root icon reference.");
             Assert.IsNotNull(rootControl.subMenu,
-                "R080: combined override must preserve root submenu wiring.");
+                "R080: combined custom settings must preserve root submenu wiring.");
         }
 
         [Test, Category("Integration")]
@@ -180,7 +180,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.customRootIcon = customIcon;
             var secondRootControl = BuildAndGetRootControl("R084-rebuild-icon-second");
             Assert.AreSame(fallbackIcon, secondRootControl.icon,
-                "R084: disabling root icon override must restore fallback icon on repeated build.");
+                "R084: disabling custom root icon must restore fallback icon on repeated build.");
         }
     }
 }

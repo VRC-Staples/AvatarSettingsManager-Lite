@@ -6,6 +6,20 @@ All notable changes to ASM-Lite are documented here.
 
 ## [Unreleased]
 
+### Added
+- Runtime workflow modes in ASM-Lite window:
+  - **Detach ASM-Lite** to bake direct runtime delivery and remove the editable ASM-Lite object.
+  - **Vendorize (Keep Attached)** to mirror generated payload assets into `Assets/ASM-Lite/<Avatar>/GeneratedAssets` while keeping ASM-Lite editable.
+  - **Return to Package Managed** recovery path for vendorized/detached states.
+- Vendorized state persistence fields on `ASMLiteComponent` (`useVendorizedGeneratedAssets`, `vendorizedGeneratedAssetsPath`).
+- Expanded EditMode coverage for install-path wiring, root menu overrides, and window customization flows (including MoveMenu adoption/remap behavior).
+
+### Changed
+- Build pipeline now syncs install-path routing in `Build()` and uses a safer prefab-instance path that routes via MoveMenu helper behavior instead of relying on brittle FullController managed-reference overrides.
+- Parameter exclusions now expand across VRCFury toggle mapping pairs (original global name + assigned deterministic name) so either-side exclusion behaves consistently.
+- Updated README editor workflow docs to reflect detach/vendorize/package-managed action set and current release automation behavior.
+- Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
+
 ## [1.0.9] - 2026-04-10
 
 ### Added

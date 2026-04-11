@@ -274,6 +274,38 @@ namespace ASMLite.Editor
                 canonicalExcludedNames: canonicalNames);
         }
 
+        private static HashSet<string> ExpandExcludedNamesWithToggleMappings(HashSet<string> excludedCanonicalNames)
+        {
+            var expanded = excludedCanonicalNames != null
+                ? new HashSet<string>(excludedCanonicalNames, StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+
+            if (expanded.Count == 0)
+                return expanded;
+
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return expanded;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                bool excludeOriginal = expanded.Contains(mapping.OriginalGlobalParam);
+                bool excludeAssigned = expanded.Contains(mapping.AssignedGlobalParam);
+                if (!excludeOriginal && !excludeAssigned)
+                    continue;
+
+                expanded.Add(mapping.OriginalGlobalParam);
+                expanded.Add(mapping.AssignedGlobalParam);
+            }
+
+            return expanded;
+        }
+
         /// <summary>
         /// Entry point called during avatar build preprocessing.
         /// Reads the final avatar parameter schema and generates all slot assets.
@@ -297,6 +329,11 @@ namespace ASMLite.Editor
                 return -1;
             }
 
+            // Keep live VRCFury FullController install-prefix wiring aligned with
+            // current component settings for preprocess/upload paths where the
+            // editor window helpers are not involved.
+            TrySyncInstallPathRouting(component);
+
             if (avDesc.expressionParameters == null)
             {
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
@@ -306,7 +343,13 @@ namespace ASMLite.Editor
             //    parameter schema from the descriptor snapshot with exclusions applied.
             //    Names are treated as opaque canonical VF output and are not rewritten.
             var exclusionReport = ResolveParameterExclusions(component, matchedCount: 0);
-            var discoveredParams = GetFinalAvatarParams(avDesc, exclusionReport.CanonicalExcludedNames, out int matchedExclusionCount);
+
+            // If the user excludes either side of a VRCFury global mapping
+            // (original or deterministic ASM_VF_* name), exclude both sides so
+            // backup customization behaves as one logical toggle parameter.
+            var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
+
+            var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out int matchedExclusionCount);
 
             if (exclusionReport.Enabled)
             {
@@ -351,7 +394,7 @@ namespace ASMLite.Editor
                 discoveredParams,
                 GetExistingGeneratedBackupNames(),
                 ASMLiteToggleNameBroker.GetLatestGlobalParamMappings(),
-                exclusionReport.CanonicalExcludedNames);
+                expandedExcludedNames);
             s_latestLegacyAliasReport = legacyAliasPlan.Report;
 
             Debug.Log(
@@ -390,6 +433,171 @@ namespace ASMLite.Editor
         internal static LegacyAliasContinuityReport GetLatestLegacyAliasContinuityReport()
         {
             return s_latestLegacyAliasReport;
+        }
+
+        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
+        {
+            if (component == null || component.gameObject == null)
+                return null;
+
+            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                var behavior = behaviors[i];
+                if (behavior == null)
+                    continue;
+
+                var type = behavior.GetType();
+                if (type == null)
+                    continue;
+
+                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    return behavior;
+            }
+
+            return null;
+        }
+
+        private static Type FindTypeByFullName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return null;
+
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                var asm = assemblies[i];
+                if (asm == null)
+                    continue;
+
+                var t = asm.GetType(fullName, throwOnError: false);
+                if (t != null)
+                    return t;
+            }
+
+            return null;
+        }
+
+        private static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)
+        {
+            var vfComponent = FindLiveVrcFuryComponent(component);
+            if (vfComponent == null)
+                return false;
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            var prefixProperty = serializedVf.FindProperty("content.menus.Array.data[0].prefix");
+            if (prefixProperty == null)
+                return false;
+
+            prefixProperty.stringValue = string.Empty;
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+
+            if (PrefabUtility.IsPartOfPrefabInstance(vfComponent) && prefixProperty.prefabOverride)
+            {
+                PrefabUtility.RevertPropertyOverride(prefixProperty, InteractionMode.AutomatedAction);
+            }
+
+            return true;
+        }
+
+        private static bool TrySyncInstallPathMoveMenuRouting(ASMLiteComponent component)
+        {
+            var avDesc = component != null ? component.GetComponentInParent<VRCAvatarDescriptor>() : null;
+            if (component == null || avDesc == null)
+                return false;
+
+            string installPrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+            string rootControlName = ResolveEffectiveRootControlName(component);
+            if (string.IsNullOrWhiteSpace(rootControlName))
+                return false;
+
+            const string routingObjectName = "ASM-Lite Install Path Routing";
+            Transform routingTransform = avDesc.transform.Find(routingObjectName);
+
+            // No custom install path -> remove routing helper if present.
+            if (string.IsNullOrEmpty(installPrefix))
+            {
+                if (routingTransform != null)
+                    UnityEngine.Object.DestroyImmediate(routingTransform.gameObject);
+                return true;
+            }
+
+            GameObject routingObject;
+            if (routingTransform != null)
+            {
+                routingObject = routingTransform.gameObject;
+            }
+            else
+            {
+                routingObject = new GameObject(routingObjectName);
+                routingObject.transform.SetParent(avDesc.transform, false);
+            }
+
+            var vfType = FindTypeByFullName("VF.Model.VRCFury");
+            var moveMenuType = FindTypeByFullName("VF.Model.Feature.MoveMenuItem");
+            if (vfType == null || moveMenuType == null)
+                return false;
+
+            var vfComponent = routingObject.GetComponent(vfType) as MonoBehaviour;
+            if (vfComponent == null)
+                vfComponent = routingObject.AddComponent(vfType) as MonoBehaviour;
+            if (vfComponent == null)
+                return false;
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            var contentProperty = serializedVf.FindProperty("content");
+            if (contentProperty == null || contentProperty.propertyType != SerializedPropertyType.ManagedReference)
+                return false;
+
+            contentProperty.managedReferenceValue = Activator.CreateInstance(moveMenuType, true);
+
+            var fromPathProperty = serializedVf.FindProperty("content.fromPath");
+            var toPathProperty = serializedVf.FindProperty("content.toPath");
+            if (fromPathProperty == null || toPathProperty == null)
+                return false;
+
+            string normalizedRoot = rootControlName.Trim();
+            fromPathProperty.stringValue = normalizedRoot;
+            toPathProperty.stringValue = installPrefix + "/" + normalizedRoot;
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            return true;
+        }
+
+        internal static bool TrySyncInstallPathRouting(ASMLiteComponent component)
+        {
+            if (component == null)
+                return false;
+
+            // Prefab-instance managedReference overrides on VRCFury FullController are
+            // brittle and explicitly warned about by VRCFury. For instance usage,
+            // route install path through a dedicated MoveMenuItem helper component.
+            if (PrefabUtility.IsPartOfPrefabInstance(component.gameObject))
+            {
+                bool routed = TrySyncInstallPathMoveMenuRouting(component);
+                bool cleared = TryClearLiveFullControllerMenuPrefixOverride(component);
+                return routed || cleared;
+            }
+
+            var vfComponent = FindLiveVrcFuryComponent(component);
+            if (vfComponent == null)
+                return false;
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            if (!ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(serializedVf, component))
+                return false;
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            return true;
         }
 
         // ─── Private implementation ────────────────────────────────────────────
@@ -1341,6 +1549,41 @@ namespace ASMLite.Editor
             }
 
             return new RebuildMigrationReport(staleVfRemoved, cleanup, componentMissing: false, avatarDescriptorFound: avatarDescriptorFound);
+        }
+
+        internal static bool TryDetachToDirectDelivery(ASMLiteComponent component, out string detail)
+        {
+            detail = string.Empty;
+
+            string validationError = Validate(component);
+            if (validationError != null)
+            {
+                detail = validationError;
+                return false;
+            }
+
+            var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
+            if (avDesc == null)
+            {
+                detail = $"[ASM-Lite] Detach failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.";
+                return false;
+            }
+
+            var exclusionReport = ResolveParameterExclusions(component, matchedCount: 0);
+            var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
+            var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out _);
+
+            PopulateExpressionMenu(component);
+            InjectFXLayers(avDesc, discoveredParams, component.slotCount);
+            InjectExpressionParams(avDesc, component.slotCount, discoveredParams);
+            InjectExpressionMenu(avDesc, component);
+
+            EditorUtility.SetDirty(avDesc);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            detail = $"Detached to direct delivery on '{avDesc.gameObject.name}' with {discoveredParams.Count} discovered parameter(s).";
+            return true;
         }
 
         // ─── Legacy descriptor-injection helpers (retired from normal flow) ───

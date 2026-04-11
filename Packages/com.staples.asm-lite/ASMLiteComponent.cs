@@ -96,7 +96,7 @@ namespace ASMLite
         public Texture2D customClearIcon;
 
         /// <summary>
-        /// Enables custom root menu icon override for the generated ASM-Lite root control.
+        /// Enables custom root menu icon behavior for the generated ASM-Lite root control.
         /// </summary>
         [SerializeField]
         public bool useCustomRootIcon = false;
@@ -108,7 +108,7 @@ namespace ASMLite
         public Texture2D customRootIcon;
 
         /// <summary>
-        /// Enables custom root menu name override for the generated ASM-Lite root control.
+        /// Enables custom root menu name behavior for the generated ASM-Lite root control.
         /// </summary>
         [SerializeField]
         public bool useCustomRootName = false;
@@ -120,7 +120,7 @@ namespace ASMLite
         public string customRootName = "";
 
         /// <summary>
-        /// Enables custom install path override for generated ASM-Lite menu/assets.
+        /// Enables custom install path behavior for generated ASM-Lite menu/assets.
         /// </summary>
         [SerializeField]
         public bool useCustomInstallPath = false;
@@ -142,6 +142,22 @@ namespace ASMLite
         /// </summary>
         [SerializeField]
         public string[] excludedParameterNames = new string[0];
+
+        /// <summary>
+        /// When true, ASM-Lite keeps a vendorized mirror of generated payload assets
+        /// under the project Assets folder and rewires the live FullController payload
+        /// to those mirrored assets after each bake.
+        /// </summary>
+        [SerializeField]
+        public bool useVendorizedGeneratedAssets = false;
+
+        /// <summary>
+        /// Project-relative folder (e.g. Assets/ASM-Lite/&lt;Avatar&gt;/GeneratedAssets)
+        /// where vendorized generated assets are mirrored when
+        /// <see cref="useVendorizedGeneratedAssets"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string vendorizedGeneratedAssetsPath = "";
 
 #if UNITY_EDITOR
         // ─── Reflection cache ─────────────────────────────────────────────────

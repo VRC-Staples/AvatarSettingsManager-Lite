@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using ASMLite;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Editor
 {
@@ -66,6 +70,33 @@ namespace ASMLite.Editor
         private bool _pendingUseParameterExclusions = false;
         private string[] _pendingExcludedParameterNames = Array.Empty<string>();
 
+        // ── Install Path Tree ─────────────────────────────────────────────────
+
+        // Which nodes in the install-path tree are expanded (keyed by full path).
+        private readonly HashSet<string> _expandedInstallPaths = new HashSet<string>(StringComparer.Ordinal);
+
+        // Scroll position for the install-path tree view.
+        private Vector2 _installPathTreeScrollPos;
+
+        // User-draggable height of the install-path tree scroll area.
+        private float _installPathTreeHeight = 240f;
+
+        // True while the user is dragging the tree resize handle.
+        private bool _isDraggingTreeResize;
+
+        // ── Parameter Checklist ───────────────────────────────────────────────
+
+        private Vector2 _paramChecklistScrollPos;
+        private float _paramChecklistHeight = 160f;
+        private bool _isDraggingParamResize;
+        private string[] _cachedParamList;
+        private VRCAvatarDescriptor _lastParamListAvatar;
+        private ParamTreeNode _cachedParamTree;
+        private readonly HashSet<string> _expandedParamMenuPaths = new HashSet<string>(StringComparer.Ordinal);
+
+        // Cached tree; rebuilt when the selected avatar changes.
+        private MenuTreeNode _cachedInstallPathTree;
+        private VRCAvatarDescriptor _lastInstallPathTreeAvatar;
 
         // ── Wheel Preview Cache ───────────────────────────────────────────────
 
@@ -116,8 +147,6 @@ namespace ASMLite.Editor
         // GUIStyle cached across repaints. Rebuilt lazily when null (domain reload).
         // Only fontSize is updated per call; cloning on every repaint is expensive.
         private GUIStyle _radialLabelStyle;
-        private const float  BannerAspect = 1200f / 520f; // slightly shorter so the UI, not the banner, remains dominant
-
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
 
@@ -141,10 +170,771 @@ namespace ASMLite.Editor
             win.Show();
         }
 
+        [MenuItem("Tools/.Staples./Dev Tools/Show ASM-Lite Package Binding")]
+        public static void ShowPackageBinding()
+        {
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ASMLiteComponent).Assembly);
+            if (packageInfo == null)
+            {
+                Debug.LogWarning("[ASM-Lite] Package binding lookup failed: PackageInfo.FindForAssembly returned null.");
+                return;
+            }
+
+            Debug.Log($"[ASM-Lite] Package binding: name='{packageInfo.name}', source={packageInfo.source}, version='{packageInfo.version}', assetPath='{packageInfo.assetPath}', resolvedPath='{packageInfo.resolvedPath}'.");
+        }
+
+        [MenuItem("Tools/.Staples./Dev Tools/VCC Embedded or Local Package Switcher...")]
+        public static void OpenVccLocalPackageSwitcher()
+        {
+            ASMLiteVccSwitcherWindow.Open();
+        }
+
+        private static List<string> FindLocalPackageCandidates(string packageName, string embeddedPath)
+        {
+            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var roots = new List<string>();
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(userProfile))
+            {
+                roots.Add(Path.Combine(userProfile, "Documents"));
+                roots.Add(Path.Combine(userProfile, "source", "repos"));
+                roots.Add(Path.Combine(userProfile, "OneDrive", "Documents"));
+            }
+
+            // Also scan sibling directories around the current project root.
+            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
+            if (!string.IsNullOrEmpty(projectRoot))
+            {
+                string parent = Directory.GetParent(projectRoot)?.FullName;
+                if (!string.IsNullOrEmpty(parent))
+                    roots.Add(parent);
+            }
+
+            for (int i = 0; i < roots.Count; i++)
+            {
+                string root = roots[i];
+                if (!Directory.Exists(root))
+                    continue;
+
+                foreach (var candidate in EnumeratePackageDirectories(root, packageName, maxDepth: 6, maxResults: 20))
+                {
+                    if (string.Equals(candidate, embeddedPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    results.Add(candidate);
+                }
+            }
+
+            return results.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        private static IEnumerable<string> EnumeratePackageDirectories(string root, string packageName, int maxDepth, int maxResults)
+        {
+            var stack = new Stack<(string path, int depth)>();
+            stack.Push((root, 0));
+            int yielded = 0;
+
+            while (stack.Count > 0 && yielded < maxResults)
+            {
+                var (current, depth) = stack.Pop();
+                if (depth > maxDepth)
+                    continue;
+
+                string dirName = Path.GetFileName(current);
+                string parentName = Path.GetFileName(Path.GetDirectoryName(current) ?? string.Empty);
+                if (string.Equals(dirName, packageName, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(parentName, "Packages", StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(Path.Combine(current, "package.json")))
+                {
+                    yielded++;
+                    yield return Path.GetFullPath(current);
+                    continue;
+                }
+
+                string[] children;
+                try
+                {
+                    children = Directory.GetDirectories(current);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < children.Length; i++)
+                    stack.Push((children[i], depth + 1));
+            }
+        }
+
+        private static string ResolveSelectedLocalPackagePath(string packageName, string selectedPath)
+        {
+            if (string.IsNullOrEmpty(selectedPath))
+                return selectedPath;
+
+            // Exact package folder selected.
+            if (File.Exists(Path.Combine(selectedPath, "package.json")))
+                return selectedPath;
+
+            // Project root selected -> <root>/Packages/<packageName>
+            string fromProjectRoot = Path.Combine(selectedPath, "Packages", packageName);
+            if (File.Exists(Path.Combine(fromProjectRoot, "package.json")))
+                return Path.GetFullPath(fromProjectRoot);
+
+            // Packages folder selected -> <packages>/<packageName>
+            string fromPackagesRoot = Path.Combine(selectedPath, packageName);
+            if (File.Exists(Path.Combine(fromPackagesRoot, "package.json")))
+                return Path.GetFullPath(fromPackagesRoot);
+
+            return selectedPath;
+        }
+
+        private static bool ValidateLocalPackageDirectory(string expectedPackageName, string localPath, out string error)
+        {
+            error = null;
+            if (!Directory.Exists(localPath))
+            {
+                error = $"directory does not exist: '{localPath}'.";
+                return false;
+            }
+
+            string packageJsonPath = Path.Combine(localPath, "package.json");
+            if (!File.Exists(packageJsonPath))
+            {
+                error = $"selected folder is missing package.json: '{localPath}'.";
+                return false;
+            }
+
+            string packageJson;
+            try
+            {
+                packageJson = File.ReadAllText(packageJsonPath);
+            }
+            catch (Exception ex)
+            {
+                error = $"failed reading package.json: {ex.Message}";
+                return false;
+            }
+
+            if (packageJson.IndexOf($"\"name\": \"{expectedPackageName}\"", StringComparison.OrdinalIgnoreCase) < 0
+                && packageJson.IndexOf($"\"name\":\"{expectedPackageName}\"", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                error = $"package.json name does not match '{expectedPackageName}'.";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryRemoveEmbeddedPackageFolder(string projectRoot, string embeddedPath, out string note, out string error)
+        {
+            note = null;
+            error = null;
+            try
+            {
+                bool isLink = (File.GetAttributes(embeddedPath) & FileAttributes.ReparsePoint) != 0;
+                if (isLink)
+                {
+                    Directory.Delete(embeddedPath, recursive: false);
+                    note = "removed junction/symlink at embedded path";
+                    return true;
+                }
+
+                string backupRoot = Path.Combine(projectRoot, ".asm-lite-package-backups");
+                Directory.CreateDirectory(backupRoot);
+                string backupName = Path.GetFileName(embeddedPath) + "__embedded_backup_" + DateTime.Now.ToString("yyyyMMddHHmmss");
+                string backupPath = Path.Combine(backupRoot, backupName);
+                Directory.Move(embeddedPath, backupPath);
+                note = $"moved embedded folder to '{backupPath}'";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static bool TrySetManifestDependency(string projectRoot, string packageName, string dependencyValue, out string error)
+        {
+            error = null;
+            try
+            {
+                string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
+                if (!File.Exists(manifestPath))
+                {
+                    error = $"manifest.json not found at '{manifestPath}'.";
+                    return false;
+                }
+
+                string json = File.ReadAllText(manifestPath);
+                if (!RemoveTopLevelJsonObjectEntry(ref json, "dependencies", packageName))
+                {
+                    // no-op if entry wasn't present
+                }
+
+                if (!AddTopLevelJsonObjectEntry(ref json, "dependencies", packageName, dependencyValue, out var addError))
+                {
+                    error = addError;
+                    return false;
+                }
+
+                string backupPath = manifestPath + ".bak";
+                File.Copy(manifestPath, backupPath, overwrite: true);
+                File.WriteAllText(manifestPath, json);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static string ToUnityFileDependencyValue(string absolutePath)
+        {
+            string normalized = Path.GetFullPath(absolutePath)
+                .Replace('\\', '/');
+
+            return $"file:{normalized}";
+        }
+
+        private static bool AddTopLevelJsonObjectEntry(ref string json, string sectionName, string key, string value, out string error)
+        {
+            error = null;
+            if (string.IsNullOrEmpty(json))
+            {
+                error = "json content was empty.";
+                return false;
+            }
+
+            string sectionNeedle = $"\"{sectionName}\"";
+            int sectionIndex = json.IndexOf(sectionNeedle, StringComparison.Ordinal);
+            if (sectionIndex < 0)
+            {
+                error = $"section '{sectionName}' was not found.";
+                return false;
+            }
+
+            int sectionBraceStart = json.IndexOf('{', sectionIndex);
+            if (sectionBraceStart < 0)
+            {
+                error = $"section '{sectionName}' has no opening brace.";
+                return false;
+            }
+
+            int sectionBraceEnd = FindMatchingBrace(json, sectionBraceStart);
+            if (sectionBraceEnd < 0)
+            {
+                error = $"section '{sectionName}' has no matching closing brace.";
+                return false;
+            }
+
+            string sectionBody = json.Substring(sectionBraceStart + 1, sectionBraceEnd - sectionBraceStart - 1);
+            bool sectionEmpty = string.IsNullOrWhiteSpace(sectionBody);
+
+            string escapedValue = value?.Replace("\\", "\\\\").Replace("\"", "\\\"") ?? string.Empty;
+            string newEntry = $"\n    \"{key}\": \"{escapedValue}\"";
+
+            if (sectionEmpty)
+            {
+                json = json.Insert(sectionBraceStart + 1, newEntry + "\n  ");
+            }
+            else
+            {
+                json = json.Insert(sectionBraceEnd, "," + newEntry);
+            }
+
+            return true;
+        }
+
+        private static bool TryRemoveVpmManifestPackageEntry(string projectRoot, string packageName)
+        {
+            try
+            {
+                string vpmManifestPath = Path.Combine(projectRoot, "Packages", "vpm-manifest.json");
+                if (!File.Exists(vpmManifestPath))
+                    return false;
+
+                string json = File.ReadAllText(vpmManifestPath);
+                bool changed = false;
+
+                changed |= RemoveTopLevelJsonObjectEntry(ref json, "dependencies", packageName);
+                changed |= RemoveTopLevelJsonObjectEntry(ref json, "locked", packageName);
+
+                if (!changed)
+                    return false;
+
+                string backupPath = vpmManifestPath + ".bak";
+                File.Copy(vpmManifestPath, backupPath, overwrite: true);
+                File.WriteAllText(vpmManifestPath, json);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] vpm-manifest cleanup skipped: {ex.Message}");
+                return false;
+            }
+        }
+
+        private static bool RemoveTopLevelJsonObjectEntry(ref string json, string sectionName, string key)
+        {
+            if (string.IsNullOrEmpty(json))
+                return false;
+
+            string sectionNeedle = $"\"{sectionName}\"";
+            int sectionIndex = json.IndexOf(sectionNeedle, StringComparison.Ordinal);
+            if (sectionIndex < 0)
+                return false;
+
+            int sectionBraceStart = json.IndexOf('{', sectionIndex);
+            if (sectionBraceStart < 0)
+                return false;
+
+            int sectionBraceEnd = FindMatchingBrace(json, sectionBraceStart);
+            if (sectionBraceEnd < 0)
+                return false;
+
+            string keyNeedle = $"\"{key}\"";
+            int keyIndex = json.IndexOf(keyNeedle, sectionBraceStart, sectionBraceEnd - sectionBraceStart + 1, StringComparison.Ordinal);
+            if (keyIndex < 0)
+                return false;
+
+            int entryStart = keyIndex;
+            while (entryStart > sectionBraceStart && char.IsWhiteSpace(json[entryStart - 1])) entryStart--;
+            if (entryStart > sectionBraceStart && json[entryStart - 1] == ',') entryStart--;
+
+            int colonIndex = json.IndexOf(':', keyIndex);
+            if (colonIndex < 0 || colonIndex > sectionBraceEnd)
+                return false;
+
+            int valueStart = colonIndex + 1;
+            while (valueStart < json.Length && char.IsWhiteSpace(json[valueStart])) valueStart++;
+
+            int entryEnd = valueStart;
+            if (entryEnd >= json.Length)
+                return false;
+
+            char startChar = json[entryEnd];
+            if (startChar == '{')
+            {
+                int valueEnd = FindMatchingBrace(json, entryEnd);
+                if (valueEnd < 0) return false;
+                entryEnd = valueEnd + 1;
+            }
+            else if (startChar == '[')
+            {
+                int valueEnd = FindMatchingBracket(json, entryEnd);
+                if (valueEnd < 0) return false;
+                entryEnd = valueEnd + 1;
+            }
+            else
+            {
+                while (entryEnd < json.Length && json[entryEnd] != ',' && json[entryEnd] != '}') entryEnd++;
+            }
+
+            while (entryEnd < json.Length && char.IsWhiteSpace(json[entryEnd])) entryEnd++;
+            if (entryEnd < json.Length && json[entryEnd] == ',') entryEnd++;
+
+            json = json.Remove(entryStart, entryEnd - entryStart);
+            return true;
+        }
+
+        private static int FindMatchingBrace(string text, int openIndex)
+        {
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = openIndex; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                        continue;
+                    }
+
+                    if (c == '\\')
+                    {
+                        escaped = true;
+                        continue;
+                    }
+
+                    if (c == '"')
+                        inString = false;
+
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                if (c == '{') depth++;
+                else if (c == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return i;
+                }
+            }
+
+            return -1;
+        }
+
+        internal static int FindMatchingBracket(string text, int openIndex)
+        {
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = openIndex; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (inString)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                        continue;
+                    }
+
+                    if (c == '\\')
+                    {
+                        escaped = true;
+                        continue;
+                    }
+
+                    if (c == '"')
+                        inString = false;
+
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                if (c == '[') depth++;
+                else if (c == ']')
+                {
+                    depth--;
+                    if (depth == 0)
+                        return i;
+                }
+            }
+
+            return -1;
+        }
+
+        // ── Dev Tools apply helpers ───────────────────────────────────────────
+
+        internal static void ApplySwitchToFileLocal(string projectRoot, string selectedLocalPath, string packageName)
+        {
+            bool isCurrentProject = string.Equals(
+                projectRoot,
+                Directory.GetParent(Application.dataPath)?.FullName,
+                StringComparison.OrdinalIgnoreCase);
+
+            string embeddedPath = Path.GetFullPath(Path.Combine(projectRoot, "Packages", packageName));
+            string dependencyValue = ToUnityFileDependencyValue(selectedLocalPath);
+
+            if (!TrySetManifestDependency(projectRoot, packageName, dependencyValue, out var manifestError))
+            {
+                Debug.LogError($"[ASM-Lite] Switch failed for '{Path.GetFileName(projectRoot)}': {manifestError}");
+                return;
+            }
+
+            bool vpmChanged = TryRemoveVpmManifestPackageEntry(projectRoot, packageName);
+
+            string embeddedRemovalNote = string.Empty;
+            bool embeddedExists = Directory.Exists(embeddedPath)
+                && !string.Equals(embeddedPath, Path.GetFullPath(selectedLocalPath), StringComparison.OrdinalIgnoreCase);
+
+            if (embeddedExists)
+            {
+                if (isCurrentProject) AssetDatabase.Refresh();
+                if (!TryRemoveEmbeddedPackageFolder(projectRoot, embeddedPath, out var removalNote, out var removalError))
+                    Debug.LogWarning($"[ASM-Lite] Could not remove embedded folder '{embeddedPath}': {removalError}. Unity may still use the embedded copy.");
+                else
+                    embeddedRemovalNote = removalNote;
+            }
+
+            if (isCurrentProject)
+            {
+                Client.Resolve();
+                AssetDatabase.Refresh();
+            }
+
+            Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to file dependency: {packageName} => '{dependencyValue}' ({(vpmChanged ? "removed stale vpm-manifest entry" : "no vpm-manifest change")}){(string.IsNullOrEmpty(embeddedRemovalNote) ? string.Empty : ". " + embeddedRemovalNote)}.");
+        }
+
+        internal static void ApplySwitchToEmbedded(string projectRoot, string packageName)
+        {
+            bool isCurrentProject = string.Equals(
+                projectRoot,
+                Directory.GetParent(Application.dataPath)?.FullName,
+                StringComparison.OrdinalIgnoreCase);
+
+            string embeddedPath = Path.GetFullPath(Path.Combine(projectRoot, "Packages", packageName));
+            string restoredFrom = null;
+
+            if (!Directory.Exists(embeddedPath))
+            {
+                string backupRoot = Path.Combine(projectRoot, ".asm-lite-package-backups");
+                if (Directory.Exists(backupRoot))
+                {
+                    string latestBackup = Directory.GetDirectories(backupRoot, packageName + "__embedded_backup_*")
+                        .OrderByDescending(x => x, StringComparer.OrdinalIgnoreCase)
+                        .FirstOrDefault();
+
+                    if (latestBackup != null)
+                    {
+                        try
+                        {
+                            Directory.Move(latestBackup, embeddedPath);
+                            restoredFrom = latestBackup;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.LogWarning($"[ASM-Lite] Could not restore embedded backup '{latestBackup}': {ex.Message}. Unity will use VCC/registry package instead.");
+                        }
+                    }
+                }
+            }
+
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ASMLiteComponent).Assembly);
+            string targetVersion = !string.IsNullOrWhiteSpace(packageInfo?.version) ? packageInfo.version : "1.0.9";
+
+            if (!TrySetManifestDependency(projectRoot, packageName, targetVersion, out var manifestError))
+            {
+                Debug.LogError($"[ASM-Lite] Switch failed for '{Path.GetFileName(projectRoot)}': {manifestError}");
+                return;
+            }
+
+            if (isCurrentProject)
+            {
+                Client.Resolve();
+                AssetDatabase.Refresh();
+            }
+
+            if (restoredFrom != null)
+                Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to version dependency: {packageName} => '{targetVersion}'. Restored embedded folder from '{restoredFrom}'.");
+            else
+                Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to version dependency: {packageName} => '{targetVersion}'. Embedded present={Directory.Exists(embeddedPath)}.");
+        }
+
+        // ── VCC local package discovery ───────────────────────────────────────
+
+        internal struct VccLocalPackage
+        {
+            public string PackageName;
+            public string DisplayName;
+            public string Version;
+            public string LocalPath;
+        }
+
+        internal static IEnumerable<string> FindVccProjectRoots()
+            => ReadVccSettingsArray("userProjects")
+                .Where(Directory.Exists)
+                .Select(Path.GetFullPath);
+
+        internal static List<VccLocalPackage> DiscoverVccLocalPackages()
+        {
+            var result = new List<VccLocalPackage>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var folder in ReadVccSettingsArray("userPackageFolders"))
+            {
+                if (!Directory.Exists(folder)) continue;
+                TryAddVccPackage(folder, result, seen);
+                foreach (var sub in Directory.GetDirectories(folder))
+                    TryAddVccPackage(sub, result, seen);
+            }
+
+            foreach (var path in ReadVccSettingsArray("userPackages"))
+                TryAddVccPackage(path, result, seen);
+
+            return result;
+        }
+
+        private static void TryAddVccPackage(string path, List<VccLocalPackage> result, HashSet<string> seen)
+        {
+            string pkgJsonPath = Path.Combine(path, "package.json");
+            if (!File.Exists(pkgJsonPath)) return;
+            string fullPath = Path.GetFullPath(path);
+            if (!seen.Add(fullPath)) return;
+
+            string content;
+            try { content = File.ReadAllText(pkgJsonPath); }
+            catch { return; }
+
+            string name = ExtractJsonString(content, "name");
+            if (string.IsNullOrEmpty(name)) return;
+
+            result.Add(new VccLocalPackage
+            {
+                PackageName = name,
+                DisplayName = ExtractJsonString(content, "displayName") ?? name,
+                Version     = ExtractJsonString(content, "version") ?? string.Empty,
+                LocalPath   = fullPath,
+            });
+        }
+
+        private static IEnumerable<string> ReadVccSettingsArray(string key)
+        {
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string settingsPath = Path.Combine(localAppData, "VRChatCreatorCompanion", "settings.json");
+            if (!File.Exists(settingsPath)) return Enumerable.Empty<string>();
+
+            string json;
+            try { json = File.ReadAllText(settingsPath); }
+            catch { return Enumerable.Empty<string>(); }
+
+            return ExtractJsonStringArray(json, key);
+        }
+
+        private static IEnumerable<string> ExtractJsonStringArray(string json, string key)
+        {
+            int idx = json.IndexOf($"\"{key}\"", StringComparison.Ordinal);
+            if (idx < 0) return Enumerable.Empty<string>();
+
+            int bracketStart = json.IndexOf('[', idx);
+            if (bracketStart < 0) return Enumerable.Empty<string>();
+
+            int bracketEnd = FindMatchingBracket(json, bracketStart);
+            if (bracketEnd < 0) return Enumerable.Empty<string>();
+
+            return ParseJsonStringArray(json.Substring(bracketStart + 1, bracketEnd - bracketStart - 1));
+        }
+
+        private static IEnumerable<string> ParseJsonStringArray(string content)
+        {
+            int pos = 0;
+            while (pos < content.Length)
+            {
+                int qStart = content.IndexOf('"', pos);
+                if (qStart < 0) break;
+                int qEnd = qStart + 1;
+                while (qEnd < content.Length)
+                {
+                    if (content[qEnd] == '\\') { qEnd += 2; continue; }
+                    if (content[qEnd] == '"') break;
+                    qEnd++;
+                }
+                if (qEnd >= content.Length) break;
+                yield return content.Substring(qStart + 1, qEnd - qStart - 1)
+                    .Replace("\\\\", "\\").Replace("\\/", "/");
+                pos = qEnd + 1;
+            }
+        }
+
+        private static string ExtractJsonString(string json, string key)
+        {
+            int idx = json.IndexOf($"\"{key}\"", StringComparison.Ordinal);
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx);
+            if (colon < 0) return null;
+            int vStart = colon + 1;
+            while (vStart < json.Length && char.IsWhiteSpace(json[vStart])) vStart++;
+            if (vStart >= json.Length || json[vStart] != '"') return null;
+            int vEnd = vStart + 1;
+            while (vEnd < json.Length)
+            {
+                if (json[vEnd] == '\\') { vEnd += 2; continue; }
+                if (json[vEnd] == '"') break;
+                vEnd++;
+            }
+            if (vEnd >= json.Length) return null;
+            return json.Substring(vStart + 1, vEnd - vStart - 1);
+        }
+
+        internal static string GetProjectPackageStatus(string projectRoot, string packageName)
+        {
+            // Read manifest first — a file: entry means the user explicitly set local,
+            // and that takes priority in the display even if the embedded folder still
+            // exists (e.g. locked by Unity while the project is open).
+            string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
+            if (File.Exists(manifestPath))
+            {
+                string json;
+                try { json = File.ReadAllText(manifestPath); }
+                catch { json = null; }
+
+                if (json != null)
+                {
+                    int idx = json.IndexOf($"\"{packageName}\"", StringComparison.Ordinal);
+                    if (idx >= 0)
+                    {
+                        int colon = json.IndexOf(':', idx);
+                        if (colon >= 0)
+                        {
+                            int vStart = colon + 1;
+                            while (vStart < json.Length && char.IsWhiteSpace(json[vStart])) vStart++;
+                            if (vStart < json.Length && json[vStart] == '"')
+                            {
+                                int vEnd = json.IndexOf('"', vStart + 1);
+                                if (vEnd >= 0)
+                                {
+                                    string val = json.Substring(vStart + 1, vEnd - vStart - 1);
+                                    if (val.StartsWith("file:", StringComparison.Ordinal))
+                                        return "file: (local)";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // No file: manifest entry — check for an embedded/linked folder.
+            string embeddedPath = Path.Combine(projectRoot, "Packages", packageName);
+            if (Directory.Exists(embeddedPath) && File.Exists(Path.Combine(embeddedPath, "package.json")))
+            {
+                try
+                {
+                    bool isLink = (File.GetAttributes(embeddedPath) & FileAttributes.ReparsePoint) != 0;
+                    return isLink ? "linked" : "embedded";
+                }
+                catch { }
+            }
+
+            if (!File.Exists(manifestPath)) return "not found";
+
+            string manifestJson;
+            try { manifestJson = File.ReadAllText(manifestPath); }
+            catch { return "manifest error"; }
+
+            int midx = manifestJson.IndexOf($"\"{packageName}\"", StringComparison.Ordinal);
+            if (midx < 0) return "not installed";
+
+            int mcolon = manifestJson.IndexOf(':', midx);
+            if (mcolon < 0) return "unknown";
+
+            int mvStart = mcolon + 1;
+            while (mvStart < manifestJson.Length && char.IsWhiteSpace(manifestJson[mvStart])) mvStart++;
+            if (mvStart >= manifestJson.Length || manifestJson[mvStart] != '"') return "unknown";
+
+            int mvEnd = manifestJson.IndexOf('"', mvStart + 1);
+            if (mvEnd < 0) return "unknown";
+
+            string mval = manifestJson.Substring(mvStart + 1, mvEnd - mvStart - 1);
+            return $"v{mval}";
+        }
+
         // ── GUI ───────────────────────────────────────────────────────────────
 
         private void OnGUI()
         {
+            // Draw the banner outside the scroll view so it sits flush with the window top.
+            DrawHeader();
+
             _scrollPos = EditorGUILayout.BeginScrollView(
                 _scrollPos,
                 alwaysShowHorizontal: false,
@@ -155,8 +945,6 @@ namespace ASMLite.Editor
 
             try
             {
-                DrawHeader();
-
                 DrawAvatarPicker();
 
                 if (_selectedAvatar != null)
@@ -212,20 +1000,17 @@ namespace ASMLite.Editor
 
             if (_bannerTexture != null)
             {
-                // Scale to full available width, clamp height to preserve 4:1 aspect.
-                float availableWidth = EditorGUIUtility.currentViewWidth - 4f; // 2px padding each side
-                float bannerHeight   = Mathf.Round(availableWidth / BannerAspect);
+                float aspect         = (float)_bannerTexture.width / _bannerTexture.height;
+                float availableWidth = EditorGUIUtility.currentViewWidth;
+                float bannerHeight   = Mathf.Round(availableWidth / aspect);
 
-                // Reserve layout space so the scroll view accounts for the banner height.
-                Rect bannerRect = GUILayoutUtility.GetRect(availableWidth, bannerHeight,
-                    GUILayout.ExpandWidth(true));
+                // Draw at absolute (0,0) — bypasses any layout group margin.
+                // StretchToFill with the correct aspect-derived height means no letterboxing.
+                GUI.DrawTexture(new Rect(0f, 0f, availableWidth, bannerHeight),
+                    _bannerTexture, ScaleMode.StretchToFill, alphaBlend: true);
 
-                // Draw flush to the left edge of the window.
-                bannerRect.x      = 0f;
-                bannerRect.width  = availableWidth + 4f;
-
-                GUI.DrawTexture(bannerRect, _bannerTexture, ScaleMode.ScaleToFit, alphaBlend: false);
-                EditorGUILayout.Space(4);
+                // Consume the height in the layout system so content below doesn't overlap.
+                GUILayout.Space(bannerHeight + 4f);
             }
             else
             {
@@ -393,13 +1178,13 @@ namespace ASMLite.Editor
             EditorGUILayout.BeginVertical("box");
 
             bool useCustomRootIcon = component ? component.useCustomRootIcon : _pendingUseCustomRootIcon;
-            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Override root icon", useCustomRootIcon);
+            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Use custom root icon", useCustomRootIcon);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Root Icon Override", ref component.useCustomRootIcon, newUseCustomRootIcon);
+                SetComponentBool(component, "Toggle ASM-Lite Custom Root Icon", ref component.useCustomRootIcon, newUseCustomRootIcon);
             else
                 _pendingUseCustomRootIcon = newUseCustomRootIcon;
 
-            using (new EditorGUI.DisabledScope(!newUseCustomRootIcon))
+            if (newUseCustomRootIcon)
             {
                 Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
                 Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
@@ -412,13 +1197,13 @@ namespace ASMLite.Editor
             EditorGUILayout.Space(6);
 
             bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
-            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Override root name", useCustomRootName);
+            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom root name", useCustomRootName);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Root Name Override", ref component.useCustomRootName, newUseCustomRootName);
+                SetComponentBool(component, "Toggle ASM-Lite Custom Root Name", ref component.useCustomRootName, newUseCustomRootName);
             else
                 _pendingUseCustomRootName = newUseCustomRootName;
 
-            using (new EditorGUI.DisabledScope(!newUseCustomRootName))
+            if (newUseCustomRootName)
             {
                 string currentRootName = component ? NormalizeOptionalString(component.customRootName) : NormalizeOptionalString(_pendingCustomRootName);
                 string newRootName = EditorGUILayout.TextField("Root Name", currentRootName);
@@ -431,54 +1216,1695 @@ namespace ASMLite.Editor
             EditorGUILayout.Space(6);
 
             bool useCustomInstallPath = component ? component.useCustomInstallPath : _pendingUseCustomInstallPath;
-            bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Override install path", useCustomInstallPath);
+            bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Use custom install path", useCustomInstallPath);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Install Path Override", ref component.useCustomInstallPath, newUseCustomInstallPath);
+            {
+                bool installToggleChanged = component.useCustomInstallPath != newUseCustomInstallPath;
+                SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, newUseCustomInstallPath);
+                if (installToggleChanged)
+                    TryRefreshInstallPathPrefix(component, "Customize Toggle");
+            }
             else
+            {
                 _pendingUseCustomInstallPath = newUseCustomInstallPath;
+            }
 
-            using (new EditorGUI.DisabledScope(!newUseCustomInstallPath))
+            if (newUseCustomInstallPath)
             {
                 string currentInstallPath = component ? NormalizeOptionalString(component.customInstallPath) : NormalizeOptionalString(_pendingCustomInstallPath);
+
+                // Only apply text-field edits when the user actually changed the value.
+                // Tree clicks write directly via ApplyInstallPathSelection and must not
+                // be overwritten by a stale newInstallPath captured before the tree draws.
+                EditorGUI.BeginChangeCheck();
                 string newInstallPath = EditorGUILayout.TextField("Install Path", currentInstallPath);
-                if (component)
-                    SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, newInstallPath);
-                else
-                    _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    if (component)
+                    {
+                        string normalizedNewInstallPath = NormalizeOptionalString(newInstallPath);
+                        bool installPathChanged = !string.Equals(NormalizeOptionalString(component.customInstallPath), normalizedNewInstallPath, StringComparison.Ordinal);
+                        SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, newInstallPath);
+                        if (installPathChanged)
+                            TryRefreshInstallPathPrefix(component, "Customize Text");
+                    }
+                    else
+                    {
+                        _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+                    }
+                }
+
+                DrawInstallPathTree(component);
             }
 
             EditorGUILayout.Space(6);
 
             bool useParameterExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
-            bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Exclude parameter names", useParameterExclusions);
+            bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Customize parameter backup", useParameterExclusions);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Parameter Exclusions", ref component.useParameterExclusions, newUseParameterExclusions);
+                SetComponentBool(component, "Toggle ASM-Lite Parameter Backup Customization", ref component.useParameterExclusions, newUseParameterExclusions);
             else
                 _pendingUseParameterExclusions = newUseParameterExclusions;
 
-            using (new EditorGUI.DisabledScope(!newUseParameterExclusions))
+            if (newUseParameterExclusions)
+                DrawParameterChecklist(component);
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void ApplyInstallPathSelection(ASMLiteComponent component, string selectedPath)
+        {
+            string normalized = NormalizeOptionalString(selectedPath);
+            if (component)
             {
-                string[] currentExcludedNames = component
-                    ? SanitizeExcludedParameterNames(component.excludedParameterNames)
-                    : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+                bool enableToggle = !string.IsNullOrEmpty(normalized) && !component.useCustomInstallPath;
 
-                string multilineValue = string.Join("\n", currentExcludedNames);
-                EditorGUILayout.LabelField("Excluded Parameter Names", EditorStyles.miniBoldLabel);
-                EditorGUILayout.LabelField("One parameter name per line. Blank and duplicate entries are ignored.", EditorStyles.wordWrappedMiniLabel);
+                if (enableToggle)
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, true);
 
-                EditorGUI.BeginChangeCheck();
-                string updatedMultilineValue = EditorGUILayout.TextArea(multilineValue, GUILayout.MinHeight(68f));
-                if (EditorGUI.EndChangeCheck())
+                SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
+                // Always attempt live prefix refresh for explicit tree selection.
+                // This repairs stale VF prefix state even when the selected path text
+                // matches the component's current customInstallPath value.
+                TryRefreshInstallPathPrefix(component, "Customize Tree");
+            }
+            else
+            {
+                _pendingCustomInstallPath = normalized;
+                if (!string.IsNullOrEmpty(normalized))
+                    _pendingUseCustomInstallPath = true;
+            }
+        }
+
+        private static void TryRefreshInstallPathPrefix(ASMLiteComponent component, string contextLabel)
+        {
+            if (component == null)
+                return;
+
+            if (!TryRefreshLiveInstallPathPrefix(component, contextLabel))
+            {
+                Debug.LogWarning($"[ASM-Lite] {contextLabel}: Install-path update did not refresh live FullController menu prefix immediately. Rebuild/upload will retry.");
+            }
+        }
+
+        // ── Install Path Tree UI ──────────────────────────────────────────────
+
+        private void DrawInstallPathTree(ASMLiteComponent component)
+        {
+            // Invalidate cached tree when avatar changes.
+            if (_lastInstallPathTreeAvatar != _selectedAvatar)
+            {
+                _cachedInstallPathTree = null;
+                _lastInstallPathTreeAvatar = _selectedAvatar;
+                _expandedInstallPaths.Clear();
+            }
+
+            if (_cachedInstallPathTree == null)
+                _cachedInstallPathTree = BuildInstallPathTree(_selectedAvatar);
+
+            string currentPath = component
+                ? NormalizeOptionalString(component.customInstallPath)
+                : NormalizeOptionalString(_pendingCustomInstallPath);
+
+            EditorGUILayout.Space(2f);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Install Location", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button("↻", GUILayout.Width(22f), GUILayout.Height(14f)))
+            {
+                _cachedInstallPathTree = BuildInstallPathTree(_selectedAvatar);
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (_cachedInstallPathTree == null || _cachedInstallPathTree.Children.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No menu paths found on selected avatar.", MessageType.None);
+                return;
+            }
+
+            // Root row — selects empty install path (menu root).
+            bool rootSelected = string.IsNullOrEmpty(currentPath);
+            var rootRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            if (rootSelected && Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(rootRect, new Color(0.24f, 0.49f, 0.91f, 0.30f));
+            if (GUI.Button(rootRect, rootSelected ? "(root)" : "(root)", rootSelected ? EditorStyles.boldLabel : EditorStyles.label))
+            {
+                ApplyInstallPathSelection(component, string.Empty);
+                Repaint();
+            }
+
+            _installPathTreeScrollPos = EditorGUILayout.BeginScrollView(
+                _installPathTreeScrollPos, GUILayout.Height(_installPathTreeHeight));
+
+            foreach (var child in _cachedInstallPathTree.Children)
+                DrawInstallPathTreeNode(child, component, currentPath, 0);
+
+            EditorGUILayout.EndScrollView();
+
+            // ── Resize handle ─────────────────────────────────────────────────
+            // A narrow strip at the bottom-right that the user can drag up/down.
+            var handleRect = EditorGUILayout.GetControlRect(false, 8f);
+            handleRect = new Rect(handleRect.xMax - 24f, handleRect.y, 24f, 8f);
+
+            EditorGUIUtility.AddCursorRect(handleRect, MouseCursor.ResizeVertical);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                // Draw three small dots as a visual grip indicator.
+                var dotColor = new Color(0.55f, 0.55f, 0.55f, 0.80f);
+                float cx = handleRect.x + handleRect.width / 2f;
+                float cy = handleRect.y + handleRect.height / 2f;
+                for (int d = -1; d <= 1; d++)
+                    EditorGUI.DrawRect(new Rect(cx + d * 5f - 1f, cy - 1f, 2f, 2f), dotColor);
+            }
+
+            if (Event.current.type == EventType.MouseDown && handleRect.Contains(Event.current.mousePosition))
+            {
+                _isDraggingTreeResize = true;
+                Event.current.Use();
+            }
+
+            if (_isDraggingTreeResize)
+            {
+                if (Event.current.type == EventType.MouseDrag)
                 {
-                    string[] parsedNames = ParseExcludedParameterNames(updatedMultilineValue);
-                    if (component)
-                        SetComponentExcludedNames(component, "Change ASM-Lite Parameter Exclusions", parsedNames);
-                    else
-                        _pendingExcludedParameterNames = parsedNames;
+                    _installPathTreeHeight = Mathf.Clamp(
+                        _installPathTreeHeight + Event.current.delta.y, 80f, 600f);
+                    Event.current.Use();
+                    Repaint();
+                }
+                else if (Event.current.type == EventType.MouseUp)
+                {
+                    _isDraggingTreeResize = false;
+                    Event.current.Use();
+                }
+            }
+        }
+
+        private void DrawInstallPathTreeNode(
+            MenuTreeNode node,
+            ASMLiteComponent component,
+            string currentPath,
+            int depth)
+        {
+            bool isSelected = string.Equals(currentPath, node.FullPath, StringComparison.Ordinal);
+            bool hasChildren = node.Children.Count > 0;
+            bool isExpanded = _expandedInstallPaths.Contains(node.FullPath);
+
+            var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            float indentPx = depth * 14f + 2f;
+            var activeRect = new Rect(rowRect.x + indentPx, rowRect.y, rowRect.width - indentPx, rowRect.height);
+
+            // Selection highlight.
+            if (isSelected && Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(activeRect, new Color(0.24f, 0.49f, 0.91f, 0.30f));
+
+            // Foldout arrow — toggles expand/collapse without selecting.
+            if (hasChildren)
+            {
+                var arrowRect = new Rect(activeRect.x, activeRect.y, 14f, activeRect.height);
+                bool toggled = EditorGUI.Foldout(arrowRect, isExpanded, GUIContent.none, true);
+                if (toggled != isExpanded)
+                {
+                    if (toggled) _expandedInstallPaths.Add(node.FullPath);
+                    else _expandedInstallPaths.Remove(node.FullPath);
+                    isExpanded = toggled;
+                    Repaint();
                 }
             }
 
-            EditorGUILayout.EndVertical();
+            // Label — clicking selects this path as the install location.
+            var labelRect = new Rect(
+                activeRect.x + 14f, activeRect.y,
+                activeRect.width - 14f, activeRect.height);
+
+            if (GUI.Button(labelRect, node.Name, isSelected ? EditorStyles.boldLabel : EditorStyles.label))
+            {
+                ApplyInstallPathSelection(component, node.FullPath);
+                Repaint();
+            }
+
+            if (hasChildren && isExpanded)
+            {
+                foreach (var child in node.Children)
+                    DrawInstallPathTreeNode(child, component, currentPath, depth + 1);
+            }
+        }
+
+        private static MenuTreeNode BuildInstallPathTree(VRCAvatarDescriptor avatar)
+        {
+            var root = new MenuTreeNode { Name = string.Empty, FullPath = string.Empty };
+            if (avatar == null)
+                return root;
+
+            var allPaths = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var p in GetAvatarSubmenuPaths(avatar)) allPaths.Add(p);
+            foreach (var p in GetVrcFuryMenuPrefixes(avatar)) allPaths.Add(p);
+
+            // Apply VRCFury MoveMenuItem remaps so install-path choices reflect
+            // the effective post-move menu layout (destination paths) instead of
+            // exposing stale pre-move source locations.
+            var moveRemaps = GetVrcFuryMoveMenuPathRemaps(avatar);
+            ApplyInstallPathMoveRemaps(allPaths, moveRemaps);
+
+            var nodeMap = new Dictionary<string, MenuTreeNode>(StringComparer.Ordinal);
+            nodeMap[string.Empty] = root;
+
+            foreach (var path in allPaths.OrderBy(p => p, StringComparer.Ordinal))
+                EnsureTreeNodeExists(nodeMap, path);
+
+            SortTreeChildren(root);
+            return root;
+        }
+
+        private static MenuTreeNode EnsureTreeNodeExists(
+            Dictionary<string, MenuTreeNode> nodeMap, string path)
+        {
+            if (nodeMap.TryGetValue(path, out var existing))
+                return existing;
+
+            int slash = path.LastIndexOf('/');
+            string parentPath = slash < 0 ? string.Empty : path.Substring(0, slash);
+            string name = slash < 0 ? path : path.Substring(slash + 1);
+
+            var parent = EnsureTreeNodeExists(nodeMap, parentPath);
+            var node = new MenuTreeNode { Name = name, FullPath = path };
+            parent.Children.Add(node);
+            nodeMap[path] = node;
+            return node;
+        }
+
+        private static void SortTreeChildren(MenuTreeNode node)
+        {
+            node.Children.Sort((a, b) =>
+                string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            foreach (var child in node.Children)
+                SortTreeChildren(child);
+        }
+
+        private static Dictionary<string, string> GetVrcFuryMoveMenuPathRemaps(VRCAvatarDescriptor avatar)
+        {
+            var remaps = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (avatar == null)
+                return remaps;
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                var iterator = so.GetIterator();
+                if (!iterator.NextVisible(true))
+                    continue;
+
+                var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+                do
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                        continue;
+
+                    string managedRefType = iterator.managedReferenceFullTypename;
+                    if (string.IsNullOrWhiteSpace(managedRefType)
+                        || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
+                        continue;
+
+                    string managedPath = iterator.propertyPath;
+                    if (!seenPaths.Add(managedPath))
+                        continue;
+
+                    var fromProp = so.FindProperty(managedPath + ".fromPath");
+                    var toProp = so.FindProperty(managedPath + ".toPath");
+                    if (fromProp == null || toProp == null)
+                        continue;
+                    if (fromProp.propertyType != SerializedPropertyType.String
+                        || toProp.propertyType != SerializedPropertyType.String)
+                        continue;
+
+                    string fromPath = NormalizeSlashPath(fromProp.stringValue);
+                    string toPath = NormalizeSlashPath(toProp.stringValue);
+                    if (string.IsNullOrWhiteSpace(toPath))
+                        continue;
+
+                    if (!remaps.ContainsKey(fromPath ?? string.Empty))
+                        remaps[fromPath ?? string.Empty] = toPath;
+                } while (iterator.NextVisible(true));
+            }
+
+            return remaps;
+        }
+
+        private static void ApplyInstallPathMoveRemaps(HashSet<string> allPaths, Dictionary<string, string> remaps)
+        {
+            if (allPaths == null || remaps == null || remaps.Count == 0)
+                return;
+
+            foreach (var kv in remaps)
+            {
+                string fromPath = kv.Key ?? string.Empty;
+                string toPath = kv.Value ?? string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(fromPath))
+                {
+                    allPaths.RemoveWhere(path =>
+                        string.Equals(path, fromPath, StringComparison.Ordinal)
+                        || path.StartsWith(fromPath + "/", StringComparison.Ordinal));
+                }
+
+                AddPathAndParents(allPaths, toPath);
+            }
+        }
+
+        private static void AddPathAndParents(HashSet<string> allPaths, string fullPath)
+        {
+            if (allPaths == null || string.IsNullOrWhiteSpace(fullPath))
+                return;
+
+            string normalized = NormalizeSlashPath(fullPath);
+            if (string.IsNullOrWhiteSpace(normalized))
+                return;
+
+            string[] segments = normalized.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return;
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < segments.Length; i++)
+            {
+                if (sb.Length > 0)
+                    sb.Append('/');
+                sb.Append(segments[i]);
+                allPaths.Add(sb.ToString());
+            }
+        }
+
+        // ── Parameter Backup Tree UI ──────────────────────────────────────────
+
+        private static Dictionary<string, string> BuildHiddenAssignedByVisibleOriginalMap(IReadOnlyCollection<string> visibleParamNames)
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (visibleParamNames == null || visibleParamNames.Count == 0)
+                return map;
+
+            var visibleSet = new HashSet<string>(visibleParamNames, StringComparer.Ordinal);
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return map;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                if (!visibleSet.Contains(mapping.OriginalGlobalParam))
+                    continue;
+                if (visibleSet.Contains(mapping.AssignedGlobalParam))
+                    continue;
+
+                if (!map.ContainsKey(mapping.OriginalGlobalParam))
+                    map.Add(mapping.OriginalGlobalParam, mapping.AssignedGlobalParam);
+            }
+
+            return map;
+        }
+
+        private static HashSet<string> NormalizeExcludedSetForVisibleRows(
+            IEnumerable<string> excludedRaw,
+            Dictionary<string, string> hiddenAssignedByVisibleOriginal)
+        {
+            var normalized = new HashSet<string>(StringComparer.Ordinal);
+            if (excludedRaw != null)
+            {
+                foreach (var name in excludedRaw)
+                {
+                    if (!string.IsNullOrWhiteSpace(name))
+                        normalized.Add(name);
+                }
+            }
+
+            if (hiddenAssignedByVisibleOriginal != null)
+            {
+                foreach (var kv in hiddenAssignedByVisibleOriginal)
+                {
+                    string original = kv.Key;
+                    string assigned = kv.Value;
+                    if (normalized.Contains(assigned))
+                        normalized.Add(original);
+                }
+            }
+
+            return normalized;
+        }
+
+        private static string[] ExpandExcludedForStorage(
+            HashSet<string> visibleExcluded,
+            Dictionary<string, string> hiddenAssignedByVisibleOriginal)
+        {
+            var expanded = new HashSet<string>(visibleExcluded ?? new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+
+            if (hiddenAssignedByVisibleOriginal != null)
+            {
+                foreach (var kv in hiddenAssignedByVisibleOriginal)
+                {
+                    if (expanded.Contains(kv.Key))
+                        expanded.Add(kv.Value);
+                }
+            }
+
+            return expanded.OrderBy(p => p, StringComparer.Ordinal).ToArray();
+        }
+
+        private void DrawParameterChecklist(ASMLiteComponent component)
+        {
+            if (_lastParamListAvatar != _selectedAvatar)
+            {
+                _cachedParamList = null;
+                _cachedParamTree = null;
+                _expandedParamMenuPaths.Clear();
+                _lastParamListAvatar = _selectedAvatar;
+            }
+            if (_cachedParamList == null)
+                _cachedParamList = GetBackableParameterNames(_selectedAvatar);
+            if (_cachedParamTree == null)
+                _cachedParamTree = BuildParamTree(_selectedAvatar);
+
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Parameter Backup", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button("↻", GUILayout.Width(22f), GUILayout.Height(14f)))
+            {
+                _cachedParamList = GetBackableParameterNames(_selectedAvatar);
+                _cachedParamTree = BuildParamTree(_selectedAvatar);
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField("Uncheck parameters to exclude them from backup.", EditorStyles.wordWrappedMiniLabel);
+
+            if (_cachedParamList == null || _cachedParamList.Length == 0)
+            {
+                EditorGUILayout.HelpBox("No parameters found on selected avatar.", MessageType.None);
+                return;
+            }
+
+            // Build hidden mapping: visible original param -> hidden assigned ASM_VF_* alias.
+            var hiddenAssignedByVisibleOriginal = BuildHiddenAssignedByVisibleOriginalMap(_cachedParamList);
+
+            // Build mutable exclusion set from current component/pending state.
+            string[] currentExcluded = component
+                ? SanitizeExcludedParameterNames(component.excludedParameterNames)
+                : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+            var excludedSet = NormalizeExcludedSetForVisibleRows(currentExcluded, hiddenAssignedByVisibleOriginal);
+            var originalExcluded = new HashSet<string>(excludedSet, StringComparer.Ordinal);
+
+            _paramChecklistScrollPos = EditorGUILayout.BeginScrollView(
+                _paramChecklistScrollPos, GUILayout.Height(_paramChecklistHeight));
+
+            foreach (var child in _cachedParamTree.Children)
+                DrawParamTreeNode(child, excludedSet, 0);
+
+            EditorGUILayout.EndScrollView();
+
+            // Write back if anything changed.
+            if (!excludedSet.SetEquals(originalExcluded))
+            {
+                string[] newExcluded = ExpandExcludedForStorage(excludedSet, hiddenAssignedByVisibleOriginal);
+                if (component)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Parameter Backup");
+                    component.excludedParameterNames = newExcluded;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingExcludedParameterNames = newExcluded;
+                }
+                Repaint();
+            }
+
+            // ── Resize handle ─────────────────────────────────────────────────
+            var handleRect = EditorGUILayout.GetControlRect(false, 8f);
+            handleRect = new Rect(handleRect.xMax - 24f, handleRect.y, 24f, 8f);
+            EditorGUIUtility.AddCursorRect(handleRect, MouseCursor.ResizeVertical);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                var dotColor = new Color(0.55f, 0.55f, 0.55f, 0.80f);
+                float cx = handleRect.x + handleRect.width / 2f;
+                float cy = handleRect.y + handleRect.height / 2f;
+                for (int d = -1; d <= 1; d++)
+                    EditorGUI.DrawRect(new Rect(cx + d * 5f - 1f, cy - 1f, 2f, 2f), dotColor);
+            }
+
+            if (Event.current.type == EventType.MouseDown && handleRect.Contains(Event.current.mousePosition))
+            {
+                _isDraggingParamResize = true;
+                Event.current.Use();
+            }
+
+            if (_isDraggingParamResize)
+            {
+                if (Event.current.type == EventType.MouseDrag)
+                {
+                    _paramChecklistHeight = Mathf.Clamp(
+                        _paramChecklistHeight + Event.current.delta.y, 60f, 400f);
+                    Event.current.Use();
+                    Repaint();
+                }
+                else if (Event.current.type == EventType.MouseUp)
+                {
+                    _isDraggingParamResize = false;
+                    Event.current.Use();
+                }
+            }
+        }
+
+        private void DrawParamTreeNode(ParamTreeNode node, HashSet<string> excludedSet, int depth)
+        {
+            float indentPx = depth * 14f + 2f;
+
+            if (node.IsParam)
+            {
+                // Checkbox row for a parameter leaf.
+                // Add extra offset so child-item checkboxes sit to the right of
+                // category checkboxes/foldouts and read as subordinate rows.
+                const float childItemOffset = 12f;
+                var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                var labelRect = new Rect(rowRect.x + indentPx + childItemOffset, rowRect.y, rowRect.width - indentPx - childItemOffset, rowRect.height);
+                bool isIncluded = !excludedSet.Contains(node.ParamName);
+                bool newIncluded = EditorGUI.ToggleLeft(labelRect, node.Name, isIncluded);
+                if (newIncluded != isIncluded)
+                {
+                    if (newIncluded) excludedSet.Remove(node.ParamName);
+                    else             excludedSet.Add(node.ParamName);
+                }
+            }
+            else
+            {
+                // Folder row — foldout arrow + category checkbox + label.
+                bool isExpanded = _expandedParamMenuPaths.Contains(node.MenuPath);
+                var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                var activeRect = new Rect(rowRect.x + indentPx, rowRect.y, rowRect.width - indentPx, rowRect.height);
+
+                var arrowRect = new Rect(activeRect.x, activeRect.y, 14f, activeRect.height);
+                bool toggled = EditorGUI.Foldout(arrowRect, isExpanded, GUIContent.none, true);
+                if (toggled != isExpanded)
+                {
+                    if (toggled) _expandedParamMenuPaths.Add(node.MenuPath);
+                    else         _expandedParamMenuPaths.Remove(node.MenuPath);
+                    Repaint();
+                }
+
+                int totalLeafCount = CountParamLeafNodes(node);
+                int includedLeafCount = CountIncludedParamLeafNodes(node, excludedSet);
+                bool allIncluded = totalLeafCount > 0 && includedLeafCount == totalLeafCount;
+                bool mixed = includedLeafCount > 0 && includedLeafCount < totalLeafCount;
+
+                var toggleRect = new Rect(activeRect.x + 14f, activeRect.y, 16f, activeRect.height);
+                EditorGUI.showMixedValue = mixed;
+                bool newAllIncluded = EditorGUI.Toggle(toggleRect, allIncluded);
+                EditorGUI.showMixedValue = false;
+
+                if (newAllIncluded != allIncluded || (mixed && Event.current.type == EventType.MouseUp && toggleRect.Contains(Event.current.mousePosition)))
+                {
+                    SetFolderIncludedState(node, excludedSet, newAllIncluded);
+                }
+
+                var labelRect = new Rect(activeRect.x + 32f, activeRect.y, activeRect.width - 32f, activeRect.height);
+                EditorGUI.LabelField(labelRect, node.Name, EditorStyles.boldLabel);
+
+                if (toggled)
+                    foreach (var child in node.Children)
+                        DrawParamTreeNode(child, excludedSet, depth + 1);
+            }
+        }
+
+        private static int CountParamLeafNodes(ParamTreeNode node)
+        {
+            if (node == null)
+                return 0;
+            if (node.IsParam)
+                return 1;
+
+            int count = 0;
+            for (int i = 0; i < node.Children.Count; i++)
+                count += CountParamLeafNodes(node.Children[i]);
+            return count;
+        }
+
+        private static int CountIncludedParamLeafNodes(ParamTreeNode node, HashSet<string> excludedSet)
+        {
+            if (node == null)
+                return 0;
+
+            if (node.IsParam)
+                return excludedSet.Contains(node.ParamName) ? 0 : 1;
+
+            int count = 0;
+            for (int i = 0; i < node.Children.Count; i++)
+                count += CountIncludedParamLeafNodes(node.Children[i], excludedSet);
+            return count;
+        }
+
+        private static void SetFolderIncludedState(ParamTreeNode node, HashSet<string> excludedSet, bool include)
+        {
+            if (node == null)
+                return;
+
+            if (node.IsParam)
+            {
+                if (include) excludedSet.Remove(node.ParamName);
+                else         excludedSet.Add(node.ParamName);
+                return;
+            }
+
+            for (int i = 0; i < node.Children.Count; i++)
+                SetFolderIncludedState(node.Children[i], excludedSet, include);
+        }
+
+        private static ParamTreeNode BuildParamTree(VRCAvatarDescriptor avatar)
+        {
+            var root = new ParamTreeNode { Name = string.Empty, MenuPath = string.Empty };
+            if (avatar == null) return root;
+
+            string[] backableParams = GetBackableParameterNames(avatar);
+            if (backableParams.Length == 0) return root;
+
+            // Build VRCFury Toggle metadata so ASM_VF_* global parameters can be
+            // grouped under their real menu paths with friendly labels instead of
+            // falling into the "(No menu)" bucket with raw global names.
+            var vrcFuryMeta = BuildVrcFuryGlobalParamMetadata(avatar);
+
+            // Reuse the same VRCFury menu-prefix discovery strategy as the custom
+            // install-path tree, then map each normalized prefix token so ASM_VF_*
+            // deterministic names can be mapped back to real menu folders.
+            var sanitizedPrefixToMenuPath = new Dictionary<string, string>(StringComparer.Ordinal);
+            var vrcFuryMenuPrefixes = GetVrcFuryMenuPrefixes(avatar);
+            for (int i = 0; i < vrcFuryMenuPrefixes.Length; i++)
+            {
+                string menuPrefix = vrcFuryMenuPrefixes[i];
+                if (string.IsNullOrWhiteSpace(menuPrefix))
+                    continue;
+
+                string token = ASMLiteToggleNameBroker.SanitizePathToken(menuPrefix);
+                if (string.IsNullOrWhiteSpace(token))
+                    continue;
+
+                if (!sanitizedPrefixToMenuPath.ContainsKey(token))
+                    sanitizedPrefixToMenuPath[token] = menuPrefix;
+            }
+
+            // Map each param name → the menu folder path where it appears.
+            var paramToMenuPath = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (avatar.expressionsMenu != null)
+                ScanMenuForParamLocations(avatar.expressionsMenu, string.Empty, paramToMenuPath,
+                    new HashSet<VRCExpressionsMenu>());
+
+            // Augment with VRCFury-assigned global parameters (ASM_VF_*) when a menu
+            // path hint is available. This keeps Toggle-generated parameters out of
+            // the "(No menu)" catch-all when they are actually driven from a menu.
+            foreach (var kvp in vrcFuryMeta)
+            {
+                string paramName = kvp.Key;
+                var meta = kvp.Value;
+                if (string.IsNullOrEmpty(meta.MenuPath))
+                    continue;
+                if (!paramToMenuPath.ContainsKey(paramName))
+                    paramToMenuPath[paramName] = meta.MenuPath;
+            }
+
+            // Build folder nodes mirroring the menu hierarchy.
+            var menuNodes = new Dictionary<string, ParamTreeNode>(StringComparer.Ordinal);
+            menuNodes[string.Empty] = root;
+
+            var unassigned = new List<string>();
+            var assigned = new List<(string MenuPath, string DisplayName, string ParamName)>();
+            foreach (var paramName in backableParams)
+            {
+                string menuPath = null;
+                if (paramToMenuPath.TryGetValue(paramName, out string mappedPath) && mappedPath != null)
+                    menuPath = mappedPath;
+
+                string displayName = paramName;
+                if (vrcFuryMeta.TryGetValue(paramName, out var meta) && !string.IsNullOrEmpty(meta.DisplayName))
+                    displayName = meta.DisplayName;
+
+                // For deterministic ASM_VF_* names, always infer display + parent
+                // folder from the encoded menu token so rows appear as user-facing
+                // toggle labels at the correct menu level.
+                if (paramName.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal)
+                    && TryInferMenuPathAndDisplayNameFromAsmVfGlobalName(
+                        paramName,
+                        sanitizedPrefixToMenuPath,
+                        out string inferredAsmMenuPath,
+                        out string inferredAsmDisplayName))
+                {
+                    menuPath = inferredAsmMenuPath;
+                    displayName = inferredAsmDisplayName;
+                }
+
+                // Fallback: when a parameter name itself encodes a menu-like path
+                // (common in some VRCFury Toggle outputs), infer folder + label
+                // directly from that path so it does not land in "(No menu)".
+                if (string.IsNullOrEmpty(menuPath)
+                    && TryInferMenuPathAndDisplayNameFromParamName(paramName, out string inferredMenuPath, out string inferredDisplayName))
+                {
+                    menuPath = inferredMenuPath;
+                    if (string.IsNullOrEmpty(displayName) || string.Equals(displayName, paramName, StringComparison.Ordinal))
+                        displayName = inferredDisplayName;
+                }
+
+                if (string.IsNullOrEmpty(menuPath))
+                {
+                    unassigned.Add(paramName);
+                    continue;
+                }
+
+                assigned.Add((menuPath, string.IsNullOrWhiteSpace(displayName) ? paramName : displayName, paramName));
+            }
+
+            // Suffix duplicate display names within the same menu folder so they are
+            // distinguishable (Rezz1, Rezz2, ...).
+            var totalByKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < assigned.Count; i++)
+            {
+                var entry = assigned[i];
+                string key = entry.MenuPath + "\u001F" + entry.DisplayName;
+                totalByKey[key] = totalByKey.TryGetValue(key, out int count) ? count + 1 : 1;
+            }
+
+            var nextIndexByKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < assigned.Count; i++)
+            {
+                var entry = assigned[i];
+                string key = entry.MenuPath + "\u001F" + entry.DisplayName;
+
+                string finalDisplayName = entry.DisplayName;
+                if (totalByKey.TryGetValue(key, out int total) && total > 1)
+                {
+                    int idx = nextIndexByKey.TryGetValue(key, out int next) ? next : 1;
+                    nextIndexByKey[key] = idx + 1;
+                    finalDisplayName = entry.DisplayName + idx;
+                }
+
+                var folderNode = EnsureParamMenuNode(menuNodes, entry.MenuPath);
+                folderNode.Children.Add(new ParamTreeNode { Name = finalDisplayName, ParamName = entry.ParamName });
+            }
+
+            // Unassigned params shown in a catch-all group.
+            if (unassigned.Count > 0)
+            {
+                const string unassignedPath = "\x01unassigned";
+                var group = new ParamTreeNode { Name = "(No menu)", MenuPath = unassignedPath };
+                foreach (var p in unassigned)
+                {
+                    string displayName = p;
+                    if (vrcFuryMeta.TryGetValue(p, out var meta) && !string.IsNullOrEmpty(meta.DisplayName))
+                        displayName = meta.DisplayName;
+
+                    group.Children.Add(new ParamTreeNode { Name = displayName, ParamName = p });
+                }
+                root.Children.Add(group);
+            }
+
+            SortParamTreeChildren(root);
+            return root;
+        }
+
+        /// <summary>
+        /// Builds a map from VRCFury toggle-like managed-reference payloads to
+        /// parameter metadata (menu path + friendly display name).
+        ///
+        /// This intentionally does not hard-require a specific managed-reference type
+        /// name so it remains compatible across VRCFury schema variants.
+        /// </summary>
+        private static Dictionary<string, (string MenuPath, string DisplayName)> BuildVrcFuryGlobalParamMetadata(VRCAvatarDescriptor avatar)
+        {
+            var result = new Dictionary<string, (string MenuPath, string DisplayName)>(StringComparer.Ordinal);
+            if (avatar == null)
+                return result;
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                var iterator = so.GetIterator();
+                if (!iterator.NextVisible(true))
+                    continue;
+
+                var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+                do
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                        continue;
+
+                    string togglePropertyPath = iterator.propertyPath;
+                    if (!seenPaths.Add(togglePropertyPath))
+                        continue;
+
+                    var useGlobalProp = so.FindProperty(togglePropertyPath + ".useGlobalParam");
+                    var globalParamProp = so.FindProperty(togglePropertyPath + ".globalParam");
+                    var menuPathProp = so.FindProperty(togglePropertyPath + ".menuPath");
+                    var nameProp = so.FindProperty(togglePropertyPath + ".name");
+                    var labelProp = so.FindProperty(togglePropertyPath + ".label");
+                    var paramNameProp = so.FindProperty(togglePropertyPath + ".paramName");
+
+                    bool hasAnyToggleFields = useGlobalProp != null
+                        || globalParamProp != null
+                        || menuPathProp != null
+                        || nameProp != null
+                        || labelProp != null
+                        || paramNameProp != null;
+
+                    if (!hasAnyToggleFields)
+                        continue;
+
+                    bool useGlobal = useGlobalProp != null
+                        && useGlobalProp.propertyType == SerializedPropertyType.Boolean
+                        && useGlobalProp.boolValue;
+
+                    string globalName = globalParamProp != null && globalParamProp.propertyType == SerializedPropertyType.String
+                        ? (globalParamProp.stringValue ?? string.Empty).Trim()
+                        : string.Empty;
+
+                    string rawMenuPath = menuPathProp != null && menuPathProp.propertyType == SerializedPropertyType.String
+                        ? menuPathProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawName = nameProp != null && nameProp.propertyType == SerializedPropertyType.String
+                        ? nameProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawLabel = labelProp != null && labelProp.propertyType == SerializedPropertyType.String
+                        ? labelProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawParamName = paramNameProp != null && paramNameProp.propertyType == SerializedPropertyType.String
+                        ? paramNameProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawNamePath = !string.IsNullOrWhiteSpace(rawName) && rawName.IndexOf('/') >= 0
+                        ? rawName
+                        : string.Empty;
+
+                    string resolvedPathSource = !string.IsNullOrWhiteSpace(rawMenuPath)
+                        ? rawMenuPath
+                        : rawNamePath;
+
+                    string normalizedFullPath = NormalizeSlashPath(resolvedPathSource);
+                    string normalizedMenuPath = normalizedFullPath;
+                    string displayName = string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(rawLabel))
+                    {
+                        displayName = rawLabel.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawNamePath))
+                    {
+                        string[] nameParts = NormalizeSlashPath(rawNamePath).Split('/');
+                        if (nameParts.Length > 0)
+                        {
+                            displayName = nameParts[nameParts.Length - 1];
+                            if (nameParts.Length > 1)
+                                normalizedMenuPath = string.Join("/", nameParts.Take(nameParts.Length - 1));
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawName))
+                    {
+                        displayName = rawName.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawParamName))
+                    {
+                        displayName = rawParamName.Trim();
+                    }
+
+                    if (string.IsNullOrWhiteSpace(displayName))
+                    {
+                        if (!string.IsNullOrWhiteSpace(normalizedFullPath))
+                        {
+                            int lastSlash = normalizedFullPath.LastIndexOf('/');
+                            if (lastSlash >= 0 && lastSlash < normalizedFullPath.Length - 1)
+                            {
+                                displayName = normalizedFullPath.Substring(lastSlash + 1);
+                                normalizedMenuPath = normalizedFullPath.Substring(0, lastSlash);
+                            }
+                            else
+                            {
+                                displayName = normalizedFullPath;
+                            }
+                        }
+                    }
+
+                    // Candidate parameter names this toggle payload may emit.
+                    var candidateParamNames = new List<string>(3);
+                    if (useGlobal && !string.IsNullOrWhiteSpace(globalName))
+                        candidateParamNames.Add(globalName);
+                    if (!string.IsNullOrWhiteSpace(rawParamName))
+                        candidateParamNames.Add(rawParamName.Trim());
+                    if (!string.IsNullOrWhiteSpace(rawName) && rawName.IndexOf('/') < 0)
+                        candidateParamNames.Add(rawName.Trim());
+
+                    for (int c = 0; c < candidateParamNames.Count; c++)
+                    {
+                        string candidate = candidateParamNames[c];
+                        if (string.IsNullOrWhiteSpace(candidate))
+                            continue;
+                        if (result.ContainsKey(candidate))
+                            continue;
+
+                        string resolvedDisplay = string.IsNullOrWhiteSpace(displayName) ? candidate : displayName;
+                        if (candidate.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal))
+                            resolvedDisplay = candidate;
+
+                        result[candidate] = (normalizedMenuPath, resolvedDisplay);
+                    }
+                } while (iterator.NextVisible(true));
+            }
+
+            // Also include deterministic names for eligible toggle candidates that
+            // are not currently materialized into avatar expression parameters.
+            if (avatar.gameObject != null)
+            {
+                var reserved = new HashSet<string>(result.Keys, StringComparer.Ordinal);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(avatar.gameObject);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var candidate = candidates[i];
+                    string deterministic = ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                        candidate.MenuPathHint,
+                        candidate.ObjectPath,
+                        reserved);
+
+                    if (string.IsNullOrWhiteSpace(deterministic) || result.ContainsKey(deterministic))
+                        continue;
+
+                    string menuPath = NormalizeSlashPath(candidate.MenuPathHint);
+                    string displayName = deterministic;
+
+                    result[deterministic] = (menuPath, displayName);
+                }
+            }
+
+            return result;
+        }
+
+        private static string NormalizeSlashPath(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            string normalized = value.Replace('\\', '/');
+            var rawSegments = normalized.Split('/');
+            var cleanSegments = new List<string>(rawSegments.Length);
+            for (int i = 0; i < rawSegments.Length; i++)
+            {
+                string segment = NormalizeMenuPathSegment(rawSegments[i]);
+                if (!string.IsNullOrEmpty(segment))
+                    cleanSegments.Add(segment);
+            }
+
+            return cleanSegments.Count == 0 ? string.Empty : string.Join("/", cleanSegments);
+        }
+
+        private static bool TryInferMenuPathAndDisplayNameFromAsmVfGlobalName(
+            string paramName,
+            Dictionary<string, string> sanitizedPrefixToMenuPath,
+            out string menuPath,
+            out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(paramName))
+                return false;
+            if (!paramName.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal))
+                return false;
+
+            string withoutPrefix = paramName.Substring(ASMLiteToggleNameBroker.GlobalPrefix.Length);
+            int split = withoutPrefix.IndexOf("__", StringComparison.Ordinal);
+            if (split <= 0)
+                return false;
+
+            string menuToken = withoutPrefix.Substring(0, split);
+
+            // First try exact token->path match from discovered VRCFury menu prefixes.
+            if (sanitizedPrefixToMenuPath != null
+                && sanitizedPrefixToMenuPath.TryGetValue(menuToken, out string exactPath)
+                && !string.IsNullOrWhiteSpace(exactPath))
+            {
+                string normalized = NormalizeSlashPath(exactPath);
+                if (TrySplitMenuPathForLabel(normalized, out menuPath, out displayName))
+                    return true;
+            }
+
+            // Then try longest discovered prefix token match. This handles deterministic
+            // names where menuToken includes the leaf label (e.g. prefix + _Bass).
+            if (sanitizedPrefixToMenuPath != null && sanitizedPrefixToMenuPath.Count > 0)
+            {
+                string bestKey = null;
+                string bestPath = null;
+                foreach (var kvp in sanitizedPrefixToMenuPath)
+                {
+                    string key = kvp.Key;
+                    if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(kvp.Value))
+                        continue;
+
+                    if (string.Equals(menuToken, key, StringComparison.Ordinal)
+                        || menuToken.StartsWith(key + "_", StringComparison.Ordinal))
+                    {
+                        if (bestKey == null || key.Length > bestKey.Length)
+                        {
+                            bestKey = key;
+                            bestPath = kvp.Value;
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(bestKey) && !string.IsNullOrWhiteSpace(bestPath))
+                {
+                    string remainder = menuToken.Length > bestKey.Length
+                        ? menuToken.Substring(bestKey.Length).TrimStart('_')
+                        : string.Empty;
+
+                    string normalizedParent = NormalizeSlashPath(bestPath);
+                    if (!string.IsNullOrWhiteSpace(remainder))
+                    {
+                        string remainderLabel = DecodeAsmVfTokenToWords(remainder);
+                        if (!string.IsNullOrWhiteSpace(normalizedParent)
+                            && !string.IsNullOrWhiteSpace(remainderLabel))
+                        {
+                            menuPath = normalizedParent;
+                            displayName = remainderLabel;
+                            return true;
+                        }
+                    }
+
+                    if (TrySplitMenuPathForLabel(normalizedParent, out menuPath, out displayName))
+                        return true;
+                }
+            }
+
+            // Final fallback when no discoverable prefix exists: decode token into
+            // a reasonable flat folder+label shape instead of deep underscore nesting.
+            string[] words = SplitAsmVfTokenWords(menuToken);
+            if (words.Length < 2)
+                return false;
+
+            menuPath = string.Join(" ", words.Take(words.Length - 1));
+            displayName = words[words.Length - 1];
+            return !string.IsNullOrWhiteSpace(menuPath) && !string.IsNullOrWhiteSpace(displayName);
+        }
+
+        private static bool TrySplitMenuPathForLabel(string fullPath, out string menuPath, out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return false;
+
+            var segments = fullPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return false;
+
+            displayName = segments[segments.Length - 1];
+            menuPath = segments.Length > 1
+                ? string.Join("/", segments.Take(segments.Length - 1))
+                : segments[0];
+
+            return !string.IsNullOrWhiteSpace(menuPath) && !string.IsNullOrWhiteSpace(displayName);
+        }
+
+        private static string[] SplitAsmVfTokenWords(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return Array.Empty<string>();
+
+            return token
+                .Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+        }
+
+        private static string DecodeAsmVfTokenToWords(string token)
+        {
+            var words = SplitAsmVfTokenWords(token);
+            if (words.Length == 0)
+                return string.Empty;
+
+            return string.Join(" ", words);
+        }
+
+        private static bool TryInferMenuPathAndDisplayNameFromParamName(
+            string paramName,
+            out string menuPath,
+            out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(paramName))
+                return false;
+
+            string normalized = paramName.Replace('\\', '/').Trim();
+            if (normalized.IndexOf('/') < 0)
+                return false;
+
+            var rawSegments = normalized.Split('/');
+            var cleanSegments = new List<string>(rawSegments.Length);
+            for (int i = 0; i < rawSegments.Length; i++)
+            {
+                string segment = NormalizeMenuPathSegment(rawSegments[i]);
+                if (!string.IsNullOrEmpty(segment))
+                    cleanSegments.Add(segment);
+            }
+
+            if (cleanSegments.Count < 2)
+                return false;
+
+            displayName = cleanSegments[cleanSegments.Count - 1];
+            menuPath = string.Join("/", cleanSegments.Take(cleanSegments.Count - 1));
+
+            return !string.IsNullOrEmpty(menuPath) && !string.IsNullOrEmpty(displayName);
+        }
+
+        private static void ScanMenuForParamLocations(
+            VRCExpressionsMenu menu, string parentPath,
+            Dictionary<string, string> paramToPath,
+            HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || !visited.Add(menu) || menu.controls == null) return;
+
+            foreach (var control in menu.controls)
+            {
+                if (control == null) continue;
+
+                // Main control parameter.
+                if (!string.IsNullOrEmpty(control.parameter?.name)
+                    && !paramToPath.ContainsKey(control.parameter.name))
+                    paramToPath[control.parameter.name] = parentPath;
+
+                // Sub-parameters (radial / 2-axis / 4-axis puppets).
+                if (control.subParameters != null)
+                    foreach (var sub in control.subParameters)
+                        if (sub != null && !string.IsNullOrEmpty(sub.name)
+                            && !paramToPath.ContainsKey(sub.name))
+                            paramToPath[sub.name] = parentPath;
+
+                // Recurse into submenus.
+                if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                    && control.subMenu != null)
+                {
+                    string seg = NormalizeMenuPathSegment(control.name);
+                    string childPath = string.IsNullOrEmpty(parentPath) ? seg
+                        : string.IsNullOrEmpty(seg) ? parentPath
+                        : parentPath + "/" + seg;
+                    ScanMenuForParamLocations(control.subMenu, childPath, paramToPath, visited);
+                }
+            }
+        }
+
+        private static ParamTreeNode EnsureParamMenuNode(
+            Dictionary<string, ParamTreeNode> nodeMap, string path)
+        {
+            if (nodeMap.TryGetValue(path, out var existing)) return existing;
+
+            int slash = path.LastIndexOf('/');
+            string parentPath = slash < 0 ? string.Empty : path.Substring(0, slash);
+            string name       = slash < 0 ? path          : path.Substring(slash + 1);
+
+            var parent = EnsureParamMenuNode(nodeMap, parentPath);
+            var node   = new ParamTreeNode { Name = name, MenuPath = path };
+            parent.Children.Add(node);
+            nodeMap[path] = node;
+            return node;
+        }
+
+        private static void SortParamTreeChildren(ParamTreeNode node)
+        {
+            // Folder nodes first, then param leaves, each group alphabetical.
+            node.Children.Sort((a, b) =>
+            {
+                if (a.IsParam != b.IsParam) return a.IsParam ? 1 : -1;
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+            foreach (var child in node.Children)
+                if (!child.IsParam) SortParamTreeChildren(child);
+        }
+
+        private static string[] GetBackableParameterNames(VRCAvatarDescriptor avatar)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            // 1) Existing avatar expression parameters (current runtime truth).
+            if (avatar?.expressionParameters?.parameters != null)
+            {
+                foreach (var p in avatar.expressionParameters.parameters)
+                {
+                    if (p == null || string.IsNullOrEmpty(p.name))
+                        continue;
+                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        continue;
+                    if (p.valueType != VRCExpressionParameters.ValueType.Bool
+                        && p.valueType != VRCExpressionParameters.ValueType.Int
+                        && p.valueType != VRCExpressionParameters.ValueType.Float)
+                        continue;
+
+                    names.Add(p.name);
+                }
+            }
+
+            // 2) VRCFury FullController referenced parameter assets (content.prms).
+            //    Include these pre-bake so package/prefab-provided parameter files
+            //    (for example media-control prefabs) are available in backup UI.
+            if (avatar?.gameObject != null)
+            {
+                var referencedVfParams = GetVrcFuryReferencedParameterNames(avatar);
+                for (int i = 0; i < referencedVfParams.Length; i++)
+                {
+                    string paramName = referencedVfParams[i];
+                    if (string.IsNullOrWhiteSpace(paramName))
+                        continue;
+                    if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        continue;
+
+                    names.Add(paramName);
+                }
+            }
+
+            // 3) VRCFury Toggle globals already assigned on serialized toggle payloads.
+            //    Include them pre-bake so Parameter Backup customization can target
+            //    prefab-driven toggles (e.g., nested utility prefabs) even before
+            //    expressionParameters has been rebuilt.
+            if (avatar?.gameObject != null)
+            {
+                var assignedGlobals = ASMLiteToggleNameBroker.DiscoverAssignedToggleGlobalParams(avatar.gameObject);
+                for (int i = 0; i < assignedGlobals.Count; i++)
+                {
+                    string assigned = assignedGlobals[i];
+                    if (string.IsNullOrWhiteSpace(assigned))
+                        continue;
+                    if (assigned.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        continue;
+
+                    names.Add(assigned);
+                }
+            }
+
+            // 4) VRCFury Toggle candidates that will be deterministically promoted to
+            //    globals during build-request enrollment. Include them pre-bake so
+            //    Parameter Backup customization can target not-yet-assigned toggles.
+            if (avatar?.gameObject != null)
+            {
+                var reserved = new HashSet<string>(names, StringComparer.Ordinal);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(avatar.gameObject);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var candidate = candidates[i];
+                    string deterministic = ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                        candidate.MenuPathHint,
+                        candidate.ObjectPath,
+                        reserved);
+
+                    if (string.IsNullOrWhiteSpace(deterministic))
+                        continue;
+                    if (deterministic.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        continue;
+
+                    names.Add(deterministic);
+                }
+            }
+
+            // If both sides of a broker mapping are present, show only the
+            // original discovered parameter in the checklist and keep the
+            // deterministic ASM_VF_* side hidden.
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings != null && mappings.Length > 0)
+            {
+                for (int i = 0; i < mappings.Length; i++)
+                {
+                    var mapping = mappings[i];
+                    if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                        || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                        continue;
+
+                    if (names.Contains(mapping.OriginalGlobalParam)
+                        && names.Contains(mapping.AssignedGlobalParam))
+                    {
+                        names.Remove(mapping.AssignedGlobalParam);
+                    }
+                }
+            }
+
+            return names
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string[] GetAvatarSubmenuPaths(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null || avatar.expressionsMenu == null)
+                return Array.Empty<string>();
+
+            var allPaths = new HashSet<string>(StringComparer.Ordinal);
+            var parentPaths = new HashSet<string>(StringComparer.Ordinal);
+            var visitedMenus = new HashSet<VRCExpressionsMenu>();
+            CollectSubmenuPathsRecursive(avatar.expressionsMenu, string.Empty, allPaths, parentPaths, visitedMenus);
+
+            // Return every submenu path — parent folders are valid install locations too.
+            return allPaths
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return Array.Empty<string>();
+
+            var paths = new HashSet<string>(StringComparer.Ordinal);
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                // FullController: content.menus array with prefix + menu asset pairs.
+                var menusProperty = so.FindProperty("content.menus");
+                if (menusProperty != null && menusProperty.isArray)
+                {
+                    for (int menuIndex = 0; menuIndex < menusProperty.arraySize; menuIndex++)
+                    {
+                        var menuEntry = menusProperty.GetArrayElementAtIndex(menuIndex);
+                        if (menuEntry == null)
+                            continue;
+
+                        var prefixProperty = menuEntry.FindPropertyRelative("prefix");
+                        string normalizedPrefix = prefixProperty == null
+                            ? string.Empty
+                            : NormalizeMenuPathSegment(prefixProperty.stringValue);
+
+                        if (!string.IsNullOrEmpty(normalizedPrefix))
+                            paths.Add(normalizedPrefix);
+
+                        var menuObjRef = FindVrcFuryMenuObjectReference(menuEntry);
+                        var menuAsset = menuObjRef != null ? menuObjRef.objectReferenceValue as VRCExpressionsMenu : null;
+                        if (menuAsset != null)
+                        {
+                            var visitedMenus = new HashSet<VRCExpressionsMenu>();
+                            CollectVrcFuryMenuPathsRecursive(menuAsset, normalizedPrefix, paths, visitedMenus);
+                        }
+                    }
+                }
+
+                // Toggle / SPS / other features: iterate ALL string properties under
+                // "content" whose name starts with "menu". This is robust across VRCFury
+                // versions without hardcoding per-type field names like "menuPath".
+                ScanVrcFuryContentForMenuPaths(so, paths);
+            }
+
+            return paths
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static string[] GetVrcFuryReferencedParameterNames(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return Array.Empty<string>();
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                var prmsProperty = so.FindProperty("content.prms");
+                if (prmsProperty == null || !prmsProperty.isArray)
+                    continue;
+
+                for (int entryIndex = 0; entryIndex < prmsProperty.arraySize; entryIndex++)
+                {
+                    var entry = prmsProperty.GetArrayElementAtIndex(entryIndex);
+                    if (entry == null)
+                        continue;
+
+                    var parametersRefProp = FindVrcFuryParametersObjectReference(entry);
+                    var parametersIdProp = entry.FindPropertyRelative("parameters.id");
+
+                    VRCExpressionParameters referencedParams = null;
+                    if (parametersRefProp != null)
+                        referencedParams = parametersRefProp.objectReferenceValue as VRCExpressionParameters;
+
+                    if (referencedParams == null && parametersIdProp != null)
+                    {
+                        string referencedPath = ParseVrcFuryReferencePath(parametersIdProp.stringValue);
+                        if (!string.IsNullOrWhiteSpace(referencedPath))
+                            referencedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(referencedPath);
+                    }
+
+                    if (referencedParams?.parameters == null)
+                        continue;
+
+                    for (int paramIndex = 0; paramIndex < referencedParams.parameters.Length; paramIndex++)
+                    {
+                        var param = referencedParams.parameters[paramIndex];
+                        if (param == null || string.IsNullOrWhiteSpace(param.name))
+                            continue;
+
+                        if (param.valueType != VRCExpressionParameters.ValueType.Bool
+                            && param.valueType != VRCExpressionParameters.ValueType.Int
+                            && param.valueType != VRCExpressionParameters.ValueType.Float)
+                            continue;
+
+                        names.Add(param.name);
+                    }
+                }
+            }
+
+            return names
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static SerializedProperty FindVrcFuryParametersObjectReference(SerializedProperty prmsEntry)
+        {
+            if (prmsEntry == null)
+                return null;
+
+            var direct = prmsEntry.FindPropertyRelative("parameters.objRef");
+            if (direct != null)
+                return direct;
+
+            return prmsEntry.FindPropertyRelative("parameters");
+        }
+
+        private static string ParseVrcFuryReferencePath(string serializedId)
+        {
+            if (string.IsNullOrWhiteSpace(serializedId))
+                return string.Empty;
+
+            string trimmed = serializedId.Trim();
+            int split = trimmed.IndexOf('|');
+            if (split >= 0 && split < trimmed.Length - 1)
+                return trimmed.Substring(split + 1).Trim();
+
+            return trimmed;
+        }
+
+        /// <summary>
+        /// Iterates all serialized string properties under a VRCFury component's "content"
+        /// managed reference and collects parent path segments from any property whose name
+        /// starts with "menu". Works across VRCFury versions (Toggle, SPS, etc.) without
+        /// hardcoding per-type field names.
+        /// </summary>
+        private static void ScanVrcFuryContentForMenuPaths(SerializedObject so, HashSet<string> paths)
+        {
+            var contentProp = so.FindProperty("content");
+            if (contentProp == null)
+                return;
+
+            var it = contentProp.Copy();
+
+            // Enter the managed reference's first child property.
+            if (!it.Next(true))
+                return;
+
+            int baseDepth = contentProp.depth;
+
+            while (it.depth > baseDepth)
+            {
+                if (it.propertyType == SerializedPropertyType.String)
+                {
+                    string val = it.stringValue;
+                    if (!string.IsNullOrWhiteSpace(val))
+                    {
+                        string lowerName = it.name.ToLowerInvariant();
+
+                        // Match fields whose name starts with "menu" (e.g. FullController
+                        // menuPath variants), OR known path/name carriers used by VRCFury
+                        // features:
+                        //   - name with slash (Toggle-style menu/item path)
+                        //   - *Path fields (e.g. MoveMenuItem.toPath, legacy content.path)
+                        bool isMenuField = lowerName.StartsWith("menu", StringComparison.Ordinal);
+                        bool isNamePath = lowerName == "name" && val.IndexOf('/') >= 0;
+                        bool isPathField = lowerName.EndsWith("path", StringComparison.Ordinal) && val.IndexOf('/') >= 0;
+
+                        if (isMenuField || isNamePath || isPathField)
+                        {
+                            string[] segs = val.Split('/');
+                            // For Toggle "name" fields the last segment is the item name, not a
+                            // folder — stop one short so only real parent menus are offered.
+                            // For menu/path destination fields (menuPath, toPath, path), include
+                            // all segments because the full value is itself a folder path.
+                            int segLimit = isNamePath ? segs.Length - 1 : segs.Length;
+                            var sb = new System.Text.StringBuilder();
+                            for (int si = 0; si < segLimit; si++)
+                            {
+                                string seg = NormalizeMenuPathSegment(segs[si]);
+                                if (string.IsNullOrEmpty(seg)) continue;
+                                if (sb.Length > 0) sb.Append('/');
+                                sb.Append(seg);
+                                paths.Add(sb.ToString());
+                            }
+                        }
+                    }
+                }
+
+                // Enter children up to 4 levels deep inside content; skip deeper subtrees.
+                if (!it.Next(it.depth < baseDepth + 4))
+                    break;
+            }
+        }
+
+        private static SerializedProperty FindVrcFuryMenuObjectReference(SerializedProperty menuEntry)
+        {
+            if (menuEntry == null)
+                return null;
+
+            // Most common FullController schema path.
+            var direct = menuEntry.FindPropertyRelative("menu.objRef");
+            if (direct != null)
+                return direct;
+
+            // Fallback for nested serialized layouts.
+            var menuProperty = menuEntry.FindPropertyRelative("menu");
+            if (menuProperty == null)
+                return null;
+
+            return menuProperty.FindPropertyRelative("objRef");
+        }
+
+        private static void CollectVrcFuryMenuPathsRecursive(
+            VRCExpressionsMenu menu,
+            string parentPath,
+            HashSet<string> paths,
+            HashSet<VRCExpressionsMenu> visitedMenus)
+        {
+            if (menu == null || !visitedMenus.Add(menu) || menu.controls == null)
+                return;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
+                    continue;
+
+                string segment = NormalizeMenuPathSegment(control.name);
+                string fullPath = string.IsNullOrEmpty(parentPath)
+                    ? segment
+                    : (string.IsNullOrEmpty(segment) ? parentPath : $"{parentPath}/{segment}");
+
+                if (!string.IsNullOrEmpty(fullPath))
+                    paths.Add(fullPath);
+
+                CollectVrcFuryMenuPathsRecursive(control.subMenu, fullPath, paths, visitedMenus);
+            }
+        }
+
+        private static void CollectSubmenuPathsRecursive(
+            VRCExpressionsMenu menu,
+            string parentPath,
+            HashSet<string> allPaths,
+            HashSet<string> parentPaths,
+            HashSet<VRCExpressionsMenu> visitedMenus)
+        {
+            if (menu == null || !visitedMenus.Add(menu) || menu.controls == null)
+                return;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
+                    continue;
+
+                string segment = NormalizeMenuPathSegment(control.name);
+                string fullPath = string.IsNullOrEmpty(parentPath)
+                    ? segment
+                    : (string.IsNullOrEmpty(segment) ? parentPath : $"{parentPath}/{segment}");
+
+                if (string.IsNullOrEmpty(fullPath))
+                    continue;
+
+                allPaths.Add(fullPath);
+                if (HasSubmenuChildren(control.subMenu))
+                    parentPaths.Add(fullPath);
+
+                CollectSubmenuPathsRecursive(control.subMenu, fullPath, allPaths, parentPaths, visitedMenus);
+            }
+        }
+
+        private static bool HasSubmenuChildren(VRCExpressionsMenu menu)
+        {
+            if (menu == null || menu.controls == null)
+                return false;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control != null && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static string NormalizeMenuPathSegment(string value)
+        {
+            string normalized = NormalizeOptionalString(value)
+                .Replace('\\', '/')
+                .Trim('/');
+
+            return normalized;
         }
 
         private void DrawIconMode()
@@ -942,6 +3368,27 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
 
             var component = GetOrRefreshComponent();
+            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+
+            switch (toolState)
+            {
+                case AsmLiteToolState.PackageManaged:
+                    EditorGUILayout.HelpBox("Tool State: Package Managed — ASM-Lite component is attached and editable.", MessageType.Info);
+                    break;
+                case AsmLiteToolState.Vendorized:
+                    EditorGUILayout.HelpBox(
+                        component != null
+                            ? "Tool State: Vendorized — ASM-Lite stays attached and editable, and generated payload is mirrored under Assets/ASM-Lite."
+                            : "Tool State: Vendorized — avatar references ASM-Lite assets copied under Assets/ASM-Lite and the tool object is detached.",
+                        MessageType.Info);
+                    break;
+                case AsmLiteToolState.Detached:
+                    EditorGUILayout.HelpBox("Tool State: Detached — avatar has baked ASM-Lite runtime data but no editable ASM-Lite component.", MessageType.Info);
+                    break;
+                default:
+                    EditorGUILayout.HelpBox("Tool State: Not Installed — no ASM-Lite component or baked markers detected on this avatar.", MessageType.None);
+                    break;
+            }
 
             if (component)
             {
@@ -1004,10 +3451,19 @@ namespace ASMLite.Editor
             }
             else
             {
-                EditorGUILayout.HelpBox(
-                    "ASM-Lite prefab has not been added to this avatar yet.\n" +
-                    "Configure settings above, then click \"Add ASM-Lite Prefab\".",
-                    MessageType.Warning);
+                if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
+                {
+                    EditorGUILayout.HelpBox(
+                        "ASM-Lite is detached on this avatar. You can return to package-managed mode below to restore editable ASM-Lite controls.",
+                        MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox(
+                        "ASM-Lite prefab has not been added to this avatar yet.\n" +
+                        "Configure settings above, then click \"Add ASM-Lite Prefab\".",
+                        MessageType.Warning);
+                }
             }
         }
 
@@ -1033,16 +3489,15 @@ namespace ASMLite.Editor
         private void DrawActionButton()
         {
             var component = GetOrRefreshComponent();
+            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
 
             if (component)
             {
-                // Two-button layout: Rebuild and Remove
+                // Primary actions.
                 EditorGUILayout.BeginHorizontal();
 
                 if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
                 {
-                    // Defer past the current OnGUI pass so AssetDatabase operations
-                    // don't corrupt the layout group stack mid-frame.
                     var captured = component;
                     EditorApplication.delayCall += () => BakeAssets(captured);
                 }
@@ -1060,21 +3515,73 @@ namespace ASMLite.Editor
                         "Remove", "Cancel");
 
                     if (confirm)
-                    {
                         EditorApplication.delayCall += () => RemovePrefab(component);
-                    }
                 }
 
                 EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.Space(6f);
+
+                EditorGUILayout.BeginVertical("box");
+                EditorGUILayout.LabelField("Detach ASM-Lite (Runtime-safe)", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    "Keep your current in-game presets working, but remove the ASM-Lite tool object from this avatar. " +
+                    "Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.",
+                    EditorStyles.wordWrappedMiniLabel);
+                if (GUILayout.Button("Detach ASM-Lite", GUILayout.Height(24)))
+                {
+                    var captured = component;
+                    EditorApplication.delayCall += () => DetachAsmLite(captured, vendorizeToAssets: false);
+                }
+                EditorGUILayout.EndVertical();
+
+                EditorGUILayout.Space(4f);
+
+                EditorGUILayout.BeginVertical("box");
+                EditorGUILayout.LabelField("Vendorize ASM-Lite Payload", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField(
+                    "Keep ASM-Lite attached and editable, but mirror generated payload files into Assets/ASM-Lite/<AvatarName> " +
+                    "and use those mirrored files instead of package generated assets.",
+                    EditorStyles.wordWrappedMiniLabel);
+                if (GUILayout.Button("Vendorize (Keep Attached)", GUILayout.Height(24)))
+                {
+                    var captured = component;
+                    EditorApplication.delayCall += () => VendorizeAsmLite(captured);
+                }
+                if (toolState == AsmLiteToolState.Vendorized)
+                {
+                    string currentVendorizedPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+                    if (string.IsNullOrWhiteSpace(currentVendorizedPath))
+                        currentVendorizedPath = "(path pending sync)";
+
+                    EditorGUILayout.Space(2f);
+                    EditorGUILayout.LabelField("Current vendorized folder:", EditorStyles.miniBoldLabel);
+                    EditorGUILayout.SelectableLabel(currentVendorizedPath, EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
+
+                    EditorGUILayout.Space(2f);
+                    if (GUILayout.Button("Return This Avatar to Package Managed", GUILayout.Height(22)))
+                        EditorApplication.delayCall += ReturnToPackageManaged;
+                }
+                EditorGUILayout.EndVertical();
             }
             else
             {
-                if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
                 {
-                    // Defer past the current OnGUI pass: CreatePrefab calls
-                    // AssetDatabase.Refresh() which can trigger re-entrant layout
-                    // events and leave BeginScrollView unmatched.
-                    EditorApplication.delayCall += AddPrefabToAvatar;
+                    EditorGUILayout.BeginVertical("box");
+                    EditorGUILayout.LabelField("Return to Package Managed Mode", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField(
+                        "Re-attach the editable ASM-Lite prefab and return this avatar to package-managed workflow. " +
+                        "Keeps your current avatar content and restores normal ASM-Lite editing.",
+                        EditorStyles.wordWrappedMiniLabel);
+                    if (GUILayout.Button("Return to Package Managed", GUILayout.Height(28)))
+                        EditorApplication.delayCall += ReturnToPackageManaged;
+                    EditorGUILayout.EndVertical();
+                }
+                else
+                {
+                    if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                        EditorApplication.delayCall += AddPrefabToAvatar;
                 }
             }
         }
@@ -1083,6 +3590,135 @@ namespace ASMLite.Editor
 
         // Per-frame component cache: refreshed once per OnGUI call, not once per draw section.
         private int _lastRefreshFrame = -1;
+
+        private enum AsmLiteToolState
+        {
+            NotInstalled,
+            PackageManaged,
+            Detached,
+            Vendorized,
+        }
+
+        private static AsmLiteToolState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
+        {
+            if (component != null)
+                return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
+            if (avatar == null)
+                return AsmLiteToolState.NotInstalled;
+            if (HasVendorizedAsmLiteReferences(avatar))
+                return AsmLiteToolState.Vendorized;
+            if (HasAsmLiteRuntimeMarkers(avatar))
+                return AsmLiteToolState.Detached;
+            return AsmLiteToolState.NotInstalled;
+        }
+
+        private static bool HasVendorizedAsmLiteReferences(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return false;
+
+            const string vendorPrefix = "Assets/ASM-Lite/";
+
+            string exprPath = avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/') : string.Empty;
+            if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                return true;
+
+            string menuPath = avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/') : string.Empty;
+            if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                return true;
+
+            if (avatar.expressionsMenu != null && avatar.expressionsMenu.controls != null)
+            {
+                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
+                {
+                    var control = avatar.expressionsMenu.controls[i];
+                    if (control?.subMenu == null)
+                        continue;
+
+                    string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
+                    if (!string.IsNullOrWhiteSpace(subPath) && subPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+
+            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            {
+                var ctrl = avatar.baseAnimationLayers[i].animatorController;
+                if (!ctrl)
+                    continue;
+
+                string ctrlPath = AssetDatabase.GetAssetPath(ctrl)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return false;
+
+            var expr = avatar.expressionParameters;
+            if (expr?.parameters != null)
+            {
+                for (int i = 0; i < expr.parameters.Length; i++)
+                {
+                    var p = expr.parameters[i];
+                    if (p == null || string.IsNullOrWhiteSpace(p.name))
+                        continue;
+                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal)
+                        || string.Equals(p.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+
+            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            {
+                var ctrl = avatar.baseAnimationLayers[i].animatorController as UnityEditor.Animations.AnimatorController;
+                if (ctrl == null)
+                    continue;
+
+                for (int j = 0; j < ctrl.layers.Length; j++)
+                {
+                    if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        return true;
+                }
+
+                for (int j = 0; j < ctrl.parameters.Length; j++)
+                {
+                    string paramName = ctrl.parameters[j].name;
+                    if (string.IsNullOrWhiteSpace(paramName))
+                        continue;
+                    if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal)
+                        || string.Equals(paramName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
+                        return true;
+                }
+            }
+
+            if (avatar.expressionsMenu?.controls != null)
+            {
+                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
+                {
+                    var control = avatar.expressionsMenu.controls[i];
+                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
+                        continue;
+
+                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
+                        return true;
+
+                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
+                    if (!string.IsNullOrWhiteSpace(subPath)
+                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
+                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
+                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
+                        return true;
+                }
+            }
+
+            return false;
+        }
 
         private ASMLiteComponent GetOrRefreshComponent()
         {
@@ -1159,40 +3795,398 @@ namespace ASMLite.Editor
         {
             if (component == null)
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh FullController menu prefix because the ASM-Lite component was null.");
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh install-path routing because the ASM-Lite component was null.");
                 return false;
             }
 
-            var vfComponent = FindLiveVrcFuryComponent(component);
-            if (vfComponent == null)
+            if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh install-path routing on '{component.gameObject.name}'.");
                 return false;
             }
-
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            if (!ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(serializedVf, component))
-            {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh FullController menu prefix on '{component.gameObject.name}'.");
-                return false;
-            }
-
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
 
             var effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
             if (string.IsNullOrEmpty(effectivePrefix))
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to root on '{component.gameObject.name}'.");
+            else
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to '{effectivePrefix}' on '{component.gameObject.name}'.");
+
+            return true;
+        }
+
+        private static string SanitizePathFragment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "Avatar";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var sb = new System.Text.StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
             {
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed live FullController menu prefix to empty on '{component.gameObject.name}'.");
+                char c = value[i];
+                if (invalid.Contains(c))
+                    sb.Append('_');
+                else
+                    sb.Append(c);
+            }
+
+            string cleaned = sb.ToString().Trim();
+            return string.IsNullOrWhiteSpace(cleaned) ? "Avatar" : cleaned;
+        }
+
+        private static string EnsureAssetFolder(string parent, string child)
+        {
+            string normalizedParent = parent.Replace('\\', '/').TrimEnd('/');
+            string candidate = normalizedParent + "/" + child;
+            if (!AssetDatabase.IsValidFolder(candidate))
+                AssetDatabase.CreateFolder(normalizedParent, child);
+            return candidate;
+        }
+
+        private static string EnsureVendorizeRootFolder(VRCAvatarDescriptor avatar)
+        {
+            string root = EnsureAssetFolder("Assets", "ASM-Lite");
+            string avatarFolder = EnsureAssetFolder(root, SanitizePathFragment(avatar != null ? avatar.gameObject.name : "Avatar"));
+            return EnsureAssetFolder(avatarFolder, "GeneratedAssets");
+        }
+
+        private static void CopyAssetIfPresent(string sourcePath, string destinationPath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
+                return;
+
+            if (!AssetDatabase.LoadMainAssetAtPath(sourcePath))
+                return;
+
+            AssetDatabase.DeleteAsset(destinationPath);
+            AssetDatabase.CopyAsset(sourcePath, destinationPath);
+        }
+
+        private static void RetargetMenuGeneratedSubmenus(VRCExpressionsMenu menu, string sourcePrefix, string destinationPrefix, HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
+                return;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control == null || control.subMenu == null)
+                    continue;
+
+                string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(subPath)
+                    && subPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
+                {
+                    string fileName = Path.GetFileName(subPath);
+                    string newPath = destinationPrefix + "/" + fileName;
+                    var replaced = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(newPath);
+                    if (replaced != null)
+                    {
+                        control.subMenu = replaced;
+                        menu.controls[i] = control;
+                        EditorUtility.SetDirty(menu);
+                    }
+                }
+
+                RetargetMenuGeneratedSubmenus(control.subMenu, sourcePrefix, destinationPrefix, visited);
+            }
+        }
+
+        private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
+        {
+            vendorizedDir = string.Empty;
+            if (avatar == null)
+                return false;
+
+            string sourcePrefix = ASMLiteAssetPaths.GeneratedDir.Replace('\\', '/').TrimEnd('/');
+            string targetDir = EnsureVendorizeRootFolder(avatar);
+
+            var generatedGuids = AssetDatabase.FindAssets(string.Empty, new[] { sourcePrefix });
+            for (int i = 0; i < generatedGuids.Length; i++)
+            {
+                string sourcePath = AssetDatabase.GUIDToAssetPath(generatedGuids[i])?.Replace('\\', '/');
+                if (string.IsNullOrWhiteSpace(sourcePath) || Directory.Exists(sourcePath))
+                    continue;
+
+                string fileName = Path.GetFileName(sourcePath);
+                string destinationPath = targetDir + "/" + fileName;
+                CopyAssetIfPresent(sourcePath, destinationPath);
+            }
+
+            // Retarget descriptor-level generated assets.
+            if (avatar.expressionParameters != null)
+            {
+                string exprPath = AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
+                {
+                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(targetDir + "/" + Path.GetFileName(exprPath));
+                    if (replacement != null)
+                    {
+                        avatar.expressionParameters = replacement;
+                        EditorUtility.SetDirty(avatar);
+                    }
+                }
+            }
+
+            if (avatar.expressionsMenu != null)
+            {
+                string menuPath = AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
+                {
+                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(targetDir + "/" + Path.GetFileName(menuPath));
+                    if (replacement != null)
+                    {
+                        avatar.expressionsMenu = replacement;
+                        EditorUtility.SetDirty(avatar);
+                    }
+                }
+
+                RetargetMenuGeneratedSubmenus(avatar.expressionsMenu, sourcePrefix, targetDir, new HashSet<VRCExpressionsMenu>());
+            }
+
+            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            {
+                var layer = avatar.baseAnimationLayers[i];
+                var controller = layer.animatorController;
+                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
+                if (string.IsNullOrWhiteSpace(ctrlPath) || !ctrlPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
+                    continue;
+
+                var replacement = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(targetDir + "/" + Path.GetFileName(ctrlPath));
+                if (replacement == null)
+                    continue;
+
+                layer.animatorController = replacement;
+                avatar.baseAnimationLayers[i] = layer;
+                EditorUtility.SetDirty(avatar);
+            }
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            vendorizedDir = targetDir;
+            return true;
+        }
+
+        private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
+        {
+            if (component == null || string.IsNullOrWhiteSpace(generatedDir))
+                return false;
+
+            var vfComponent = FindLiveVrcFuryComponent(component);
+            if (vfComponent == null)
+                return false;
+
+            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController));
+            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+            if (fxController == null || menu == null || parameters == null)
+                return false;
+
+            var so = new SerializedObject(vfComponent);
+            so.Update();
+
+            bool applied = false;
+            applied |= SetObjectReferenceIfPresent(so, "content.controllers.Array.data[0].controller.objRef", fxController);
+            applied |= SetObjectReferenceIfPresent(so, "content.menus.Array.data[0].menu.objRef", menu);
+            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameters.objRef", parameters);
+            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameter.objRef", parameters);
+            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].objRef", parameters);
+            applied |= SetObjectReferenceIfPresent(so, "content.controller.objRef", fxController);
+            applied |= SetObjectReferenceIfPresent(so, "content.menu.objRef", menu);
+            applied |= SetObjectReferenceIfPresent(so, "content.parameters.objRef", parameters);
+
+            if (!applied)
+                return false;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            return true;
+        }
+
+        private static bool SetObjectReferenceIfPresent(SerializedObject so, string path, UnityEngine.Object value)
+        {
+            var prop = so.FindProperty(path);
+            if (prop == null)
+                return false;
+
+            prop.objectReferenceValue = value;
+            return true;
+        }
+
+        private void VendorizeAsmLite(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            const string modeLabel = "Vendorize ASM-Lite (Keep Attached)";
+            bool confirm = EditorUtility.DisplayDialog(
+                modeLabel,
+                "This will keep ASM-Lite attached and editable, mirror generated payload files into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, and switch this avatar to those mirrored files. Continue?",
+                "Continue",
+                "Cancel");
+            if (!confirm)
+                return;
+
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
+            if (avatar == null)
+            {
+                EditorUtility.DisplayDialog(modeLabel, "No VRCAvatarDescriptor found for this ASM-Lite component.", "OK");
+                return;
+            }
+
+            if (!TryRefreshLiveInstallPathPrefix(component, "Vendorize"))
+            {
+                EditorUtility.DisplayDialog(modeLabel, "Failed to refresh FullController install prefix before vendorizing.", "OK");
+                return;
+            }
+
+            int count = ASMLiteBuilder.Build(component);
+            if (count >= 0)
+                _discoveredParamCount = count;
+
+            if (!TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out string vendorizedDir))
+            {
+                EditorUtility.DisplayDialog(modeLabel, "Failed to mirror generated assets to Assets/ASM-Lite.", "OK");
+                return;
+            }
+
+            if (!TryRetargetLiveFullControllerGeneratedAssets(component, vendorizedDir))
+            {
+                EditorUtility.DisplayDialog(modeLabel, "Mirrored assets were created, but live FullController references could not be retargeted.", "OK");
+                return;
+            }
+
+            Undo.RecordObject(component, "Enable ASM-Lite Vendorized Assets");
+            component.useVendorizedGeneratedAssets = true;
+            component.vendorizedGeneratedAssetsPath = vendorizedDir;
+            EditorUtility.SetDirty(component);
+
+            _cachedCustomParamCount = -1;
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log($"[ASM-Lite] Vendorized generated payload for '{avatar.gameObject.name}' to '{vendorizedDir}' and kept ASM-Lite attached.");
+            EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
+            Repaint();
+        }
+
+        private void DetachAsmLite(ASMLiteComponent component, bool vendorizeToAssets)
+        {
+            if (component == null)
+                return;
+
+            string modeLabel = vendorizeToAssets ? "Vendorize + Detach" : "Detach ASM-Lite";
+            bool confirm = EditorUtility.DisplayDialog(
+                modeLabel,
+                vendorizeToAssets
+                    ? "This will bake ASM-Lite directly into avatar assets, copy generated assets into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, then remove the ASM-Lite prefab object. Continue?"
+                    : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object. Continue?",
+                "Continue",
+                "Cancel");
+
+            if (!confirm)
+                return;
+
+            if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
+            {
+                Debug.LogError(detail);
+                EditorUtility.DisplayDialog(modeLabel, detail, "OK");
+                return;
+            }
+
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
+            string vendorizedDir = string.Empty;
+            if (vendorizeToAssets && avatar != null)
+            {
+                if (!TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out vendorizedDir))
+                {
+                    Debug.LogWarning("[ASM-Lite] Vendorize requested, but generated assets could not be copied/rebound. Detached payload still applied.");
+                }
+            }
+
+            Undo.SetCurrentGroupName(modeLabel);
+            int group = Undo.GetCurrentGroup();
+            Undo.DestroyObjectImmediate(component.gameObject);
+            Undo.CollapseUndoOperations(group);
+
+            _cachedComponent = null;
+            _lastRefreshFrame = -1;
+            _discoveredParamCount = -1;
+            _cachedCustomParamCount = -1;
+
+            string completion;
+            if (vendorizeToAssets && !string.IsNullOrWhiteSpace(vendorizedDir))
+            {
+                completion = $"{detail}\n\nVendorized assets folder:\n{vendorizedDir}";
+                Debug.Log($"[ASM-Lite] {detail} Vendorized generated assets to '{vendorizedDir}'.");
             }
             else
             {
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed live FullController menu prefix to '{effectivePrefix}' on '{component.gameObject.name}'.");
+                completion = detail;
+                Debug.Log($"[ASM-Lite] {detail}");
             }
 
-            return true;
+            EditorUtility.DisplayDialog(modeLabel + " Complete", completion, "OK");
+            Repaint();
+        }
+
+        private void ReturnToPackageManaged()
+        {
+            if (_selectedAvatar == null)
+                return;
+
+            var existing = GetOrRefreshComponent();
+            if (existing != null)
+            {
+                if (!existing.useVendorizedGeneratedAssets)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Already Package Managed",
+                        "This avatar already has an ASM-Lite component attached and editable.",
+                        "OK");
+                    return;
+                }
+
+                Undo.RecordObject(existing, "Disable ASM-Lite Vendorized Assets");
+                existing.useVendorizedGeneratedAssets = false;
+                existing.vendorizedGeneratedAssetsPath = string.Empty;
+                EditorUtility.SetDirty(existing);
+
+                if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(existing.gameObject, existing, "Return To Package Managed"))
+                {
+                    EditorUtility.DisplayDialog(
+                        "Return to Package Managed",
+                        "Failed to restore package-managed FullController wiring on the attached ASM-Lite component.",
+                        "OK");
+                    return;
+                }
+
+                _discoveredParamCount = -1;
+                _cachedCustomParamCount = -1;
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+
+                EditorUtility.DisplayDialog(
+                    "Package Managed Restored",
+                    "ASM-Lite remains attached and editable. This avatar now uses package-managed generated payload references again.",
+                    "OK");
+                Repaint();
+                return;
+            }
+
+            ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
+
+            _cachedComponent = null;
+            _lastRefreshFrame = -1;
+            _discoveredParamCount = -1;
+            _cachedCustomParamCount = -1;
+
+            AddPrefabToAvatar();
+
+            EditorUtility.DisplayDialog(
+                "Package Managed Restored",
+                "ASM-Lite has been re-attached in package-managed mode for this avatar.\n\nYou can now edit settings and rebuild normally.",
+                "OK");
         }
 
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
@@ -1238,6 +4232,128 @@ namespace ASMLite.Editor
             _pendingCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
             _pendingUseParameterExclusions = component.useParameterExclusions;
             _pendingExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
+        }
+
+        private static bool TryResolveInstallPrefixFromMovedRootPath(string rootControlName, string movedDestinationPath, out string installPrefix)
+        {
+            installPrefix = string.Empty;
+
+            string root = NormalizeOptionalString(rootControlName);
+            string destination = NormalizeSlashPath(movedDestinationPath);
+            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(destination))
+                return false;
+
+            if (string.Equals(destination, root, StringComparison.Ordinal))
+            {
+                installPrefix = string.Empty;
+                return true;
+            }
+
+            string suffix = "/" + root;
+            if (destination.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                installPrefix = destination.Substring(0, destination.Length - suffix.Length);
+                return true;
+            }
+
+            // Fallback: treat destination as direct prefix if it does not include
+            // the root segment explicitly.
+            installPrefix = destination;
+            return true;
+        }
+
+        private static bool TryAdoptInstallPathFromMoveMenu(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            out string adoptedInstallPrefix,
+            out int removedMoveComponents)
+        {
+            adoptedInstallPrefix = string.Empty;
+            removedMoveComponents = 0;
+
+            if (component == null || avatar == null)
+                return false;
+
+            string effectiveRootName = ASMLiteBuilder.ResolveEffectiveRootControlName(component);
+            if (string.IsNullOrWhiteSpace(effectiveRootName))
+                return false;
+
+            var remaps = GetVrcFuryMoveMenuPathRemaps(avatar);
+            if (remaps.Count == 0)
+                return false;
+
+            string normalizedRoot = NormalizeSlashPath(effectiveRootName);
+            string matchedDestination = null;
+            foreach (var kv in remaps)
+            {
+                string fromPath = NormalizeSlashPath(kv.Key);
+                if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
+                    continue;
+
+                matchedDestination = kv.Value;
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(matchedDestination))
+                return false;
+
+            if (!TryResolveInstallPrefixFromMovedRootPath(effectiveRootName, matchedDestination, out string resolvedPrefix))
+                return false;
+
+            resolvedPrefix = NormalizeOptionalString(resolvedPrefix);
+
+            bool changedComponent = !component.useCustomInstallPath
+                || !string.Equals(NormalizeOptionalString(component.customInstallPath), resolvedPrefix, StringComparison.Ordinal);
+
+            if (changedComponent)
+            {
+                Undo.RecordObject(component, "Adopt ASM-Lite Install Path From Move Menu");
+                component.useCustomInstallPath = true;
+                component.customInstallPath = resolvedPrefix;
+                EditorUtility.SetDirty(component);
+            }
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                // Preserve ASM-Lite managed install-path routing helper.
+                if (string.Equals(behaviour.gameObject.name, "ASM-Lite Install Path Routing", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                var content = so.FindProperty("content");
+                if (content == null || content.propertyType != SerializedPropertyType.ManagedReference)
+                    continue;
+
+                string managedRefType = content.managedReferenceFullTypename;
+                if (string.IsNullOrWhiteSpace(managedRefType)
+                    || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
+                var fromProp = so.FindProperty("content.fromPath");
+                if (fromProp == null || fromProp.propertyType != SerializedPropertyType.String)
+                    continue;
+
+                string fromPath = NormalizeSlashPath(fromProp.stringValue);
+                if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
+                    continue;
+
+                Undo.DestroyObjectImmediate(behaviour);
+                removedMoveComponents++;
+            }
+
+            adoptedInstallPrefix = resolvedPrefix;
+            return changedComponent || removedMoveComponents > 0;
         }
 
         private void AddPrefabToAvatar()
@@ -1339,6 +4455,8 @@ namespace ASMLite.Editor
                 string savedCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
                 bool savedUseParameterExclusions = component.useParameterExclusions;
                 string[] savedExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
+                bool savedUseVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
+                string savedVendorizedGeneratedAssetsPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
                 Transform savedParent = component.gameObject.transform.parent;
 
                 Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
@@ -1374,6 +4492,8 @@ namespace ASMLite.Editor
                     newComponent.customInstallPath = savedCustomInstallPath;
                     newComponent.useParameterExclusions = savedUseParameterExclusions;
                     newComponent.excludedParameterNames = savedExcludedParameterNames;
+                    newComponent.useVendorizedGeneratedAssets = savedUseVendorizedGeneratedAssets;
+                    newComponent.vendorizedGeneratedAssetsPath = savedVendorizedGeneratedAssetsPath;
 
                     if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
                     {
@@ -1415,6 +4535,33 @@ namespace ASMLite.Editor
                 int count = ASMLiteBuilder.Build(component);
                 if (count >= 0)
                     _discoveredParamCount = count;
+
+                if (component.useVendorizedGeneratedAssets)
+                {
+                    string preferredDir = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+                    if (!TryVendorizeGeneratedAssetsToAvatarFolder(_selectedAvatar, out string syncedDir))
+                    {
+                        Debug.LogWarning("[ASM-Lite] Vendorized mode enabled but generated asset mirror sync failed. Keeping existing references.");
+                    }
+                    else
+                    {
+                        string effectiveDir = string.IsNullOrWhiteSpace(preferredDir) ? syncedDir : preferredDir;
+                        if (!string.Equals(effectiveDir, syncedDir, StringComparison.Ordinal))
+                            effectiveDir = syncedDir;
+
+                        if (TryRetargetLiveFullControllerGeneratedAssets(component, effectiveDir))
+                        {
+                            component.vendorizedGeneratedAssetsPath = effectiveDir;
+                            EditorUtility.SetDirty(component);
+                            Debug.Log($"[ASM-Lite] Vendorized payload sync complete at '{effectiveDir}'.");
+                        }
+                        else
+                        {
+                            Debug.LogWarning("[ASM-Lite] Vendorized payload sync copied assets, but live FullController references were not retargeted.");
+                        }
+                    }
+                }
+
                 AssetDatabase.Refresh();
                 Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. migrationRemoved={migrationReport.StaleVrcFuryRemoved}, cleanupFxLayers={migrationReport.Cleanup.FxLayersRemoved}, cleanupFxParams={migrationReport.Cleanup.FxParamsRemoved}, cleanupExprParams={migrationReport.Cleanup.ExprParamsRemoved}, cleanupMenuControls={migrationReport.Cleanup.MenuControlsRemoved}.");
             }
@@ -1464,7 +4611,15 @@ namespace ASMLite.Editor
         {
             var existing = GetOrRefreshComponent();
             if (existing != null)
+            {
+                if (TryAdoptInstallPathFromMoveMenu(existing, _selectedAvatar, out string adoptedPrefix, out int removedMoveComponents))
+                {
+                    string readablePrefix = string.IsNullOrEmpty(adoptedPrefix) ? "<root>" : adoptedPrefix;
+                    Debug.Log($"[ASM-Lite] Adopted install path from VRCFury Move Menu for '{existing.gameObject.name}': prefix='{readablePrefix}', removedMoveComponents={removedMoveComponents}.");
+                }
+
                 CopyComponentCustomizationToPending(existing);
+            }
         }
 
         private void OnSelectionChange()
@@ -1487,6 +4642,176 @@ namespace ASMLite.Editor
 
                 Repaint();
             }
+        }
+
+        // ── Nested types ──────────────────────────────────────────────────────
+
+        /// <summary>Node in the install-path menu tree.</summary>
+        private class MenuTreeNode
+        {
+            public string Name;
+            public string FullPath;
+            public readonly List<MenuTreeNode> Children = new List<MenuTreeNode>();
+        }
+
+        /// <summary>
+        /// Node in the parameter-backup tree. Leaf nodes (IsParam == true) represent
+        /// individual parameters with a checkbox. Interior nodes are menu folders.
+        /// </summary>
+        private class ParamTreeNode
+        {
+            public string Name;
+            public string MenuPath;   // non-null / set for folder nodes
+            public string ParamName;  // non-null for leaf param nodes
+            public bool IsParam => ParamName != null;
+            public readonly List<ParamTreeNode> Children = new List<ParamTreeNode>();
+        }
+    }
+
+    internal class ASMLiteVccSwitcherWindow : EditorWindow
+    {
+        private sealed class ProjectRow
+        {
+            public string ProjectName;
+            public string ProjectRoot;
+            public string Status;
+            public bool Selected;
+        }
+
+        private List<ASMLiteWindow.VccLocalPackage> _packages;
+        private int _selectedPkg = -1;
+        private List<ProjectRow> _rows;
+        private Vector2 _pkgScroll;
+        private Vector2 _projScroll;
+        private bool _initialized;
+
+        internal static void Open()
+        {
+            var win = GetWindow<ASMLiteVccSwitcherWindow>(false, "VCC Embedded or Local Package Switcher");
+            win.minSize = new Vector2(580, 440);
+            win.Scan();
+            win.Show();
+        }
+
+        private void Scan()
+        {
+            _packages = ASMLiteWindow.DiscoverVccLocalPackages();
+            _selectedPkg = _packages.Count == 1 ? 0 : -1;
+            BuildRows();
+            _initialized = true;
+            Repaint();
+        }
+
+        private void BuildRows()
+        {
+            if (_selectedPkg < 0 || _packages == null || _selectedPkg >= _packages.Count)
+            {
+                _rows = new List<ProjectRow>();
+                return;
+            }
+
+            var pkg = _packages[_selectedPkg];
+            string currentRoot = Directory.GetParent(Application.dataPath)?.FullName;
+            var roots = ASMLiteWindow.FindVccProjectRoots().ToList();
+            if (!string.IsNullOrEmpty(currentRoot)
+                && !roots.Any(r => string.Equals(r, currentRoot, StringComparison.OrdinalIgnoreCase)))
+                roots.Insert(0, currentRoot);
+
+            _rows = roots.Select(root => new ProjectRow
+            {
+                ProjectName = Path.GetFileName(root)
+                    + (string.Equals(root, currentRoot, StringComparison.OrdinalIgnoreCase) ? " (current)" : string.Empty),
+                ProjectRoot = root,
+                Status      = ASMLiteWindow.GetProjectPackageStatus(root, pkg.PackageName),
+                Selected    = false,
+            }).ToList();
+        }
+
+        private void OnGUI()
+        {
+            if (!_initialized) { EditorGUILayout.LabelField("Scanning..."); return; }
+
+            // ── Local packages ────────────────────────────────────────────────
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Local packages (VCC user package folders)", EditorStyles.boldLabel);
+
+            _pkgScroll = EditorGUILayout.BeginScrollView(_pkgScroll, GUILayout.MaxHeight(140));
+            if (_packages == null || _packages.Count == 0)
+            {
+                EditorGUILayout.HelpBox(
+                    "No local packages found. Add package folders in VCC → Settings → Packages.",
+                    MessageType.Info);
+            }
+            else
+            {
+                for (int i = 0; i < _packages.Count; i++)
+                {
+                    var pkg = _packages[i];
+                    EditorGUILayout.BeginHorizontal();
+                    bool newSel = EditorGUILayout.Toggle(i == _selectedPkg, GUILayout.Width(18));
+                    EditorGUILayout.BeginVertical();
+                    EditorGUILayout.LabelField($"{pkg.DisplayName}  v{pkg.Version}", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField($"{pkg.PackageName}  ·  {pkg.LocalPath}", EditorStyles.miniLabel);
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.EndHorizontal();
+                    if (newSel && i != _selectedPkg) { _selectedPkg = i; BuildRows(); }
+                }
+            }
+            EditorGUILayout.EndScrollView();
+
+            EditorGUILayout.Space(6);
+
+            // ── Projects ──────────────────────────────────────────────────────
+            bool pkgPicked = _selectedPkg >= 0 && _packages != null && _selectedPkg < _packages.Count;
+            using (new EditorGUI.DisabledScope(!pkgPicked))
+            {
+                EditorGUILayout.LabelField("VCC projects", EditorStyles.boldLabel);
+                _projScroll = EditorGUILayout.BeginScrollView(_projScroll, GUILayout.ExpandHeight(true));
+                if (_rows != null)
+                    foreach (var row in _rows)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        row.Selected = EditorGUILayout.Toggle(row.Selected, GUILayout.Width(18));
+                        EditorGUILayout.LabelField(row.ProjectName, GUILayout.ExpandWidth(true));
+                        EditorGUILayout.LabelField(row.Status, GUILayout.Width(110));
+                        EditorGUILayout.EndHorizontal();
+                    }
+                EditorGUILayout.EndScrollView();
+
+                EditorGUILayout.Space(2);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("All") && _rows != null)  foreach (var r in _rows) r.Selected = true;
+                if (GUILayout.Button("None") && _rows != null) foreach (var r in _rows) r.Selected = false;
+                EditorGUILayout.EndHorizontal();
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Scan")) Scan();
+            bool hasSelection = pkgPicked && _rows != null && _rows.Any(r => r.Selected);
+            using (new EditorGUI.DisabledScope(!hasSelection))
+            {
+                if (GUILayout.Button("Set to Local"))    Apply(toLocal: true);
+                if (GUILayout.Button("Set to Embedded")) Apply(toLocal: false);
+            }
+            if (GUILayout.Button("Close")) Close();
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.Space(4);
+        }
+
+        private void Apply(bool toLocal)
+        {
+            if (_packages == null || _rows == null || _selectedPkg < 0) return;
+            var pkg = _packages[_selectedPkg];
+            foreach (var row in _rows.Where(r => r.Selected).ToList())
+            {
+                if (toLocal)
+                    ASMLiteWindow.ApplySwitchToFileLocal(row.ProjectRoot, pkg.LocalPath, pkg.PackageName);
+                else
+                    ASMLiteWindow.ApplySwitchToEmbedded(row.ProjectRoot, pkg.PackageName);
+            }
+            BuildRows();
+            Repaint();
         }
     }
 }

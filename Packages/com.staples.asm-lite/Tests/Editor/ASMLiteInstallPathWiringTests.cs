@@ -155,6 +155,53 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void W08_BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            try
+            {
+                Assert.IsNotNull(ctx?.Comp, "W08: fixture creation failed to produce ASMLite component.");
+
+                var component = ctx.Comp;
+                component.useCustomInstallPath = true;
+                component.customInstallPath = "  Avatars/UploadSync  ";
+
+                var vf = component.gameObject.GetComponent<VF.Model.VRCFury>();
+                if (vf == null)
+                    vf = component.gameObject.AddComponent<VF.Model.VRCFury>();
+
+                vf.content = new VF.Model.Feature.FullController
+                {
+                    menus = new[] { new VF.Model.Feature.MenuEntry() }
+                };
+
+                var beforeSo = new SerializedObject(vf);
+                beforeSo.Update();
+                var beforePrefix = beforeSo.FindProperty("content.menus.Array.data[0].prefix");
+                Assert.IsNotNull(beforePrefix,
+                    "W08: expected FullController prefix field at content.menus.Array.data[0].prefix before Build().");
+                Assert.AreEqual(string.Empty, beforePrefix.stringValue,
+                    "W08: setup should start from empty prefix before Build() sync.");
+
+                int buildResult = ASMLiteBuilder.Build(component);
+                Assert.GreaterOrEqual(buildResult, 0,
+                    $"W08: Build() should succeed while syncing install prefix. result={buildResult}.");
+
+                var afterSo = new SerializedObject(vf);
+                afterSo.Update();
+                var afterPrefix = afterSo.FindProperty("content.menus.Array.data[0].prefix");
+                Assert.IsNotNull(afterPrefix,
+                    "W08: expected FullController prefix field at content.menus.Array.data[0].prefix after Build().");
+                Assert.AreEqual("Avatars/UploadSync", afterPrefix.stringValue,
+                    "W08: Build() must propagate trimmed custom install path into live FullController menu prefix for preprocess/upload parity.");
+            }
+            finally
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
         private static string ConfigurePrefabWiringAndReadPrefix(bool useCustomInstallPath, string customInstallPath)
         {
             var go = new GameObject("WiringRoot");

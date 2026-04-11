@@ -70,8 +70,11 @@ The hooks block commits that use banned personal identity metadata or blocked co
    - **Action Icon Mode** - default bundled action icons or custom Save/Load/Clear icons.
 4. Click **Add ASM-Lite Prefab**.
 
-Once the prefab is added, two buttons appear:
-- **Rebuild ASM-Lite** - regenerates all assets after changing slot count or icon settings.
+Once the prefab is added, management actions appear:
+- **Rebuild ASM-Lite** - regenerates payload assets and refreshes live wiring after changing settings.
+- **Detach ASM-Lite** - bakes ASM-Lite runtime data into avatar assets, then removes the editable ASM-Lite GameObject from the avatar.
+- **Vendorize (Keep Attached)** - mirrors generated payload assets into `Assets/ASM-Lite/<AvatarName>/GeneratedAssets` and retargets live references there while keeping ASM-Lite editable.
+- **Return to Package Managed** - when vendorized/detached state is detected, restores the normal package-managed editable workflow.
 - **Remove Prefab** - removes the ASM-Lite prefab from the avatar hierarchy and cleans up ASM-Lite managed state, including legacy direct-injection remnants on older avatars.
 
 ### In-Game
@@ -145,7 +148,7 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 
 ## Releases
 
-Release artifacts are published automatically when `package.json` is updated on `main` - an auto-tag workflow creates a version tag which triggers the release build. The VPM listing rebuilds automatically when release events are published/updated. A nightly prerelease build runs on the `dev` branch at 05:00 UTC daily.
+Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch).
 
 ---
 

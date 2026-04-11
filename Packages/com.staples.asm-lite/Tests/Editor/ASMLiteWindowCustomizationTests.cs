@@ -1,7 +1,41 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
+using VRC.SDK3.Avatars.ScriptableObjects;
+
+namespace VF.Model.Feature
+{
+    [System.Serializable]
+    internal class FullControllerLikeParamsRef
+    {
+        public VRCExpressionParameters objRef;
+        public string id;
+    }
+
+    [System.Serializable]
+    internal class FullControllerLikePrmsEntry
+    {
+        public FullControllerLikeParamsRef parameters = new FullControllerLikeParamsRef();
+    }
+
+    [System.Serializable]
+    internal class FullControllerLike
+    {
+        public FullControllerLikePrmsEntry[] prms;
+    }
+
+    [System.Serializable]
+    internal class MoveMenuItem
+    {
+        public string fromPath;
+        public string toPath;
+    }
+}
 
 namespace ASMLite.Tests.Editor
 {
@@ -150,6 +184,234 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void GetBackableParameterNames_IncludesAssignedPrefabToggleGlobals_PreBake()
+        {
+            var limbRoot = new GameObject("AvatarLimbScaling");
+            limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var arms = new GameObject("Arms");
+            arms.transform.SetParent(limbRoot.transform, false);
+
+            var vf = arms.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "AvatarLimbScaling_Arms",
+                name = "Avatar Limb Scaling/Arms",
+                menuPath = "",
+            };
+
+            string[] backable = InvokePrivateStatic<string[]>(
+                typeof(ASMLite.Editor.ASMLiteWindow),
+                "GetBackableParameterNames",
+                _ctx.AvDesc);
+
+            CollectionAssert.Contains(backable, "AvatarLimbScaling_Arms",
+                "Assigned VRCFury globals under nested prefab-style hierarchy should be backable pre-bake.");
+        }
+
+        [Test]
+        public void GetBackableParameterNames_IncludesVrcFuryReferencedParameterAssets_PreBake()
+        {
+            var mediaRoot = new GameObject("Media");
+            mediaRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var vf = mediaRoot.AddComponent<VF.Model.VRCFury>();
+            var referencedParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            referencedParams.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VRCOSC/Media/Play",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = false,
+                    networkSynced = false,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VRCOSC/Media/Volume",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0f,
+                    saved = false,
+                    networkSynced = false,
+                },
+            };
+
+            try
+            {
+                vf.content = new VF.Model.Feature.FullControllerLike
+                {
+                    prms = new[]
+                    {
+                        new VF.Model.Feature.FullControllerLikePrmsEntry
+                        {
+                            parameters = new VF.Model.Feature.FullControllerLikeParamsRef
+                            {
+                                objRef = referencedParams,
+                                id = string.Empty,
+                            },
+                        },
+                    },
+                };
+
+                string[] backable = InvokePrivateStatic<string[]>(
+                    typeof(ASMLite.Editor.ASMLiteWindow),
+                    "GetBackableParameterNames",
+                    _ctx.AvDesc);
+
+                CollectionAssert.Contains(backable, "VRCOSC/Media/Play",
+                    "VRCFury FullController prms references should be included in backable names pre-bake.");
+                CollectionAssert.Contains(backable, "VRCOSC/Media/Volume",
+                    "All supported value types from referenced parameter assets should be included pre-bake.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
+        public void GetVrcFuryMoveMenuPathRemaps_ExtractsFromAndToPaths()
+        {
+            var moveMenuRoot = new GameObject("MoveMenuFeature");
+            moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var vf = moveMenuRoot.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Source Bucket",
+                toPath = "Destination/Source Bucket",
+            };
+
+            var remaps = InvokePrivateStatic<Dictionary<string, string>>(
+                typeof(ASMLite.Editor.ASMLiteWindow),
+                "GetVrcFuryMoveMenuPathRemaps",
+                _ctx.AvDesc);
+
+            Assert.IsTrue(remaps.TryGetValue("Source Bucket", out var destination),
+                "Move-menu remaps should include source path from serialized fromPath.");
+            Assert.AreEqual("Destination/Source Bucket", destination,
+                "Move-menu remaps should preserve destination path from serialized toPath.");
+        }
+
+        [Test]
+        public void ApplyInstallPathMoveRemaps_RemovesSourceAndAddsDestinationHierarchy()
+        {
+            var paths = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Source Bucket",
+                "Source Bucket/Submenu",
+                "Unrelated",
+            };
+
+            var remaps = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["Source Bucket"] = "Destination/Source Bucket",
+            };
+
+            InvokePrivateStatic<object>(
+                typeof(ASMLite.Editor.ASMLiteWindow),
+                "ApplyInstallPathMoveRemaps",
+                paths,
+                remaps);
+
+            CollectionAssert.DoesNotContain(paths, "Source Bucket",
+                "Source install path should be suppressed when move remap exists.");
+            CollectionAssert.DoesNotContain(paths, "Source Bucket/Submenu",
+                "Source subtree should be suppressed when move remap exists.");
+            CollectionAssert.Contains(paths, "Destination",
+                "Destination parent should be available for install path selection.");
+            CollectionAssert.Contains(paths, "Destination/Source Bucket",
+                "Destination path should be available for install path selection.");
+            CollectionAssert.Contains(paths, "Unrelated",
+                "Non-moved paths should remain available.");
+        }
+
+        [Test]
+        public void GetVrcFuryMenuPrefixes_IncludesMoveMenuToPathDestinations()
+        {
+            var moveMenuRoot = new GameObject("MoveMenuFeature");
+            moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            const string destinationPath = "Root Bucket/Feature Node/Leaf Group";
+            var expectedPrefixes = new[]
+            {
+                "Root Bucket",
+                "Root Bucket/Feature Node",
+                "Root Bucket/Feature Node/Leaf Group",
+            };
+
+            var vf = moveMenuRoot.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Legacy Bucket/Feature Node/Leaf Group",
+                toPath = destinationPath,
+            };
+
+            string[] prefixes = InvokePrivateStatic<string[]>(
+                typeof(ASMLite.Editor.ASMLiteWindow),
+                "GetVrcFuryMenuPrefixes",
+                _ctx.AvDesc);
+
+            foreach (var expected in expectedPrefixes)
+            {
+                CollectionAssert.Contains(prefixes, expected,
+                    "Move-menu destination path should contribute each parent segment and full path to install path options.");
+            }
+        }
+
+        [Test]
+        public void SyncPendingSlotCountFromAvatar_AdoptsMoveMenuInstallPathAndRemovesMoveComponent()
+        {
+            _ctx.Comp.useCustomInstallPath = false;
+            _ctx.Comp.customInstallPath = string.Empty;
+            _ctx.Comp.useCustomRootName = false;
+            _ctx.Comp.customRootName = string.Empty;
+
+            var moveMenuRoot = new GameObject("MoveMenuFeature");
+            moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var vf = moveMenuRoot.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Settings Manager",
+                toPath = "Tools/Settings Manager",
+            };
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+                InvokePrivate(window, "SyncPendingSlotCountFromAvatar");
+
+                Assert.IsTrue(_ctx.Comp.useCustomInstallPath,
+                    "Move-menu migration should enable custom install path on the ASM-Lite component.");
+                Assert.AreEqual("Tools", _ctx.Comp.customInstallPath,
+                    "Move-menu migration should adopt destination parent as install prefix.");
+
+                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomInstallPath"),
+                    "Pending state should mirror adopted install-path enablement.");
+                Assert.AreEqual("Tools", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
+                    "Pending state should mirror adopted install-path prefix.");
+
+                int remainingMoveComponents = _ctx.AvatarGo
+                    .GetComponentsInChildren<VF.Model.VRCFury>(true)
+                    .Count(c => c != null
+                        && c.content is VF.Model.Feature.MoveMenuItem move
+                        && string.Equals(move.fromPath, "Settings Manager", StringComparison.Ordinal)
+                        && string.Equals(move.toPath, "Tools/Settings Manager", StringComparison.Ordinal));
+
+                Assert.AreEqual(0, remainingMoveComponents,
+                    "Move-menu migration should remove consumed MoveMenuItem component to avoid duplicate routing.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
         private static void SetPrivateField(object target, string fieldName, object value)
         {
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
@@ -169,6 +431,13 @@ namespace ASMLite.Tests.Editor
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
             method.Invoke(target, args);
+        }
+
+        private static T InvokePrivateStatic<T>(System.Type targetType, string methodName, params object[] args)
+        {
+            var method = targetType.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Missing private static method '{methodName}' on {targetType.Name}.");
+            return (T)method.Invoke(null, args);
         }
     }
 }
