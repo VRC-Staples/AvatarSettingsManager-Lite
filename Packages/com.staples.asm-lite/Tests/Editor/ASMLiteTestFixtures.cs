@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEditor.Animations;
+using NUnit.Framework;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite;
@@ -125,6 +126,38 @@ namespace ASMLite.Tests.Editor
             if (parent != null)
                 child.transform.SetParent(parent.transform);
             return child;
+        }
+
+        internal static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)
+        {
+            if (component == null)
+                return null;
+
+            var vf = component.GetComponent<VF.Model.VRCFury>();
+            if (vf == null)
+                vf = component.gameObject.AddComponent<VF.Model.VRCFury>();
+
+            vf.content = new VF.Model.Feature.FullController
+            {
+                menus = new[]
+                {
+                    new VF.Model.Feature.MenuEntry()
+                }
+            };
+
+            return vf;
+        }
+
+        internal static string ReadSerializedMenuPrefix(VF.Model.VRCFury vf)
+        {
+            var serializedVf = new SerializedObject(vf);
+            serializedVf.Update();
+
+            var prefixProperty = serializedVf.FindProperty("content.menus.Array.data[0].prefix");
+            Assert.IsNotNull(prefixProperty,
+                "Expected serialized FullController menu prefix field at content.menus.Array.data[0].prefix.");
+
+            return prefixProperty.stringValue;
         }
 
         public static void TearDownTestAvatar(GameObject avatarGo)

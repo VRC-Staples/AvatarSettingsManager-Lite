@@ -19,13 +19,23 @@ MonoBehaviour:
     saved: 0
     defaultValue: 0
     networkSynced: 0
-  - name: ASMLite_Bak_S1_KeepA
+  - name: ASMLite_Bak_S1_Keep_A
     valueType: 0
     saved: 1
-    defaultValue: 0
+    defaultValue: 2
     networkSynced: 0
-  - name: ASMLite_Bak_S2_KeepA
+  - name: ASMLite_Bak_S1_Keep_B
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Keep_A
     valueType: 0
     saved: 1
-    defaultValue: 0
+    defaultValue: 2
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Keep_B
+    valueType: 2
+    saved: 1
+    defaultValue: 1
     networkSynced: 0
