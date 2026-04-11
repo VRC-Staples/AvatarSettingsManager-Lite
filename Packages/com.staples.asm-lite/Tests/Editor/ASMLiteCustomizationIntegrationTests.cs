@@ -200,6 +200,173 @@ namespace ASMLite.Tests.Editor
                 "A54: repeated combined build must not duplicate generated expression parameter keys.");
         }
 
+        [Test, Category("Integration")]
+        public void A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts()
+        {
+            var staleIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[7], "A55");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "A55");
+
+            _ctx.Comp.slotCount = 2;
+            _ctx.Comp.useCustomRootName = false;
+            _ctx.Comp.customRootName = "  Stale Root Name  ";
+            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.customRootIcon = staleIcon;
+            _ctx.Comp.useCustomInstallPath = false;
+            _ctx.Comp.customInstallPath = "  Avatars/StalePrefix  ";
+            _ctx.Comp.useParameterExclusions = false;
+            _ctx.Comp.excludedParameterNames = new[] { "Keep_A", "Drop_B", " Ghost " };
+
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "Keep_A", VRCExpressionParameters.ValueType.Int, 1f);
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "Drop_B", VRCExpressionParameters.ValueType.Float, 0.3f);
+
+            int descriptorFxAsmLayersBefore = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorExprAsmBefore = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
+                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorSettingsBefore = (_ctx.AvDesc.expressionsMenu.controls ?? new List<VRCExpressionsMenu.Control>())
+                .Count(c => c != null && c.name == ASMLiteBuilder.DefaultRootControlName);
+
+            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, buildResult,
+                "A55: disabled exclusion toggle must ignore stale excluded names and include both discovered parameters.");
+
+            var generatedRoot = LoadGeneratedRootMenu();
+            Assert.AreEqual(1, generatedRoot.controls.Count,
+                "A55: generated root should contain one wrapper control in disabled-toggle baseline mode.");
+
+            var rootControl = generatedRoot.controls[0];
+            Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, rootControl.name,
+                "A55: disabled custom root name toggle must keep baseline Settings Manager wrapper name.");
+            Assert.AreSame(fallbackIcon, rootControl.icon,
+                "A55: disabled custom root icon toggle must keep bundled presets icon fallback.");
+
+            var generatedFx = LoadGeneratedFxController();
+            var generatedExpr = LoadGeneratedExprParams();
+
+            var fxNames = generatedFx.parameters
+                .Where(p => p != null && !string.IsNullOrEmpty(p.name))
+                .Select(p => p.name)
+                .ToHashSet();
+            var exprNames = generatedExpr.parameters
+                .Where(p => p != null && !string.IsNullOrEmpty(p.name))
+                .Select(p => p.name)
+                .ToHashSet();
+
+            Assert.IsTrue(fxNames.Contains("Keep_A"),
+                "A55: disabled exclusion toggle must keep discovered Keep_A source parameter in generated FX schema.");
+            Assert.IsTrue(fxNames.Contains("Drop_B"),
+                "A55: disabled exclusion toggle must keep discovered Drop_B source parameter in generated FX schema.");
+            Assert.IsTrue(fxNames.Contains("ASMLite_Def_Keep_A") && fxNames.Contains("ASMLite_Def_Drop_B"),
+                "A55: disabled exclusion toggle must keep default keys for all discovered parameters.");
+
+            for (int slot = 1; slot <= _ctx.Comp.slotCount; slot++)
+            {
+                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_A"),
+                    $"A55: disabled exclusion toggle must keep Keep_A backup key ASMLite_Bak_S{slot}_Keep_A in FX schema.");
+                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Drop_B"),
+                    $"A55: disabled exclusion toggle must keep Drop_B backup key ASMLite_Bak_S{slot}_Drop_B in FX schema.");
+                Assert.IsTrue(exprNames.Contains($"ASMLite_Bak_S{slot}_Keep_A"),
+                    $"A55: disabled exclusion toggle must keep Keep_A backup key ASMLite_Bak_S{slot}_Keep_A in expression schema.");
+                Assert.IsTrue(exprNames.Contains($"ASMLite_Bak_S{slot}_Drop_B"),
+                    $"A55: disabled exclusion toggle must keep Drop_B backup key ASMLite_Bak_S{slot}_Drop_B in expression schema.");
+            }
+
+            int descriptorFxAsmLayersAfter = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorExprAsmAfter = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
+                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorSettingsAfter = (_ctx.AvDesc.expressionsMenu.controls ?? new List<VRCExpressionsMenu.Control>())
+                .Count(c => c != null && c.name == ASMLiteBuilder.DefaultRootControlName);
+
+            Assert.AreEqual(descriptorFxAsmLayersBefore, descriptorFxAsmLayersAfter,
+                "A55: Build() should not inject ASMLite layers into fixture descriptor FX controller during disabled-toggle baseline path.");
+            Assert.AreEqual(descriptorExprAsmBefore, descriptorExprAsmAfter,
+                "A55: Build() should not inject ASMLite params into fixture descriptor expression parameters during disabled-toggle baseline path.");
+            Assert.AreEqual(descriptorSettingsBefore, descriptorSettingsAfter,
+                "A55: Build() should not inject Settings Manager controls into fixture descriptor root menu during disabled-toggle baseline path.");
+
+            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
+            string serializedPrefix = ConfigureFullControllerAndReadPrefix("A55");
+            Assert.AreEqual(string.Empty, serializedPrefix,
+                "A55: disabled custom install path toggle must serialize empty FullController prefix even when stale path text exists.");
+        }
+
+        [Test, Category("Integration")]
+        public void A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild()
+        {
+            _ctx.Comp.slotCount = 1;
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = " Enabled First Pass ";
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[2], "A56");
+            _ctx.Comp.useCustomInstallPath = true;
+            _ctx.Comp.customInstallPath = " Avatars/EnabledFirstPass ";
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = new[] { "Drop_First" };
+
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "Keep_First", VRCExpressionParameters.ValueType.Int, 2f);
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "Drop_First", VRCExpressionParameters.ValueType.Bool, 1f);
+
+            int enabledResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, enabledResult,
+                "A56: setup build should honor enabled exclusion toggle and keep only one discovered parameter.");
+
+            _ctx.Comp.useCustomRootName = false;
+            _ctx.Comp.customRootName = " stale disabled name ";
+            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "A56");
+            _ctx.Comp.useCustomInstallPath = false;
+            _ctx.Comp.customInstallPath = " stale/disabled/prefix ";
+            _ctx.Comp.useParameterExclusions = false;
+            _ctx.Comp.excludedParameterNames = new[] { "Keep_First", "Drop_First" };
+
+            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            int firstDisabledResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, firstDisabledResult,
+                "A56: first disabled-toggle build after enabled pass must include both discovered parameters.");
+
+            var firstDisabledMenu = LoadGeneratedRootMenu();
+            var firstDisabledFx = LoadGeneratedFxController();
+            var firstDisabledExpr = LoadGeneratedExprParams();
+
+            int firstDisabledRootCount = firstDisabledMenu.controls.Count;
+            int firstDisabledFxSchemaCount = CountGeneratedFxSchemaKeys(firstDisabledFx);
+            int firstDisabledExprSchemaCount = CountGeneratedExpressionSchemaKeys(firstDisabledExpr);
+
+            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            int secondDisabledResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(firstDisabledResult, secondDisabledResult,
+                "A56: repeated disabled-toggle build must keep Build() return deterministic.");
+
+            var secondDisabledMenu = LoadGeneratedRootMenu();
+            var secondDisabledFx = LoadGeneratedFxController();
+            var secondDisabledExpr = LoadGeneratedExprParams();
+
+            Assert.AreEqual(firstDisabledRootCount, secondDisabledMenu.controls.Count,
+                "A56: repeated disabled-toggle build must keep root wrapper count deterministic.");
+            Assert.AreEqual(firstDisabledFxSchemaCount, CountGeneratedFxSchemaKeys(secondDisabledFx),
+                "A56: repeated disabled-toggle build must keep generated FX schema count deterministic.");
+            Assert.AreEqual(firstDisabledExprSchemaCount, CountGeneratedExpressionSchemaKeys(secondDisabledExpr),
+                "A56: repeated disabled-toggle build must keep generated expression schema count deterministic.");
+
+            var secondFxNames = secondDisabledFx.parameters
+                .Where(p => p != null && !string.IsNullOrEmpty(p.name))
+                .Select(p => p.name)
+                .ToList();
+            var secondExprNames = secondDisabledExpr.parameters
+                .Where(p => p != null && !string.IsNullOrEmpty(p.name))
+                .Select(p => p.name)
+                .ToList();
+
+            Assert.IsTrue(secondFxNames.Contains("Drop_First") && secondFxNames.Contains("ASMLite_Def_Drop_First"),
+                "A56: disabled exclusion toggle must keep previously excluded source/default keys in generated FX schema.");
+            Assert.IsTrue(secondFxNames.Contains("ASMLite_Bak_S1_Drop_First") && secondExprNames.Contains("ASMLite_Bak_S1_Drop_First"),
+                "A56: disabled exclusion toggle must restore previously excluded backup keys in generated FX and expression schemas.");
+            Assert.AreEqual(0, CountDuplicateNames(secondFxNames),
+                "A56: repeated disabled-toggle build must not introduce duplicate generated FX keys.");
+            Assert.AreEqual(0, CountDuplicateNames(secondExprNames),
+                "A56: repeated disabled-toggle build must not introduce duplicate generated expression keys.");
+        }
+
         private string ConfigureFullControllerAndReadPrefix(string aid)
         {
             var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(

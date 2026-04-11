@@ -19,22 +19,12 @@ MonoBehaviour:
     saved: 0
     defaultValue: 0
     networkSynced: 0
-  - name: ASMLite_Bak_S1_Keep_A
-    valueType: 0
-    saved: 1
-    defaultValue: 2
-    networkSynced: 0
-  - name: ASMLite_Bak_S1_Keep_B
+  - name: ASMLite_Bak_S1_ASM_VF_Menu_Hat__TestAvatar
     valueType: 2
     saved: 1
-    defaultValue: 1
+    defaultValue: 0
     networkSynced: 0
-  - name: ASMLite_Bak_S2_Keep_A
-    valueType: 0
-    saved: 1
-    defaultValue: 2
-    networkSynced: 0
-  - name: ASMLite_Bak_S2_Keep_B
+  - name: ASMLite_Bak_S1_VF777_Menu/Hat
     valueType: 2
     saved: 1
     defaultValue: 1

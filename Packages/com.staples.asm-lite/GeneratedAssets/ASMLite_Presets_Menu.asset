@@ -24,13 +24,3 @@ MonoBehaviour:
     subMenu: {fileID: 11400000, guid: 1f74f34b7fcfaec4aaa94bb62a998f2d, type: 2}
     subParameters: []
     labels: []
-  - name: Preset 2
-    icon: {fileID: 2800000, guid: 757ae6584e454d59a3f83f3f5f66513b, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: bb1fbdfe597b62940b812e5829714edf, type: 2}
-    subParameters: []
-    labels: []
