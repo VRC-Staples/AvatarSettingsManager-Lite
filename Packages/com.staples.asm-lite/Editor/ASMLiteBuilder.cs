@@ -350,7 +350,8 @@ namespace ASMLite.Editor
                 component.slotCount,
                 discoveredParams,
                 GetExistingGeneratedBackupNames(),
-                ASMLiteToggleNameBroker.GetLatestGlobalParamMappings());
+                ASMLiteToggleNameBroker.GetLatestGlobalParamMappings(),
+                exclusionReport.CanonicalExcludedNames);
             s_latestLegacyAliasReport = legacyAliasPlan.Report;
 
             Debug.Log(
@@ -802,7 +803,8 @@ namespace ASMLite.Editor
             int slotCount,
             List<VRCExpressionParameters.Parameter> avatarParams,
             string[] existingParamNames,
-            ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings)
+            ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings,
+            HashSet<string> excludedCanonicalNames)
         {
             var avatarParamNames = new List<string>(avatarParams.Count);
             var avatarParamSet = new HashSet<string>(StringComparer.Ordinal);
@@ -865,6 +867,13 @@ namespace ASMLite.Editor
                         continue;
                     }
 
+                    if (excludedCanonicalNames != null
+                        && excludedCanonicalNames.Count > 0
+                        && excludedCanonicalNames.Contains(parsed.SourceParamName))
+                    {
+                        continue;
+                    }
+
                     if (seen.Add(existingName))
                         names.Add(existingName);
 
@@ -920,7 +929,7 @@ namespace ASMLite.Editor
                 });
             }
 
-            return BuildBackupNamePlan(slotCount, avatarParams, existingParamNames, Array.Empty<ASMLiteToggleNameBroker.GlobalParamMapping>()).Names;
+            return BuildBackupNamePlan(slotCount, avatarParams, existingParamNames, Array.Empty<ASMLiteToggleNameBroker.GlobalParamMapping>(), null).Names;
         }
 
         private static string[] GetExistingGeneratedBackupNames()

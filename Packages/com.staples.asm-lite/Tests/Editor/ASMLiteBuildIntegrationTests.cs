@@ -353,5 +353,91 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(0, duplicateExprNames,
                 $"A50: repeated Build() introduced duplicate ASMLite expression param names. duplicateGroups={duplicateExprNames}.");
         }
+
+        [Test, Category("Integration")]
+        public void A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "A51_Keep", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "A51_Drop", VRCExpressionParameters.ValueType.Float);
+            AddParam(_ctx, "A51_KeepTwo", VRCExpressionParameters.ValueType.Bool);
+
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = new[] { "A51_Drop", "A51_Drop", "Missing_Name" };
+
+            int buildResult = BuildOrFail(_ctx, "A51");
+            Assert.AreEqual(2, buildResult,
+                "A51: Build() return should count only non-excluded discovered params.");
+
+            var generatedCtrl = LoadGeneratedFxController();
+            var generatedExpr = LoadGeneratedExprParams();
+
+            int expectedFxAsmParams = 1 + (_ctx.Comp.slotCount * buildResult) + buildResult;
+            int expectedExprAsmParams = 1 + (_ctx.Comp.slotCount * buildResult);
+
+            Assert.AreEqual(expectedFxAsmParams, CountASMLiteFxParams(generatedCtrl),
+                "A51: FX parameter shape should reflect exclusion-pruned discovery count.");
+            Assert.AreEqual(expectedExprAsmParams, CountASMLiteExprParams(generatedExpr),
+                "A51: expression parameter shape should reflect exclusion-pruned discovery count.");
+
+            var fxNames = generatedCtrl.parameters.Select(p => p.name).ToHashSet();
+            var exprNames = generatedExpr.parameters.Select(p => p.name).ToHashSet();
+
+            Assert.IsFalse(fxNames.Contains("A51_Drop"), "A51: excluded live parameter must not be declared in FX controller.");
+            Assert.IsFalse(fxNames.Contains("ASMLite_Def_A51_Drop"), "A51: excluded default key must not be generated in FX controller.");
+            Assert.IsFalse(fxNames.Contains("ASMLite_Bak_S1_A51_Drop") || fxNames.Contains("ASMLite_Bak_S2_A51_Drop"),
+                "A51: excluded backup keys must not be generated in FX controller.");
+
+            Assert.IsFalse(exprNames.Contains("ASMLite_Bak_S1_A51_Drop") || exprNames.Contains("ASMLite_Bak_S2_A51_Drop"),
+                "A51: excluded backup keys must not be generated in expression parameters.");
+        }
+
+        [Test, Category("Integration")]
+        public void A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups()
+        {
+            _ctx.Comp.slotCount = 1;
+            AddParam(_ctx, "A52_Keep", VRCExpressionParameters.ValueType.Int, 1f);
+            AddParam(_ctx, "A52_Drop", VRCExpressionParameters.ValueType.Float, 0.3f);
+
+            _ctx.Comp.useParameterExclusions = false;
+            int baselineResult = BuildOrFail(_ctx, "A52");
+            Assert.AreEqual(2, baselineResult, "A52: baseline build must include both parameters before exclusion toggle.");
+
+            var baselineExpr = LoadGeneratedExprParams();
+            Assert.IsTrue(baselineExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
+                "A52: baseline generated expression schema must contain excluded candidate backup key before toggle.");
+
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = new[] { "A52_Drop", " Ghost " };
+
+            int firstExcludedResult = BuildOrFail(_ctx, "A52");
+            Assert.AreEqual(1, firstExcludedResult,
+                "A52: exclusion-enabled build should return only the non-excluded discovered param count.");
+
+            var firstExcludedCtrl = LoadGeneratedFxController();
+            int firstExcludedLayers = CountASMLiteLayers(firstExcludedCtrl);
+            int firstExcludedFxParamCount = CountASMLiteFxParams(firstExcludedCtrl);
+            string exprFirstExcluded = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+
+            int secondExcludedResult = BuildOrFail(_ctx, "A52");
+            Assert.AreEqual(firstExcludedResult, secondExcludedResult,
+                "A52: repeated exclusion-enabled builds should keep Build() return deterministic.");
+
+            string exprSecondExcluded = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            Assert.AreEqual(exprFirstExcluded, exprSecondExcluded,
+                "A52: expression output should be text-idempotent across repeated exclusion-enabled builds.");
+
+            var generatedCtrl = LoadGeneratedFxController();
+            var generatedExpr = LoadGeneratedExprParams();
+            Assert.AreEqual(firstExcludedLayers, CountASMLiteLayers(generatedCtrl),
+                "A52: repeated exclusion-enabled builds should keep FX layer count deterministic.");
+            Assert.AreEqual(firstExcludedFxParamCount, CountASMLiteFxParams(generatedCtrl),
+                "A52: repeated exclusion-enabled builds should keep FX ASMLite parameter count deterministic.");
+
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "A52_Drop" || p.name == "ASMLite_Def_A52_Drop" || p.name == "ASMLite_Bak_S1_A52_Drop"),
+                "A52: FX output must remove excluded live/default/backup keys after exclusion toggle.");
+            Assert.IsFalse(generatedExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
+                "A52: expression output must remove previously generated excluded backup keys after exclusion toggle.");
+        }
     }
 }

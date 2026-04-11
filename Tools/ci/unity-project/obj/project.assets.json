@@ -1,30 +1,11 @@
 {
   "version": 3,
   "targets": {
-    ".NETStandard,Version=v2.1": {
-      "ASMLite.Runtime/1.0.0": {
-        "type": "project",
-        "framework": ".NETStandard,Version=v2.1",
-        "compile": {
-          "bin/placeholder/ASMLite.Runtime.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/ASMLite.Runtime.dll": {}
-        }
-      }
-    }
+    ".NETStandard,Version=v2.1": {}
   },
-  "libraries": {
-    "ASMLite.Runtime/1.0.0": {
-      "type": "project",
-      "path": "ASMLite.Runtime.csproj",
-      "msbuildProject": "ASMLite.Runtime.csproj"
-    }
-  },
+  "libraries": {},
   "projectFileDependencyGroups": {
-    ".NETStandard,Version=v2.1": [
-      "ASMLite.Runtime >= 1.0.0"
-    ]
+    ".NETStandard,Version=v2.1": []
   },
   "packageFolders": {
     "C:\\Users\\Staples\\.nuget\\packages\\": {}
@@ -32,9 +13,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Editor.csproj",
-      "projectName": "ASMLite.Editor",
-      "projectPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Editor.csproj",
+      "projectUniqueName": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj",
+      "projectName": "ASMLite.Runtime",
+      "projectPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj",
       "packagesPath": "C:\\Users\\Staples\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\obj\\",
       "projectStyle": "PackageReference",
@@ -50,11 +31,7 @@
       "frameworks": {
         "netstandard2.1": {
           "targetAlias": "netstandard2.1",
-          "projectReferences": {
-            "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj": {
-              "projectPath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj"
-            }
-          }
+          "projectReferences": {}
         }
       },
       "warningProperties": {

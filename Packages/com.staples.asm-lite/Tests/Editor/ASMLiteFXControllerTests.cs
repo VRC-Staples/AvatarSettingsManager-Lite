@@ -77,6 +77,18 @@ namespace ASMLite.Tests.Editor
             return child.state;
         }
 
+        private static VRC_AvatarParameterDriver LoadSlotDriver(AnimatorController ctrl, int slot, string stateName)
+        {
+            var sm = GetLayerSM(ctrl, $"ASMLite_Slot{slot}");
+            var state = FindState(sm, stateName);
+            var driver = state.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
+            Assert.IsNotNull(driver, $"Slot {slot} state '{stateName}' must have a VRCAvatarParameterDriver.");
+            return driver;
+        }
+
+        private static bool HasCopy(VRC_AvatarParameterDriver driver, string source, string destination)
+            => driver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == source && p.name == destination);
+
         // ── A05 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -528,6 +540,62 @@ namespace ASMLite.Tests.Editor
                         }
                     }
                 }
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void A21_ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "KeepA", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "DropB", VRCExpressionParameters.ValueType.Float);
+            AddParam(_ctx, "DropC", VRCExpressionParameters.ValueType.Bool);
+
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = new[] { "DropB", " DropC ", "DropB", "GhostMissing" };
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                "A21: Build() should return only non-excluded discovered params.");
+
+            var genCtrl = LoadGeneratedController("A21");
+            var allNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
+
+            Assert.IsTrue(allNames.Contains("KeepA"), "A21: non-excluded live param should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Def_KeepA"), "A21: non-excluded default param should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S1_KeepA"), "A21: non-excluded slot backup should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S2_KeepA"), "A21: non-excluded slot backup should remain declared in FX params.");
+
+            Assert.IsFalse(allNames.Contains("DropB"), "A21: excluded live param must not be declared in FX params.");
+            Assert.IsFalse(allNames.Contains("DropC"), "A21: excluded live param must not be declared in FX params.");
+
+            foreach (int slot in new[] { 1, 2 })
+            {
+                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropB"), $"A21: excluded backup key ASMLite_Bak_S{slot}_DropB must be omitted.");
+                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropC"), $"A21: excluded backup key ASMLite_Bak_S{slot}_DropC must be omitted.");
+            }
+            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropB"), "A21: excluded default key ASMLite_Def_DropB must be omitted.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropC"), "A21: excluded default key ASMLite_Def_DropC must be omitted.");
+
+            for (int slot = 1; slot <= 2; slot++)
+            {
+                var saveDriver = LoadSlotDriver(genCtrl, slot, $"SaveSlot{slot}");
+                var loadDriver = LoadSlotDriver(genCtrl, slot, $"LoadSlot{slot}");
+                var resetDriver = LoadSlotDriver(genCtrl, slot, $"ResetSlot{slot}");
+
+                Assert.IsTrue(HasCopy(saveDriver, "KeepA", $"ASMLite_Bak_S{slot}_KeepA"),
+                    $"A21: Save driver for slot {slot} must keep non-excluded copy wiring.");
+                Assert.IsTrue(HasCopy(loadDriver, $"ASMLite_Bak_S{slot}_KeepA", "KeepA"),
+                    $"A21: Load driver for slot {slot} must keep non-excluded copy wiring.");
+                Assert.IsTrue(HasCopy(resetDriver, "ASMLite_Def_KeepA", $"ASMLite_Bak_S{slot}_KeepA"),
+                    $"A21: Reset driver for slot {slot} must keep non-excluded clear wiring.");
+
+                Assert.IsFalse(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source == "DropB" || p.source == "DropC" || p.name.Contains("DropB") || p.name.Contains("DropC"))),
+                    $"A21: Save driver for slot {slot} must not contain excluded-source copy entries.");
+                Assert.IsFalse(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name == "DropB" || p.name == "DropC")),
+                    $"A21: Load driver for slot {slot} must not contain excluded-source copy entries.");
+                Assert.IsFalse(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name.Contains("DropB") || p.name.Contains("DropC"))),
+                    $"A21: Reset driver for slot {slot} must not contain excluded-source copy entries.");
             }
         }
     }

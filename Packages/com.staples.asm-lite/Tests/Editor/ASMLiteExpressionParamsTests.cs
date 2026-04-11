@@ -404,5 +404,42 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(report.UnmatchedCount, 1, "Unmatched continuity counter must include aliases with no broker mapping.");
             Assert.GreaterOrEqual(report.MalformedCount, 1, "Malformed continuity counter must include invalid legacy backup names.");
         }
+
+        [Test, Category("Integration")]
+        public void A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset()
+        {
+            _ctx.Comp.slotCount = 2;
+            AddParam(_ctx, "KeepA", VRCExpressionParameters.ValueType.Int, 3f);
+            AddParam(_ctx, "DropB", VRCExpressionParameters.ValueType.Float, 0.75f);
+
+            _ctx.Comp.useParameterExclusions = false;
+            int baselineBuild = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, baselineBuild, "A28: baseline build should discover both params before exclusions are enabled.");
+
+            var baselineGenerated = LoadGeneratedParams();
+            Assert.IsTrue(baselineGenerated.Any(p => p.name == "ASMLite_Bak_S1_DropB"),
+                "A28: baseline build must include backup key for DropB before exclusions are enabled.");
+            Assert.IsTrue(baselineGenerated.Any(p => p.name == "ASMLite_Bak_S2_DropB"),
+                "A28: baseline build must include backup key for DropB before exclusions are enabled.");
+
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = new[] { "DropB", "DropB", " GhostMissing " };
+
+            int excludedBuild = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, excludedBuild,
+                "A28: exclusion-enabled build should return only non-excluded discovered params.");
+
+            var generated = LoadGeneratedParams();
+            var names = generated.Select(p => p.name).ToHashSet();
+
+            Assert.IsTrue(names.Contains("ASMLite_Ctrl"), "A28: control key must remain present in generated expression params.");
+            Assert.IsTrue(names.Contains("ASMLite_Bak_S1_KeepA"), "A28: non-excluded backup key should remain generated.");
+            Assert.IsTrue(names.Contains("ASMLite_Bak_S2_KeepA"), "A28: non-excluded backup key should remain generated.");
+
+            Assert.IsFalse(names.Contains("ASMLite_Bak_S1_DropB"),
+                "A28: excluded backup key must be removed from generated expression params after exclusions are enabled.");
+            Assert.IsFalse(names.Contains("ASMLite_Bak_S2_DropB"),
+                "A28: excluded backup key must be removed from generated expression params after exclusions are enabled.");
+        }
     }
 }
