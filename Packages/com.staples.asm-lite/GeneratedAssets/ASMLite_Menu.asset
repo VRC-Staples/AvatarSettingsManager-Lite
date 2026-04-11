@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Parameters: {fileID: 0}
   controls:
-  - name: Settings Manager
+  - name: Migrated Root
     icon: {fileID: 2800000, guid: 86b5f9cd98fc44cda7a0900f80377b9e, type: 3}
     type: 103
     parameter:

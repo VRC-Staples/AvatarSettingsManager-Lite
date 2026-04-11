@@ -71,6 +71,33 @@ namespace ASMLite.Editor
             }
         }
 
+        internal static bool TryRefreshLiveFullControllerWiring(GameObject root, ASMLiteComponent component, string contextLabel)
+        {
+            if (root == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh live FullController wiring because the root object was null.");
+                return false;
+            }
+
+            ConfigureVRCFuryFullController(root, component);
+
+            var vfType = FindTypeByFullName("VF.Model.VRCFury");
+            if (vfType == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury type was not found while refreshing live FullController wiring.");
+                return false;
+            }
+
+            var vfComponent = root.GetComponent(vfType) as MonoBehaviour;
+            if (vfComponent == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component is missing after live FullController wiring refresh.");
+                return false;
+            }
+
+            return true;
+        }
+
         private static void ConfigureVRCFuryFullController(GameObject root, ASMLiteComponent component)
         {
             if (root == null)

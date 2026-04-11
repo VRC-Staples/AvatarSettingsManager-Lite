@@ -8,6 +8,9 @@
     ".NETStandard,Version=v2.1": {},
     ".NETStandard,Version=v2.1/": {
       "ASMLite.Runtime/1.0.0": {
+        "dependencies": {
+          "ASMLite.Runtime": "1.0.0"
+        },
         "runtime": {
           "ASMLite.Runtime.dll": {}
         }

@@ -1132,6 +1132,69 @@ namespace ASMLite.Editor
                 .ToArray();
         }
 
+        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
+        {
+            if (component == null || component.gameObject == null)
+                return null;
+
+            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                var behavior = behaviors[i];
+                if (behavior == null)
+                    continue;
+
+                var type = behavior.GetType();
+                if (type == null)
+                    continue;
+
+                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    return behavior;
+            }
+
+            return null;
+        }
+
+        private static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
+        {
+            if (component == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh FullController menu prefix because the ASM-Lite component was null.");
+                return false;
+            }
+
+            var vfComponent = FindLiveVrcFuryComponent(component);
+            if (vfComponent == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
+                return false;
+            }
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            if (!ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(serializedVf, component))
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh FullController menu prefix on '{component.gameObject.name}'.");
+                return false;
+            }
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+
+            var effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+            if (string.IsNullOrEmpty(effectivePrefix))
+            {
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed live FullController menu prefix to empty on '{component.gameObject.name}'.");
+            }
+            else
+            {
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed live FullController menu prefix to '{effectivePrefix}' on '{component.gameObject.name}'.");
+            }
+
+            return true;
+        }
+
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
         {
             if (component == null)
@@ -1215,7 +1278,15 @@ namespace ASMLite.Editor
 
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
+            {
                 CopyPendingCustomizationToComponent(component);
+                if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
+                {
+                    Debug.LogError("[ASM-Lite] Failed to refresh live FullController wiring on newly added prefab instance.");
+                    Undo.DestroyObjectImmediate(instance);
+                    return;
+                }
+            }
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
@@ -1303,6 +1374,12 @@ namespace ASMLite.Editor
                     newComponent.customInstallPath = savedCustomInstallPath;
                     newComponent.useParameterExclusions = savedUseParameterExclusions;
                     newComponent.excludedParameterNames = savedExcludedParameterNames;
+
+                    if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
+                    {
+                        Debug.LogError("[ASM-Lite] Migration rebuild failed to refresh live FullController wiring. Aborting rebuild.");
+                        return;
+                    }
                 }
 
                 Undo.RegisterCreatedObjectUndo(instance, "Rebuild ASM-Lite (migration)");
@@ -1328,6 +1405,12 @@ namespace ASMLite.Editor
                 // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
                 //    so rebuild input reflects generated assets + VF wiring only.
                 var migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
+
+                if (!TryRefreshLiveInstallPathPrefix(component, "Bake"))
+                {
+                    Debug.LogError("[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+                    return;
+                }
 
                 int count = ASMLiteBuilder.Build(component);
                 if (count >= 0)

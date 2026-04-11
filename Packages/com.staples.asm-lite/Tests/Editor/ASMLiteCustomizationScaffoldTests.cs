@@ -3,6 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
 
 namespace ASMLite.Tests.Editor
@@ -146,6 +147,11 @@ namespace ASMLite.Tests.Editor
                 CollectionAssert.AreEqual(new[] { "ParamA", "ParamB" }, component.excludedParameterNames,
                     "Pending exclusions should be trimmed, de-duplicated, and scrubbed of blanks before serialization.");
 
+                var wiredVf = component.GetComponent<VF.Model.VRCFury>();
+                Assert.IsNotNull(wiredVf, "Add prefab should keep a live VF.Model.VRCFury component for bake wiring.");
+                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(wiredVf),
+                    "Add prefab + immediate bake should normalize null install path to legacy empty FullController prefix.");
+
                 var pendingIcons = GetPrivateField<Texture2D[]>(window, "_pendingCustomIcons");
                 Assert.AreNotSame(pendingIcons, component.customIcons,
                     "New prefab should receive a copy of pending icon array, not the same reference.");
@@ -215,11 +221,106 @@ namespace ASMLite.Tests.Editor
                     "Migration rebuild should normalize blank install path values.");
                 CollectionAssert.AreEqual(new[] { "Mood", "Hue" }, rebuilt.excludedParameterNames,
                     "Migration rebuild should preserve sanitized exclusion names.");
+
+                var rebuiltVf = rebuilt.GetComponent<VF.Model.VRCFury>();
+                Assert.IsNotNull(rebuiltVf, "Migration rebuild should preserve VF.Model.VRCFury delivery component.");
+                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(rebuiltVf),
+                    "Migration rebuild should apply normalized blank install path as legacy empty FullController prefix.");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(window);
             }
+        }
+
+        [Test]
+        public void BakeAssets_RewritesLivePrefixDeterministically_WhenCustomizationFlipsEnabledDisabledAndBlank()
+        {
+            var vf = EnsureLiveFullControllerPayload(_ctx.Comp);
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "  Avatars/Primary  ";
+                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                Assert.AreEqual("Avatars/Primary", ReadSerializedMenuPrefix(vf),
+                    "Enabled custom install path should serialize trimmed FullController prefix on live bake.");
+
+                _ctx.Comp.useCustomInstallPath = false;
+                _ctx.Comp.customInstallPath = "Avatars/ShouldNotPersist";
+                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(vf),
+                    "Disabled custom install path should reset FullController prefix to legacy empty value.");
+
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "   ";
+                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(vf),
+                    "Enabled whitespace-only custom install path should collapse to legacy empty FullController prefix.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void BakeAssets_MissingVrcFury_FailsClosedWithDiagnostics()
+        {
+            _ctx.Comp.useCustomInstallPath = true;
+            _ctx.Comp.customInstallPath = "Avatars/MissingVf";
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+
+                LogAssert.Expect(LogType.Error,
+                    $"[ASM-Lite] Bake: Expected VF.Model.VRCFury component was not found on '{_ctx.Comp.gameObject.name}'.");
+                LogAssert.Expect(LogType.Error,
+                    "[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+
+                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+
+                Assert.AreEqual(-1, GetPrivateField<int>(window, "_discoveredParamCount"),
+                    "Bake should abort before rebuild when live VF.Model.VRCFury component is missing.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        private static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)
+        {
+            var vf = component.GetComponent<VF.Model.VRCFury>();
+            if (vf == null)
+                vf = component.gameObject.AddComponent<VF.Model.VRCFury>();
+
+            vf.content = new VF.Model.Feature.FullController
+            {
+                menus = new[]
+                {
+                    new VF.Model.Feature.MenuEntry()
+                }
+            };
+
+            return vf;
+        }
+
+        private static string ReadSerializedMenuPrefix(VF.Model.VRCFury vf)
+        {
+            var serializedVf = new SerializedObject(vf);
+            serializedVf.Update();
+
+            var prefixProperty = serializedVf.FindProperty("content.menus.Array.data[0].prefix");
+            Assert.IsNotNull(prefixProperty,
+                "Expected serialized FullController menu prefix field at content.menus.Array.data[0].prefix.");
+
+            return prefixProperty.stringValue;
         }
 
         private static void SetPrivateField(object target, string fieldName, object value)

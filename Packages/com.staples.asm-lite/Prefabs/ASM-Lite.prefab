@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
+  - component: {fileID: 7660080534037735098}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -60,3 +61,48 @@ MonoBehaviour:
   customInstallPath: 
   useParameterExclusions: 0
   excludedParameterNames: []
+--- !u!114 &7660080534037735098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2447387302260284102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  content:
+    rid: 4657480930861514755
+  features: []
+  untouchedMarker: keep
+  references:
+    version: 2
+    RefIds:
+    - rid: 4657480930861514755
+      type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}
+      data:
+        controllers:
+        - controller:
+            objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
+          type: 5
+        menus:
+        - menu:
+            objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
+          prefix: 
+        prms:
+        - parameters:
+            objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
+          parameter:
+            objRef: {fileID: 0}
+          objRef: {fileID: 0}
+        smoothedPrms: []
+        globalParams:
+        - '*'
+        controller:
+          objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
+        menu:
+          objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
+        parameters:
+          objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
