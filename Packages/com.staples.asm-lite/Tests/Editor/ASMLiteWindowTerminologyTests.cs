@@ -17,23 +17,33 @@ namespace ASMLite.Tests.Editor
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
         [Test]
-        public void AlwaysVisibleCopy_UsesSlotTerminologyAcrossSettingsAndPreviewSurfaces()
+        public void AlwaysVisibleCopy_UsesPresetTerminologyAcrossSettingsPreviewAndCustomizeSurfaces()
         {
             var copy = GetAllCopy("NotInstalled", hasComponent: false).ToArray();
 
+            CollectionAssert.Contains(copy, "Preset Count");
             CollectionAssert.Contains(copy,
-                "How many slots your avatar has. Each slot can hold a full snapshot of your settings.");
+                "How many presets your avatar has. Each preset can hold a full snapshot of your settings.");
             CollectionAssert.Contains(copy,
-                "How many slots to add. Each slot lets you save and load a full set of avatar settings.");
+                "How many presets to add. Each preset lets you save and load a full set of avatar settings.");
             CollectionAssert.Contains(copy,
-                "Each slot uses a different gear color for quick visual scanning.\nSlots 1 to 4: Blue, Red, Green, Purple\nSlots 5 to 8: Cyan, Orange, Pink, Yellow");
+                "Changed preset count? Click \"Rebuild ASM-Lite\" to apply it.");
             CollectionAssert.Contains(copy,
-                "Flow: Root Menu → Slots Menu → Action Submenu");
-            CollectionAssert.Contains(copy, "Slots Menu");
+                "Each preset uses a different gear color for quick visual scanning.\nPresets 1 to 4: Blue, Red, Green, Purple\nPresets 5 to 8: Cyan, Orange, Pink, Yellow");
             CollectionAssert.Contains(copy,
-                "Keep your current in-game slot data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.");
+                "Flow: Root Menu → Presets Menu → Action Submenu");
+            CollectionAssert.Contains(copy, "Presets Menu");
+            CollectionAssert.Contains(copy, "Preset Icons");
+            CollectionAssert.Contains(copy, "Preset 1");
+            CollectionAssert.Contains(copy, "Clear Preset");
+            CollectionAssert.Contains(copy, "Preset 1 Icon");
+            CollectionAssert.Contains(copy, "Clear Preset Icon");
+            CollectionAssert.Contains(copy,
+                "A preset icon set here overrides the selected Icon Mode for that preset only.\nEmpty presets keep the normal Icon Mode icon.");
+            CollectionAssert.Contains(copy,
+                "Keep your current in-game preset data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.");
 
-            AssertNoPresetTerms(copy);
+            AssertNoSlotTerms(copy);
         }
 
         [TestCase("PackageManaged", true, "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.")]
@@ -46,7 +56,7 @@ namespace ASMLite.Tests.Editor
             var copy = GetStateSpecificCopy(toolStateName, hasComponent);
 
             CollectionAssert.Contains(copy, expectedStatus);
-            AssertNoPresetTerms(copy);
+            AssertNoSlotTerms(copy);
         }
 
         [Test]
@@ -63,9 +73,9 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(notInstalledNoComponent,
                 "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".");
 
-            AssertNoPresetTerms(detachedNoComponent);
-            AssertNoPresetTerms(vendorizedNoComponent);
-            AssertNoPresetTerms(notInstalledNoComponent);
+            AssertNoSlotTerms(detachedNoComponent);
+            AssertNoSlotTerms(vendorizedNoComponent);
+            AssertNoSlotTerms(notInstalledNoComponent);
         }
 
         [TestCase("PackageManaged", true)]
@@ -73,13 +83,13 @@ namespace ASMLite.Tests.Editor
         [TestCase("Vendorized", false)]
         [TestCase("Detached", false)]
         [TestCase("NotInstalled", false)]
-        public void TerminologySnapshot_AllCopySurfacesRejectMixedPresetSlotLanguage(string toolStateName, bool hasComponent)
+        public void TerminologySnapshot_AllCopySurfacesRejectMixedSlotPresetLanguage(string toolStateName, bool hasComponent)
         {
             var copy = GetAllCopy(toolStateName, hasComponent).ToArray();
 
             Assert.That(copy.Length, Is.GreaterThan(0),
                 $"Expected terminology snapshot to expose copy for {toolStateName} (hasComponent={hasComponent}).");
-            AssertNoPresetTerms(copy);
+            AssertNoSlotTerms(copy);
         }
 
         private static IEnumerable<string> GetAllCopy(string toolStateName, bool hasComponent)
@@ -116,13 +126,13 @@ namespace ASMLite.Tests.Editor
             return (string[])property.GetValue(snapshot);
         }
 
-        private static void AssertNoPresetTerms(IEnumerable<string> copy)
+        private static void AssertNoSlotTerms(IEnumerable<string> copy)
         {
             foreach (string line in copy)
             {
                 Assert.False(
-                    line.IndexOf("preset", StringComparison.OrdinalIgnoreCase) >= 0,
-                    $"Detected mixed preset/slot terminology in copy: '{line}'");
+                    line.IndexOf("slot", StringComparison.OrdinalIgnoreCase) >= 0,
+                    $"Detected mixed slot/preset terminology in copy: '{line}'");
             }
         }
     }

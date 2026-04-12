@@ -169,16 +169,16 @@ namespace ASMLite.Editor
         // ── Static GUIContent ─────────────────────────────────────────────────
 
         private const string SlotCountTooltipActive =
-            "How many slots your avatar has. Each slot can hold a full snapshot of your settings.";
+            "How many presets your avatar has. Each preset can hold a full snapshot of your settings.";
 
         private const string SlotCountTooltipPending =
-            "How many slots to add. Each slot lets you save and load a full set of avatar settings.";
+            "How many presets to add. Each preset lets you save and load a full set of avatar settings.";
 
         private const string SlotColorLegendHelpText =
-            "Each slot uses a different gear color for quick visual scanning.\nSlots 1 to 4: Blue, Red, Green, Purple\nSlots 5 to 8: Cyan, Orange, Pink, Yellow";
+            "Each preset uses a different gear color for quick visual scanning.\nPresets 1 to 4: Blue, Red, Green, Purple\nPresets 5 to 8: Cyan, Orange, Pink, Yellow";
 
-        private const string PreviewFlowSubtitle = "Flow: Root Menu → Slots Menu → Action Submenu";
-        private const string PreviewMiddleDialTitle = "Slots Menu";
+        private const string PreviewFlowSubtitle = "Flow: Root Menu → Presets Menu → Action Submenu";
+        private const string PreviewMiddleDialTitle = "Presets Menu";
 
         private const string StatusPackageManagedText =
             "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.";
@@ -196,7 +196,7 @@ namespace ASMLite.Editor
             "Status: Not installed. ASM-Lite has not been added to this avatar yet.";
 
         private const string AttachedCountSummaryFormat =
-            "✓ {0} custom parameter(s) are being saved across {1} slot(s).";
+            "✓ {0} custom parameter(s) are being saved across {1} preset(s).";
 
         private const string DetachedOrVendorizedNoComponentText =
             "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.";
@@ -205,13 +205,25 @@ namespace ASMLite.Editor
             "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".";
 
         private const string DetachDescriptionText =
-            "Keep your current in-game slot data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.";
+            "Keep your current in-game preset data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.";
+
+        private const string ChangedPresetCountHelpText =
+            "Changed preset count? Click \"Rebuild ASM-Lite\" to apply it.";
+
+        private const string PresetIconsFoldoutTitle = "Preset Icons";
+        private const string PresetNameLabelFormat = "Preset {0}";
+        private const string ClearPresetLabel = "Clear Preset";
+        private const string PresetIconFieldLabelFormat = "Preset {0} Icon";
+        private const string ClearPresetIconFieldLabel = "Clear Preset Icon";
+
+        private const string PresetIconOverridesHelpText =
+            "A preset icon set here overrides the selected Icon Mode for that preset only.\nEmpty presets keep the normal Icon Mode icon.";
 
         private static readonly GUIContent s_slotCountLabelActive =
-            new GUIContent("Slot Count", SlotCountTooltipActive);
+            new GUIContent("Preset Count", SlotCountTooltipActive);
 
         private static readonly GUIContent s_slotCountLabelPending =
-            new GUIContent("Slot Count", SlotCountTooltipPending);
+            new GUIContent("Preset Count", SlotCountTooltipPending);
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -1131,7 +1143,7 @@ namespace ASMLite.Editor
                 }
 
                 EditorGUILayout.HelpBox(
-                    "Changed slot count? Click \"Rebuild ASM-Lite\" to apply it.",
+                    ChangedPresetCountHelpText,
                     MessageType.None);
             }
             else
@@ -1354,7 +1366,7 @@ namespace ASMLite.Editor
                     EditorGUILayout.Space(4f);
                 }
 
-                _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, "Slot Icons", true);
+                _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, PresetIconsFoldoutTitle, true);
                 if (_iconsSlotFoldout)
                 {
                     EditorGUI.indentLevel++;
@@ -1388,7 +1400,7 @@ namespace ASMLite.Editor
 
                     for (int i = 0; i < nameSlotCount; i++)
                     {
-                        string fieldName = DrawTextFieldWithFocusCue($"Slot {i + 1}", slotNames[i], $"asm_name_preset_{i + 1}");
+                        string fieldName = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), slotNames[i], $"asm_name_preset_{i + 1}");
                         if (!string.Equals(fieldName, slotNames[i], StringComparison.Ordinal))
                         {
                             slotNames[i] = fieldName ?? string.Empty;
@@ -1402,7 +1414,7 @@ namespace ASMLite.Editor
                     string newLoadLabel = DrawTextFieldWithFocusCue("Load", component.customLoadLabel, "asm_name_load");
                     SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, newLoadLabel);
 
-                    string newClearLabel = DrawTextFieldWithFocusCue("Clear Slot", component.customClearPresetLabel, "asm_name_clear");
+                    string newClearLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, component.customClearPresetLabel, "asm_name_clear");
                     SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, newClearLabel);
 
                     string newConfirmLabel = DrawTextFieldWithFocusCue("Confirm", component.customConfirmLabel, "asm_name_confirm");
@@ -1415,12 +1427,12 @@ namespace ASMLite.Editor
                     _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
                     for (int i = 0; i < nameSlotCount; i++)
                     {
-                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue($"Slot {i + 1}", _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
+                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
                     }
 
                     _pendingCustomSaveLabel = DrawTextFieldWithFocusCue("Save", _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
                     _pendingCustomLoadLabel = DrawTextFieldWithFocusCue("Load", _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
-                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue("Clear Slot", _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
+                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
                     _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue("Confirm", _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
                 }
 
@@ -3238,7 +3250,7 @@ namespace ASMLite.Editor
             for (int i = 0; i < slotCount; i++)
             {
                 Texture2D newTex = (Texture2D)EditorGUILayout.ObjectField(
-                    $"Slot {i + 1} Icon",
+                    string.Format(PresetIconFieldLabelFormat, i + 1),
                     currentCustomIcons[i],
                     typeof(Texture2D),
                     allowSceneObjects: false);
@@ -3260,7 +3272,7 @@ namespace ASMLite.Editor
             }
 
             EditorGUILayout.HelpBox(
-                "A slot icon set here overrides the selected Icon Mode for that slot only.\nEmpty slots keep the normal Icon Mode icon.",
+                PresetIconOverridesHelpText,
                 MessageType.None);
         }
 
@@ -3279,7 +3291,7 @@ namespace ASMLite.Editor
             var newLoad = (Texture2D)EditorGUILayout.ObjectField(
                 "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
             var newClear = (Texture2D)EditorGUILayout.ObjectField(
-                "Clear Slot Icon", currentClear, typeof(Texture2D), allowSceneObjects: false);
+                ClearPresetIconFieldLabel, currentClear, typeof(Texture2D), allowSceneObjects: false);
 
             ActionIconMode desiredMode = (newSave != null || newLoad != null || newClear != null)
                 ? ActionIconMode.Custom
@@ -3518,7 +3530,7 @@ namespace ASMLite.Editor
                 _mainWheelLabels = new string[slotCount + 1];
                 _mainWheelLabels[0] = "Back";
                 for (int i = 0; i < slotCount; i++)
-                    _mainWheelLabels[i + 1] = $"Slot {i + 1}";
+                    _mainWheelLabels[i + 1] = string.Format(PresetNameLabelFormat, i + 1);
             }
 
             _mainWheelIcons[0] = _previewBackIcon;
@@ -3882,11 +3894,20 @@ namespace ASMLite.Editor
         {
             var alwaysVisible = new[]
             {
+                s_slotCountLabelActive.text,
+                s_slotCountLabelPending.text,
                 s_slotCountLabelActive.tooltip,
                 s_slotCountLabelPending.tooltip,
+                ChangedPresetCountHelpText,
                 SlotColorLegendHelpText,
                 PreviewFlowSubtitle,
                 PreviewMiddleDialTitle,
+                PresetIconsFoldoutTitle,
+                string.Format(PresetNameLabelFormat, 1),
+                ClearPresetLabel,
+                string.Format(PresetIconFieldLabelFormat, 1),
+                ClearPresetIconFieldLabel,
+                PresetIconOverridesHelpText,
                 AttachedCountSummaryFormat,
                 DetachDescriptionText,
             };
