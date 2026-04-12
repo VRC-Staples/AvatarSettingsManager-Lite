@@ -3837,100 +3837,154 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
             var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
 
-            if (component)
+            EditorGUILayout.LabelField("Primary Actions", EditorStyles.boldLabel);
+            EditorGUILayout.BeginVertical("box");
+            for (int i = 0; i < hierarchy.PrimaryActions.Length; i++)
+                DrawActionControl(hierarchy.PrimaryActions[i], component, toolState);
+            EditorGUILayout.EndVertical();
+
+            if (!hierarchy.HasAdvancedActions)
+                return;
+
+            EditorGUILayout.Space(6f);
+
+            EditorGUILayout.BeginVertical("box");
+            _showAdvancedActions = EditorGUILayout.Foldout(_showAdvancedActions, "Advanced Actions", true);
+            if (_showAdvancedActions)
             {
-                // Primary actions.
-                EditorGUILayout.BeginHorizontal();
-
-                if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
-                {
-                    var captured = component;
-                    EditorApplication.delayCall += () => BakeAssets(captured);
-                }
-
-                var prevColor = GUI.color;
-                GUI.color = new Color(1f, 0.45f, 0.45f);
-                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32), GUILayout.MinWidth(110));
-                GUI.color = prevColor;
-                if (removeClicked)
-                {
-                    bool confirm = EditorUtility.DisplayDialog(
-                        "Remove ASM-Lite Prefab",
-                        "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
-                        "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
-                        "Remove", "Cancel");
-
-                    if (confirm)
-                        EditorApplication.delayCall += () => RemovePrefab(component);
-                }
-
-                EditorGUILayout.EndHorizontal();
-
-                EditorGUILayout.Space(6f);
-
-                EditorGUILayout.BeginVertical("box");
-                EditorGUILayout.LabelField("Detach ASM-Lite (Runtime-safe)", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(
-                    "Keep your current in-game presets working, but remove the ASM-Lite tool object from this avatar. " +
-                    "Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.",
-                    EditorStyles.wordWrappedMiniLabel);
-                if (GUILayout.Button("Detach ASM-Lite", GUILayout.Height(24)))
-                {
-                    var captured = component;
-                    EditorApplication.delayCall += () => DetachAsmLite(captured, vendorizeToAssets: false);
-                }
-                EditorGUILayout.EndVertical();
-
                 EditorGUILayout.Space(4f);
-
-                EditorGUILayout.BeginVertical("box");
-                EditorGUILayout.LabelField("Vendorize ASM-Lite Payload", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField(
-                    "Keep ASM-Lite attached and editable, but mirror generated payload files into Assets/ASM-Lite/<AvatarName> " +
-                    "and use those mirrored files instead of package generated assets.",
-                    EditorStyles.wordWrappedMiniLabel);
-                if (GUILayout.Button("Vendorize (Keep Attached)", GUILayout.Height(24)))
-                {
-                    var captured = component;
-                    EditorApplication.delayCall += () => VendorizeAsmLite(captured);
-                }
-                if (toolState == AsmLiteToolState.Vendorized)
-                {
-                    string currentVendorizedPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
-                    if (string.IsNullOrWhiteSpace(currentVendorizedPath))
-                        currentVendorizedPath = "(path pending sync)";
-
-                    EditorGUILayout.Space(2f);
-                    EditorGUILayout.LabelField("Current vendorized folder:", EditorStyles.miniBoldLabel);
-                    EditorGUILayout.SelectableLabel(currentVendorizedPath, EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
-
-                    EditorGUILayout.Space(2f);
-                    if (GUILayout.Button("Return This Avatar to Package Managed", GUILayout.Height(22)))
-                        EditorApplication.delayCall += ReturnToPackageManaged;
-                }
-                EditorGUILayout.EndVertical();
+                for (int i = 0; i < hierarchy.AdvancedActions.Length; i++)
+                    DrawActionControl(hierarchy.AdvancedActions[i], component, toolState);
             }
             else
             {
-                if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
-                {
-                    EditorGUILayout.BeginVertical("box");
-                    EditorGUILayout.LabelField("Return to Package Managed Mode", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField(
-                        "Re-attach the editable ASM-Lite prefab and return this avatar to package-managed workflow. " +
-                        "Keeps your current avatar content and restores normal ASM-Lite editing.",
-                        EditorStyles.wordWrappedMiniLabel);
-                    if (GUILayout.Button("Return to Package Managed", GUILayout.Height(28)))
-                        EditorApplication.delayCall += ReturnToPackageManaged;
-                    EditorGUILayout.EndVertical();
-                }
-                else
-                {
+                EditorGUILayout.LabelField(
+                    "Maintenance and destructive actions are hidden until Advanced is expanded.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawActionControl(AsmLiteWindowAction action, ASMLiteComponent component, AsmLiteToolState toolState)
+        {
+            switch (action)
+            {
+                case AsmLiteWindowAction.AddPrefab:
                     if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
                         EditorApplication.delayCall += AddPrefabToAvatar;
-                }
+                    break;
+                case AsmLiteWindowAction.Rebuild:
+                    if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
+                    {
+                        var captured = component;
+                        EditorApplication.delayCall += () => BakeAssets(captured);
+                    }
+                    break;
+                case AsmLiteWindowAction.ReturnToPackageManaged:
+                    DrawBakedOnlyReturnToPackageManagedAction();
+                    break;
+                case AsmLiteWindowAction.RemovePrefab:
+                    DrawRemovePrefabAction(component);
+                    break;
+                case AsmLiteWindowAction.Detach:
+                    DrawDetachAction(component);
+                    break;
+                case AsmLiteWindowAction.Vendorize:
+                    DrawVendorizeAction(component, toolState);
+                    break;
+                case AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged:
+                    DrawReturnAttachedVendorizedToPackageManagedAction();
+                    break;
             }
+        }
+
+        private void DrawBakedOnlyReturnToPackageManagedAction()
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Return to Package Managed Mode", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Re-attach the editable ASM-Lite prefab and return this avatar to package-managed workflow. " +
+                "Keeps your current avatar content and restores normal ASM-Lite editing.",
+                EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button("Return to Package Managed", GUILayout.Height(28)))
+                EditorApplication.delayCall += ReturnToPackageManaged;
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawRemovePrefabAction(ASMLiteComponent component)
+        {
+            var prevColor = GUI.color;
+            GUI.color = new Color(1f, 0.45f, 0.45f);
+            bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32), GUILayout.MinWidth(110));
+            GUI.color = prevColor;
+            if (!removeClicked)
+                return;
+
+            bool confirm = EditorUtility.DisplayDialog(
+                "Remove ASM-Lite Prefab",
+                "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
+                "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
+                "Remove", "Cancel");
+
+            if (confirm)
+                EditorApplication.delayCall += () => RemovePrefab(component);
+        }
+
+        private void DrawDetachAction(ASMLiteComponent component)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Detach ASM-Lite (Runtime-safe)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Keep your current in-game presets working, but remove the ASM-Lite tool object from this avatar. " +
+                "Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.",
+                EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button("Detach ASM-Lite", GUILayout.Height(24)))
+            {
+                var captured = component;
+                EditorApplication.delayCall += () => DetachAsmLite(captured, vendorizeToAssets: false);
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawVendorizeAction(ASMLiteComponent component, AsmLiteToolState toolState)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Vendorize ASM-Lite Payload", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Keep ASM-Lite attached and editable, but mirror generated payload files into Assets/ASM-Lite/<AvatarName> " +
+                "and use those mirrored files instead of package generated assets.",
+                EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button("Vendorize (Keep Attached)", GUILayout.Height(24)))
+            {
+                var captured = component;
+                EditorApplication.delayCall += () => VendorizeAsmLite(captured);
+            }
+
+            if (toolState == AsmLiteToolState.Vendorized)
+            {
+                string currentVendorizedPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+                if (string.IsNullOrWhiteSpace(currentVendorizedPath))
+                    currentVendorizedPath = "(path pending sync)";
+
+                EditorGUILayout.Space(2f);
+                EditorGUILayout.LabelField("Current vendorized folder:", EditorStyles.miniBoldLabel);
+                EditorGUILayout.SelectableLabel(currentVendorizedPath, EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawReturnAttachedVendorizedToPackageManagedAction()
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Return This Avatar to Package Managed", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Stop using the vendorized payload folder for this attached ASM-Lite component and return to package-managed generated assets.",
+                EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button("Return This Avatar to Package Managed", GUILayout.Height(22)))
+                EditorApplication.delayCall += ReturnToPackageManaged;
+            EditorGUILayout.EndVertical();
         }
 
         // ── Logic ─────────────────────────────────────────────────────────────

@@ -70,6 +70,13 @@ namespace ASMLite.Tests.Editor
                 "Detach must never appear in primary actions.");
             Assert.False(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
                 "Vendorize must never appear in primary actions.");
+
+            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
+                "Closed Advanced disclosure must hide Remove from visible action controls.");
+            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
+                "Closed Advanced disclosure must hide Detach from visible action controls.");
+            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
+                "Closed Advanced disclosure must hide Vendorize from visible action controls.");
         }
 
         [Test]
@@ -86,6 +93,26 @@ namespace ASMLite.Tests.Editor
                 "Vendorized attached avatars must keep Rebuild as the primary action.");
             Assert.True(hierarchy.HasAdvancedAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged),
                 "Vendorized attached avatars must keep package-managed return in advanced actions.");
+            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged),
+                "Closed Advanced disclosure must hide attached vendorized return controls.");
+        }
+
+        [Test]
+        public void BuildActionHierarchyContract_ComponentPresentVendorized_ExpandedAdvancedMakesMaintenanceVisible()
+        {
+            var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
+                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                hasComponent: true,
+                advancedDisclosureExpanded: true);
+
+            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
+                "Expanded Advanced disclosure must surface Remove for attached avatars.");
+            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
+                "Expanded Advanced disclosure must surface Detach for attached avatars.");
+            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
+                "Expanded Advanced disclosure must surface Vendorize for attached avatars.");
+            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged),
+                "Expanded Advanced disclosure must surface attached vendorized return controls.");
         }
 
         [Test]
@@ -196,6 +223,19 @@ namespace ASMLite.Tests.Editor
             var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
             field.SetValue(target, value);
+        }
+
+        private static bool IsActionVisible(
+            ASMLite.Editor.ASMLiteWindow.AsmLiteActionHierarchy hierarchy,
+            ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction action)
+        {
+            if (hierarchy.HasPrimaryAction(action))
+                return true;
+
+            if (!hierarchy.AdvancedDisclosureExpanded)
+                return false;
+
+            return hierarchy.HasAdvancedAction(action);
         }
     }
 }
