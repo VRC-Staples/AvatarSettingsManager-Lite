@@ -195,8 +195,25 @@ namespace ASMLite.Editor
         private const string StatusNotInstalledText =
             "Status: Not installed. ASM-Lite has not been added to this avatar yet.";
 
+        private const string AttachedComponentInfoText = "✓ ASM-Lite is attached to this avatar.";
+
         private const string AttachedCountSummaryFormat =
             "✓ {0} custom parameter(s) are being saved across {1} preset(s).";
+
+        private const string DescriptorCountSourceText =
+            "This count is based on the avatar settings currently loaded in the descriptor.";
+
+        private const string MissingExpressionParametersWarningText =
+            "⚠ This avatar has no Expression Parameters asset assigned yet.";
+
+        private const string ParameterImportPendingWarningText =
+            "⚠ Avatar parameter data is still importing in Unity. Please wait a moment.";
+
+        private const string ToggleBrokerCollisionWarningFormat =
+            "[Toggle Broker] Last setup reserved {0} name(s) and auto-adjusted conflicting names: preflight={1}, intra-candidate={2}.";
+
+        private const string ToggleBrokerNoCollisionInfoFormat =
+            "[Toggle Broker] Last setup reserved {0} name(s). No naming conflicts needed adjustment.";
 
         private const string DetachedOrVendorizedNoComponentText =
             "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.";
@@ -3774,43 +3791,21 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
 
             var component = GetOrRefreshComponent();
+            bool hasComponent = component;
             var toolState = GetAsmLiteToolState(_selectedAvatar, component);
 
-            EditorGUILayout.HelpBox(ResolveStatusCopy(toolState, component != null), ResolveStatusMessageType(toolState));
+            int? backedUpCount = null;
+            bool parameterImportPending = false;
 
-            if (component)
+            if (hasComponent)
             {
-                EditorGUILayout.HelpBox(
-                    "✓ ASM-Lite is attached to this avatar.",
-                    MessageType.Info);
-
                 // Guard against mid-reimport state: expressionParameters or its
                 // parameters array can be transiently null while Unity is importing.
                 try
                 {
-                    int backedUpCount = GetEffectiveBackedUpParameterCount(component);
-                    if (backedUpCount >= 0)
-                    {
-                        EditorGUILayout.HelpBox(
-                            string.Format(
-                                AttachedCountSummaryFormat,
-                                backedUpCount,
-                                component.slotCount),
-                            MessageType.Info);
-
-                        if (_discoveredParamCount < 0)
-                        {
-                            EditorGUILayout.HelpBox(
-                                "This count is based on the avatar settings currently loaded in the descriptor.",
-                                MessageType.None);
-                        }
-                    }
-                    else
-                    {
-                        EditorGUILayout.HelpBox(
-                            "⚠ This avatar has no Expression Parameters asset assigned yet.",
-                            MessageType.Warning);
-                    }
+                    int computedCount = GetEffectiveBackedUpParameterCount(component);
+                    if (computedCount >= 0)
+                        backedUpCount = computedCount;
                 }
                 catch (System.Exception ex)
                 {
@@ -3823,27 +3818,30 @@ namespace ASMLite.Editor
                         Debug.LogWarning($"[ASM-Lite] Expression parameters draw failed: {ex.GetType().Name}: {ex.Message}");
                         Repaint();
                     }
-                    EditorGUILayout.HelpBox(
-                        "⚠ Avatar parameter data is still importing in Unity. Please wait a moment.",
-                        MessageType.Warning);
-                }
 
-                DrawToggleBrokerStatus();
+                    parameterImportPending = true;
+                }
             }
-            else
+
+            bool hasToggleBrokerReport = ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var toggleBrokerReport);
+            var snapshot = BuildStatusPanelSnapshot(new StatusPanelSnapshotInput(
+                toolState,
+                hasComponent,
+                component != null ? component.slotCount : 0,
+                _discoveredParamCount,
+                backedUpCount,
+                parameterImportPending,
+                hasToggleBrokerReport,
+                toggleBrokerReport.PreReservedNameCount,
+                toggleBrokerReport.PreflightCollisionAdjustments,
+                toggleBrokerReport.CandidateCollisionAdjustments));
+
+            EditorGUILayout.HelpBox(snapshot.SummaryText, ToMessageType(snapshot.SummarySeverity));
+
+            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
             {
-                if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
-                {
-                    EditorGUILayout.HelpBox(
-                        DetachedOrVendorizedNoComponentText,
-                        MessageType.Info);
-                }
-                else
-                {
-                    EditorGUILayout.HelpBox(
-                        NotInstalledNoComponentText,
-                        MessageType.Warning);
-                }
+                var detail = snapshot.DetailEntries[i];
+                EditorGUILayout.HelpBox(detail.Text, ToMessageType(detail.Severity));
             }
         }
 
@@ -3867,6 +3865,169 @@ namespace ASMLite.Editor
             return toolState == AsmLiteToolState.NotInstalled
                 ? MessageType.None
                 : MessageType.Info;
+        }
+
+        internal enum StatusDetailSeverity
+        {
+            Neutral,
+            Info,
+            Warning,
+            Error,
+        }
+
+        internal readonly struct StatusDetailEntry
+        {
+            public StatusDetailEntry(string text, StatusDetailSeverity severity)
+            {
+                Text = text ?? string.Empty;
+                Severity = severity;
+            }
+
+            public string Text { get; }
+            public StatusDetailSeverity Severity { get; }
+        }
+
+        internal readonly struct StatusPanelSnapshotInput
+        {
+            public StatusPanelSnapshotInput(
+                AsmLiteToolState toolState,
+                bool hasComponent,
+                int slotCount,
+                int discoveredParamCount,
+                int? backedUpCount,
+                bool parameterImportPending,
+                bool hasToggleBrokerReport,
+                int toggleBrokerPreReservedNameCount,
+                int toggleBrokerPreflightCollisionAdjustments,
+                int toggleBrokerCandidateCollisionAdjustments)
+            {
+                ToolState = toolState;
+                HasComponent = hasComponent;
+                SlotCount = slotCount;
+                DiscoveredParamCount = discoveredParamCount;
+                BackedUpCount = backedUpCount;
+                ParameterImportPending = parameterImportPending;
+                HasToggleBrokerReport = hasToggleBrokerReport;
+                ToggleBrokerPreReservedNameCount = toggleBrokerPreReservedNameCount;
+                ToggleBrokerPreflightCollisionAdjustments = toggleBrokerPreflightCollisionAdjustments;
+                ToggleBrokerCandidateCollisionAdjustments = toggleBrokerCandidateCollisionAdjustments;
+            }
+
+            public AsmLiteToolState ToolState { get; }
+            public bool HasComponent { get; }
+            public int SlotCount { get; }
+            public int DiscoveredParamCount { get; }
+            public int? BackedUpCount { get; }
+            public bool ParameterImportPending { get; }
+            public bool HasToggleBrokerReport { get; }
+            public int ToggleBrokerPreReservedNameCount { get; }
+            public int ToggleBrokerPreflightCollisionAdjustments { get; }
+            public int ToggleBrokerCandidateCollisionAdjustments { get; }
+        }
+
+        internal readonly struct StatusPanelSnapshot
+        {
+            public StatusPanelSnapshot(string summaryText, StatusDetailSeverity summarySeverity, StatusDetailEntry[] detailEntries, bool detailsCollapsedByDefault)
+            {
+                SummaryText = summaryText ?? string.Empty;
+                SummarySeverity = summarySeverity;
+                DetailEntries = detailEntries ?? Array.Empty<StatusDetailEntry>();
+                DetailsCollapsedByDefault = detailsCollapsedByDefault;
+            }
+
+            public string SummaryText { get; }
+            public StatusDetailSeverity SummarySeverity { get; }
+            public StatusDetailEntry[] DetailEntries { get; }
+            public bool ShowDetailsDisclosure => DetailEntries.Length > 0;
+            public bool DetailsCollapsedByDefault { get; }
+        }
+
+        internal static StatusPanelSnapshot BuildStatusPanelSnapshot(StatusPanelSnapshotInput input)
+        {
+            var details = new List<StatusDetailEntry>();
+
+            if (input.HasComponent)
+            {
+                details.Add(new StatusDetailEntry(AttachedComponentInfoText, StatusDetailSeverity.Info));
+
+                if (input.ParameterImportPending)
+                {
+                    details.Add(new StatusDetailEntry(ParameterImportPendingWarningText, StatusDetailSeverity.Warning));
+                }
+                else if (input.BackedUpCount.HasValue)
+                {
+                    details.Add(new StatusDetailEntry(
+                        string.Format(AttachedCountSummaryFormat, input.BackedUpCount.Value, input.SlotCount),
+                        StatusDetailSeverity.Info));
+
+                    if (input.DiscoveredParamCount < 0)
+                    {
+                        details.Add(new StatusDetailEntry(
+                            DescriptorCountSourceText,
+                            StatusDetailSeverity.Neutral));
+                    }
+                }
+                else
+                {
+                    details.Add(new StatusDetailEntry(
+                        MissingExpressionParametersWarningText,
+                        StatusDetailSeverity.Warning));
+                }
+
+                if (input.HasToggleBrokerReport)
+                {
+                    int totalAdjustments = input.ToggleBrokerPreflightCollisionAdjustments + input.ToggleBrokerCandidateCollisionAdjustments;
+                    if (totalAdjustments > 0)
+                    {
+                        details.Add(new StatusDetailEntry(
+                            string.Format(
+                                ToggleBrokerCollisionWarningFormat,
+                                input.ToggleBrokerPreReservedNameCount,
+                                input.ToggleBrokerPreflightCollisionAdjustments,
+                                input.ToggleBrokerCandidateCollisionAdjustments),
+                            StatusDetailSeverity.Warning));
+                    }
+                    else
+                    {
+                        details.Add(new StatusDetailEntry(
+                            string.Format(ToggleBrokerNoCollisionInfoFormat, input.ToggleBrokerPreReservedNameCount),
+                            StatusDetailSeverity.Neutral));
+                    }
+                }
+            }
+            else if (input.ToolState == AsmLiteToolState.Detached || input.ToolState == AsmLiteToolState.Vendorized)
+            {
+                details.Add(new StatusDetailEntry(DetachedOrVendorizedNoComponentText, StatusDetailSeverity.Info));
+            }
+            else if (input.ToolState == AsmLiteToolState.NotInstalled)
+            {
+                details.Add(new StatusDetailEntry(NotInstalledNoComponentText, StatusDetailSeverity.Warning));
+            }
+
+            var summarySeverity = ResolveStatusMessageType(input.ToolState) == MessageType.None
+                ? StatusDetailSeverity.Neutral
+                : StatusDetailSeverity.Info;
+
+            return new StatusPanelSnapshot(
+                ResolveStatusCopy(input.ToolState, input.HasComponent),
+                summarySeverity,
+                details.ToArray(),
+                detailsCollapsedByDefault: details.Count > 0);
+        }
+
+        private static MessageType ToMessageType(StatusDetailSeverity severity)
+        {
+            switch (severity)
+            {
+                case StatusDetailSeverity.Info:
+                    return MessageType.Info;
+                case StatusDetailSeverity.Warning:
+                    return MessageType.Warning;
+                case StatusDetailSeverity.Error:
+                    return MessageType.Error;
+                default:
+                    return MessageType.None;
+            }
         }
 
         internal readonly struct TerminologySnapshot
@@ -3924,25 +4085,6 @@ namespace ASMLite.Editor
                 stateSpecific.Add(NotInstalledNoComponentText);
 
             return new TerminologySnapshot(alwaysVisible, stateSpecific.ToArray());
-        }
-
-        private void DrawToggleBrokerStatus()
-        {
-            if (!ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var report))
-                return;
-
-            int totalAdjustments = report.PreflightCollisionAdjustments + report.CandidateCollisionAdjustments;
-            if (totalAdjustments > 0)
-            {
-                EditorGUILayout.HelpBox(
-                    $"[Toggle Broker] Last setup reserved {report.PreReservedNameCount} name(s) and auto-adjusted conflicting names: preflight={report.PreflightCollisionAdjustments}, intra-candidate={report.CandidateCollisionAdjustments}.",
-                    MessageType.Warning);
-                return;
-            }
-
-            EditorGUILayout.HelpBox(
-                $"[Toggle Broker] Last setup reserved {report.PreReservedNameCount} name(s). No naming conflicts needed adjustment.",
-                MessageType.None);
         }
 
         private void DrawActionButton()
