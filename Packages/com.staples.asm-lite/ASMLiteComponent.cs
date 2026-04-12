@@ -64,8 +64,15 @@ namespace ASMLite
         public int selectedGearIndex = 0;
 
         /// <summary>
-        /// User-supplied icon textures used when iconMode is Custom.
-        /// Should have one entry per expression parameter slot.
+        /// Enables per-slot custom icon overrides for expression menu slot entries.
+        /// When disabled, slot entries use iconMode fallback only.
+        /// </summary>
+        [SerializeField]
+        public bool useCustomSlotIcons = false;
+
+        /// <summary>
+        /// User-supplied icon textures for per-slot overrides.
+        /// Each non-null entry overrides iconMode for that slot only.
         /// </summary>
         [SerializeField]
         public Texture2D[] customIcons = new Texture2D[0];
@@ -118,6 +125,45 @@ namespace ASMLite
         /// </summary>
         [SerializeField]
         public string customRootName = "";
+
+        /// <summary>
+        /// Optional legacy custom slot label format used when <see cref="useCustomRootName"/> is enabled.
+        /// Supports {slot} token replacement (1-based). Example: "Outfit {slot}".
+        /// Kept for backward compatibility with existing serialized data.
+        /// </summary>
+        [SerializeField]
+        public string customPresetNameFormat = "";
+
+        /// <summary>
+        /// Optional per-slot custom preset labels used when <see cref="useCustomRootName"/> is enabled.
+        /// Slot index maps to array index + 1.
+        /// </summary>
+        [SerializeField]
+        public string[] customPresetNames = new string[0];
+
+        /// <summary>
+        /// Optional custom Save label used when <see cref="useCustomRootName"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customSaveLabel = "";
+
+        /// <summary>
+        /// Optional custom Load label used when <see cref="useCustomRootName"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customLoadLabel = "";
+
+        /// <summary>
+        /// Optional custom Clear Preset label used when <see cref="useCustomRootName"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customClearPresetLabel = "";
+
+        /// <summary>
+        /// Optional custom Confirm label used when <see cref="useCustomRootName"/> is enabled.
+        /// </summary>
+        [SerializeField]
+        public string customConfirmLabel = "";
 
         /// <summary>
         /// Enables custom install path behavior for generated ASM-Lite menu/assets.

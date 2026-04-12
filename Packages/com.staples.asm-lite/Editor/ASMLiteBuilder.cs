@@ -44,6 +44,11 @@ namespace ASMLite.Editor
         internal const string CtrlParam = "ASMLite_Ctrl";
 
         internal const string DefaultRootControlName = "Settings Manager";
+        internal const string DefaultPresetNameFormat = "Slot {slot}";
+        internal const string DefaultSaveLabel = "Save";
+        internal const string DefaultLoadLabel = "Load";
+        internal const string DefaultClearPresetLabel = "Clear Slot";
+        internal const string DefaultConfirmLabel = "Confirm";
 
         internal readonly struct CleanupReport
         {
@@ -312,7 +317,7 @@ namespace ASMLite.Editor
         /// </summary>
         public static int Build(ASMLiteComponent component)
         {
-            // 0. Validate configuration -- catches bad state from non-window entry points
+            // 0. Validate configuration. This catches bad state from non-window entry points.
             //    (e.g. OnPreprocess during avatar upload where the window slider is bypassed).
             string validationError = Validate(component);
             if (validationError != null)
@@ -1302,6 +1307,12 @@ namespace ASMLite.Editor
         {
             int slotCount = component.slotCount;
 
+            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
+            string effectiveSaveLabel = ResolveEffectiveSaveLabel(component);
+            string effectiveLoadLabel = ResolveEffectiveLoadLabel(component);
+            string effectiveClearPresetLabel = ResolveEffectiveClearPresetLabel(component);
+            string effectiveConfirmLabel = ResolveEffectiveConfirmLabel(component);
+
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
@@ -1313,7 +1324,7 @@ namespace ASMLite.Editor
             Texture2D bundledReset = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
 
             Texture2D iconSave, iconLoad, iconReset;
-            if (component.actionIconMode == ActionIconMode.Custom)
+            if (component.useCustomSlotIcons && component.actionIconMode == ActionIconMode.Custom)
             {
                 iconSave  = component.customSaveIcon  != null ? component.customSaveIcon  : bundledSave;
                 iconLoad  = component.customLoadIcon  != null ? component.customLoadIcon  : bundledLoad;
@@ -1384,7 +1395,7 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Confirm",
+                            name      = effectiveConfirmLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = saveParamValue,
@@ -1400,7 +1411,7 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Confirm",
+                            name      = effectiveConfirmLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = clearParamValue,
@@ -1416,14 +1427,14 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Save",
+                            name    = effectiveSaveLabel,
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = confirmMenu,
                             icon    = iconSave,
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Load",
+                            name      = effectiveLoadLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = loadParamValue,
@@ -1431,7 +1442,7 @@ namespace ASMLite.Editor
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Clear Preset",
+                            name    = effectiveClearPresetLabel,
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = resetConfirmMenu,
                             icon    = iconReset,
@@ -1458,7 +1469,7 @@ namespace ASMLite.Editor
             {
                 presetsMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name    = $"Preset {slot}",
+                    name    = ResolveEffectivePresetControlName(component, slot),
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = slotMenus[slot - 1], // in-memory reference, not reloaded from disk
                     icon    = slotIcons[slot - 1],
@@ -1470,7 +1481,6 @@ namespace ASMLite.Editor
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
             // is never broken.
-            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
             Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
             rootMenu.controls = new List<VRCExpressionsMenu.Control>
             {
@@ -2017,14 +2027,88 @@ namespace ASMLite.Editor
             return string.IsNullOrWhiteSpace(trimmed) ? DefaultRootControlName : trimmed;
         }
 
+        internal static string ResolveEffectivePresetNameFormat(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultPresetNameFormat;
+
+            string trimmed = component.customPresetNameFormat?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultPresetNameFormat : trimmed;
+        }
+
+        internal static string ResolveEffectivePresetControlName(ASMLiteComponent component, int slot)
+        {
+            if (component == null || !component.useCustomRootName)
+                return $"Slot {slot}";
+
+            if (component.customPresetNames != null)
+            {
+                int index = slot - 1;
+                if (index >= 0 && index < component.customPresetNames.Length)
+                {
+                    string customName = component.customPresetNames[index]?.Trim();
+                    if (!string.IsNullOrWhiteSpace(customName))
+                        return customName;
+                }
+            }
+
+            // Legacy fallback for existing serialized format-based customization.
+            string legacyFormat = component.customPresetNameFormat?.Trim();
+            if (!string.IsNullOrWhiteSpace(legacyFormat))
+            {
+                if (legacyFormat.IndexOf("{slot}", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return legacyFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+                return $"{legacyFormat} {slot}";
+            }
+
+            return $"Slot {slot}";
+        }
+
+        internal static string ResolveEffectiveSaveLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultSaveLabel;
+
+            string trimmed = component.customSaveLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultSaveLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveLoadLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultLoadLabel;
+
+            string trimmed = component.customLoadLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultLoadLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveClearPresetLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultClearPresetLabel;
+
+            string trimmed = component.customClearPresetLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultClearPresetLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveConfirmLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultConfirmLabel;
+
+            string trimmed = component.customConfirmLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultConfirmLabel : trimmed;
+        }
+
         /// <summary>
-        /// Resolves the root wrapper menu control icon for generated/injected paths.
-        /// Uses the custom icon only when explicitly enabled and non-null; otherwise
-        /// falls back to the bundled presets icon contract.
+        /// Resolves root wrapper menu control icon for generated/injected paths.
+        /// Master custom-icons gate controls whether custom root icon may apply.
+        /// If custom icon is absent, falls back to bundled presets icon.
         /// </summary>
         internal static Texture2D ResolveEffectiveRootControlIcon(ASMLiteComponent component, Texture2D fallbackIcon)
         {
-            if (component == null || !component.useCustomRootIcon)
+            if (component == null || !component.useCustomSlotIcons)
                 return fallbackIcon;
 
             return component.customRootIcon != null ? component.customRootIcon : fallbackIcon;
@@ -2078,20 +2162,27 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Resolves the icon for a given slot based on the component's iconMode.
-        ///   SameColor : all slots use the single gear icon at selectedGearIndex.
-        ///   MultiColor: each slot cycles through GearIconPaths by index.
-        ///   Custom    : uses the user-supplied texture from customIcons[slot-1],
-        ///                falling back to <paramref name="fallback"/> if null/out-of-range.
-        ///   default   : returns <paramref name="fallback"/>.
-        /// All LoadAssetAtPath calls are expected to run before StartAssetEditing.
-        /// <paramref name="cache"/> deduplicates loads when the same path is resolved
-        /// for multiple slots (e.g. SameColor mode).
+        /// Resolves icon for given slot using per-slot override-first behavior.
+        /// If customIcons[slot-1] assigned, use it.
+        /// Else fall back to selected iconMode (SameColor/MultiColor).
+        /// Else fall back to <paramref name="fallback"/>.
+        /// All LoadAssetAtPath calls expected before StartAssetEditing.
+        /// <paramref name="cache"/> deduplicates repeated gear loads.
         /// </summary>
         private static Texture2D ResolveSlotIcon(
             ASMLiteComponent component, int slot, Texture2D fallback,
             Dictionary<string, Texture2D> cache)
         {
+            int index = slot - 1;
+            if (component.useCustomSlotIcons
+                && component.customIcons != null
+                && index >= 0
+                && index < component.customIcons.Length
+                && component.customIcons[index] != null)
+            {
+                return component.customIcons[index];
+            }
+
             switch (component.iconMode)
             {
                 case IconMode.SameColor:
@@ -2102,23 +2193,13 @@ namespace ASMLite.Editor
                     return tex != null ? tex : fallback;
                 }
                 case IconMode.MultiColor:
+                default:
                 {
                     string path = ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length];
                     if (!cache.TryGetValue(path, out var tex))
                         cache[path] = tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                     return tex != null ? tex : fallback;
                 }
-                case IconMode.Custom:
-                {
-                    int index = slot - 1;
-                    if (component.customIcons != null
-                        && index < component.customIcons.Length
-                        && component.customIcons[index] != null)
-                        return component.customIcons[index];
-                    return fallback;
-                }
-                default:
-                    return fallback;
             }
         }
     }

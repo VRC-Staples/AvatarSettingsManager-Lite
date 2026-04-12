@@ -48,7 +48,8 @@ namespace ASMLite.Editor
         // Pending gear index: shown before the prefab is added, applied on add.
         private int _pendingSelectedGearIndex = 0;
 
-        // Pending custom icons: shown before the prefab is added, applied on add.
+        // Pending custom slot-icon toggle/icons: shown before prefab is added, applied on add.
+        private bool _pendingUseCustomSlotIcons = false;
         private Texture2D[] _pendingCustomIcons = new Texture2D[3];
 
         // Pending action icon mode: shown before the prefab is added, applied on add.
@@ -61,14 +62,28 @@ namespace ASMLite.Editor
 
         // Pending customization scaffold state: copied into new prefab instances
         // and refreshed from the selected avatar component when present.
-        private bool _pendingUseCustomRootIcon = false;
         private Texture2D _pendingCustomRootIcon;
         private bool _pendingUseCustomRootName = false;
         private string _pendingCustomRootName = string.Empty;
+        private string[] _pendingCustomPresetNames = Array.Empty<string>();
+        private string _pendingCustomPresetNameFormat = string.Empty;
+        private string _pendingCustomSaveLabel = string.Empty;
+        private string _pendingCustomLoadLabel = string.Empty;
+        private string _pendingCustomClearPresetLabel = string.Empty;
+        private string _pendingCustomConfirmLabel = string.Empty;
         private bool _pendingUseCustomInstallPath = false;
         private string _pendingCustomInstallPath = string.Empty;
         private bool _pendingUseParameterExclusions = false;
         private string[] _pendingExcludedParameterNames = Array.Empty<string>();
+
+        // Icon settings foldouts (hierarchy-style UI groups).
+        private bool _iconsRootFoldout = true;
+        private bool _iconsActionFoldout = true;
+        private bool _iconsSlotFoldout = true;
+
+        // Action hierarchy disclosure state. Advanced maintenance actions stay hidden
+        // until explicitly expanded by the user.
+        [SerializeField] private bool _showAdvancedActions;
 
         // ── Install Path Tree ─────────────────────────────────────────────────
 
@@ -118,8 +133,9 @@ namespace ASMLite.Editor
         private Texture2D[] _mainWheelIcons;
         private string[]    _mainWheelLabels;
 
-        // Sub-wheel arrays are invariant -- allocate once as static readonly.
-        private static readonly string[] s_subWheelLabels = { "Back", "Save", "Load", "Clear" };
+        // Sub-wheel arrays are invariant. Allocate once as static readonly.
+        private static readonly string s_subWheelBackLabel = "Back";
+
 
         // Fallback grey square drawn when a custom icon slot is unassigned.
         private Texture2D _previewFallback;
@@ -137,7 +153,7 @@ namespace ASMLite.Editor
 
         // ── Radial wheel style cache ──────────────────────────────────────────
 
-        // Colors declared once -- Color is a struct but declaring as static readonly
+        // Colors declared once. Color is a struct, and static readonly keeps intent explicit.
         // makes the intent explicit and avoids accidental per-call reconstruction.
         private static readonly Color s_wheelColorMain   = new Color(0.14f, 0.18f, 0.20f);
         private static readonly Color s_wheelColorBorder = new Color(0.10f, 0.35f, 0.38f);
@@ -858,7 +874,7 @@ namespace ASMLite.Editor
 
         internal static string GetProjectPackageStatus(string projectRoot, string packageName)
         {
-            // Read manifest first — a file: entry means the user explicitly set local,
+            // Read manifest first. A file: entry means the user explicitly set local,
             // and that takes priority in the display even if the embedded folder still
             // exists (e.g. locked by Unity while the project is open).
             string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
@@ -893,7 +909,7 @@ namespace ASMLite.Editor
                 }
             }
 
-            // No file: manifest entry — check for an embedded/linked folder.
+            // No file: manifest entry. Check for an embedded or linked folder.
             string embeddedPath = Path.Combine(projectRoot, "Packages", packageName);
             if (Directory.Exists(embeddedPath) && File.Exists(Path.Combine(embeddedPath, "package.json")))
             {
@@ -1004,7 +1020,7 @@ namespace ASMLite.Editor
                 float availableWidth = EditorGUIUtility.currentViewWidth;
                 float bannerHeight   = Mathf.Round(availableWidth / aspect);
 
-                // Draw at absolute (0,0) — bypasses any layout group margin.
+                // Draw at absolute (0,0). This bypasses any layout group margin.
                 // StretchToFill with the correct aspect-derived height means no letterboxing.
                 GUI.DrawTexture(new Rect(0f, 0f, availableWidth, bannerHeight),
                     _bannerTexture, ScaleMode.StretchToFill, alphaBlend: true);
@@ -1049,7 +1065,7 @@ namespace ASMLite.Editor
             if (_selectedAvatar == null)
             {
                 EditorGUILayout.HelpBox(
-                    "Select the VRC Avatar Descriptor in your scene hierarchy to get started.",
+                    "Select your avatar in the Hierarchy (the object with a VRC Avatar Descriptor) to begin.",
                     MessageType.Info);
             }
         }
@@ -1078,7 +1094,7 @@ namespace ASMLite.Editor
                 }
 
                 EditorGUILayout.HelpBox(
-                    "Click \"Rebuild ASM-Lite\" to apply slot count changes.",
+                    "Changed slot count? Click \"Rebuild ASM-Lite\" to apply it.",
                     MessageType.None);
             }
             else
@@ -1097,15 +1113,10 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField("Icon Settings", EditorStyles.boldLabel);
             EditorGUILayout.Space(6);
 
-            EditorGUILayout.BeginVertical("box");
-            DrawIconMode();
-            EditorGUILayout.EndVertical();
+            var component = GetOrRefreshComponent();
 
-            EditorGUILayout.Space(6);
-
-            EditorGUILayout.BeginVertical("box");
-            DrawActionIcons();
-            EditorGUILayout.EndVertical();
+            // Icon mode stays directly under section title.
+            DrawIconMode(component);
 
             EditorGUILayout.Space(8);
             DrawWheelPreview();
@@ -1154,6 +1165,61 @@ namespace ASMLite.Editor
             EditorUtility.SetDirty(component);
         }
 
+        private void SetComponentRawString(ASMLiteComponent component, string undoLabel, ref string target, string value)
+        {
+            if (string.Equals(target, value, StringComparison.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value ?? string.Empty;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentStringArray(ASMLiteComponent component, string undoLabel, ref string[] target, string[] value)
+        {
+            string[] next = value ?? Array.Empty<string>();
+            string[] current = target ?? Array.Empty<string>();
+
+            if (current.Length == next.Length)
+            {
+                bool equal = true;
+                for (int i = 0; i < current.Length; i++)
+                {
+                    if (!string.Equals(current[i], next[i], StringComparison.Ordinal))
+                    {
+                        equal = false;
+                        break;
+                    }
+                }
+
+                if (equal)
+                    return;
+            }
+
+            Undo.RecordObject(component, undoLabel);
+            target = CloneStrings(next);
+            EditorUtility.SetDirty(component);
+        }
+
+        private static string DrawTextFieldWithFocusCue(string label, string value, string controlName)
+        {
+            GUI.SetNextControlName(controlName);
+            string newValue = EditorGUILayout.TextField(label, value ?? string.Empty);
+
+            if (Event.current.type == EventType.Repaint
+                && string.Equals(GUI.GetNameOfFocusedControl(), controlName, StringComparison.Ordinal))
+            {
+                Rect r = GUILayoutUtility.GetLastRect();
+                Color focus = new Color(0.20f, 0.60f, 0.95f, 0.90f);
+                EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1f), focus);
+                EditorGUI.DrawRect(new Rect(r.x, r.yMax - 1f, r.width, 1f), focus);
+                EditorGUI.DrawRect(new Rect(r.x, r.y, 1f, r.height), focus);
+                EditorGUI.DrawRect(new Rect(r.xMax - 1f, r.y, 1f, r.height), focus);
+            }
+
+            return newValue;
+        }
+
         private void SetComponentExcludedNames(ASMLiteComponent component, string undoLabel, string[] value)
         {
             string[] sanitized = SanitizeExcludedParameterNames(value);
@@ -1166,51 +1232,164 @@ namespace ASMLite.Editor
             EditorUtility.SetDirty(component);
         }
 
+        private string ResolveEffectiveRootNameForPreview(ASMLiteComponent component)
+        {
+            return component
+                ? ASMLiteBuilder.ResolveEffectiveRootControlName(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomRootName)
+                    ? NormalizeOptionalString(_pendingCustomRootName)
+                    : ASMLiteBuilder.DefaultRootControlName);
+        }
+
+        private string[] ResolveEffectiveActionLabelsForPreview(ASMLiteComponent component)
+        {
+            string save = component
+                ? ASMLiteBuilder.ResolveEffectiveSaveLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomSaveLabel)
+                    ? NormalizeOptionalString(_pendingCustomSaveLabel)
+                    : ASMLiteBuilder.DefaultSaveLabel);
+
+            string load = component
+                ? ASMLiteBuilder.ResolveEffectiveLoadLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomLoadLabel)
+                    ? NormalizeOptionalString(_pendingCustomLoadLabel)
+                    : ASMLiteBuilder.DefaultLoadLabel);
+
+            string clear = component
+                ? ASMLiteBuilder.ResolveEffectiveClearPresetLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomClearPresetLabel)
+                    ? NormalizeOptionalString(_pendingCustomClearPresetLabel)
+                    : ASMLiteBuilder.DefaultClearPresetLabel);
+
+            return new[] { s_subWheelBackLabel, save, load, clear };
+        }
+
         private void DrawCustomizeSection()
         {
             EditorGUILayout.LabelField("Customize", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "All customization options are opt-in. Leave toggles off to keep current ASM-Lite generated output behavior.",
+                "Everything here is optional. If you leave these toggles off, ASM-Lite keeps its default look and behavior.",
                 MessageType.None);
 
             var component = GetOrRefreshComponent();
 
             EditorGUILayout.BeginVertical("box");
 
-            bool useCustomRootIcon = component ? component.useCustomRootIcon : _pendingUseCustomRootIcon;
-            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Use custom root icon", useCustomRootIcon);
+            bool useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+            bool newUseCustomSlotIcons = EditorGUILayout.ToggleLeft("Use custom icons", useCustomSlotIcons);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Custom Root Icon", ref component.useCustomRootIcon, newUseCustomRootIcon);
-            else
-                _pendingUseCustomRootIcon = newUseCustomRootIcon;
-
-            if (newUseCustomRootIcon)
             {
-                Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
-                Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
-                if (component)
-                    SetComponentTexture(component, "Change ASM-Lite Root Icon", ref component.customRootIcon, newRootIcon);
-                else
-                    _pendingCustomRootIcon = newRootIcon;
+                SetComponentBool(component, "Toggle ASM-Lite Custom Slot Icons", ref component.useCustomSlotIcons, newUseCustomSlotIcons);
+
+                if (!newUseCustomSlotIcons && component.actionIconMode != ActionIconMode.Default)
+                {
+                    Undo.RecordObject(component, "Disable ASM-Lite Custom Action Icons");
+                    component.actionIconMode = ActionIconMode.Default;
+                    EditorUtility.SetDirty(component);
+                }
+            }
+            else
+            {
+                _pendingUseCustomSlotIcons = newUseCustomSlotIcons;
+                if (!newUseCustomSlotIcons)
+                    _pendingActionIconMode = ActionIconMode.Default;
             }
 
-            EditorGUILayout.Space(6);
+            if (newUseCustomSlotIcons)
+            {
+                EditorGUILayout.BeginVertical("box");
+
+                _iconsRootFoldout = EditorGUILayout.Foldout(_iconsRootFoldout, "Root Icon", true);
+                if (_iconsRootFoldout)
+                {
+                    EditorGUI.indentLevel++;
+                    DrawRootIconSettings(component);
+                    EditorGUI.indentLevel--;
+                    EditorGUILayout.Space(4f);
+                }
+
+                _iconsActionFoldout = EditorGUILayout.Foldout(_iconsActionFoldout, "Action Icons", true);
+                if (_iconsActionFoldout)
+                {
+                    EditorGUI.indentLevel++;
+                    DrawActionIcons(component);
+                    EditorGUI.indentLevel--;
+                    EditorGUILayout.Space(4f);
+                }
+
+                _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, "Slot Icons", true);
+                if (_iconsSlotFoldout)
+                {
+                    EditorGUI.indentLevel++;
+                    DrawSlotIconSelectors(component);
+                    EditorGUI.indentLevel--;
+                }
+
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.Space(6);
+            }
 
             bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
-            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom root name", useCustomRootName);
+            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom name", useCustomRootName);
             if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Custom Root Name", ref component.useCustomRootName, newUseCustomRootName);
+                SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, newUseCustomRootName);
             else
                 _pendingUseCustomRootName = newUseCustomRootName;
 
             if (newUseCustomRootName)
             {
-                string currentRootName = component ? NormalizeOptionalString(component.customRootName) : NormalizeOptionalString(_pendingCustomRootName);
-                string newRootName = EditorGUILayout.TextField("Root Name", currentRootName);
+                int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
+
                 if (component)
-                    SetComponentString(component, "Change ASM-Lite Root Name", ref component.customRootName, newRootName);
+                {
+                    string newRootName = DrawTextFieldWithFocusCue("Root Menu", component.customRootName, "asm_name_root");
+                    SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, newRootName);
+
+                    string[] slotNames = EnsureSizedStringArray(component.customPresetNames, nameSlotCount);
+                    if (!ReferenceEquals(slotNames, component.customPresetNames))
+                        SetComponentStringArray(component, "Resize ASM-Lite Preset Names", ref component.customPresetNames, slotNames);
+
+                    for (int i = 0; i < nameSlotCount; i++)
+                    {
+                        string fieldName = DrawTextFieldWithFocusCue($"Slot {i + 1}", slotNames[i], $"asm_name_preset_{i + 1}");
+                        if (!string.Equals(fieldName, slotNames[i], StringComparison.Ordinal))
+                        {
+                            slotNames[i] = fieldName ?? string.Empty;
+                            SetComponentStringArray(component, "Change ASM-Lite Preset Name", ref component.customPresetNames, slotNames);
+                        }
+                    }
+
+                    string newSaveLabel = DrawTextFieldWithFocusCue("Save", component.customSaveLabel, "asm_name_save");
+                    SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, newSaveLabel);
+
+                    string newLoadLabel = DrawTextFieldWithFocusCue("Load", component.customLoadLabel, "asm_name_load");
+                    SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, newLoadLabel);
+
+                    string newClearLabel = DrawTextFieldWithFocusCue("Clear Slot", component.customClearPresetLabel, "asm_name_clear");
+                    SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, newClearLabel);
+
+                    string newConfirmLabel = DrawTextFieldWithFocusCue("Confirm", component.customConfirmLabel, "asm_name_confirm");
+                    SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, newConfirmLabel);
+                }
                 else
-                    _pendingCustomRootName = NormalizeOptionalString(newRootName);
+                {
+                    _pendingCustomRootName = DrawTextFieldWithFocusCue("Root Menu", _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
+
+                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                    for (int i = 0; i < nameSlotCount; i++)
+                    {
+                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue($"Slot {i + 1}", _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
+                    }
+
+                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue("Save", _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
+                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue("Load", _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
+                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue("Clear Slot", _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
+                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue("Confirm", _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
+                }
+
+                EditorGUILayout.HelpBox(
+                    "Leave any name field blank to use ASM-Lite's default menu name for that item.",
+                    MessageType.None);
             }
 
             EditorGUILayout.Space(6);
@@ -1339,11 +1518,11 @@ namespace ASMLite.Editor
 
             if (_cachedInstallPathTree == null || _cachedInstallPathTree.Children.Count == 0)
             {
-                EditorGUILayout.HelpBox("No menu paths found on selected avatar.", MessageType.None);
+                EditorGUILayout.HelpBox("No expression menu paths were found on this avatar yet.", MessageType.None);
                 return;
             }
 
-            // Root row — selects empty install path (menu root).
+            // Root row. Selects empty install path (menu root).
             bool rootSelected = string.IsNullOrEmpty(currentPath);
             var rootRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
             if (rootSelected && Event.current.type == EventType.Repaint)
@@ -1420,7 +1599,7 @@ namespace ASMLite.Editor
             if (isSelected && Event.current.type == EventType.Repaint)
                 EditorGUI.DrawRect(activeRect, new Color(0.24f, 0.49f, 0.91f, 0.30f));
 
-            // Foldout arrow — toggles expand/collapse without selecting.
+            // Foldout arrow. Toggles expand/collapse without selecting.
             if (hasChildren)
             {
                 var arrowRect = new Rect(activeRect.x, activeRect.y, 14f, activeRect.height);
@@ -1434,7 +1613,7 @@ namespace ASMLite.Editor
                 }
             }
 
-            // Label — clicking selects this path as the install location.
+            // Label. Clicking selects this path as the install location.
             var labelRect = new Rect(
                 activeRect.x + 14f, activeRect.y,
                 activeRect.width - 14f, activeRect.height);
@@ -1711,7 +1890,7 @@ namespace ASMLite.Editor
 
             if (_cachedParamList == null || _cachedParamList.Length == 0)
             {
-                EditorGUILayout.HelpBox("No parameters found on selected avatar.", MessageType.None);
+                EditorGUILayout.HelpBox("No expression parameters were found on this avatar yet.", MessageType.None);
                 return;
             }
 
@@ -1809,7 +1988,7 @@ namespace ASMLite.Editor
             }
             else
             {
-                // Folder row — foldout arrow + category checkbox + label.
+                // Folder row. Foldout arrow + category checkbox + label.
                 bool isExpanded = _expandedParamMenuPaths.Contains(node.MenuPath);
                 var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
                 var activeRect = new Rect(rowRect.x + indentPx, rowRect.y, rowRect.width - indentPx, rowRect.height);
@@ -2583,7 +2762,7 @@ namespace ASMLite.Editor
             var visitedMenus = new HashSet<VRCExpressionsMenu>();
             CollectSubmenuPathsRecursive(avatar.expressionsMenu, string.Empty, allPaths, parentPaths, visitedMenus);
 
-            // Return every submenu path — parent folders are valid install locations too.
+            // Return every submenu path. Parent folders are valid install locations too.
             return allPaths
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .ToArray();
@@ -2783,7 +2962,7 @@ namespace ASMLite.Editor
                         {
                             string[] segs = val.Split('/');
                             // For Toggle "name" fields the last segment is the item name, not a
-                            // folder — stop one short so only real parent menus are offered.
+                            // folder. Stop one short so only real parent menus are offered.
                             // For menu/path destination fields (menuPath, toPath, path), include
                             // all segments because the full value is itself a folder path.
                             int segLimit = isNamePath ? segs.Length - 1 : segs.Length;
@@ -2907,42 +3086,52 @@ namespace ASMLite.Editor
             return normalized;
         }
 
-        private void DrawIconMode()
+        private void DrawRootIconSettings(ASMLiteComponent component)
         {
-            var component = GetOrRefreshComponent();
+            Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
+            Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
 
-            EditorGUILayout.LabelField("Slot Icons", EditorStyles.miniBoldLabel);
+            if (component)
+            {
+                SetComponentTexture(component, "Change ASM-Lite Root Icon", ref component.customRootIcon, newRootIcon);
+            }
+            else
+            {
+                _pendingCustomRootIcon = newRootIcon;
+            }
 
-            // Determine current mode and slot count based on whether component exists
-            int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
+            EditorGUILayout.HelpBox(
+                "If this is empty, ASM-Lite uses its built-in root icon.",
+                MessageType.None);
+        }
+
+        private void DrawIconMode(ASMLiteComponent component)
+        {
             IconMode currentMode = component ? component.iconMode : _pendingIconMode;
             int currentGearIndex = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
-            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
 
-            // Always resize customIcons to match slotCount before any indexing.
-            if (currentCustomIcons == null || currentCustomIcons.Length != currentSlotCount)
+            // Slot icon mode selector intentionally excludes Custom.
+            // Existing Custom values are migrated to MultiColor the first time this UI is drawn.
+            if (currentMode == IconMode.Custom)
             {
-                var resized = new Texture2D[currentSlotCount];
-                if (currentCustomIcons != null)
-                {
-                    int copy = Mathf.Min(currentCustomIcons.Length, currentSlotCount);
-                    System.Array.Copy(currentCustomIcons, resized, copy);
-                }
-                currentCustomIcons = resized;
-
+                currentMode = IconMode.MultiColor;
                 if (component)
                 {
-                    component.customIcons = resized;
+                    Undo.RecordObject(component, "Migrate ASM-Lite Slot Icon Mode");
+                    component.iconMode = currentMode;
                     EditorUtility.SetDirty(component);
                 }
                 else
                 {
-                    _pendingCustomIcons = resized;
+                    _pendingIconMode = currentMode;
                 }
             }
 
-            // Mode selector.
-            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", currentMode);
+            var modeOptions = new[] { "MultiColor", "SameColor" };
+            int currentModeIndex = currentMode == IconMode.SameColor ? 1 : 0;
+            int newModeIndex = EditorGUILayout.Popup("Icon Mode", currentModeIndex, modeOptions);
+            IconMode newMode = newModeIndex == 1 ? IconMode.SameColor : IconMode.MultiColor;
+
             if (newMode != currentMode)
             {
                 if (component)
@@ -2957,143 +3146,134 @@ namespace ASMLite.Editor
                 }
             }
 
-            // Per-mode controls.
-            switch (newMode)
+            if (newMode == IconMode.SameColor)
             {
-                case IconMode.SameColor:
+                var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
+                int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, colorNames);
+                if (newIndex != currentGearIndex)
                 {
-                    var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
-                    int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, colorNames);
-                    if (newIndex != currentGearIndex)
+                    if (component)
                     {
-                        if (component)
-                        {
-                            Undo.RecordObject(component, "Change ASM-Lite Gear Color");
-                            component.selectedGearIndex = newIndex;
-                            EditorUtility.SetDirty(component);
-                        }
-                        else
-                        {
-                            _pendingSelectedGearIndex = newIndex;
-                        }
+                        Undo.RecordObject(component, "Change ASM-Lite Gear Color");
+                        component.selectedGearIndex = newIndex;
+                        EditorUtility.SetDirty(component);
                     }
-                    break;
-                }
-
-                case IconMode.MultiColor:
-                {
-                    EditorGUILayout.HelpBox(
-                        "Each slot gets a unique gear color.\nSlots 1-4: Blue, Red, Green, Purple\nSlots 5-8: Cyan, Orange, Pink, Yellow",
-                        MessageType.None);
-                    break;
-                }
-
-                case IconMode.Custom:
-                {
-                    for (int i = 0; i < currentSlotCount; i++)
+                    else
                     {
-                        var newTex = (Texture2D)EditorGUILayout.ObjectField(
-                            $"Slot {i + 1} Icon",
-                            currentCustomIcons[i],
-                            typeof(Texture2D),
-                            allowSceneObjects: false);
-                        if (newTex != currentCustomIcons[i])
-                        {
-                            currentCustomIcons[i] = newTex;
-                            if (component)
-                            {
-                                Undo.RecordObject(component, "Change ASM-Lite Custom Icon");
-                                component.customIcons[i] = newTex;
-                                EditorUtility.SetDirty(component);
-                            }
-                            else
-                            {
-                                _pendingCustomIcons[i] = newTex;
-                            }
-                        }
+                        _pendingSelectedGearIndex = newIndex;
                     }
-                    break;
                 }
+                return;
             }
+
+            EditorGUILayout.HelpBox(
+                "Each preset slot uses a different gear color for quick visual scanning.\nSlots 1 to 4: Blue, Red, Green, Purple\nSlots 5 to 8: Cyan, Orange, Pink, Yellow",
+                MessageType.None);
         }
 
-        /// <summary>
-        /// Draws the Action Icons section. Allows the user to choose between the
-        /// bundled Save/Load/Clear Preset icons (Default) or custom Texture2D icons
-        /// (Custom). Custom icons apply globally: the same three textures are used
-        /// across all slot submenus.
-        /// </summary>
-        private void DrawActionIcons()
+        private void DrawSlotIconSelectors(ASMLiteComponent component)
         {
-            var component = GetOrRefreshComponent();
+            int slotCount = component ? component.slotCount : _pendingSlotCount;
+            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
 
-            EditorGUILayout.LabelField("Action Icons", EditorStyles.miniBoldLabel);
-
-            ActionIconMode currentMode = component ? component.actionIconMode : _pendingActionIconMode;
-
-            var newMode = (ActionIconMode)EditorGUILayout.EnumPopup("Action Icon Mode", currentMode);
-            if (newMode != currentMode)
+            if (currentCustomIcons == null || currentCustomIcons.Length != slotCount)
             {
+                var resized = new Texture2D[slotCount];
+                if (currentCustomIcons != null)
+                {
+                    int copy = Mathf.Min(currentCustomIcons.Length, slotCount);
+                    Array.Copy(currentCustomIcons, resized, copy);
+                }
+
+                currentCustomIcons = resized;
                 if (component)
                 {
-                    Undo.RecordObject(component, "Change ASM-Lite Action Icon Mode");
-                    component.actionIconMode = newMode;
+                    Undo.RecordObject(component, "Resize ASM-Lite Slot Icons");
+                    component.customIcons = resized;
                     EditorUtility.SetDirty(component);
                 }
                 else
                 {
-                    _pendingActionIconMode = newMode;
+                    _pendingCustomIcons = resized;
                 }
             }
 
-            if (newMode == ActionIconMode.Custom)
+            for (int i = 0; i < slotCount; i++)
             {
-                Texture2D currentSave  = component ? component.customSaveIcon  : _pendingCustomSaveIcon;
-                Texture2D currentLoad  = component ? component.customLoadIcon  : _pendingCustomLoadIcon;
-                Texture2D currentClear = component ? component.customClearIcon : _pendingCustomClearIcon;
+                Texture2D newTex = (Texture2D)EditorGUILayout.ObjectField(
+                    $"Slot {i + 1} Icon",
+                    currentCustomIcons[i],
+                    typeof(Texture2D),
+                    allowSceneObjects: false);
 
-                // Save icon
-                var newSave = (Texture2D)EditorGUILayout.ObjectField(
-                    "Save Icon", currentSave, typeof(Texture2D), allowSceneObjects: false);
-                if (newSave != currentSave)
+                if (newTex == currentCustomIcons[i])
+                    continue;
+
+                currentCustomIcons[i] = newTex;
+                if (component)
                 {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Save Icon");
-                        component.customSaveIcon = newSave;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomSaveIcon = newSave; }
+                    Undo.RecordObject(component, "Change ASM-Lite Slot Icon");
+                    component.customIcons[i] = newTex;
+                    EditorUtility.SetDirty(component);
                 }
-
-                // Load icon
-                var newLoad = (Texture2D)EditorGUILayout.ObjectField(
-                    "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
-                if (newLoad != currentLoad)
+                else
                 {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Load Icon");
-                        component.customLoadIcon = newLoad;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomLoadIcon = newLoad; }
-                }
-
-                // Clear Preset icon
-                var newClear = (Texture2D)EditorGUILayout.ObjectField(
-                    "Clear Preset Icon", currentClear, typeof(Texture2D), allowSceneObjects: false);
-                if (newClear != currentClear)
-                {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Clear Preset Icon");
-                        component.customClearIcon = newClear;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomClearIcon = newClear; }
+                    _pendingCustomIcons[i] = newTex;
                 }
             }
+
+            EditorGUILayout.HelpBox(
+                "A slot icon set here overrides the selected Icon Mode for that slot only.\nEmpty slots keep the normal Icon Mode icon.",
+                MessageType.None);
+        }
+
+        /// <summary>
+        /// Draws Action Icon controls (Save/Load/Clear). Mode auto-derived:
+        /// any assigned icon => Custom, all empty => Default.
+        /// </summary>
+        private void DrawActionIcons(ASMLiteComponent component)
+        {
+            Texture2D currentSave = component ? component.customSaveIcon : _pendingCustomSaveIcon;
+            Texture2D currentLoad = component ? component.customLoadIcon : _pendingCustomLoadIcon;
+            Texture2D currentClear = component ? component.customClearIcon : _pendingCustomClearIcon;
+
+            var newSave = (Texture2D)EditorGUILayout.ObjectField(
+                "Save Icon", currentSave, typeof(Texture2D), allowSceneObjects: false);
+            var newLoad = (Texture2D)EditorGUILayout.ObjectField(
+                "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
+            var newClear = (Texture2D)EditorGUILayout.ObjectField(
+                "Clear Slot Icon", currentClear, typeof(Texture2D), allowSceneObjects: false);
+
+            ActionIconMode desiredMode = (newSave != null || newLoad != null || newClear != null)
+                ? ActionIconMode.Custom
+                : ActionIconMode.Default;
+
+            if (component)
+            {
+                bool changed = newSave != currentSave || newLoad != currentLoad || newClear != currentClear;
+                bool modeChanged = component.actionIconMode != desiredMode;
+
+                if (changed || modeChanged)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Action Icons");
+                    component.customSaveIcon = newSave;
+                    component.customLoadIcon = newLoad;
+                    component.customClearIcon = newClear;
+                    component.actionIconMode = desiredMode;
+                    EditorUtility.SetDirty(component);
+                }
+            }
+            else
+            {
+                _pendingCustomSaveIcon = newSave;
+                _pendingCustomLoadIcon = newLoad;
+                _pendingCustomClearIcon = newClear;
+                _pendingActionIconMode = desiredMode;
+            }
+
+            EditorGUILayout.HelpBox(
+                "Leave any icon field empty to use ASM-Lite's built-in icon for that action.",
+                MessageType.None);
         }
 
         // ── Wheel Preview ─────────────────────────────────────────────────────
@@ -3104,11 +3284,28 @@ namespace ASMLite.Editor
         /// </summary>
         private void RefreshPreviewCache(
             int slotCount, IconMode iconMode, int gearIndex,
+            bool useCustomSlotIcons,
             ActionIconMode actionIconMode,
             Texture2D[] customIcons, Texture2D customSave, Texture2D customLoad, Texture2D customClear)
         {
             int modeInt       = (int)iconMode;
             int actionModeInt = (int)actionIconMode;
+
+            if (_previewFallback == null)
+            {
+                _previewFallback = new Texture2D(1, 1);
+                _previewFallback.SetPixel(0, 0, new Color(0.35f, 0.35f, 0.35f));
+                _previewFallback.Apply();
+            }
+
+            // Load bundled defaults once; used for preview fallback even in custom mode.
+            _cachedIconSave   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
+            _cachedIconLoad   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
+            _cachedIconClear  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
+
+            Texture2D bundledSave   = _cachedIconSave ?? _previewFallback;
+            Texture2D bundledLoad   = _cachedIconLoad ?? _previewFallback;
+            Texture2D bundledClear  = _cachedIconClear ?? _previewFallback;
 
             bool dirty = _previewSlotCount      != slotCount
                       || _previewIconMode       != modeInt
@@ -3118,70 +3315,90 @@ namespace ASMLite.Editor
             if (!dirty && _previewGearTextures != null
                 && _previewGearTextures.Length == slotCount)
             {
-                if (iconMode == IconMode.Custom && customIcons != null)
+                for (int i = 0; i < slotCount; i++)
                 {
-                    for (int i = 0; i < slotCount; i++)
+                    Texture2D expected;
+                    if (useCustomSlotIcons
+                        && customIcons != null
+                        && i < customIcons.Length
+                        && customIcons[i] != null)
                     {
-                        var expected = (i < customIcons.Length) ? customIcons[i] : null;
-                        if (_previewGearTextures[i] != expected) { dirty = true; break; }
+                        expected = customIcons[i];
                     }
+                    else
+                    {
+                        if (iconMode == IconMode.SameColor)
+                        {
+                            expected = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                                ASMLiteAssetPaths.GearIconPaths[gearIndex]) ?? _previewFallback;
+                        }
+                        else
+                        {
+                            expected = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                                ASMLiteAssetPaths.GearIconPaths[i % ASMLiteAssetPaths.GearIconPaths.Length]) ?? _previewFallback;
+                        }
+                    }
+
+                    if (_previewGearTextures[i] != expected) { dirty = true; break; }
                 }
-                if (actionIconMode == ActionIconMode.Custom
-                    && (_previewSaveIcon  != customSave
-                     || _previewLoadIcon  != customLoad
-                     || _previewClearIcon != customClear))
+
+                Texture2D expectedSave = actionIconMode == ActionIconMode.Custom
+                    ? (customSave ?? bundledSave)
+                    : bundledSave;
+                Texture2D expectedLoad = actionIconMode == ActionIconMode.Custom
+                    ? (customLoad ?? bundledLoad)
+                    : bundledLoad;
+                Texture2D expectedClear = actionIconMode == ActionIconMode.Custom
+                    ? (customClear ?? bundledClear)
+                    : bundledClear;
+
+                if (_previewSaveIcon != expectedSave
+                    || _previewLoadIcon != expectedLoad
+                    || _previewClearIcon != expectedClear)
                     dirty = true;
             }
             else dirty = true;
 
             if (!dirty) return;
 
-            if (_previewFallback == null)
-            {
-                _previewFallback = new Texture2D(1, 1);
-                _previewFallback.SetPixel(0, 0, new Color(0.35f, 0.35f, 0.35f));
-                _previewFallback.Apply();
-            }
-
             _previewGearTextures = new Texture2D[slotCount];
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 Texture2D tex = null;
-                switch (iconMode)
+                int idx = slot - 1;
+
+                if (useCustomSlotIcons
+                    && customIcons != null
+                    && idx < customIcons.Length
+                    && customIcons[idx] != null)
                 {
-                    case IconMode.SameColor:
-                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                            ASMLiteAssetPaths.GearIconPaths[gearIndex]);
-                        break;
-                    case IconMode.MultiColor:
-                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                            ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length]);
-                        break;
-                    case IconMode.Custom:
-                        int idx = slot - 1;
-                        if (customIcons != null && idx < customIcons.Length)
-                            tex = customIcons[idx];
-                        break;
+                    tex = customIcons[idx];
                 }
-                _previewGearTextures[slot - 1] = tex != null ? tex : _previewFallback;
+                else if (iconMode == IconMode.SameColor)
+                {
+                    tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[gearIndex]);
+                }
+                else
+                {
+                    tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[idx % ASMLiteAssetPaths.GearIconPaths.Length]);
+                }
+
+                _previewGearTextures[idx] = tex != null ? tex : _previewFallback;
             }
 
             if (actionIconMode == ActionIconMode.Custom)
             {
-                _previewSaveIcon  = customSave  != null ? customSave  : _previewFallback;
-                _previewLoadIcon  = customLoad  != null ? customLoad  : _previewFallback;
-                _previewClearIcon = customClear != null ? customClear : _previewFallback;
+                _previewSaveIcon  = customSave  != null ? customSave  : bundledSave;
+                _previewLoadIcon  = customLoad  != null ? customLoad  : bundledLoad;
+                _previewClearIcon = customClear != null ? customClear : bundledClear;
             }
             else
             {
-                // Load once and hold -- these paths never change. The ??= null check
-                // also handles post-domain-reload resets (Unity clears instance fields).
-                _cachedIconSave  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
-                _cachedIconLoad  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
-                _cachedIconClear ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
-                _previewSaveIcon  = _cachedIconSave  ?? _previewFallback;
-                _previewLoadIcon  = _cachedIconLoad  ?? _previewFallback;
-                _previewClearIcon = _cachedIconClear ?? _previewFallback;
+                _previewSaveIcon  = bundledSave;
+                _previewLoadIcon  = bundledLoad;
+                _previewClearIcon = bundledClear;
             }
 
             _previewSlotCount      = slotCount;
@@ -3191,8 +3408,8 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Draws a VRC-style radial menu preview: main slot wheel and inset
-        /// Save/Load/Clear sub-wheel for slot 1.
+        /// Draws expression menu preview flow: Root Menu → Presets Menu → Action Submenu.
+        /// All three dials use same size and sit in one horizontal flow with arrows.
         /// </summary>
         private void DrawWheelPreview()
         {
@@ -3201,54 +3418,62 @@ namespace ASMLite.Editor
             int            slotCount   = component ? component.slotCount          : _pendingSlotCount;
             IconMode       iconMode    = component ? component.iconMode            : _pendingIconMode;
             int            gearIndex   = component ? component.selectedGearIndex   : _pendingSelectedGearIndex;
-            ActionIconMode actionMode  = component ? component.actionIconMode      : _pendingActionIconMode;
+            bool           useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+            ActionIconMode actionMode  = (component != null && component.useCustomSlotIcons)
+                ? component.actionIconMode
+                : (_pendingUseCustomSlotIcons ? _pendingActionIconMode : ActionIconMode.Default);
             Texture2D[]    customIcons = component ? component.customIcons         : _pendingCustomIcons;
             Texture2D      customSave  = component ? component.customSaveIcon      : _pendingCustomSaveIcon;
             Texture2D      customLoad  = component ? component.customLoadIcon      : _pendingCustomLoadIcon;
             Texture2D      customClear = component ? component.customClearIcon     : _pendingCustomClearIcon;
 
-            RefreshPreviewCache(slotCount, iconMode, gearIndex, actionMode,
+            RefreshPreviewCache(slotCount, iconMode, gearIndex, useCustomSlotIcons, actionMode,
                 customIcons, customSave, customLoad, customClear);
 
-            // Load back arrow once.
             if (_previewBackIcon == null)
                 _previewBackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
                     ASMLiteAssetPaths.IconBackArrow) ?? _previewFallback;
 
+            Texture2D rootFallbackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets) ?? _previewFallback;
+            Texture2D rootPreviewIcon = component
+                ? ASMLiteBuilder.ResolveEffectiveRootControlIcon(component, rootFallbackIcon)
+                : ((_pendingUseCustomSlotIcons && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
+            string rootPreviewName = ResolveEffectiveRootNameForPreview(component);
+            string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
+
             EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
-            EditorGUILayout.LabelField(
-                "Preview of generated menu icon placement.",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Flow: Root Menu → Presets Menu → Action Submenu", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(6f);
 
-            float availWidth = EditorGUIUtility.currentViewWidth - 32f;
+            float availWidth = EditorGUIUtility.currentViewWidth - 40f;
+            const float connectorWidth = 30f;
+            const float gap = 8f;
+            const float titleHeight = 16f;
 
-            // GestureManager canonical size is 300px. Keep the preview one step
-            // smaller than the settings controls so it reads as confirmation,
-            // not the primary focal point.
-            float mainSize = Mathf.Clamp(availWidth * 0.46f, 150f, 260f);
-            float subSize  = Mathf.Round(mainSize * 0.46f);
+            float dialSize = Mathf.Clamp((availWidth - (connectorWidth * 2f) - (gap * 4f)) / 3f, 120f, 220f);
+            float rootIconSize = Mathf.Clamp(dialSize * 0.22f, 28f, 54f);
 
-            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + subSize * 0.35f + 4f);
-
-            // Main wheel: left-center.
-            Rect mainRect = new Rect(
-                rowRect.x + availWidth * 0.24f - mainSize * 0.5f,
-                rowRect.y,
-                mainSize, mainSize);
-
-            // Sub-wheel: offset down and right so it reads as a drill-down from the main wheel.
-            Rect subRect = new Rect(
-                rowRect.x + availWidth * 0.63f,
-                rowRect.y + mainSize * 0.36f,
-                subSize, subSize);
+            float totalWidth = dialSize * 3f + connectorWidth * 2f + gap * 4f;
+            float rowHeight = titleHeight + dialSize + 2f;
+            Rect rowRect = GUILayoutUtility.GetRect(0f, rowHeight, GUILayout.ExpandWidth(true));
 
             if (Event.current.type != EventType.Repaint)
                 return;
 
-            // Main wheel: Back at top, then user slot icons.
-            // Rebuild cached arrays only when size or content changed (handled by
-            // RefreshPreviewCache above which sets _previewSlotCount when dirty).
+            float startX = rowRect.x + Mathf.Max(0f, (rowRect.width - totalWidth) * 0.5f);
+            float y = rowRect.y;
+
+            Rect rootDialRect = new Rect(startX, y + titleHeight, dialSize, dialSize);
+            Rect arrow1Rect = new Rect(rootDialRect.xMax + gap, rootDialRect.y, connectorWidth, dialSize);
+            Rect presetsDialRect = new Rect(arrow1Rect.xMax + gap, rootDialRect.y, dialSize, dialSize);
+            Rect arrow2Rect = new Rect(presetsDialRect.xMax + gap, rootDialRect.y, connectorWidth, dialSize);
+            Rect actionDialRect = new Rect(arrow2Rect.xMax + gap, rootDialRect.y, dialSize, dialSize);
+
+            var titleStyle = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.UpperCenter };
+            GUI.Label(new Rect(rootDialRect.x, y, rootDialRect.width, titleHeight), "Root Menu", titleStyle);
+            GUI.Label(new Rect(presetsDialRect.x, y, presetsDialRect.width, titleHeight), "Presets Menu", titleStyle);
+            GUI.Label(new Rect(actionDialRect.x, y, actionDialRect.width, titleHeight), "Action Submenu", titleStyle);
+
             if (_mainWheelIcons == null || _mainWheelIcons.Length != slotCount + 1
                 || _mainWheelLabels == null || _mainWheelLabels.Length != slotCount + 1)
             {
@@ -3258,25 +3483,90 @@ namespace ASMLite.Editor
                 for (int i = 0; i < slotCount; i++)
                     _mainWheelLabels[i + 1] = $"Slot {i + 1}";
             }
+
             _mainWheelIcons[0] = _previewBackIcon;
             for (int i = 0; i < slotCount; i++)
                 _mainWheelIcons[i + 1] = _previewGearTextures[i];
 
-            DrawRadialWheel(mainRect, _mainWheelIcons, _mainWheelLabels);
+            DrawRootDialPreview(rootDialRect, rootPreviewIcon, rootPreviewName, rootIconSize);
+            DrawFlowArrow(arrow1Rect);
+            DrawRadialWheel(presetsDialRect, _mainWheelIcons, _mainWheelLabels);
+            DrawFlowArrow(arrow2Rect);
+            DrawRadialWheel(actionDialRect, new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon }, actionLabels);
+        }
 
-            // Sub-wheel: Back at top, then Save/Load/Clear.
-            // Icon array must be rebuilt each repaint (action icons can change), but
-            // the label array is static readonly -- no per-frame allocation.
-            var subIcons = new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
-            DrawRadialWheel(subRect, subIcons, s_subWheelLabels);
+        private void DrawRootDialPreview(Rect cropRect, Texture2D icon, string rootName, float iconSize)
+        {
+            // Clip all drawing to crop rect so overhang is naturally cut off.
+            GUI.BeginGroup(cropRect);
 
-            // Connector line.
-            var origHandles = Handles.color;
-            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.6f);
-            Handles.DrawLine(
-                new Vector3(mainRect.xMax, mainRect.center.y),
-                new Vector3(subRect.xMin,  subRect.center.y));
-            Handles.color = origHandles;
+            // Zoomed crop of left wheel segment (Slot-3-like wedge).
+            float cx = cropRect.width * 0.90f;
+            float cy = cropRect.height * 0.50f;
+
+            // Keep original circle scale; clipping removes overhang.
+            float outerR = Mathf.Min(cropRect.width, cropRect.height) * 0.90f;
+            float innerR = outerR / 3f;
+
+            var oldHandles = Handles.color;
+
+            // Fill dial body only (outside curve remains transparent).
+            Handles.color = s_wheelColorMain;
+            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, outerR - 1f);
+
+            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.55f);
+
+            float a1 = Mathf.Deg2Rad * 135f;
+            float a2 = Mathf.Deg2Rad * 225f;
+            var p1Inner = new Vector3(cx + Mathf.Cos(a1) * innerR, cy + Mathf.Sin(a1) * innerR, 0f);
+            var p1Outer = new Vector3(cx + Mathf.Cos(a1) * (outerR - 1f), cy + Mathf.Sin(a1) * (outerR - 1f), 0f);
+            var p2Inner = new Vector3(cx + Mathf.Cos(a2) * innerR, cy + Mathf.Sin(a2) * innerR, 0f);
+            var p2Outer = new Vector3(cx + Mathf.Cos(a2) * (outerR - 1f), cy + Mathf.Sin(a2) * (outerR - 1f), 0f);
+            Handles.DrawLine(p1Inner, p1Outer);
+            Handles.DrawLine(p2Inner, p2Outer);
+
+            Handles.color = s_wheelColorBorder;
+            Handles.DrawWireArc(new Vector3(cx, cy, 0f), Vector3.forward, new Vector3(Mathf.Cos(a1), Mathf.Sin(a1), 0f), 90f, outerR - 1f);
+
+            Handles.color = s_wheelColorInner;
+            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, innerR);
+            Handles.color = s_wheelColorBorder;
+            Handles.DrawWireDisc(new Vector3(cx, cy, 0f), Vector3.forward, innerR);
+            Handles.color = oldHandles;
+
+            // Icon centered in zoomed wedge around 180°.
+            float iconRadius = outerR * 0.66f;
+            float ix = cx - iconRadius - iconSize * 0.5f;
+            float iy = cy - iconSize * 0.5f;
+            Rect iconRect = new Rect(ix, iy, iconSize, iconSize);
+            GUI.DrawTexture(iconRect, icon ?? _previewFallback, ScaleMode.ScaleToFit, true);
+
+            string displayName = string.IsNullOrWhiteSpace(rootName)
+                ? ASMLiteBuilder.DefaultRootControlName
+                : rootName;
+            var centeredMini = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.UpperCenter
+            };
+            Rect labelRect = new Rect(iconRect.x - 24f, iconRect.yMax + 2f, iconRect.width + 48f, 16f);
+            GUI.Label(labelRect, displayName, centeredMini);
+
+            GUI.EndGroup();
+        }
+
+        private static void DrawFlowArrow(Rect rect)
+        {
+            var old = Handles.color;
+            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.75f);
+
+            float y = rect.center.y;
+            float x0 = rect.x + 4f;
+            float x1 = rect.xMax - 7f;
+            Handles.DrawLine(new Vector3(x0, y, 0f), new Vector3(x1, y, 0f));
+            Handles.DrawLine(new Vector3(x1, y, 0f), new Vector3(x1 - 6f, y - 4f, 0f));
+            Handles.DrawLine(new Vector3(x1, y, 0f), new Vector3(x1 - 6f, y + 4f, 0f));
+
+            Handles.color = old;
         }
 
         /// <summary>
@@ -3302,10 +3592,9 @@ namespace ASMLite.Editor
             var origColor   = GUI.color;
             var origHandles = Handles.color;
 
-            // Background fill (full circle approximated by square: Handles clips it).
-            GUI.color = s_wheelColorMain;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = origColor;
+            // Fill dial body only (outside circle stays transparent).
+            Handles.color = s_wheelColorMain;
+            Handles.DrawSolidDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
             // Outer ring.
             Handles.color = s_wheelColorBorder;
@@ -3329,7 +3618,7 @@ namespace ASMLite.Editor
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, innerR);
 
             // Icons and labels.
-            // Reuse cached GUIStyle -- only update fontSize (depends on scale).
+            // Reuse cached GUIStyle. Only update fontSize (depends on scale).
             if (_radialLabelStyle == null)
             {
                 _radialLabelStyle = new GUIStyle(EditorStyles.miniLabel)
@@ -3363,6 +3652,74 @@ namespace ASMLite.Editor
             GUI.color     = origColor;
         }
 
+        private int GetEffectiveBackedUpParameterCount(ASMLiteComponent component)
+        {
+            if (_selectedAvatar == null)
+                return -1;
+
+            var exprParams = _selectedAvatar.expressionParameters;
+            if (exprParams == null || exprParams.parameters == null)
+                return -1;
+
+            bool useExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
+            if (!useExclusions)
+            {
+                var discovered = ASMLiteBuilder.GetFinalAvatarParams(_selectedAvatar, null, out _);
+                return discovered?.Count ?? 0;
+            }
+
+            string[] rawExcluded = component
+                ? SanitizeExcludedParameterNames(component.excludedParameterNames)
+                : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+
+            var canonicalExcluded = new HashSet<string>(StringComparer.Ordinal);
+            if (rawExcluded != null)
+            {
+                for (int i = 0; i < rawExcluded.Length; i++)
+                {
+                    var candidate = rawExcluded[i];
+                    if (!string.IsNullOrWhiteSpace(candidate))
+                        canonicalExcluded.Add(candidate);
+                }
+            }
+
+            var expandedExcluded = ExpandExcludedNamesWithToggleMappingsForUi(canonicalExcluded);
+            var filtered = ASMLiteBuilder.GetFinalAvatarParams(_selectedAvatar, expandedExcluded, out _);
+            return filtered?.Count ?? 0;
+        }
+
+        private static HashSet<string> ExpandExcludedNamesWithToggleMappingsForUi(HashSet<string> excludedCanonicalNames)
+        {
+            var expanded = excludedCanonicalNames != null
+                ? new HashSet<string>(excludedCanonicalNames, StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+
+            if (expanded.Count == 0)
+                return expanded;
+
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return expanded;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                bool excludeOriginal = expanded.Contains(mapping.OriginalGlobalParam);
+                bool excludeAssigned = expanded.Contains(mapping.AssignedGlobalParam);
+                if (!excludeOriginal && !excludeAssigned)
+                    continue;
+
+                expanded.Add(mapping.OriginalGlobalParam);
+                expanded.Add(mapping.AssignedGlobalParam);
+            }
+
+            return expanded;
+        }
+
         private void DrawStatus()
         {
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
@@ -3373,62 +3730,53 @@ namespace ASMLite.Editor
             switch (toolState)
             {
                 case AsmLiteToolState.PackageManaged:
-                    EditorGUILayout.HelpBox("Tool State: Package Managed — ASM-Lite component is attached and editable.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.", MessageType.Info);
                     break;
                 case AsmLiteToolState.Vendorized:
                     EditorGUILayout.HelpBox(
                         component != null
-                            ? "Tool State: Vendorized — ASM-Lite stays attached and editable, and generated payload is mirrored under Assets/ASM-Lite."
-                            : "Tool State: Vendorized — avatar references ASM-Lite assets copied under Assets/ASM-Lite and the tool object is detached.",
+                            ? "Status: Vendorized. ASM-Lite is still editable, and generated files are also copied to Assets/ASM-Lite."
+                            : "Status: Vendorized. This avatar is using ASM-Lite files copied under Assets/ASM-Lite, but the editable ASM-Lite object is not attached.",
                         MessageType.Info);
                     break;
                 case AsmLiteToolState.Detached:
-                    EditorGUILayout.HelpBox("Tool State: Detached — avatar has baked ASM-Lite runtime data but no editable ASM-Lite component.", MessageType.Info);
+                    EditorGUILayout.HelpBox("Status: Baked only. This avatar has ASM-Lite data, but the editable ASM-Lite object is not attached.", MessageType.Info);
                     break;
                 default:
-                    EditorGUILayout.HelpBox("Tool State: Not Installed — no ASM-Lite component or baked markers detected on this avatar.", MessageType.None);
+                    EditorGUILayout.HelpBox("Status: Not installed. ASM-Lite has not been added to this avatar yet.", MessageType.None);
                     break;
             }
 
             if (component)
             {
                 EditorGUILayout.HelpBox(
-                    "✓ ASM-Lite prefab is present on this avatar.",
+                    "✓ ASM-Lite is attached to this avatar.",
                     MessageType.Info);
 
                 // Guard against mid-reimport state: expressionParameters or its
                 // parameters array can be transiently null while Unity is importing.
                 try
                 {
-                    if (_discoveredParamCount >= 0)
+                    int backedUpCount = GetEffectiveBackedUpParameterCount(component);
+                    if (backedUpCount >= 0)
                     {
-                        // Post-build count: includes VRCFury Toggle/FullController params.
                         EditorGUILayout.HelpBox(
-                            $"✓ {_discoveredParamCount} custom parameter(s) backed up across " +
-                            $"{component.slotCount} slot(s).",
+                            $"✓ {backedUpCount} custom parameter(s) are being saved across " +
+                            $"{component.slotCount} preset slot(s).",
                             MessageType.Info);
+
+                        if (_discoveredParamCount < 0)
+                        {
+                            EditorGUILayout.HelpBox(
+                                "This count is based on the avatar settings currently loaded in the descriptor.",
+                                MessageType.None);
+                        }
                     }
                     else
                     {
-                        var exprParams = _selectedAvatar.expressionParameters;
-                        if (exprParams != null && exprParams.parameters != null)
-                        {
-                            if (_cachedCustomParamCount < 0)
-                            {
-                                _cachedCustomParamCount = exprParams.parameters
-                                    .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_", StringComparison.Ordinal));
-                            }
-
-                            EditorGUILayout.HelpBox(
-                                $"✓ {_cachedCustomParamCount} custom parameter(s) detected: rebuild to include VRCFury parameters.",
-                                MessageType.Info);
-                        }
-                        else
-                        {
-                            EditorGUILayout.HelpBox(
-                                "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
-                                MessageType.Warning);
-                        }
+                        EditorGUILayout.HelpBox(
+                            "⚠ This avatar has no Expression Parameters asset assigned yet.",
+                            MessageType.Warning);
                     }
                 }
                 catch (System.Exception ex)
@@ -3443,7 +3791,7 @@ namespace ASMLite.Editor
                         Repaint();
                     }
                     EditorGUILayout.HelpBox(
-                        "⚠ Expression parameters are currently being imported. Please wait.",
+                        "⚠ Avatar parameter data is still importing in Unity. Please wait a moment.",
                         MessageType.Warning);
                 }
 
@@ -3454,14 +3802,13 @@ namespace ASMLite.Editor
                 if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
                 {
                     EditorGUILayout.HelpBox(
-                        "ASM-Lite is detached on this avatar. You can return to package-managed mode below to restore editable ASM-Lite controls.",
+                        "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.",
                         MessageType.Info);
                 }
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "ASM-Lite prefab has not been added to this avatar yet.\n" +
-                        "Configure settings above, then click \"Add ASM-Lite Prefab\".",
+                        "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".",
                         MessageType.Warning);
                 }
             }
@@ -3476,13 +3823,13 @@ namespace ASMLite.Editor
             if (totalAdjustments > 0)
             {
                 EditorGUILayout.HelpBox(
-                    $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) and adjusted deterministic assignments: preflight={report.PreflightCollisionAdjustments}, intra-candidate={report.CandidateCollisionAdjustments}.",
+                    $"[Toggle Broker] Last setup reserved {report.PreReservedNameCount} name(s) and auto-adjusted conflicting names: preflight={report.PreflightCollisionAdjustments}, intra-candidate={report.CandidateCollisionAdjustments}.",
                     MessageType.Warning);
                 return;
             }
 
             EditorGUILayout.HelpBox(
-                $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) with no deterministic suffix adjustments needed.",
+                $"[Toggle Broker] Last setup reserved {report.PreReservedNameCount} name(s). No naming conflicts needed adjustment.",
                 MessageType.None);
         }
 
@@ -3591,7 +3938,7 @@ namespace ASMLite.Editor
         // Per-frame component cache: refreshed once per OnGUI call, not once per draw section.
         private int _lastRefreshFrame = -1;
 
-        private enum AsmLiteToolState
+        internal enum AsmLiteToolState
         {
             NotInstalled,
             PackageManaged,
@@ -3599,7 +3946,115 @@ namespace ASMLite.Editor
             Vendorized,
         }
 
-        private static AsmLiteToolState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
+        internal enum AsmLiteWindowAction
+        {
+            AddPrefab,
+            Rebuild,
+            ReturnToPackageManaged,
+            RemovePrefab,
+            Detach,
+            Vendorize,
+            ReturnAttachedVendorizedToPackageManaged,
+        }
+
+        internal readonly struct AsmLiteActionHierarchy
+        {
+            public AsmLiteActionHierarchy(AsmLiteWindowAction[] primaryActions, AsmLiteWindowAction[] advancedActions, bool advancedDisclosureExpanded)
+            {
+                PrimaryActions = primaryActions ?? Array.Empty<AsmLiteWindowAction>();
+                AdvancedActions = advancedActions ?? Array.Empty<AsmLiteWindowAction>();
+                AdvancedDisclosureExpanded = advancedDisclosureExpanded;
+            }
+
+            public AsmLiteWindowAction[] PrimaryActions { get; }
+            public AsmLiteWindowAction[] AdvancedActions { get; }
+            public bool AdvancedDisclosureExpanded { get; }
+            public bool HasAdvancedActions => AdvancedActions.Length > 0;
+
+            public bool HasPrimaryAction(AsmLiteWindowAction action)
+            {
+                for (int i = 0; i < PrimaryActions.Length; i++)
+                {
+                    if (PrimaryActions[i] == action)
+                        return true;
+                }
+
+                return false;
+            }
+
+            public bool HasAdvancedAction(AsmLiteWindowAction action)
+            {
+                for (int i = 0; i < AdvancedActions.Length; i++)
+                {
+                    if (AdvancedActions[i] == action)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
+        internal AsmLiteActionHierarchy GetActionHierarchyContract()
+        {
+            var component = GetOrRefreshComponent();
+            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+        }
+
+        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(AsmLiteToolState toolState, bool hasComponent, bool advancedDisclosureExpanded)
+        {
+            if (hasComponent)
+            {
+                var primaryActions = new[] { AsmLiteWindowAction.Rebuild };
+
+                if (toolState == AsmLiteToolState.Vendorized)
+                {
+                    return new AsmLiteActionHierarchy(
+                        primaryActions,
+                        new[]
+                        {
+                            AsmLiteWindowAction.RemovePrefab,
+                            AsmLiteWindowAction.Detach,
+                            AsmLiteWindowAction.Vendorize,
+                            AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged,
+                        },
+                        advancedDisclosureExpanded);
+                }
+
+                return new AsmLiteActionHierarchy(
+                    primaryActions,
+                    new[]
+                    {
+                        AsmLiteWindowAction.RemovePrefab,
+                        AsmLiteWindowAction.Detach,
+                        AsmLiteWindowAction.Vendorize,
+                    },
+                    advancedDisclosureExpanded);
+            }
+
+            if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
+            {
+                return new AsmLiteActionHierarchy(
+                    new[] { AsmLiteWindowAction.ReturnToPackageManaged },
+                    Array.Empty<AsmLiteWindowAction>(),
+                    advancedDisclosureExpanded);
+            }
+
+            return new AsmLiteActionHierarchy(
+                new[] { AsmLiteWindowAction.AddPrefab },
+                Array.Empty<AsmLiteWindowAction>(),
+                advancedDisclosureExpanded);
+        }
+
+        internal static bool IsMaintenanceAction(AsmLiteWindowAction action)
+        {
+            return action == AsmLiteWindowAction.RemovePrefab
+                || action == AsmLiteWindowAction.Detach
+                || action == AsmLiteWindowAction.Vendorize
+                || action == AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged;
+        }
+
+        internal static AsmLiteToolState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
             if (component != null)
                 return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
@@ -3749,6 +4204,34 @@ namespace ASMLite.Editor
             var clone = new Texture2D[source.Length];
             Array.Copy(source, clone, source.Length);
             return clone;
+        }
+
+        private static string[] CloneStrings(string[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<string>();
+
+            var clone = new string[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string[] EnsureSizedStringArray(string[] source, int size)
+        {
+            if (size <= 0)
+                return Array.Empty<string>();
+
+            if (source != null && source.Length == size)
+                return source;
+
+            var resized = new string[size];
+            if (source != null)
+                Array.Copy(source, resized, Mathf.Min(source.Length, size));
+
+            for (int i = 0; i < resized.Length; i++)
+                resized[i] ??= string.Empty;
+
+            return resized;
         }
 
         private static string NormalizeOptionalString(string value)
@@ -4208,12 +4691,19 @@ namespace ASMLite.Editor
             component.customSaveIcon = _pendingCustomSaveIcon;
             component.customLoadIcon = _pendingCustomLoadIcon;
             component.customClearIcon = _pendingCustomClearIcon;
+            component.useCustomSlotIcons = _pendingUseCustomSlotIcons;
             component.customIcons = CloneTextures(_pendingCustomIcons);
 
-            component.useCustomRootIcon = _pendingUseCustomRootIcon;
+            component.useCustomRootIcon = _pendingUseCustomSlotIcons && _pendingCustomRootIcon != null;
             component.customRootIcon = _pendingCustomRootIcon;
             component.useCustomRootName = _pendingUseCustomRootName;
-            component.customRootName = NormalizeOptionalString(_pendingCustomRootName);
+            component.customRootName = _pendingCustomRootName ?? string.Empty;
+            component.customPresetNames = CloneStrings(_pendingCustomPresetNames);
+            component.customPresetNameFormat = NormalizeOptionalString(_pendingCustomPresetNameFormat);
+            component.customSaveLabel = _pendingCustomSaveLabel ?? string.Empty;
+            component.customLoadLabel = _pendingCustomLoadLabel ?? string.Empty;
+            component.customClearPresetLabel = _pendingCustomClearPresetLabel ?? string.Empty;
+            component.customConfirmLabel = _pendingCustomConfirmLabel ?? string.Empty;
             component.useCustomInstallPath = _pendingUseCustomInstallPath;
             component.customInstallPath = NormalizeOptionalString(_pendingCustomInstallPath);
             component.useParameterExclusions = _pendingUseParameterExclusions;
@@ -4229,12 +4719,18 @@ namespace ASMLite.Editor
             _pendingCustomSaveIcon = component.customSaveIcon;
             _pendingCustomLoadIcon = component.customLoadIcon;
             _pendingCustomClearIcon = component.customClearIcon;
+            _pendingUseCustomSlotIcons = component.useCustomSlotIcons;
             _pendingCustomIcons = CloneTextures(component.customIcons);
 
-            _pendingUseCustomRootIcon = component.useCustomRootIcon;
             _pendingCustomRootIcon = component.customRootIcon;
             _pendingUseCustomRootName = component.useCustomRootName;
-            _pendingCustomRootName = NormalizeOptionalString(component.customRootName);
+            _pendingCustomRootName = component.customRootName ?? string.Empty;
+            _pendingCustomPresetNames = CloneStrings(component.customPresetNames);
+            _pendingCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
+            _pendingCustomSaveLabel = component.customSaveLabel ?? string.Empty;
+            _pendingCustomLoadLabel = component.customLoadLabel ?? string.Empty;
+            _pendingCustomClearPresetLabel = component.customClearPresetLabel ?? string.Empty;
+            _pendingCustomConfirmLabel = component.customConfirmLabel ?? string.Empty;
             _pendingUseCustomInstallPath = component.useCustomInstallPath;
             _pendingCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
             _pendingUseParameterExclusions = component.useParameterExclusions;
@@ -4453,11 +4949,17 @@ namespace ASMLite.Editor
                 Texture2D savedCustomSave = component.customSaveIcon;
                 Texture2D savedCustomLoad = component.customLoadIcon;
                 Texture2D savedCustomClear = component.customClearIcon;
+                bool savedUseCustomSlotIcons = component.useCustomSlotIcons;
                 Texture2D[] savedCustomIcons = CloneTextures(component.customIcons);
-                bool savedUseCustomRootIcon = component.useCustomRootIcon;
                 Texture2D savedCustomRootIcon = component.customRootIcon;
                 bool savedUseCustomRootName = component.useCustomRootName;
-                string savedCustomRootName = NormalizeOptionalString(component.customRootName);
+                string savedCustomRootName = component.customRootName ?? string.Empty;
+                string[] savedCustomPresetNames = CloneStrings(component.customPresetNames);
+                string savedCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
+                string savedCustomSaveLabel = component.customSaveLabel ?? string.Empty;
+                string savedCustomLoadLabel = component.customLoadLabel ?? string.Empty;
+                string savedCustomClearPresetLabel = component.customClearPresetLabel ?? string.Empty;
+                string savedCustomConfirmLabel = component.customConfirmLabel ?? string.Empty;
                 bool savedUseCustomInstallPath = component.useCustomInstallPath;
                 string savedCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
                 bool savedUseParameterExclusions = component.useParameterExclusions;
@@ -4490,11 +4992,18 @@ namespace ASMLite.Editor
                     newComponent.customSaveIcon = savedCustomSave;
                     newComponent.customLoadIcon = savedCustomLoad;
                     newComponent.customClearIcon = savedCustomClear;
+                    newComponent.useCustomSlotIcons = savedUseCustomSlotIcons;
                     newComponent.customIcons = savedCustomIcons;
-                    newComponent.useCustomRootIcon = savedUseCustomRootIcon;
+                    newComponent.useCustomRootIcon = savedUseCustomSlotIcons && savedCustomRootIcon != null;
                     newComponent.customRootIcon = savedCustomRootIcon;
                     newComponent.useCustomRootName = savedUseCustomRootName;
                     newComponent.customRootName = savedCustomRootName;
+                    newComponent.customPresetNames = savedCustomPresetNames;
+                    newComponent.customPresetNameFormat = savedCustomPresetNameFormat;
+                    newComponent.customSaveLabel = savedCustomSaveLabel;
+                    newComponent.customLoadLabel = savedCustomLoadLabel;
+                    newComponent.customClearPresetLabel = savedCustomClearPresetLabel;
+                    newComponent.customConfirmLabel = savedCustomConfirmLabel;
                     newComponent.useCustomInstallPath = savedUseCustomInstallPath;
                     newComponent.customInstallPath = savedCustomInstallPath;
                     newComponent.useParameterExclusions = savedUseParameterExclusions;
