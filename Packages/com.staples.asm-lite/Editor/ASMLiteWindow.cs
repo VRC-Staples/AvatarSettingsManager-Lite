@@ -1416,11 +1416,30 @@ namespace ASMLite.Editor
             {
                 int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
 
+                // ── Root Menu Name ───────────────────────────────────────────────
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.LabelField(NamingSectionRootHeader, EditorStyles.miniBoldLabel);
+                EditorGUI.indentLevel++;
+
                 if (component)
                 {
                     string newRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, component.customRootName, "asm_name_root");
                     SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, newRootName);
+                }
+                else
+                {
+                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
+                }
 
+                EditorGUI.indentLevel--;
+
+                // ── Preset Names ────────────────────────────────────────────────
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.LabelField(NamingSectionPresetHeader, EditorStyles.miniBoldLabel);
+                EditorGUI.indentLevel++;
+
+                if (component)
+                {
                     string[] slotNames = EnsureSizedStringArray(component.customPresetNames, nameSlotCount);
                     if (!ReferenceEquals(slotNames, component.customPresetNames))
                         SetComponentStringArray(component, "Resize ASM-Lite Preset Names", ref component.customPresetNames, slotNames);
@@ -1434,7 +1453,25 @@ namespace ASMLite.Editor
                             SetComponentStringArray(component, "Change ASM-Lite Preset Name", ref component.customPresetNames, slotNames);
                         }
                     }
+                }
+                else
+                {
+                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                    for (int i = 0; i < nameSlotCount; i++)
+                    {
+                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
+                    }
+                }
 
+                EditorGUI.indentLevel--;
+
+                // ── Action Labels ───────────────────────────────────────────────
+                EditorGUILayout.Space(4f);
+                EditorGUILayout.LabelField(NamingSectionActionHeader, EditorStyles.miniBoldLabel);
+                EditorGUI.indentLevel++;
+
+                if (component)
+                {
                     string newSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, component.customSaveLabel, "asm_name_save");
                     SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, newSaveLabel);
 
@@ -1449,20 +1486,15 @@ namespace ASMLite.Editor
                 }
                 else
                 {
-                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
-
-                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
-                    for (int i = 0; i < nameSlotCount; i++)
-                    {
-                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
-                    }
-
                     _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
                     _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
                     _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
                     _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
                 }
 
+                EditorGUI.indentLevel--;
+
+                EditorGUILayout.Space(4f);
                 EditorGUILayout.HelpBox(
                     NameFallbackGuidanceText,
                     MessageType.None);
