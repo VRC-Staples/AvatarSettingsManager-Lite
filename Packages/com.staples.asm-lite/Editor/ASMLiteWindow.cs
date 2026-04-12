@@ -234,6 +234,14 @@ namespace ASMLite.Editor
         private const string ClearPresetLabel = "Clear Preset";
         private const string PresetIconFieldLabelFormat = "Preset {0} Icon";
         private const string ClearPresetIconFieldLabel = "Clear Preset Icon";
+        private const string RootMenuFieldLabel = "Root Menu";
+        private const string SaveFieldLabel = "Save";
+        private const string LoadFieldLabel = "Load";
+        private const string ConfirmFieldLabel = "Confirm";
+        private const string NameFallbackGuidanceText = "Leave any name field blank to use ASM-Lite's default menu name for that item.";
+        private const string NamingSectionRootHeader = "Root Menu Name";
+        private const string NamingSectionPresetHeader = "Preset Names";
+        private const string NamingSectionActionHeader = "Action Labels";
 
         private const string PresetIconOverridesHelpText =
             "A preset icon set here overrides the selected Icon Mode for that preset only.\nEmpty presets keep the normal Icon Mode icon.";
@@ -1410,7 +1418,7 @@ namespace ASMLite.Editor
 
                 if (component)
                 {
-                    string newRootName = DrawTextFieldWithFocusCue("Root Menu", component.customRootName, "asm_name_root");
+                    string newRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, component.customRootName, "asm_name_root");
                     SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, newRootName);
 
                     string[] slotNames = EnsureSizedStringArray(component.customPresetNames, nameSlotCount);
@@ -1427,21 +1435,21 @@ namespace ASMLite.Editor
                         }
                     }
 
-                    string newSaveLabel = DrawTextFieldWithFocusCue("Save", component.customSaveLabel, "asm_name_save");
+                    string newSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, component.customSaveLabel, "asm_name_save");
                     SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, newSaveLabel);
 
-                    string newLoadLabel = DrawTextFieldWithFocusCue("Load", component.customLoadLabel, "asm_name_load");
+                    string newLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, component.customLoadLabel, "asm_name_load");
                     SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, newLoadLabel);
 
                     string newClearLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, component.customClearPresetLabel, "asm_name_clear");
                     SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, newClearLabel);
 
-                    string newConfirmLabel = DrawTextFieldWithFocusCue("Confirm", component.customConfirmLabel, "asm_name_confirm");
+                    string newConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, component.customConfirmLabel, "asm_name_confirm");
                     SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, newConfirmLabel);
                 }
                 else
                 {
-                    _pendingCustomRootName = DrawTextFieldWithFocusCue("Root Menu", _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
+                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
 
                     _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
                     for (int i = 0; i < nameSlotCount; i++)
@@ -1449,14 +1457,14 @@ namespace ASMLite.Editor
                         _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
                     }
 
-                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue("Save", _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
-                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue("Load", _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
+                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
+                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
                     _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
-                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue("Confirm", _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
+                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
                 }
 
                 EditorGUILayout.HelpBox(
-                    "Leave any name field blank to use ASM-Lite's default menu name for that item.",
+                    NameFallbackGuidanceText,
                     MessageType.None);
             }
 
@@ -4084,6 +4092,75 @@ namespace ASMLite.Editor
                 default:
                     return MessageType.None;
             }
+        }
+
+        internal enum NamingGroupFlowState
+        {
+            Attached,
+            PendingInstall,
+        }
+
+        internal readonly struct NamingGroupSectionSnapshot
+        {
+            public NamingGroupSectionSnapshot(string header, string[] orderedFieldLabels)
+            {
+                Header = header ?? string.Empty;
+                OrderedFieldLabels = orderedFieldLabels ?? Array.Empty<string>();
+            }
+
+            public string Header { get; }
+            public string[] OrderedFieldLabels { get; }
+        }
+
+        internal readonly struct NamingGroupSnapshot
+        {
+            public NamingGroupSnapshot(NamingGroupFlowState flowState, NamingGroupSectionSnapshot[] sections, string fallbackGuidance)
+            {
+                FlowState = flowState;
+                Sections = sections ?? Array.Empty<NamingGroupSectionSnapshot>();
+                FallbackGuidance = fallbackGuidance ?? string.Empty;
+
+                var flattened = new List<string>();
+                for (int i = 0; i < Sections.Length; i++)
+                {
+                    var section = Sections[i];
+                    for (int j = 0; j < section.OrderedFieldLabels.Length; j++)
+                        flattened.Add(section.OrderedFieldLabels[j]);
+                }
+
+                OrderedFieldLabels = flattened.ToArray();
+            }
+
+            public NamingGroupFlowState FlowState { get; }
+            public NamingGroupSectionSnapshot[] Sections { get; }
+            public string[] OrderedFieldLabels { get; }
+            public string FallbackGuidance { get; }
+        }
+
+        internal static NamingGroupSnapshot GetNamingGroupSnapshot(NamingGroupFlowState flowState, int presetCount)
+        {
+            int normalizedPresetCount = Mathf.Max(1, presetCount);
+
+            var sections = new[]
+            {
+                new NamingGroupSectionSnapshot(NamingSectionRootHeader, new[] { RootMenuFieldLabel }),
+                new NamingGroupSectionSnapshot(NamingSectionPresetHeader, BuildPresetNameFieldLabels(normalizedPresetCount)),
+                new NamingGroupSectionSnapshot(
+                    NamingSectionActionHeader,
+                    new[] { SaveFieldLabel, LoadFieldLabel, ClearPresetLabel, ConfirmFieldLabel }),
+            };
+
+            return new NamingGroupSnapshot(flowState, sections, NameFallbackGuidanceText);
+        }
+
+        private static string[] BuildPresetNameFieldLabels(int presetCount)
+        {
+            int normalizedPresetCount = Mathf.Max(1, presetCount);
+            var fieldLabels = new string[normalizedPresetCount];
+            for (int i = 0; i < normalizedPresetCount; i++)
+                fieldLabels[i] = string.Format(PresetNameLabelFormat, i + 1);
+
+            return fieldLabels;
         }
 
         internal readonly struct TerminologySnapshot
