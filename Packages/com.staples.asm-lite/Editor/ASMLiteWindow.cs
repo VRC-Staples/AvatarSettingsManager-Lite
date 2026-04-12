@@ -84,6 +84,8 @@ namespace ASMLite.Editor
         // Action hierarchy disclosure state. Advanced maintenance actions stay hidden
         // until explicitly expanded by the user.
         [SerializeField] private bool _showAdvancedActions;
+        [SerializeField] private bool _showStatusDetails;
+        private bool _hadStatusDetailsLastDraw;
 
         // ── Install Path Tree ─────────────────────────────────────────────────
 
@@ -3838,11 +3840,37 @@ namespace ASMLite.Editor
 
             EditorGUILayout.HelpBox(snapshot.SummaryText, ToMessageType(snapshot.SummarySeverity));
 
-            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+            if (!snapshot.ShowDetailsDisclosure)
             {
-                var detail = snapshot.DetailEntries[i];
-                EditorGUILayout.HelpBox(detail.Text, ToMessageType(detail.Severity));
+                _showStatusDetails = false;
+                _hadStatusDetailsLastDraw = false;
+                return;
             }
+
+            if (!_hadStatusDetailsLastDraw)
+                _showStatusDetails = !snapshot.DetailsCollapsedByDefault;
+
+            _showStatusDetails = EditorGUILayout.Foldout(
+                _showStatusDetails,
+                BuildStatusDetailsDisclosureLabel(snapshot),
+                true);
+
+            if (_showStatusDetails)
+            {
+                for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+                {
+                    var detail = snapshot.DetailEntries[i];
+                    EditorGUILayout.HelpBox(detail.Text, ToMessageType(detail.Severity));
+                }
+            }
+            else
+            {
+                EditorGUILayout.LabelField(
+                    "Expand details to inspect warnings and recovery guidance.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+
+            _hadStatusDetailsLastDraw = true;
         }
 
         private static string ResolveStatusCopy(AsmLiteToolState toolState, bool hasComponent)
@@ -4013,6 +4041,34 @@ namespace ASMLite.Editor
                 summarySeverity,
                 details.ToArray(),
                 detailsCollapsedByDefault: details.Count > 0);
+        }
+
+        internal static string BuildStatusDetailsDisclosureLabel(StatusPanelSnapshot snapshot)
+        {
+            if (!snapshot.ShowDetailsDisclosure)
+                return "Details";
+
+            int warningCount = 0;
+            int errorCount = 0;
+
+            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+            {
+                var severity = snapshot.DetailEntries[i].Severity;
+                if (severity == StatusDetailSeverity.Warning)
+                    warningCount++;
+                else if (severity == StatusDetailSeverity.Error)
+                    errorCount++;
+            }
+
+            if (errorCount > 0)
+                return warningCount > 0
+                    ? $"Details ({errorCount} error(s), {warningCount} warning(s))"
+                    : $"Details ({errorCount} error(s))";
+
+            if (warningCount > 0)
+                return $"Details ({warningCount} warning(s))";
+
+            return $"Details ({snapshot.DetailEntries.Length})";
         }
 
         private static MessageType ToMessageType(StatusDetailSeverity severity)

@@ -145,6 +145,46 @@ namespace ASMLite.Tests.Editor
                 "Any conditional details should default to collapsed disclosure for S03 compression behavior.");
         }
 
+        [Test]
+        public void BuildStatusDetailsDisclosureLabel_WithWarnings_ContainsWarningCount()
+        {
+            var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
+                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                hasComponent: true,
+                slotCount: 3,
+                discoveredParamCount: 0,
+                backedUpCount: null,
+                parameterImportPending: true,
+                hasToggleBrokerReport: true,
+                toggleBrokerPreReservedNameCount: 5,
+                toggleBrokerPreflightCollisionAdjustments: 2,
+                toggleBrokerCandidateCollisionAdjustments: 1));
+
+            string label = ASMLite.Editor.ASMLiteWindow.BuildStatusDetailsDisclosureLabel(snapshot);
+
+            Assert.AreEqual("Details (2 warning(s))", label);
+        }
+
+        [Test]
+        public void BuildStatusDetailsDisclosureLabel_InformationalOnly_UsesDetailCount()
+        {
+            var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
+                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                hasComponent: true,
+                slotCount: 3,
+                discoveredParamCount: 8,
+                backedUpCount: 8,
+                parameterImportPending: false,
+                hasToggleBrokerReport: false,
+                toggleBrokerPreReservedNameCount: 0,
+                toggleBrokerPreflightCollisionAdjustments: 0,
+                toggleBrokerCandidateCollisionAdjustments: 0));
+
+            string label = ASMLite.Editor.ASMLiteWindow.BuildStatusDetailsDisclosureLabel(snapshot);
+
+            Assert.AreEqual("Details (2)", label);
+        }
+
         private static ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshot BuildSnapshot(
             ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput input)
         {
