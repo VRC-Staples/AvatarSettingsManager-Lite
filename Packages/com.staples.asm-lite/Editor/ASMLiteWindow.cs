@@ -168,13 +168,50 @@ namespace ASMLite.Editor
 
         // ── Static GUIContent ─────────────────────────────────────────────────
 
+        private const string SlotCountTooltipActive =
+            "How many slots your avatar has. Each slot can hold a full snapshot of your settings.";
+
+        private const string SlotCountTooltipPending =
+            "How many slots to add. Each slot lets you save and load a full set of avatar settings.";
+
+        private const string SlotColorLegendHelpText =
+            "Each slot uses a different gear color for quick visual scanning.\nSlots 1 to 4: Blue, Red, Green, Purple\nSlots 5 to 8: Cyan, Orange, Pink, Yellow";
+
+        private const string PreviewFlowSubtitle = "Flow: Root Menu → Slots Menu → Action Submenu";
+        private const string PreviewMiddleDialTitle = "Slots Menu";
+
+        private const string StatusPackageManagedText =
+            "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.";
+
+        private const string StatusVendorizedAttachedText =
+            "Status: Vendorized. ASM-Lite is still editable, and generated files are also copied to Assets/ASM-Lite.";
+
+        private const string StatusVendorizedDetachedText =
+            "Status: Vendorized. This avatar is using ASM-Lite files copied under Assets/ASM-Lite, but the editable ASM-Lite object is not attached.";
+
+        private const string StatusDetachedText =
+            "Status: Baked only. This avatar has ASM-Lite data, but the editable ASM-Lite object is not attached.";
+
+        private const string StatusNotInstalledText =
+            "Status: Not installed. ASM-Lite has not been added to this avatar yet.";
+
+        private const string AttachedCountSummaryFormat =
+            "✓ {0} custom parameter(s) are being saved across {1} slot(s).";
+
+        private const string DetachedOrVendorizedNoComponentText =
+            "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.";
+
+        private const string NotInstalledNoComponentText =
+            "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".";
+
+        private const string DetachDescriptionText =
+            "Keep your current in-game slot data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.";
+
         private static readonly GUIContent s_slotCountLabelActive =
-            new GUIContent("Slot Count",
-                "How many preset slots your avatar has. Each slot can hold a full snapshot of your settings.");
+            new GUIContent("Slot Count", SlotCountTooltipActive);
 
         private static readonly GUIContent s_slotCountLabelPending =
-            new GUIContent("Slot Count",
-                "How many preset slots to add. Each slot lets you save and load a full set of avatar settings.");
+            new GUIContent("Slot Count", SlotCountTooltipPending);
 
         // ── Open ──────────────────────────────────────────────────────────────
 
@@ -3167,7 +3204,7 @@ namespace ASMLite.Editor
             }
 
             EditorGUILayout.HelpBox(
-                "Each preset slot uses a different gear color for quick visual scanning.\nSlots 1 to 4: Blue, Red, Green, Purple\nSlots 5 to 8: Cyan, Orange, Pink, Yellow",
+                SlotColorLegendHelpText,
                 MessageType.None);
         }
 
@@ -3408,7 +3445,7 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Draws expression menu preview flow: Root Menu → Presets Menu → Action Submenu.
+        /// Draws expression menu preview flow: Root Menu → Slots Menu → Action Submenu.
         /// All three dials use same size and sit in one horizontal flow with arrows.
         /// </summary>
         private void DrawWheelPreview()
@@ -3442,7 +3479,7 @@ namespace ASMLite.Editor
             string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
 
             EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
-            EditorGUILayout.LabelField("Flow: Root Menu → Presets Menu → Action Submenu", EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(PreviewFlowSubtitle, EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(6f);
 
             float availWidth = EditorGUIUtility.currentViewWidth - 40f;
@@ -3471,7 +3508,7 @@ namespace ASMLite.Editor
 
             var titleStyle = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.UpperCenter };
             GUI.Label(new Rect(rootDialRect.x, y, rootDialRect.width, titleHeight), "Root Menu", titleStyle);
-            GUI.Label(new Rect(presetsDialRect.x, y, presetsDialRect.width, titleHeight), "Presets Menu", titleStyle);
+            GUI.Label(new Rect(presetsDialRect.x, y, presetsDialRect.width, titleHeight), PreviewMiddleDialTitle, titleStyle);
             GUI.Label(new Rect(actionDialRect.x, y, actionDialRect.width, titleHeight), "Action Submenu", titleStyle);
 
             if (_mainWheelIcons == null || _mainWheelIcons.Length != slotCount + 1
@@ -3727,25 +3764,7 @@ namespace ASMLite.Editor
             var component = GetOrRefreshComponent();
             var toolState = GetAsmLiteToolState(_selectedAvatar, component);
 
-            switch (toolState)
-            {
-                case AsmLiteToolState.PackageManaged:
-                    EditorGUILayout.HelpBox("Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.", MessageType.Info);
-                    break;
-                case AsmLiteToolState.Vendorized:
-                    EditorGUILayout.HelpBox(
-                        component != null
-                            ? "Status: Vendorized. ASM-Lite is still editable, and generated files are also copied to Assets/ASM-Lite."
-                            : "Status: Vendorized. This avatar is using ASM-Lite files copied under Assets/ASM-Lite, but the editable ASM-Lite object is not attached.",
-                        MessageType.Info);
-                    break;
-                case AsmLiteToolState.Detached:
-                    EditorGUILayout.HelpBox("Status: Baked only. This avatar has ASM-Lite data, but the editable ASM-Lite object is not attached.", MessageType.Info);
-                    break;
-                default:
-                    EditorGUILayout.HelpBox("Status: Not installed. ASM-Lite has not been added to this avatar yet.", MessageType.None);
-                    break;
-            }
+            EditorGUILayout.HelpBox(ResolveStatusCopy(toolState, component != null), ResolveStatusMessageType(toolState));
 
             if (component)
             {
@@ -3761,8 +3780,10 @@ namespace ASMLite.Editor
                     if (backedUpCount >= 0)
                     {
                         EditorGUILayout.HelpBox(
-                            $"✓ {backedUpCount} custom parameter(s) are being saved across " +
-                            $"{component.slotCount} preset slot(s).",
+                            string.Format(
+                                AttachedCountSummaryFormat,
+                                backedUpCount,
+                                component.slotCount),
                             MessageType.Info);
 
                         if (_discoveredParamCount < 0)
@@ -3802,16 +3823,86 @@ namespace ASMLite.Editor
                 if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
                 {
                     EditorGUILayout.HelpBox(
-                        "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.",
+                        DetachedOrVendorizedNoComponentText,
                         MessageType.Info);
                 }
                 else
                 {
                     EditorGUILayout.HelpBox(
-                        "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".",
+                        NotInstalledNoComponentText,
                         MessageType.Warning);
                 }
             }
+        }
+
+        private static string ResolveStatusCopy(AsmLiteToolState toolState, bool hasComponent)
+        {
+            switch (toolState)
+            {
+                case AsmLiteToolState.PackageManaged:
+                    return StatusPackageManagedText;
+                case AsmLiteToolState.Vendorized:
+                    return hasComponent ? StatusVendorizedAttachedText : StatusVendorizedDetachedText;
+                case AsmLiteToolState.Detached:
+                    return StatusDetachedText;
+                default:
+                    return StatusNotInstalledText;
+            }
+        }
+
+        private static MessageType ResolveStatusMessageType(AsmLiteToolState toolState)
+        {
+            return toolState == AsmLiteToolState.NotInstalled
+                ? MessageType.None
+                : MessageType.Info;
+        }
+
+        internal readonly struct TerminologySnapshot
+        {
+            public TerminologySnapshot(string[] alwaysVisibleCopy, string[] stateSpecificCopy)
+            {
+                AlwaysVisibleCopy = alwaysVisibleCopy ?? Array.Empty<string>();
+                StateSpecificCopy = stateSpecificCopy ?? Array.Empty<string>();
+            }
+
+            public string[] AlwaysVisibleCopy { get; }
+            public string[] StateSpecificCopy { get; }
+
+            public IEnumerable<string> EnumerateAllCopy()
+            {
+                for (int i = 0; i < AlwaysVisibleCopy.Length; i++)
+                    yield return AlwaysVisibleCopy[i];
+
+                for (int i = 0; i < StateSpecificCopy.Length; i++)
+                    yield return StateSpecificCopy[i];
+            }
+        }
+
+        internal static TerminologySnapshot GetTerminologySnapshot(AsmLiteToolState toolState, bool hasComponent)
+        {
+            var alwaysVisible = new[]
+            {
+                s_slotCountLabelActive.tooltip,
+                s_slotCountLabelPending.tooltip,
+                SlotColorLegendHelpText,
+                PreviewFlowSubtitle,
+                PreviewMiddleDialTitle,
+                AttachedCountSummaryFormat,
+                DetachDescriptionText,
+            };
+
+            var stateSpecific = new List<string>
+            {
+                ResolveStatusCopy(toolState, hasComponent),
+            };
+
+            if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
+                stateSpecific.Add(DetachedOrVendorizedNoComponentText);
+
+            if (toolState == AsmLiteToolState.NotInstalled)
+                stateSpecific.Add(NotInstalledNoComponentText);
+
+            return new TerminologySnapshot(alwaysVisible, stateSpecific.ToArray());
         }
 
         private void DrawToggleBrokerStatus()
@@ -3936,10 +4027,7 @@ namespace ASMLite.Editor
         {
             EditorGUILayout.BeginVertical("box");
             EditorGUILayout.LabelField("Detach ASM-Lite (Runtime-safe)", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Keep your current in-game presets working, but remove the ASM-Lite tool object from this avatar. " +
-                "Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.",
-                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.LabelField(DetachDescriptionText, EditorStyles.wordWrappedMiniLabel);
             if (GUILayout.Button("Detach ASM-Lite", GUILayout.Height(24)))
             {
                 var captured = component;
