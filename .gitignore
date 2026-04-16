@@ -64,5 +64,45 @@ Tools/ci/unity-project/Library/
 Tools/ci/unity-project/Temp/
 Tools/ci/unity-project/Logs/
 Tools/ci/unity-project/UserSettings/
+Tools/ci/unity-project/Assets/
 Tools/ci/unity-project/*.csproj
+
+# CI Unity project package filtering
+Tools/ci/unity-project/Packages/*/
+Tools/ci/unity-project/Packages/com.vrchat.*/
+!Tools/ci/unity-project/Packages/com.vrchat.core.*/
+!Tools/ci/unity-project/Packages/com.vrchat.base/
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/
+!Tools/ci/unity-project/Packages/vpm-manifest.json
+!Tools/ci/unity-project/Packages/manifest.json
+
+# Un-ignore only the DLLs and package.json needed for compile/test checking
+Tools/ci/unity-project/Packages/com.vrchat.base/*
+Tools/ci/unity-project/Packages/com.vrchat.base/**/*
+!Tools/ci/unity-project/Packages/com.vrchat.base/package.json
+!Tools/ci/unity-project/Packages/com.vrchat.base/package.json.meta
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll.meta
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll.meta
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Collections.Immutable.dll.meta
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Runtime.CompilerServices.Unsafe.dll
+!Tools/ci/unity-project/Packages/com.vrchat.base/Runtime/VRCSDK/Dependencies/Managed/System.Runtime.CompilerServices.Unsafe.dll.meta
+Tools/ci/unity-project/Packages/com.vrchat.avatars/*
+Tools/ci/unity-project/Packages/com.vrchat.avatars/**/*
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/package.json
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/package.json.meta
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll.meta
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll
+!Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll.meta
 
