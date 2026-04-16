@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using ASMLite;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -33,10 +34,6 @@ namespace ASMLite.Editor
 
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
-
-        // Cached LINQ Count() result: avoids per-repaint enumeration.
-        // -1 means invalid; recomputed lazily in DrawStatus.
-        private int _cachedCustomParamCount = -1;
 
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
@@ -84,8 +81,6 @@ namespace ASMLite.Editor
         // Action hierarchy disclosure state. Advanced maintenance actions stay hidden
         // until explicitly expanded by the user.
         [SerializeField] private bool _showAdvancedActions;
-        [SerializeField] private bool _showStatusDetails;
-        private bool _hadStatusDetailsLastDraw;
 
         // ── Install Path Tree ─────────────────────────────────────────────────
 
@@ -148,10 +143,13 @@ namespace ASMLite.Editor
         private Texture2D _cachedIconSave;
         private Texture2D _cachedIconLoad;
         private Texture2D _cachedIconClear;
+        private Texture2D _cachedFlowArrow;
 
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
+        private const float BannerMaxDrawWidth = 1200f;
+        private const float SectionGap = 12f;
 
         // ── Radial wheel style cache ──────────────────────────────────────────
 
@@ -161,10 +159,14 @@ namespace ASMLite.Editor
         private static readonly Color s_wheelColorBorder = new Color(0.10f, 0.35f, 0.38f);
         private static readonly Color s_wheelColorInner  = new Color(0.21f, 0.24f, 0.27f);
         private static readonly Color s_separatorColor   = new Color(0.10f, 0.35f, 0.38f, 0.20f);
+        private static readonly Color s_sectionBorderColor = new Color(0.10f, 0.35f, 0.38f, 0.32f);
+        private static readonly Color s_sectionTintColor = new Color(0.12f, 0.16f, 0.18f, 0.12f);
 
         // GUIStyle cached across repaints. Rebuilt lazily when null (domain reload).
         // Only fontSize is updated per call; cloning on every repaint is expensive.
         private GUIStyle _radialLabelStyle;
+        private GUIStyle _sectionCardStyle;
+        private GUIStyle _sectionContentStyle;
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
 
@@ -262,764 +264,6 @@ namespace ASMLite.Editor
             win.Show();
         }
 
-        [MenuItem("Tools/.Staples./Dev Tools/Show ASM-Lite Package Binding")]
-        public static void ShowPackageBinding()
-        {
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ASMLiteComponent).Assembly);
-            if (packageInfo == null)
-            {
-                Debug.LogWarning("[ASM-Lite] Package binding lookup failed: PackageInfo.FindForAssembly returned null.");
-                return;
-            }
-
-            Debug.Log($"[ASM-Lite] Package binding: name='{packageInfo.name}', source={packageInfo.source}, version='{packageInfo.version}', assetPath='{packageInfo.assetPath}', resolvedPath='{packageInfo.resolvedPath}'.");
-        }
-
-        [MenuItem("Tools/.Staples./Dev Tools/VCC Embedded or Local Package Switcher...")]
-        public static void OpenVccLocalPackageSwitcher()
-        {
-            ASMLiteVccSwitcherWindow.Open();
-        }
-
-        private static List<string> FindLocalPackageCandidates(string packageName, string embeddedPath)
-        {
-            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            var roots = new List<string>();
-            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrEmpty(userProfile))
-            {
-                roots.Add(Path.Combine(userProfile, "Documents"));
-                roots.Add(Path.Combine(userProfile, "source", "repos"));
-                roots.Add(Path.Combine(userProfile, "OneDrive", "Documents"));
-            }
-
-            // Also scan sibling directories around the current project root.
-            string projectRoot = Directory.GetParent(Application.dataPath)?.FullName;
-            if (!string.IsNullOrEmpty(projectRoot))
-            {
-                string parent = Directory.GetParent(projectRoot)?.FullName;
-                if (!string.IsNullOrEmpty(parent))
-                    roots.Add(parent);
-            }
-
-            for (int i = 0; i < roots.Count; i++)
-            {
-                string root = roots[i];
-                if (!Directory.Exists(root))
-                    continue;
-
-                foreach (var candidate in EnumeratePackageDirectories(root, packageName, maxDepth: 6, maxResults: 20))
-                {
-                    if (string.Equals(candidate, embeddedPath, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    results.Add(candidate);
-                }
-            }
-
-            return results.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
-        }
-
-        private static IEnumerable<string> EnumeratePackageDirectories(string root, string packageName, int maxDepth, int maxResults)
-        {
-            var stack = new Stack<(string path, int depth)>();
-            stack.Push((root, 0));
-            int yielded = 0;
-
-            while (stack.Count > 0 && yielded < maxResults)
-            {
-                var (current, depth) = stack.Pop();
-                if (depth > maxDepth)
-                    continue;
-
-                string dirName = Path.GetFileName(current);
-                string parentName = Path.GetFileName(Path.GetDirectoryName(current) ?? string.Empty);
-                if (string.Equals(dirName, packageName, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(parentName, "Packages", StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(Path.Combine(current, "package.json")))
-                {
-                    yielded++;
-                    yield return Path.GetFullPath(current);
-                    continue;
-                }
-
-                string[] children;
-                try
-                {
-                    children = Directory.GetDirectories(current);
-                }
-                catch
-                {
-                    continue;
-                }
-
-                for (int i = 0; i < children.Length; i++)
-                    stack.Push((children[i], depth + 1));
-            }
-        }
-
-        private static string ResolveSelectedLocalPackagePath(string packageName, string selectedPath)
-        {
-            if (string.IsNullOrEmpty(selectedPath))
-                return selectedPath;
-
-            // Exact package folder selected.
-            if (File.Exists(Path.Combine(selectedPath, "package.json")))
-                return selectedPath;
-
-            // Project root selected -> <root>/Packages/<packageName>
-            string fromProjectRoot = Path.Combine(selectedPath, "Packages", packageName);
-            if (File.Exists(Path.Combine(fromProjectRoot, "package.json")))
-                return Path.GetFullPath(fromProjectRoot);
-
-            // Packages folder selected -> <packages>/<packageName>
-            string fromPackagesRoot = Path.Combine(selectedPath, packageName);
-            if (File.Exists(Path.Combine(fromPackagesRoot, "package.json")))
-                return Path.GetFullPath(fromPackagesRoot);
-
-            return selectedPath;
-        }
-
-        private static bool ValidateLocalPackageDirectory(string expectedPackageName, string localPath, out string error)
-        {
-            error = null;
-            if (!Directory.Exists(localPath))
-            {
-                error = $"directory does not exist: '{localPath}'.";
-                return false;
-            }
-
-            string packageJsonPath = Path.Combine(localPath, "package.json");
-            if (!File.Exists(packageJsonPath))
-            {
-                error = $"selected folder is missing package.json: '{localPath}'.";
-                return false;
-            }
-
-            string packageJson;
-            try
-            {
-                packageJson = File.ReadAllText(packageJsonPath);
-            }
-            catch (Exception ex)
-            {
-                error = $"failed reading package.json: {ex.Message}";
-                return false;
-            }
-
-            if (packageJson.IndexOf($"\"name\": \"{expectedPackageName}\"", StringComparison.OrdinalIgnoreCase) < 0
-                && packageJson.IndexOf($"\"name\":\"{expectedPackageName}\"", StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                error = $"package.json name does not match '{expectedPackageName}'.";
-                return false;
-            }
-
-            return true;
-        }
-
-        private static bool TryRemoveEmbeddedPackageFolder(string projectRoot, string embeddedPath, out string note, out string error)
-        {
-            note = null;
-            error = null;
-            try
-            {
-                bool isLink = (File.GetAttributes(embeddedPath) & FileAttributes.ReparsePoint) != 0;
-                if (isLink)
-                {
-                    Directory.Delete(embeddedPath, recursive: false);
-                    note = "removed junction/symlink at embedded path";
-                    return true;
-                }
-
-                string backupRoot = Path.Combine(projectRoot, ".asm-lite-package-backups");
-                Directory.CreateDirectory(backupRoot);
-                string backupName = Path.GetFileName(embeddedPath) + "__embedded_backup_" + DateTime.Now.ToString("yyyyMMddHHmmss");
-                string backupPath = Path.Combine(backupRoot, backupName);
-                Directory.Move(embeddedPath, backupPath);
-                note = $"moved embedded folder to '{backupPath}'";
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return false;
-            }
-        }
-
-        private static bool TrySetManifestDependency(string projectRoot, string packageName, string dependencyValue, out string error)
-        {
-            error = null;
-            try
-            {
-                string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
-                if (!File.Exists(manifestPath))
-                {
-                    error = $"manifest.json not found at '{manifestPath}'.";
-                    return false;
-                }
-
-                string json = File.ReadAllText(manifestPath);
-                if (!RemoveTopLevelJsonObjectEntry(ref json, "dependencies", packageName))
-                {
-                    // no-op if entry wasn't present
-                }
-
-                if (!AddTopLevelJsonObjectEntry(ref json, "dependencies", packageName, dependencyValue, out var addError))
-                {
-                    error = addError;
-                    return false;
-                }
-
-                string backupPath = manifestPath + ".bak";
-                File.Copy(manifestPath, backupPath, overwrite: true);
-                File.WriteAllText(manifestPath, json);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return false;
-            }
-        }
-
-        private static string ToUnityFileDependencyValue(string absolutePath)
-        {
-            string normalized = Path.GetFullPath(absolutePath)
-                .Replace('\\', '/');
-
-            return $"file:{normalized}";
-        }
-
-        private static bool AddTopLevelJsonObjectEntry(ref string json, string sectionName, string key, string value, out string error)
-        {
-            error = null;
-            if (string.IsNullOrEmpty(json))
-            {
-                error = "json content was empty.";
-                return false;
-            }
-
-            string sectionNeedle = $"\"{sectionName}\"";
-            int sectionIndex = json.IndexOf(sectionNeedle, StringComparison.Ordinal);
-            if (sectionIndex < 0)
-            {
-                error = $"section '{sectionName}' was not found.";
-                return false;
-            }
-
-            int sectionBraceStart = json.IndexOf('{', sectionIndex);
-            if (sectionBraceStart < 0)
-            {
-                error = $"section '{sectionName}' has no opening brace.";
-                return false;
-            }
-
-            int sectionBraceEnd = FindMatchingBrace(json, sectionBraceStart);
-            if (sectionBraceEnd < 0)
-            {
-                error = $"section '{sectionName}' has no matching closing brace.";
-                return false;
-            }
-
-            string sectionBody = json.Substring(sectionBraceStart + 1, sectionBraceEnd - sectionBraceStart - 1);
-            bool sectionEmpty = string.IsNullOrWhiteSpace(sectionBody);
-
-            string escapedValue = value?.Replace("\\", "\\\\").Replace("\"", "\\\"") ?? string.Empty;
-            string newEntry = $"\n    \"{key}\": \"{escapedValue}\"";
-
-            if (sectionEmpty)
-            {
-                json = json.Insert(sectionBraceStart + 1, newEntry + "\n  ");
-            }
-            else
-            {
-                json = json.Insert(sectionBraceEnd, "," + newEntry);
-            }
-
-            return true;
-        }
-
-        private static bool TryRemoveVpmManifestPackageEntry(string projectRoot, string packageName)
-        {
-            try
-            {
-                string vpmManifestPath = Path.Combine(projectRoot, "Packages", "vpm-manifest.json");
-                if (!File.Exists(vpmManifestPath))
-                    return false;
-
-                string json = File.ReadAllText(vpmManifestPath);
-                bool changed = false;
-
-                changed |= RemoveTopLevelJsonObjectEntry(ref json, "dependencies", packageName);
-                changed |= RemoveTopLevelJsonObjectEntry(ref json, "locked", packageName);
-
-                if (!changed)
-                    return false;
-
-                string backupPath = vpmManifestPath + ".bak";
-                File.Copy(vpmManifestPath, backupPath, overwrite: true);
-                File.WriteAllText(vpmManifestPath, json);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogWarning($"[ASM-Lite] vpm-manifest cleanup skipped: {ex.Message}");
-                return false;
-            }
-        }
-
-        private static bool RemoveTopLevelJsonObjectEntry(ref string json, string sectionName, string key)
-        {
-            if (string.IsNullOrEmpty(json))
-                return false;
-
-            string sectionNeedle = $"\"{sectionName}\"";
-            int sectionIndex = json.IndexOf(sectionNeedle, StringComparison.Ordinal);
-            if (sectionIndex < 0)
-                return false;
-
-            int sectionBraceStart = json.IndexOf('{', sectionIndex);
-            if (sectionBraceStart < 0)
-                return false;
-
-            int sectionBraceEnd = FindMatchingBrace(json, sectionBraceStart);
-            if (sectionBraceEnd < 0)
-                return false;
-
-            string keyNeedle = $"\"{key}\"";
-            int keyIndex = json.IndexOf(keyNeedle, sectionBraceStart, sectionBraceEnd - sectionBraceStart + 1, StringComparison.Ordinal);
-            if (keyIndex < 0)
-                return false;
-
-            int entryStart = keyIndex;
-            while (entryStart > sectionBraceStart && char.IsWhiteSpace(json[entryStart - 1])) entryStart--;
-            if (entryStart > sectionBraceStart && json[entryStart - 1] == ',') entryStart--;
-
-            int colonIndex = json.IndexOf(':', keyIndex);
-            if (colonIndex < 0 || colonIndex > sectionBraceEnd)
-                return false;
-
-            int valueStart = colonIndex + 1;
-            while (valueStart < json.Length && char.IsWhiteSpace(json[valueStart])) valueStart++;
-
-            int entryEnd = valueStart;
-            if (entryEnd >= json.Length)
-                return false;
-
-            char startChar = json[entryEnd];
-            if (startChar == '{')
-            {
-                int valueEnd = FindMatchingBrace(json, entryEnd);
-                if (valueEnd < 0) return false;
-                entryEnd = valueEnd + 1;
-            }
-            else if (startChar == '[')
-            {
-                int valueEnd = FindMatchingBracket(json, entryEnd);
-                if (valueEnd < 0) return false;
-                entryEnd = valueEnd + 1;
-            }
-            else
-            {
-                while (entryEnd < json.Length && json[entryEnd] != ',' && json[entryEnd] != '}') entryEnd++;
-            }
-
-            while (entryEnd < json.Length && char.IsWhiteSpace(json[entryEnd])) entryEnd++;
-            if (entryEnd < json.Length && json[entryEnd] == ',') entryEnd++;
-
-            json = json.Remove(entryStart, entryEnd - entryStart);
-            return true;
-        }
-
-        private static int FindMatchingBrace(string text, int openIndex)
-        {
-            int depth = 0;
-            bool inString = false;
-            bool escaped = false;
-
-            for (int i = openIndex; i < text.Length; i++)
-            {
-                char c = text[i];
-                if (inString)
-                {
-                    if (escaped)
-                    {
-                        escaped = false;
-                        continue;
-                    }
-
-                    if (c == '\\')
-                    {
-                        escaped = true;
-                        continue;
-                    }
-
-                    if (c == '"')
-                        inString = false;
-
-                    continue;
-                }
-
-                if (c == '"')
-                {
-                    inString = true;
-                    continue;
-                }
-
-                if (c == '{') depth++;
-                else if (c == '}')
-                {
-                    depth--;
-                    if (depth == 0)
-                        return i;
-                }
-            }
-
-            return -1;
-        }
-
-        internal static int FindMatchingBracket(string text, int openIndex)
-        {
-            int depth = 0;
-            bool inString = false;
-            bool escaped = false;
-
-            for (int i = openIndex; i < text.Length; i++)
-            {
-                char c = text[i];
-                if (inString)
-                {
-                    if (escaped)
-                    {
-                        escaped = false;
-                        continue;
-                    }
-
-                    if (c == '\\')
-                    {
-                        escaped = true;
-                        continue;
-                    }
-
-                    if (c == '"')
-                        inString = false;
-
-                    continue;
-                }
-
-                if (c == '"')
-                {
-                    inString = true;
-                    continue;
-                }
-
-                if (c == '[') depth++;
-                else if (c == ']')
-                {
-                    depth--;
-                    if (depth == 0)
-                        return i;
-                }
-            }
-
-            return -1;
-        }
-
-        // ── Dev Tools apply helpers ───────────────────────────────────────────
-
-        internal static void ApplySwitchToFileLocal(string projectRoot, string selectedLocalPath, string packageName)
-        {
-            bool isCurrentProject = string.Equals(
-                projectRoot,
-                Directory.GetParent(Application.dataPath)?.FullName,
-                StringComparison.OrdinalIgnoreCase);
-
-            string embeddedPath = Path.GetFullPath(Path.Combine(projectRoot, "Packages", packageName));
-            string dependencyValue = ToUnityFileDependencyValue(selectedLocalPath);
-
-            if (!TrySetManifestDependency(projectRoot, packageName, dependencyValue, out var manifestError))
-            {
-                Debug.LogError($"[ASM-Lite] Switch failed for '{Path.GetFileName(projectRoot)}': {manifestError}");
-                return;
-            }
-
-            bool vpmChanged = TryRemoveVpmManifestPackageEntry(projectRoot, packageName);
-
-            string embeddedRemovalNote = string.Empty;
-            bool embeddedExists = Directory.Exists(embeddedPath)
-                && !string.Equals(embeddedPath, Path.GetFullPath(selectedLocalPath), StringComparison.OrdinalIgnoreCase);
-
-            if (embeddedExists)
-            {
-                if (isCurrentProject) AssetDatabase.Refresh();
-                if (!TryRemoveEmbeddedPackageFolder(projectRoot, embeddedPath, out var removalNote, out var removalError))
-                    Debug.LogWarning($"[ASM-Lite] Could not remove embedded folder '{embeddedPath}': {removalError}. Unity may still use the embedded copy.");
-                else
-                    embeddedRemovalNote = removalNote;
-            }
-
-            if (isCurrentProject)
-            {
-                Client.Resolve();
-                AssetDatabase.Refresh();
-            }
-
-            Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to file dependency: {packageName} => '{dependencyValue}' ({(vpmChanged ? "removed stale vpm-manifest entry" : "no vpm-manifest change")}){(string.IsNullOrEmpty(embeddedRemovalNote) ? string.Empty : ". " + embeddedRemovalNote)}.");
-        }
-
-        internal static void ApplySwitchToEmbedded(string projectRoot, string packageName)
-        {
-            bool isCurrentProject = string.Equals(
-                projectRoot,
-                Directory.GetParent(Application.dataPath)?.FullName,
-                StringComparison.OrdinalIgnoreCase);
-
-            string embeddedPath = Path.GetFullPath(Path.Combine(projectRoot, "Packages", packageName));
-            string restoredFrom = null;
-
-            if (!Directory.Exists(embeddedPath))
-            {
-                string backupRoot = Path.Combine(projectRoot, ".asm-lite-package-backups");
-                if (Directory.Exists(backupRoot))
-                {
-                    string latestBackup = Directory.GetDirectories(backupRoot, packageName + "__embedded_backup_*")
-                        .OrderByDescending(x => x, StringComparer.OrdinalIgnoreCase)
-                        .FirstOrDefault();
-
-                    if (latestBackup != null)
-                    {
-                        try
-                        {
-                            Directory.Move(latestBackup, embeddedPath);
-                            restoredFrom = latestBackup;
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogWarning($"[ASM-Lite] Could not restore embedded backup '{latestBackup}': {ex.Message}. Unity will use VCC/registry package instead.");
-                        }
-                    }
-                }
-            }
-
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(ASMLiteComponent).Assembly);
-            string targetVersion = !string.IsNullOrWhiteSpace(packageInfo?.version) ? packageInfo.version : "1.0.9";
-
-            if (!TrySetManifestDependency(projectRoot, packageName, targetVersion, out var manifestError))
-            {
-                Debug.LogError($"[ASM-Lite] Switch failed for '{Path.GetFileName(projectRoot)}': {manifestError}");
-                return;
-            }
-
-            if (isCurrentProject)
-            {
-                Client.Resolve();
-                AssetDatabase.Refresh();
-            }
-
-            if (restoredFrom != null)
-                Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to version dependency: {packageName} => '{targetVersion}'. Restored embedded folder from '{restoredFrom}'.");
-            else
-                Debug.Log($"[ASM-Lite] [{Path.GetFileName(projectRoot)}] Switched to version dependency: {packageName} => '{targetVersion}'. Embedded present={Directory.Exists(embeddedPath)}.");
-        }
-
-        // ── VCC local package discovery ───────────────────────────────────────
-
-        internal struct VccLocalPackage
-        {
-            public string PackageName;
-            public string DisplayName;
-            public string Version;
-            public string LocalPath;
-        }
-
-        internal static IEnumerable<string> FindVccProjectRoots()
-            => ReadVccSettingsArray("userProjects")
-                .Where(Directory.Exists)
-                .Select(Path.GetFullPath);
-
-        internal static List<VccLocalPackage> DiscoverVccLocalPackages()
-        {
-            var result = new List<VccLocalPackage>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var folder in ReadVccSettingsArray("userPackageFolders"))
-            {
-                if (!Directory.Exists(folder)) continue;
-                TryAddVccPackage(folder, result, seen);
-                foreach (var sub in Directory.GetDirectories(folder))
-                    TryAddVccPackage(sub, result, seen);
-            }
-
-            foreach (var path in ReadVccSettingsArray("userPackages"))
-                TryAddVccPackage(path, result, seen);
-
-            return result;
-        }
-
-        private static void TryAddVccPackage(string path, List<VccLocalPackage> result, HashSet<string> seen)
-        {
-            string pkgJsonPath = Path.Combine(path, "package.json");
-            if (!File.Exists(pkgJsonPath)) return;
-            string fullPath = Path.GetFullPath(path);
-            if (!seen.Add(fullPath)) return;
-
-            string content;
-            try { content = File.ReadAllText(pkgJsonPath); }
-            catch { return; }
-
-            string name = ExtractJsonString(content, "name");
-            if (string.IsNullOrEmpty(name)) return;
-
-            result.Add(new VccLocalPackage
-            {
-                PackageName = name,
-                DisplayName = ExtractJsonString(content, "displayName") ?? name,
-                Version     = ExtractJsonString(content, "version") ?? string.Empty,
-                LocalPath   = fullPath,
-            });
-        }
-
-        private static IEnumerable<string> ReadVccSettingsArray(string key)
-        {
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string settingsPath = Path.Combine(localAppData, "VRChatCreatorCompanion", "settings.json");
-            if (!File.Exists(settingsPath)) return Enumerable.Empty<string>();
-
-            string json;
-            try { json = File.ReadAllText(settingsPath); }
-            catch { return Enumerable.Empty<string>(); }
-
-            return ExtractJsonStringArray(json, key);
-        }
-
-        private static IEnumerable<string> ExtractJsonStringArray(string json, string key)
-        {
-            int idx = json.IndexOf($"\"{key}\"", StringComparison.Ordinal);
-            if (idx < 0) return Enumerable.Empty<string>();
-
-            int bracketStart = json.IndexOf('[', idx);
-            if (bracketStart < 0) return Enumerable.Empty<string>();
-
-            int bracketEnd = FindMatchingBracket(json, bracketStart);
-            if (bracketEnd < 0) return Enumerable.Empty<string>();
-
-            return ParseJsonStringArray(json.Substring(bracketStart + 1, bracketEnd - bracketStart - 1));
-        }
-
-        private static IEnumerable<string> ParseJsonStringArray(string content)
-        {
-            int pos = 0;
-            while (pos < content.Length)
-            {
-                int qStart = content.IndexOf('"', pos);
-                if (qStart < 0) break;
-                int qEnd = qStart + 1;
-                while (qEnd < content.Length)
-                {
-                    if (content[qEnd] == '\\') { qEnd += 2; continue; }
-                    if (content[qEnd] == '"') break;
-                    qEnd++;
-                }
-                if (qEnd >= content.Length) break;
-                yield return content.Substring(qStart + 1, qEnd - qStart - 1)
-                    .Replace("\\\\", "\\").Replace("\\/", "/");
-                pos = qEnd + 1;
-            }
-        }
-
-        private static string ExtractJsonString(string json, string key)
-        {
-            int idx = json.IndexOf($"\"{key}\"", StringComparison.Ordinal);
-            if (idx < 0) return null;
-            int colon = json.IndexOf(':', idx);
-            if (colon < 0) return null;
-            int vStart = colon + 1;
-            while (vStart < json.Length && char.IsWhiteSpace(json[vStart])) vStart++;
-            if (vStart >= json.Length || json[vStart] != '"') return null;
-            int vEnd = vStart + 1;
-            while (vEnd < json.Length)
-            {
-                if (json[vEnd] == '\\') { vEnd += 2; continue; }
-                if (json[vEnd] == '"') break;
-                vEnd++;
-            }
-            if (vEnd >= json.Length) return null;
-            return json.Substring(vStart + 1, vEnd - vStart - 1);
-        }
-
-        internal static string GetProjectPackageStatus(string projectRoot, string packageName)
-        {
-            // Read manifest first. A file: entry means the user explicitly set local,
-            // and that takes priority in the display even if the embedded folder still
-            // exists (e.g. locked by Unity while the project is open).
-            string manifestPath = Path.Combine(projectRoot, "Packages", "manifest.json");
-            if (File.Exists(manifestPath))
-            {
-                string json;
-                try { json = File.ReadAllText(manifestPath); }
-                catch { json = null; }
-
-                if (json != null)
-                {
-                    int idx = json.IndexOf($"\"{packageName}\"", StringComparison.Ordinal);
-                    if (idx >= 0)
-                    {
-                        int colon = json.IndexOf(':', idx);
-                        if (colon >= 0)
-                        {
-                            int vStart = colon + 1;
-                            while (vStart < json.Length && char.IsWhiteSpace(json[vStart])) vStart++;
-                            if (vStart < json.Length && json[vStart] == '"')
-                            {
-                                int vEnd = json.IndexOf('"', vStart + 1);
-                                if (vEnd >= 0)
-                                {
-                                    string val = json.Substring(vStart + 1, vEnd - vStart - 1);
-                                    if (val.StartsWith("file:", StringComparison.Ordinal))
-                                        return "file: (local)";
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // No file: manifest entry. Check for an embedded or linked folder.
-            string embeddedPath = Path.Combine(projectRoot, "Packages", packageName);
-            if (Directory.Exists(embeddedPath) && File.Exists(Path.Combine(embeddedPath, "package.json")))
-            {
-                try
-                {
-                    bool isLink = (File.GetAttributes(embeddedPath) & FileAttributes.ReparsePoint) != 0;
-                    return isLink ? "linked" : "embedded";
-                }
-                catch { }
-            }
-
-            if (!File.Exists(manifestPath)) return "not found";
-
-            string manifestJson;
-            try { manifestJson = File.ReadAllText(manifestPath); }
-            catch { return "manifest error"; }
-
-            int midx = manifestJson.IndexOf($"\"{packageName}\"", StringComparison.Ordinal);
-            if (midx < 0) return "not installed";
-
-            int mcolon = manifestJson.IndexOf(':', midx);
-            if (mcolon < 0) return "unknown";
-
-            int mvStart = mcolon + 1;
-            while (mvStart < manifestJson.Length && char.IsWhiteSpace(manifestJson[mvStart])) mvStart++;
-            if (mvStart >= manifestJson.Length || manifestJson[mvStart] != '"') return "unknown";
-
-            int mvEnd = manifestJson.IndexOf('"', mvStart + 1);
-            if (mvEnd < 0) return "unknown";
-
-            string mval = manifestJson.Substring(mvStart + 1, mvEnd - mvStart - 1);
-            return $"v{mval}";
-        }
-
         // ── GUI ───────────────────────────────────────────────────────────────
 
         private void OnGUI()
@@ -1037,23 +281,44 @@ namespace ASMLite.Editor
 
             try
             {
+                BeginSectionCard();
                 DrawAvatarPicker();
+                EndSectionCard();
 
                 if (_selectedAvatar != null)
                 {
-                    EditorGUILayout.Space(8);
+                    EditorGUILayout.Space(SectionGap);
+
+                    BeginSectionCard();
                     DrawSettings();
+                    EndSectionCard();
+
                     SectionSeparator();
+
+                    BeginSectionCard();
                     DrawIconSettingsSection();
+                    EndSectionCard();
+
                     SectionSeparator();
+
+                    BeginSectionCard();
                     DrawCustomizeSection();
+                    EndSectionCard();
+
                     SectionSeparator();
+
+                    BeginSectionCard();
                     DrawStatus();
-                    EditorGUILayout.Space(16);
+                    EndSectionCard();
+
+                    EditorGUILayout.Space(SectionGap);
+
+                    BeginSectionCard();
                     DrawActionButton();
+                    EndSectionCard();
                 }
 
-                EditorGUILayout.Space(8);
+                EditorGUILayout.Space(SectionGap);
             }
             catch (ExitGUIException) { throw; }
             catch (System.Exception ex)
@@ -1078,10 +343,58 @@ namespace ASMLite.Editor
         /// </summary>
         private static void SectionSeparator()
         {
-            EditorGUILayout.Space(6);
-            Rect r = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(r, s_separatorColor);
-            EditorGUILayout.Space(6);
+            GUILayoutUtility.GetRect(1f, SectionGap * 0.5f, GUILayout.ExpandWidth(true));
+            Rect lineRect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
+            GUILayoutUtility.GetRect(1f, SectionGap * 0.5f, GUILayout.ExpandWidth(true));
+
+            if (Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(lineRect, s_separatorColor);
+        }
+
+        private void EnsureSectionStyles()
+        {
+            if (_sectionCardStyle == null)
+            {
+                _sectionCardStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    padding = new RectOffset(12, 12, 10, 12),
+                    margin = new RectOffset(0, 0, 0, 0),
+                    stretchWidth = true,
+                };
+            }
+
+            if (_sectionContentStyle == null)
+            {
+                _sectionContentStyle = new GUIStyle()
+                {
+                    padding = new RectOffset(0, 0, 0, 0),
+                    margin = new RectOffset(0, 0, 0, 0),
+                    stretchWidth = true,
+                };
+            }
+        }
+
+        private void BeginSectionCard()
+        {
+            EnsureSectionStyles();
+
+            EditorGUILayout.BeginVertical(_sectionCardStyle);
+
+            Rect accentRect = GUILayoutUtility.GetRect(0f, 4f, GUILayout.ExpandWidth(true));
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(accentRect, s_sectionTintColor);
+                EditorGUI.DrawRect(new Rect(accentRect.x, accentRect.y, accentRect.width, 1f), s_sectionBorderColor);
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.BeginVertical(_sectionContentStyle);
+        }
+
+        private static void EndSectionCard()
+        {
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawHeader()
@@ -1092,14 +405,19 @@ namespace ASMLite.Editor
 
             if (_bannerTexture != null)
             {
-                float aspect         = (float)_bannerTexture.width / _bannerTexture.height;
+                float aspect = (float)_bannerTexture.width / _bannerTexture.height;
                 float availableWidth = EditorGUIUtility.currentViewWidth;
-                float bannerHeight   = Mathf.Round(availableWidth / aspect);
+                float drawWidth = Mathf.Min(availableWidth, BannerMaxDrawWidth);
+                float drawX = Mathf.Max(0f, (availableWidth - drawWidth) * 0.5f);
+                float bannerHeight = Mathf.Round(drawWidth / aspect);
 
-                // Draw at absolute (0,0). This bypasses any layout group margin.
-                // StretchToFill with the correct aspect-derived height means no letterboxing.
-                GUI.DrawTexture(new Rect(0f, 0f, availableWidth, bannerHeight),
-                    _bannerTexture, ScaleMode.StretchToFill, alphaBlend: true);
+                // Draw at the top with a capped width so very wide editor windows don't let
+                // the banner dominate the whole viewport.
+                GUI.DrawTexture(
+                    new Rect(drawX, 0f, drawWidth, bannerHeight),
+                    _bannerTexture,
+                    ScaleMode.StretchToFill,
+                    alphaBlend: true);
 
                 // Consume the height in the layout system so content below doesn't overlap.
                 GUILayout.Space(bannerHeight + 4f);
@@ -1117,6 +435,10 @@ namespace ASMLite.Editor
         {
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Avatar", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Choose the avatar root you want to inspect and configure.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var newAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(
                 label:             "Avatar Root",
@@ -1129,7 +451,6 @@ namespace ASMLite.Editor
                 _selectedAvatar = newAvatar;
                 _cachedComponent = null;
                 _lastRefreshFrame = -1;
-                _cachedCustomParamCount = -1;
                 _discoveredParamCount = -1;
 
                 if (_selectedAvatar != null)
@@ -1149,6 +470,10 @@ namespace ASMLite.Editor
         private void DrawSettings()
         {
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Set the preset count first. Everything else adapts around that choice.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var component = GetOrRefreshComponent();
 
@@ -1187,6 +512,9 @@ namespace ASMLite.Editor
         private void DrawIconSettingsSection()
         {
             EditorGUILayout.LabelField("Icon Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Tune slot icon behavior here. The preview below stays as the source of truth for how the menu will look.",
+                EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(6);
 
             var component = GetOrRefreshComponent();
@@ -1279,21 +607,50 @@ namespace ASMLite.Editor
 
         private static string DrawTextFieldWithFocusCue(string label, string value, string controlName)
         {
-            GUI.SetNextControlName(controlName);
-            string newValue = EditorGUILayout.TextField(label, value ?? string.Empty);
+            Rect rect = EditorGUILayout.GetControlRect();
+            int id = GUIUtility.GetControlID(FocusType.Keyboard, rect);
+            Rect fieldRect = EditorGUI.PrefixLabel(rect, id, new GUIContent(label));
 
-            if (Event.current.type == EventType.Repaint
-                && string.Equals(GUI.GetNameOfFocusedControl(), controlName, StringComparison.Ordinal))
+            GUI.SetNextControlName(controlName);
+            return EditorGUI.TextField(fieldRect, value ?? string.Empty);
+        }
+
+        private static bool IsNamedTextFieldFocused(string controlName)
+        {
+            return string.Equals(GUI.GetNameOfFocusedControl(), controlName, StringComparison.Ordinal);
+        }
+
+        private void CommitDraftRawStringIfBlurred(ASMLiteComponent component, string controlName, string undoLabel, ref string target, string draftValue)
+        {
+            if (component == null || IsNamedTextFieldFocused(controlName))
+                return;
+
+            SetComponentRawString(component, undoLabel, ref target, draftValue ?? string.Empty);
+        }
+
+        private void CommitDraftStringIfBlurred(ASMLiteComponent component, string controlName, string undoLabel, ref string target, string draftValue)
+        {
+            if (component == null || IsNamedTextFieldFocused(controlName))
+                return;
+
+            SetComponentString(component, undoLabel, ref target, draftValue);
+        }
+
+        private void CommitDraftStringArrayIfBlurred(ASMLiteComponent component, string[] controlNames, string undoLabel, ref string[] target, string[] draftValue)
+        {
+            if (component == null)
+                return;
+
+            if (controlNames != null)
             {
-                Rect r = GUILayoutUtility.GetLastRect();
-                Color focus = new Color(0.20f, 0.60f, 0.95f, 0.90f);
-                EditorGUI.DrawRect(new Rect(r.x, r.y, r.width, 1f), focus);
-                EditorGUI.DrawRect(new Rect(r.x, r.yMax - 1f, r.width, 1f), focus);
-                EditorGUI.DrawRect(new Rect(r.x, r.y, 1f, r.height), focus);
-                EditorGUI.DrawRect(new Rect(r.xMax - 1f, r.y, 1f, r.height), focus);
+                for (int i = 0; i < controlNames.Length; i++)
+                {
+                    if (IsNamedTextFieldFocused(controlNames[i]))
+                        return;
+                }
             }
 
-            return newValue;
+            SetComponentStringArray(component, undoLabel, ref target, draftValue);
         }
 
         private void SetComponentExcludedNames(ASMLiteComponent component, string undoLabel, string[] value)
@@ -1340,12 +697,31 @@ namespace ASMLite.Editor
             return new[] { s_subWheelBackLabel, save, load, clear };
         }
 
+        private string ResolveEffectivePendingPresetLabelForPreview(int presetIndex)
+        {
+            int slot = presetIndex + 1;
+            if (!_pendingUseCustomRootName)
+                return ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+            string[] presetNames = EnsureSizedStringArray(_pendingCustomPresetNames, Mathf.Max(_pendingSlotCount, slot));
+            string candidate = presetIndex < presetNames.Length ? NormalizeOptionalString(presetNames[presetIndex]) : string.Empty;
+            if (!string.IsNullOrWhiteSpace(candidate))
+                return candidate;
+
+            string legacyFormat = NormalizeOptionalString(_pendingCustomPresetNameFormat);
+            if (!string.IsNullOrWhiteSpace(legacyFormat) && legacyFormat.IndexOf("{slot}", StringComparison.OrdinalIgnoreCase) >= 0)
+                return legacyFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+            return ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+        }
+
         private void DrawCustomizeSection()
         {
             EditorGUILayout.LabelField("Customize", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
                 "Everything here is optional. If you leave these toggles off, ASM-Lite keeps its default look and behavior.",
                 MessageType.None);
+            EditorGUILayout.Space(6);
 
             var component = GetOrRefreshComponent();
 
@@ -1381,18 +757,18 @@ namespace ASMLite.Editor
                     EditorGUI.indentLevel++;
                     DrawRootIconSettings(component);
                     EditorGUI.indentLevel--;
-                    EditorGUILayout.Space(4f);
                 }
 
+                EditorGUILayout.Space(4);
                 _iconsActionFoldout = EditorGUILayout.Foldout(_iconsActionFoldout, "Action Icons", true);
                 if (_iconsActionFoldout)
                 {
                     EditorGUI.indentLevel++;
                     DrawActionIcons(component);
                     EditorGUI.indentLevel--;
-                    EditorGUILayout.Space(4f);
                 }
 
+                EditorGUILayout.Space(4);
                 _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, PresetIconsFoldoutTitle, true);
                 if (_iconsSlotFoldout)
                 {
@@ -1402,9 +778,9 @@ namespace ASMLite.Editor
                 }
 
                 EditorGUILayout.EndVertical();
-                EditorGUILayout.Space(6);
             }
 
+            EditorGUILayout.Space(6);
             bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
             bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom name", useCustomRootName);
             if (component)
@@ -1417,14 +793,14 @@ namespace ASMLite.Editor
                 int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
 
                 // ── Root Menu Name ───────────────────────────────────────────────
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(4);
                 EditorGUILayout.LabelField(NamingSectionRootHeader, EditorStyles.miniBoldLabel);
                 EditorGUI.indentLevel++;
 
                 if (component)
                 {
-                    string newRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, component.customRootName, "asm_name_root");
-                    SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, newRootName);
+                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root") ?? string.Empty;
+                    CommitDraftRawStringIfBlurred(component, "asm_name_root", "Change ASM-Lite Root Menu Name", ref component.customRootName, _pendingCustomRootName);
                 }
                 else
                 {
@@ -1434,25 +810,22 @@ namespace ASMLite.Editor
                 EditorGUI.indentLevel--;
 
                 // ── Preset Names ────────────────────────────────────────────────
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(4);
                 EditorGUILayout.LabelField(NamingSectionPresetHeader, EditorStyles.miniBoldLabel);
                 EditorGUI.indentLevel++;
 
                 if (component)
                 {
-                    string[] slotNames = EnsureSizedStringArray(component.customPresetNames, nameSlotCount);
-                    if (!ReferenceEquals(slotNames, component.customPresetNames))
-                        SetComponentStringArray(component, "Resize ASM-Lite Preset Names", ref component.customPresetNames, slotNames);
-
+                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                    string[] controlNames = new string[nameSlotCount];
                     for (int i = 0; i < nameSlotCount; i++)
                     {
-                        string fieldName = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), slotNames[i], $"asm_name_preset_{i + 1}");
-                        if (!string.Equals(fieldName, slotNames[i], StringComparison.Ordinal))
-                        {
-                            slotNames[i] = fieldName ?? string.Empty;
-                            SetComponentStringArray(component, "Change ASM-Lite Preset Name", ref component.customPresetNames, slotNames);
-                        }
+                        string controlName = $"asm_name_preset_{i + 1}";
+                        controlNames[i] = controlName;
+                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], controlName) ?? string.Empty;
                     }
+
+                    CommitDraftStringArrayIfBlurred(component, controlNames, "Change ASM-Lite Preset Name", ref component.customPresetNames, _pendingCustomPresetNames);
                 }
                 else
                 {
@@ -1466,23 +839,23 @@ namespace ASMLite.Editor
                 EditorGUI.indentLevel--;
 
                 // ── Action Labels ───────────────────────────────────────────────
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(4);
                 EditorGUILayout.LabelField(NamingSectionActionHeader, EditorStyles.miniBoldLabel);
                 EditorGUI.indentLevel++;
 
                 if (component)
                 {
-                    string newSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, component.customSaveLabel, "asm_name_save");
-                    SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, newSaveLabel);
+                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save") ?? string.Empty;
+                    CommitDraftRawStringIfBlurred(component, "asm_name_save", "Change ASM-Lite Save Label", ref component.customSaveLabel, _pendingCustomSaveLabel);
 
-                    string newLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, component.customLoadLabel, "asm_name_load");
-                    SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, newLoadLabel);
+                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load") ?? string.Empty;
+                    CommitDraftRawStringIfBlurred(component, "asm_name_load", "Change ASM-Lite Load Label", ref component.customLoadLabel, _pendingCustomLoadLabel);
 
-                    string newClearLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, component.customClearPresetLabel, "asm_name_clear");
-                    SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, newClearLabel);
+                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear") ?? string.Empty;
+                    CommitDraftRawStringIfBlurred(component, "asm_name_clear", "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, _pendingCustomClearPresetLabel);
 
-                    string newConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, component.customConfirmLabel, "asm_name_confirm");
-                    SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, newConfirmLabel);
+                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm") ?? string.Empty;
+                    CommitDraftRawStringIfBlurred(component, "asm_name_confirm", "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, _pendingCustomConfirmLabel);
                 }
                 else
                 {
@@ -1494,7 +867,7 @@ namespace ASMLite.Editor
 
                 EditorGUI.indentLevel--;
 
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(4);
                 EditorGUILayout.HelpBox(
                     NameFallbackGuidanceText,
                     MessageType.None);
@@ -1518,28 +891,17 @@ namespace ASMLite.Editor
 
             if (newUseCustomInstallPath)
             {
-                string currentInstallPath = component ? NormalizeOptionalString(component.customInstallPath) : NormalizeOptionalString(_pendingCustomInstallPath);
+                string currentInstallPath = NormalizeOptionalString(_pendingCustomInstallPath);
 
-                // Only apply text-field edits when the user actually changed the value.
-                // Tree clicks write directly via ApplyInstallPathSelection and must not
-                // be overwritten by a stale newInstallPath captured before the tree draws.
                 EditorGUI.BeginChangeCheck();
-                string newInstallPath = EditorGUILayout.TextField("Install Path", currentInstallPath);
+                string newInstallPath = DrawTextFieldWithFocusCue("Install Path", currentInstallPath, "asm_install_path");
                 if (EditorGUI.EndChangeCheck())
-                {
-                    if (component)
-                    {
-                        string normalizedNewInstallPath = NormalizeOptionalString(newInstallPath);
-                        bool installPathChanged = !string.Equals(NormalizeOptionalString(component.customInstallPath), normalizedNewInstallPath, StringComparison.Ordinal);
-                        SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, newInstallPath);
-                        if (installPathChanged)
-                            TryRefreshInstallPathPrefix(component, "Customize Text");
-                    }
-                    else
-                    {
-                        _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
-                    }
-                }
+                    _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+
+                bool installPathFocused = IsNamedTextFieldFocused("asm_install_path");
+                CommitDraftStringIfBlurred(component, "asm_install_path", "Change ASM-Lite Install Path", ref component.customInstallPath, _pendingCustomInstallPath);
+                if (component && !installPathFocused)
+                    TryRefreshInstallPathPrefix(component, "Customize Text");
 
                 DrawInstallPathTree(component);
             }
@@ -2813,6 +2175,10 @@ namespace ASMLite.Editor
             // 4) VRCFury Toggle candidates that will be deterministically promoted to
             //    globals during build-request enrollment. Include them pre-bake so
             //    Parameter Backup customization can target not-yet-assigned toggles.
+            //    When a candidate already carries a legacy/non-deterministic source
+            //    global name, suppress that stale visible name in favor of the
+            //    deterministic ASM_VF_* name ASM-Lite will actually back up after
+            //    build-request enrollment.
             if (avatar?.gameObject != null)
             {
                 var reserved = new HashSet<string>(names, StringComparer.Ordinal);
@@ -2829,6 +2195,12 @@ namespace ASMLite.Editor
                         continue;
                     if (deterministic.StartsWith("ASMLite_", StringComparison.Ordinal))
                         continue;
+
+                    if (!string.IsNullOrWhiteSpace(candidate.GlobalParam)
+                        && !candidate.GlobalParam.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    {
+                        names.Remove(candidate.GlobalParam.Trim());
+                    }
 
                     names.Add(deterministic);
                 }
@@ -3410,6 +2782,7 @@ namespace ASMLite.Editor
             _cachedIconSave   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
             _cachedIconLoad   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
             _cachedIconClear  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
+            _cachedFlowArrow  ??= AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.staples.asm-lite/Icons/FlowArrow.png");
 
             Texture2D bundledSave   = _cachedIconSave ?? _previewFallback;
             Texture2D bundledLoad   = _cachedIconLoad ?? _previewFallback;
@@ -3554,7 +2927,7 @@ namespace ASMLite.Editor
             EditorGUILayout.Space(6f);
 
             float availWidth = EditorGUIUtility.currentViewWidth - 40f;
-            const float connectorWidth = 30f;
+            const float connectorWidth = 60f;
             const float gap = 8f;
             const float titleHeight = 16f;
 
@@ -3587,9 +2960,14 @@ namespace ASMLite.Editor
             {
                 _mainWheelIcons  = new Texture2D[slotCount + 1];
                 _mainWheelLabels = new string[slotCount + 1];
-                _mainWheelLabels[0] = "Back";
-                for (int i = 0; i < slotCount; i++)
-                    _mainWheelLabels[i + 1] = string.Format(PresetNameLabelFormat, i + 1);
+            }
+
+            _mainWheelLabels[0] = "Back";
+            for (int i = 0; i < slotCount; i++)
+            {
+                _mainWheelLabels[i + 1] = component
+                    ? ASMLiteBuilder.ResolveEffectivePresetControlName(component, i + 1)
+                    : ResolveEffectivePendingPresetLabelForPreview(i);
             }
 
             _mainWheelIcons[0] = _previewBackIcon;
@@ -3662,19 +3040,21 @@ namespace ASMLite.Editor
             GUI.EndGroup();
         }
 
-        private static void DrawFlowArrow(Rect rect)
+             private void DrawFlowArrow(Rect rect)
         {
-            var old = Handles.color;
-            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.75f);
-
-            float y = rect.center.y;
-            float x0 = rect.x + 4f;
-            float x1 = rect.xMax - 7f;
-            Handles.DrawLine(new Vector3(x0, y, 0f), new Vector3(x1, y, 0f));
-            Handles.DrawLine(new Vector3(x1, y, 0f), new Vector3(x1 - 6f, y - 4f, 0f));
-            Handles.DrawLine(new Vector3(x1, y, 0f), new Vector3(x1 - 6f, y + 4f, 0f));
-
-            Handles.color = old;
+            // Draw cached arrow icon centered in rect with small margin.
+            if (_cachedFlowArrow != null)
+            {
+                float margin = 8f;
+                float iconWidth = rect.width - margin * 2f;
+                float iconHeight = rect.height - margin * 2f;
+                Rect iconRect = new Rect(
+                    rect.center.x - iconWidth * 0.5f,
+                    rect.center.y - iconHeight * 0.5f,
+                    iconWidth,
+                    iconHeight);
+                GUI.DrawTexture(iconRect, _cachedFlowArrow, ScaleMode.ScaleToFit);
+            }
         }
 
         /// <summary>
@@ -3831,6 +3211,10 @@ namespace ASMLite.Editor
         private void DrawStatus()
         {
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Use this section to confirm whether the avatar is attached, baked-only, or vendorized before taking action.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var component = GetOrRefreshComponent();
             bool hasComponent = component;
@@ -3878,39 +3262,7 @@ namespace ASMLite.Editor
                 toggleBrokerReport.PreflightCollisionAdjustments,
                 toggleBrokerReport.CandidateCollisionAdjustments));
 
-            EditorGUILayout.HelpBox(snapshot.SummaryText, ToMessageType(snapshot.SummarySeverity));
-
-            if (!snapshot.ShowDetailsDisclosure)
-            {
-                _showStatusDetails = false;
-                _hadStatusDetailsLastDraw = false;
-                return;
-            }
-
-            if (!_hadStatusDetailsLastDraw)
-                _showStatusDetails = !snapshot.DetailsCollapsedByDefault;
-
-            _showStatusDetails = EditorGUILayout.Foldout(
-                _showStatusDetails,
-                BuildStatusDetailsDisclosureLabel(snapshot),
-                true);
-
-            if (_showStatusDetails)
-            {
-                for (int i = 0; i < snapshot.DetailEntries.Length; i++)
-                {
-                    var detail = snapshot.DetailEntries[i];
-                    EditorGUILayout.HelpBox(detail.Text, ToMessageType(detail.Severity));
-                }
-            }
-            else
-            {
-                EditorGUILayout.LabelField(
-                    "Expand details to inspect warnings and recovery guidance.",
-                    EditorStyles.wordWrappedMiniLabel);
-            }
-
-            _hadStatusDetailsLastDraw = true;
+            EditorGUILayout.HelpBox(BuildCombinedStatusMessage(snapshot), ToMessageType(GetCombinedStatusSeverity(snapshot)));
         }
 
         private static string ResolveStatusCopy(AsmLiteToolState toolState, bool hasComponent)
@@ -3995,19 +3347,16 @@ namespace ASMLite.Editor
 
         internal readonly struct StatusPanelSnapshot
         {
-            public StatusPanelSnapshot(string summaryText, StatusDetailSeverity summarySeverity, StatusDetailEntry[] detailEntries, bool detailsCollapsedByDefault)
+            public StatusPanelSnapshot(string summaryText, StatusDetailSeverity summarySeverity, StatusDetailEntry[] detailEntries)
             {
                 SummaryText = summaryText ?? string.Empty;
                 SummarySeverity = summarySeverity;
                 DetailEntries = detailEntries ?? Array.Empty<StatusDetailEntry>();
-                DetailsCollapsedByDefault = detailsCollapsedByDefault;
             }
 
             public string SummaryText { get; }
             public StatusDetailSeverity SummarySeverity { get; }
             public StatusDetailEntry[] DetailEntries { get; }
-            public bool ShowDetailsDisclosure => DetailEntries.Length > 0;
-            public bool DetailsCollapsedByDefault { get; }
         }
 
         internal static StatusPanelSnapshot BuildStatusPanelSnapshot(StatusPanelSnapshotInput input)
@@ -4079,36 +3428,37 @@ namespace ASMLite.Editor
             return new StatusPanelSnapshot(
                 ResolveStatusCopy(input.ToolState, input.HasComponent),
                 summarySeverity,
-                details.ToArray(),
-                detailsCollapsedByDefault: details.Count > 0);
+                details.ToArray());
         }
 
-        internal static string BuildStatusDetailsDisclosureLabel(StatusPanelSnapshot snapshot)
+        internal static string BuildCombinedStatusMessage(StatusPanelSnapshot snapshot)
         {
-            if (!snapshot.ShowDetailsDisclosure)
-                return "Details";
+            var lines = new List<string>();
 
-            int warningCount = 0;
-            int errorCount = 0;
+            if (!string.IsNullOrWhiteSpace(snapshot.SummaryText))
+                lines.Add(snapshot.SummaryText.Trim());
 
             for (int i = 0; i < snapshot.DetailEntries.Length; i++)
             {
-                var severity = snapshot.DetailEntries[i].Severity;
-                if (severity == StatusDetailSeverity.Warning)
-                    warningCount++;
-                else if (severity == StatusDetailSeverity.Error)
-                    errorCount++;
+                string detailText = snapshot.DetailEntries[i].Text;
+                if (!string.IsNullOrWhiteSpace(detailText))
+                    lines.Add($"• {detailText.Trim()}");
             }
 
-            if (errorCount > 0)
-                return warningCount > 0
-                    ? $"Details ({errorCount} error(s), {warningCount} warning(s))"
-                    : $"Details ({errorCount} error(s))";
+            return string.Join("\n", lines);
+        }
 
-            if (warningCount > 0)
-                return $"Details ({warningCount} warning(s))";
+        internal static StatusDetailSeverity GetCombinedStatusSeverity(StatusPanelSnapshot snapshot)
+        {
+            StatusDetailSeverity highest = snapshot.SummarySeverity;
 
-            return $"Details ({snapshot.DetailEntries.Length})";
+            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+            {
+                if ((int)snapshot.DetailEntries[i].Severity > (int)highest)
+                    highest = snapshot.DetailEntries[i].Severity;
+            }
+
+            return highest;
         }
 
         private static MessageType ToMessageType(StatusDetailSeverity severity)
@@ -4259,6 +3609,12 @@ namespace ASMLite.Editor
             var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
 
             EditorGUILayout.LabelField("Primary Actions", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Normal workflow first. Maintenance and destructive actions stay below so the main path stays obvious.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Recommended", EditorStyles.miniBoldLabel);
+            EditorGUILayout.Space(2f);
             EditorGUILayout.BeginVertical("box");
             for (int i = 0; i < hierarchy.PrimaryActions.Length; i++)
                 DrawActionControl(hierarchy.PrimaryActions[i], component, toolState);
@@ -4267,20 +3623,22 @@ namespace ASMLite.Editor
             if (!hierarchy.HasAdvancedActions)
                 return;
 
-            EditorGUILayout.Space(6f);
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Maintenance / Advanced", EditorStyles.miniBoldLabel);
+            EditorGUILayout.Space(2f);
 
             EditorGUILayout.BeginVertical("box");
             _showAdvancedActions = EditorGUILayout.Foldout(_showAdvancedActions, "Advanced Actions", true);
             if (_showAdvancedActions)
             {
-                EditorGUILayout.Space(4f);
+                EditorGUILayout.Space(6f);
                 for (int i = 0; i < hierarchy.AdvancedActions.Length; i++)
                     DrawActionControl(hierarchy.AdvancedActions[i], component, toolState);
             }
             else
             {
                 EditorGUILayout.LabelField(
-                    "Maintenance and destructive actions are hidden until Advanced is expanded.",
+                    "Maintenance and destructive actions stay hidden until you expand Advanced.",
                     EditorStyles.wordWrappedMiniLabel);
             }
             EditorGUILayout.EndVertical();
@@ -4291,11 +3649,11 @@ namespace ASMLite.Editor
             switch (action)
             {
                 case AsmLiteWindowAction.AddPrefab:
-                    if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                    if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(40), GUILayout.ExpandWidth(true)))
                         EditorApplication.delayCall += AddPrefabToAvatar;
                     break;
                 case AsmLiteWindowAction.Rebuild:
-                    if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
+                    if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(40), GUILayout.MinWidth(220), GUILayout.ExpandWidth(true)))
                     {
                         var captured = component;
                         EditorApplication.delayCall += () => BakeAssets(captured);
@@ -4327,7 +3685,7 @@ namespace ASMLite.Editor
                 "Re-attach the editable ASM-Lite prefab and return this avatar to package-managed workflow. " +
                 "Keeps your current avatar content and restores normal ASM-Lite editing.",
                 EditorStyles.wordWrappedMiniLabel);
-            if (GUILayout.Button("Return to Package Managed", GUILayout.Height(28)))
+            if (GUILayout.Button("Return to Package Managed", GUILayout.Height(32), GUILayout.ExpandWidth(true)))
                 EditorApplication.delayCall += ReturnToPackageManaged;
             EditorGUILayout.EndVertical();
         }
@@ -5021,7 +4379,6 @@ namespace ASMLite.Editor
             component.vendorizedGeneratedAssetsPath = vendorizedDir;
             EditorUtility.SetDirty(component);
 
-            _cachedCustomParamCount = -1;
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
@@ -5072,7 +4429,6 @@ namespace ASMLite.Editor
             _cachedComponent = null;
             _lastRefreshFrame = -1;
             _discoveredParamCount = -1;
-            _cachedCustomParamCount = -1;
 
             string completion;
             if (vendorizeToAssets && !string.IsNullOrWhiteSpace(vendorizedDir))
@@ -5122,7 +4478,6 @@ namespace ASMLite.Editor
                 }
 
                 _discoveredParamCount = -1;
-                _cachedCustomParamCount = -1;
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
@@ -5139,7 +4494,6 @@ namespace ASMLite.Editor
             _cachedComponent = null;
             _lastRefreshFrame = -1;
             _discoveredParamCount = -1;
-            _cachedCustomParamCount = -1;
 
             AddPrefabToAvatar();
 
@@ -5622,7 +4976,6 @@ namespace ASMLite.Editor
                 _selectedAvatar  = descriptor;
                 _cachedComponent = null;
                 _lastRefreshFrame = -1;
-                _cachedCustomParamCount = -1;
                 _discoveredParamCount = -1;
                 SyncPendingSlotCountFromAvatar();
 
@@ -5651,153 +5004,6 @@ namespace ASMLite.Editor
             public string ParamName;  // non-null for leaf param nodes
             public bool IsParam => ParamName != null;
             public readonly List<ParamTreeNode> Children = new List<ParamTreeNode>();
-        }
-    }
-
-    internal class ASMLiteVccSwitcherWindow : EditorWindow
-    {
-        private sealed class ProjectRow
-        {
-            public string ProjectName;
-            public string ProjectRoot;
-            public string Status;
-            public bool Selected;
-        }
-
-        private List<ASMLiteWindow.VccLocalPackage> _packages;
-        private int _selectedPkg = -1;
-        private List<ProjectRow> _rows;
-        private Vector2 _pkgScroll;
-        private Vector2 _projScroll;
-        private bool _initialized;
-
-        internal static void Open()
-        {
-            var win = GetWindow<ASMLiteVccSwitcherWindow>(false, "VCC Embedded or Local Package Switcher");
-            win.minSize = new Vector2(580, 440);
-            win.Scan();
-            win.Show();
-        }
-
-        private void Scan()
-        {
-            _packages = ASMLiteWindow.DiscoverVccLocalPackages();
-            _selectedPkg = _packages.Count == 1 ? 0 : -1;
-            BuildRows();
-            _initialized = true;
-            Repaint();
-        }
-
-        private void BuildRows()
-        {
-            if (_selectedPkg < 0 || _packages == null || _selectedPkg >= _packages.Count)
-            {
-                _rows = new List<ProjectRow>();
-                return;
-            }
-
-            var pkg = _packages[_selectedPkg];
-            string currentRoot = Directory.GetParent(Application.dataPath)?.FullName;
-            var roots = ASMLiteWindow.FindVccProjectRoots().ToList();
-            if (!string.IsNullOrEmpty(currentRoot)
-                && !roots.Any(r => string.Equals(r, currentRoot, StringComparison.OrdinalIgnoreCase)))
-                roots.Insert(0, currentRoot);
-
-            _rows = roots.Select(root => new ProjectRow
-            {
-                ProjectName = Path.GetFileName(root)
-                    + (string.Equals(root, currentRoot, StringComparison.OrdinalIgnoreCase) ? " (current)" : string.Empty),
-                ProjectRoot = root,
-                Status      = ASMLiteWindow.GetProjectPackageStatus(root, pkg.PackageName),
-                Selected    = false,
-            }).ToList();
-        }
-
-        private void OnGUI()
-        {
-            if (!_initialized) { EditorGUILayout.LabelField("Scanning..."); return; }
-
-            // ── Local packages ────────────────────────────────────────────────
-            EditorGUILayout.Space(4);
-            EditorGUILayout.LabelField("Local packages (VCC user package folders)", EditorStyles.boldLabel);
-
-            _pkgScroll = EditorGUILayout.BeginScrollView(_pkgScroll, GUILayout.MaxHeight(140));
-            if (_packages == null || _packages.Count == 0)
-            {
-                EditorGUILayout.HelpBox(
-                    "No local packages found. Add package folders in VCC → Settings → Packages.",
-                    MessageType.Info);
-            }
-            else
-            {
-                for (int i = 0; i < _packages.Count; i++)
-                {
-                    var pkg = _packages[i];
-                    EditorGUILayout.BeginHorizontal();
-                    bool newSel = EditorGUILayout.Toggle(i == _selectedPkg, GUILayout.Width(18));
-                    EditorGUILayout.BeginVertical();
-                    EditorGUILayout.LabelField($"{pkg.DisplayName}  v{pkg.Version}", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField($"{pkg.PackageName}  ·  {pkg.LocalPath}", EditorStyles.miniLabel);
-                    EditorGUILayout.EndVertical();
-                    EditorGUILayout.EndHorizontal();
-                    if (newSel && i != _selectedPkg) { _selectedPkg = i; BuildRows(); }
-                }
-            }
-            EditorGUILayout.EndScrollView();
-
-            EditorGUILayout.Space(6);
-
-            // ── Projects ──────────────────────────────────────────────────────
-            bool pkgPicked = _selectedPkg >= 0 && _packages != null && _selectedPkg < _packages.Count;
-            using (new EditorGUI.DisabledScope(!pkgPicked))
-            {
-                EditorGUILayout.LabelField("VCC projects", EditorStyles.boldLabel);
-                _projScroll = EditorGUILayout.BeginScrollView(_projScroll, GUILayout.ExpandHeight(true));
-                if (_rows != null)
-                    foreach (var row in _rows)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-                        row.Selected = EditorGUILayout.Toggle(row.Selected, GUILayout.Width(18));
-                        EditorGUILayout.LabelField(row.ProjectName, GUILayout.ExpandWidth(true));
-                        EditorGUILayout.LabelField(row.Status, GUILayout.Width(110));
-                        EditorGUILayout.EndHorizontal();
-                    }
-                EditorGUILayout.EndScrollView();
-
-                EditorGUILayout.Space(2);
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("All") && _rows != null)  foreach (var r in _rows) r.Selected = true;
-                if (GUILayout.Button("None") && _rows != null) foreach (var r in _rows) r.Selected = false;
-                EditorGUILayout.EndHorizontal();
-            }
-
-            EditorGUILayout.Space(4);
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Scan")) Scan();
-            bool hasSelection = pkgPicked && _rows != null && _rows.Any(r => r.Selected);
-            using (new EditorGUI.DisabledScope(!hasSelection))
-            {
-                if (GUILayout.Button("Set to Local"))    Apply(toLocal: true);
-                if (GUILayout.Button("Set to Embedded")) Apply(toLocal: false);
-            }
-            if (GUILayout.Button("Close")) Close();
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.Space(4);
-        }
-
-        private void Apply(bool toLocal)
-        {
-            if (_packages == null || _rows == null || _selectedPkg < 0) return;
-            var pkg = _packages[_selectedPkg];
-            foreach (var row in _rows.Where(r => r.Selected).ToList())
-            {
-                if (toLocal)
-                    ASMLiteWindow.ApplySwitchToFileLocal(row.ProjectRoot, pkg.LocalPath, pkg.PackageName);
-                else
-                    ASMLiteWindow.ApplySwitchToEmbedded(row.ProjectRoot, pkg.PackageName);
-            }
-            BuildRows();
-            Repaint();
         }
     }
 }

@@ -212,6 +212,46 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void GetBackableParameterNames_PrefersDeterministicToggleAlias_OverLegacySourceName()
+        {
+            const string legacySource = "VF300_Clothing/Rezz";
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = legacySource,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = false,
+                globalParam = legacySource,
+                menuPath = "Clothing/Rezz",
+                name = "Rezz",
+            };
+
+            string[] backable = InvokePrivateStatic<string[]>(
+                typeof(ASMLite.Editor.ASMLiteWindow),
+                "GetBackableParameterNames",
+                _ctx.AvDesc);
+
+            string deterministic = ASMLite.Editor.ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                "Clothing/Rezz",
+                _ctx.AvatarGo.name,
+                new HashSet<string>(StringComparer.Ordinal));
+
+            CollectionAssert.DoesNotContain(backable, legacySource,
+                "Pre-bake toggle rows should suppress stale legacy source globals when ASM-Lite will deterministically rebind that toggle during build.");
+            CollectionAssert.Contains(backable, deterministic,
+                "Pre-bake toggle rows should expose the deterministic ASM_VF alias that ASM-Lite will actually back up after enrollment.");
+        }
+
+        [Test]
         public void GetBackableParameterNames_IncludesVrcFuryReferencedParameterAssets_PreBake()
         {
             var mediaRoot = new GameObject("Media");

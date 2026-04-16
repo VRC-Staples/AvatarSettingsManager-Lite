@@ -48,6 +48,7 @@ MonoBehaviour:
   slotCount: 3
   iconMode: 0
   selectedGearIndex: 0
+  useCustomSlotIcons: 0
   customIcons: []
   actionIconMode: 0
   customSaveIcon: {fileID: 0}
@@ -57,6 +58,12 @@ MonoBehaviour:
   customRootIcon: {fileID: 0}
   useCustomRootName: 0
   customRootName: 
+  customPresetNameFormat: 
+  customPresetNames: []
+  customSaveLabel: 
+  customLoadLabel: 
+  customClearPresetLabel: 
+  customConfirmLabel: 
   useCustomInstallPath: 0
   customInstallPath: 
   useParameterExclusions: 0
@@ -82,11 +89,11 @@ MonoBehaviour:
   config:
     features: []
   content:
-    rid: 4657480957155868691
+    rid: 4657481039153201218
   references:
     version: 2
     RefIds:
-    - rid: 4657480957155868691
+    - rid: 4657481039153201218
       type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
       data:
         version: 4

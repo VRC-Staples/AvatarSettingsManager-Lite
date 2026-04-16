@@ -19,6 +19,26 @@ MonoBehaviour:
     saved: 0
     defaultValue: 0
     networkSynced: 0
+  - name: ASMLite_Bak_S1_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 1.1298.0
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
   - name: ASMLite_Bak_S1_All black
     valueType: 2
     saved: 1
@@ -314,7 +334,207 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
-  - name: ASMLite_Bak_S1_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S1_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 1.1298.0
     valueType: 2
     saved: 1
     defaultValue: 0
@@ -614,7 +834,207 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
-  - name: ASMLite_Bak_S2_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S2_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 1.1298.0
     valueType: 2
     saved: 1
     defaultValue: 0
@@ -914,7 +1334,207 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
-  - name: ASMLite_Bak_S3_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S3_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF 1.1298.0
     valueType: 2
     saved: 1
     defaultValue: 0
@@ -1214,7 +1834,207 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
-  - name: ASMLite_Bak_S4_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S4_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF 1.1298.0
     valueType: 2
     saved: 1
     defaultValue: 0
@@ -1514,7 +2334,207 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
-  - name: ASMLite_Bak_S5_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S5_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF 3.10.2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF 1.1298.0
     valueType: 2
     saved: 1
     defaultValue: 0
@@ -1814,7 +2834,877 @@ MonoBehaviour:
     saved: 1
     defaultValue: 1
     networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S6_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
   - name: ASMLite_Bak_S6_ASM_VF_Clothing_Rezz__Oct25_Dress_fury_stuff
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF135_Clothing/Rezz2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF135_Clothing/Rezz2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF135_Clothing/Rezz2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S4_VF135_Clothing/Rezz2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S5_VF135_Clothing/Rezz2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_autoMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_stealth2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_multi2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Blowjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Pussy2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Anal2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Handjob Right2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Double Handjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Handjob/Handjob Left2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Titjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Assjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF11_Special/Thighjob2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF126_Lighting menu/AudioLink/Disable AudioLink 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF127_Lighting menu/AudioLink/Treble Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF128_Lighting menu/AudioLink/Bass Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF129_Lighting menu/AudioLink/HighMid Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF130_Lighting menu/AudioLink/Volume Toggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF131_Body/BunnyToggle2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF132_Lighting menu/AudioLink/Glasses2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF133_Clothing/PastieText2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF134_Clothing/RGBMode2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S6_VF135_Clothing/Rezz2
     valueType: 2
     saved: 1
     defaultValue: 0

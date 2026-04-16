@@ -6,6 +6,7 @@ using UnityEditor.Animations;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -1990,14 +1991,27 @@ namespace ASMLite.Editor
             var rootMenu = avDesc.expressionsMenu;
             if (rootMenu != null && rootMenu.controls != null)
             {
+                string generatedPresetsMenuPath = ($"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset").Replace('\\', '/');
+                const string presetsMenuFileName = "ASMLite_Presets_Menu.asset";
+
                 for (int i = rootMenu.controls.Count - 1; i >= 0; i--)
                 {
                     var control = rootMenu.controls[i];
                     if (control == null)
                         continue;
-                    if (control.name != DefaultRootControlName)
-                        continue;
                     if (control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
+                        continue;
+
+                    string submenuPath = control.subMenu != null
+                        ? (AssetDatabase.GetAssetPath(control.subMenu) ?? string.Empty).Replace('\\', '/')
+                        : string.Empty;
+
+                    bool matchesAsmLiteRootName = string.Equals(control.name, DefaultRootControlName, StringComparison.Ordinal);
+                    bool matchesGeneratedPresetsPath = string.Equals(submenuPath, generatedPresetsMenuPath, StringComparison.Ordinal);
+                    bool matchesPresetsMenuFileName = !string.IsNullOrWhiteSpace(submenuPath)
+                        && string.Equals(Path.GetFileName(submenuPath), presetsMenuFileName, StringComparison.Ordinal);
+
+                    if (!matchesAsmLiteRootName && !matchesGeneratedPresetsPath && !matchesPresetsMenuFileName)
                         continue;
 
                     rootMenu.controls.RemoveAt(i);

@@ -223,6 +223,33 @@ namespace ASMLite.Tests.Editor
                 $"A38: cleanup must remove Settings Manager root control. before={before}, after={after}.");
         }
 
+        [Test, Category("Integration")]
+        public void A38b_Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference()
+        {
+            _ctx.Comp.slotCount = 1;
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = "My Custom Presets";
+            AddAvatarParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
+
+            bool detached = ASMLiteBuilder.TryDetachToDirectDelivery(_ctx.Comp, out string detail);
+            Assert.IsTrue(detached,
+                $"A38b: detach setup failed. detail={detail}");
+
+            int customizedRootCountBefore = _ctx.AvDesc.expressionsMenu.controls.Count(c => c != null
+                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                && c.name == "My Custom Presets");
+            Assert.Greater(customizedRootCountBefore, 0,
+                $"A38b: setup failure, expected customized detached root control before cleanup. count={customizedRootCountBefore}.");
+
+            ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
+
+            int customizedRootCountAfter = _ctx.AvDesc.expressionsMenu.controls.Count(c => c != null
+                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                && c.name == "My Custom Presets");
+            Assert.AreEqual(0, customizedRootCountAfter,
+                $"A38b: cleanup must remove customized detached root control. before={customizedRootCountBefore}, after={customizedRootCountAfter}.");
+        }
+
         // ── A39 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]

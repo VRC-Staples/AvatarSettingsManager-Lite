@@ -26,10 +26,12 @@ namespace ASMLite.Tests.Editor
                 snapshot.SummaryText);
             Assert.AreEqual(0, snapshot.DetailEntries.Length,
                 "Malformed component-missing package-managed input should not invent detail rows.");
-            Assert.False(snapshot.ShowDetailsDisclosure,
-                "No detail rows means no disclosure affordance should be shown.");
-            Assert.False(snapshot.DetailsCollapsedByDefault,
-                "No detail rows means collapsed-by-default should remain false.");
+            Assert.AreEqual(
+                "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.",
+                ASMLite.Editor.ASMLiteWindow.BuildCombinedStatusMessage(snapshot));
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Info,
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
         }
 
         [Test]
@@ -65,10 +67,11 @@ namespace ASMLite.Tests.Editor
                 Contains.Item("ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode."));
             Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Info, detached.DetailEntries[0].Severity);
             Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Info, vendorized.DetailEntries[0].Severity);
-            Assert.True(detached.ShowDetailsDisclosure);
-            Assert.True(vendorized.ShowDetailsDisclosure);
-            Assert.True(detached.DetailsCollapsedByDefault);
-            Assert.True(vendorized.DetailsCollapsedByDefault);
+
+            StringAssert.Contains("• ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.",
+                ASMLite.Editor.ASMLiteWindow.BuildCombinedStatusMessage(detached));
+            StringAssert.Contains("• ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.",
+                ASMLite.Editor.ASMLiteWindow.BuildCombinedStatusMessage(vendorized));
         }
 
         [Test]
@@ -91,8 +94,9 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, snapshot.DetailEntries.Length,
                 "Not-installed branch should keep exactly one onboarding warning detail.");
             Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning, snapshot.DetailEntries[0].Severity);
-            Assert.True(snapshot.ShowDetailsDisclosure);
-            Assert.True(snapshot.DetailsCollapsedByDefault);
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning,
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
         }
 
         [Test]
@@ -114,8 +118,9 @@ namespace ASMLite.Tests.Editor
                 Contains.Item("⚠ This avatar has no Expression Parameters asset assigned yet."));
             Assert.AreEqual(1, snapshot.DetailEntries.Count(d => d.Severity == ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning),
                 "Missing-expression branch should provide one warning detail.");
-            Assert.True(snapshot.ShowDetailsDisclosure);
-            Assert.True(snapshot.DetailsCollapsedByDefault);
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning,
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
         }
 
         [Test]
@@ -140,13 +145,13 @@ namespace ASMLite.Tests.Editor
 
             Assert.AreEqual(2, snapshot.DetailEntries.Count(d => d.Severity == ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning),
                 "Import-pending plus collision branch should emit two warning details.");
-            Assert.True(snapshot.ShowDetailsDisclosure);
-            Assert.True(snapshot.DetailsCollapsedByDefault,
-                "Any conditional details should default to collapsed disclosure for S03 compression behavior.");
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning,
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
         }
 
         [Test]
-        public void BuildStatusDetailsDisclosureLabel_WithWarnings_ContainsWarningCount()
+        public void BuildCombinedStatusMessage_WithWarnings_ContainsSummaryAndBulletLines()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
@@ -160,13 +165,18 @@ namespace ASMLite.Tests.Editor
                 toggleBrokerPreflightCollisionAdjustments: 2,
                 toggleBrokerCandidateCollisionAdjustments: 1));
 
-            string label = ASMLite.Editor.ASMLiteWindow.BuildStatusDetailsDisclosureLabel(snapshot);
+            string message = ASMLite.Editor.ASMLiteWindow.BuildCombinedStatusMessage(snapshot);
 
-            Assert.AreEqual("Details (2 warning(s))", label);
+            StringAssert.StartsWith(
+                "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.",
+                message);
+            StringAssert.Contains("• ASM-Lite component is attached to this avatar.", message);
+            StringAssert.Contains("• ⚠ Avatar parameter data is still importing in Unity. Please wait a moment.", message);
+            StringAssert.Contains("• [Toggle Broker] Last setup reserved 5 name(s) and auto-adjusted conflicting names: preflight=2, intra-candidate=1.", message);
         }
 
         [Test]
-        public void BuildStatusDetailsDisclosureLabel_InformationalOnly_UsesDetailCount()
+        public void BuildCombinedStatusMessage_InformationalOnly_UsesSummaryAndDetails()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
@@ -180,9 +190,16 @@ namespace ASMLite.Tests.Editor
                 toggleBrokerPreflightCollisionAdjustments: 0,
                 toggleBrokerCandidateCollisionAdjustments: 0));
 
-            string label = ASMLite.Editor.ASMLiteWindow.BuildStatusDetailsDisclosureLabel(snapshot);
+            string message = ASMLite.Editor.ASMLiteWindow.BuildCombinedStatusMessage(snapshot);
 
-            Assert.AreEqual("Details (2)", label);
+            StringAssert.StartsWith(
+                "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.",
+                message);
+            StringAssert.Contains("• ASM-Lite component is attached to this avatar.", message);
+            StringAssert.Contains("• ASM-Lite currently backs up 8 parameter(s) across 3 preset slot(s).", message);
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Info,
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
         }
 
         private static ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshot BuildSnapshot(

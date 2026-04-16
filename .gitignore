@@ -7,8 +7,13 @@ Thumbs.db
 .vscode/
 *.code-workspace
 
-# GSD
+# AI Stuff
 .gsd/
+.forge/
+.gsd
+.audits
+.gsd-id
+agents.md
 .claude/
 claude.md
 .bg-shell/
@@ -33,8 +38,7 @@ unity-export.log
 # VPM package — never ignore
 !Packages/com.staples.asm-lite/
 
-# ── GSD baseline (auto-generated) ──
-.gsd
+# Misc
 *.swp
 *.swo
 *~
@@ -49,15 +53,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-target/
-vendor/
 *.log
-coverage/
-.cache/
 tmp/
-
-# ── GSD baseline (auto-generated) ──
-.gsd-id
 
 # ── Unity Test Project for regression tests.
 Test Project/
@@ -68,5 +65,4 @@ Tools/ci/unity-project/Temp/
 Tools/ci/unity-project/Logs/
 Tools/ci/unity-project/UserSettings/
 Tools/ci/unity-project/*.csproj
-# Tools/ci/unity-project/Packages/packages-lock.json is intentionally tracked (network not available in CI docker)
-.gstack/
+
