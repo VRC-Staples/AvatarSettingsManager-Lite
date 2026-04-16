@@ -170,7 +170,7 @@ namespace ASMLite.Tests.Editor
             StringAssert.StartsWith(
                 "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.",
                 message);
-            StringAssert.Contains("• ASM-Lite component is attached to this avatar.", message);
+            StringAssert.Contains("• ✓ ASM-Lite is attached to this avatar.", message);
             StringAssert.Contains("• ⚠ Avatar parameter data is still importing in Unity. Please wait a moment.", message);
             StringAssert.Contains("• [Toggle Broker] Last setup reserved 5 name(s) and auto-adjusted conflicting names: preflight=2, intra-candidate=1.", message);
         }
@@ -195,8 +195,8 @@ namespace ASMLite.Tests.Editor
             StringAssert.StartsWith(
                 "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.",
                 message);
-            StringAssert.Contains("• ASM-Lite component is attached to this avatar.", message);
-            StringAssert.Contains("• ASM-Lite currently backs up 8 parameter(s) across 3 preset slot(s).", message);
+            StringAssert.Contains("• ✓ ASM-Lite is attached to this avatar.", message);
+            StringAssert.Contains("• ✓ 8 custom parameter(s) are being saved across 3 preset(s).", message);
             Assert.AreEqual(
                 ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Info,
                 ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));

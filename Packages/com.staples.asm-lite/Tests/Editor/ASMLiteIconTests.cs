@@ -139,6 +139,7 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 4;
             _ctx.Comp.iconMode = IconMode.Custom;
+            _ctx.Comp.useCustomSlotIcons = true;
 
             var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "A53");
             var customSlot1 = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[5], "A53");

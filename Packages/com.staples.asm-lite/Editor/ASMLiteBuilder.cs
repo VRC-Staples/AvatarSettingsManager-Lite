@@ -48,7 +48,7 @@ namespace ASMLite.Editor
         internal const string DefaultPresetNameFormat = "Preset {slot}";
         internal const string DefaultSaveLabel = "Save";
         internal const string DefaultLoadLabel = "Load";
-        internal const string DefaultClearPresetLabel = "Clear Slot";
+        internal const string DefaultClearPresetLabel = "Clear Preset";
         internal const string DefaultConfirmLabel = "Confirm";
 
         internal readonly struct CleanupReport

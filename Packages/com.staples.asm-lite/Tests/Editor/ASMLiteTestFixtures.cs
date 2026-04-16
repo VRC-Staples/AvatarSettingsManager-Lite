@@ -115,6 +115,10 @@ namespace ASMLite.Tests.Editor
 
         public static void SetExpressionParams(AsmLiteTestContext ctx, params VRCExpressionParameters.Parameter[] parameters)
         {
+            Assert.IsNotNull(ctx, "SetExpressionParams requires a valid test context.");
+            Assert.IsNotNull(ctx.ParamsAsset,
+                "SetExpressionParams requires a non-null ParamsAsset. Ensure CreateTestAvatar() completed and test teardown has not already disposed the asset.");
+
             ctx.ParamsAsset.parameters = parameters ?? new VRCExpressionParameters.Parameter[0];
             EditorUtility.SetDirty(ctx.ParamsAsset);
             AssetDatabase.SaveAssets();

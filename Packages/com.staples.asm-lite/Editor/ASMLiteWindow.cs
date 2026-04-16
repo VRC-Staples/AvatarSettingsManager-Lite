@@ -4533,7 +4533,7 @@ namespace ASMLite.Editor
             component.useCustomRootIcon = _pendingUseCustomRootIcon;
             component.customRootIcon = _pendingCustomRootIcon;
             component.useCustomRootName = _pendingUseCustomRootName;
-            component.customRootName = _pendingCustomRootName ?? string.Empty;
+            component.customRootName = NormalizeOptionalString(_pendingCustomRootName);
             component.customPresetNames = CloneStrings(_pendingCustomPresetNames);
             component.customPresetNameFormat = NormalizeOptionalString(_pendingCustomPresetNameFormat);
             component.customSaveLabel = _pendingCustomSaveLabel ?? string.Empty;
@@ -4561,7 +4561,7 @@ namespace ASMLite.Editor
             _pendingUseCustomRootIcon = component.useCustomRootIcon;
             _pendingCustomRootIcon = component.customRootIcon;
             _pendingUseCustomRootName = component.useCustomRootName;
-            _pendingCustomRootName = component.customRootName ?? string.Empty;
+            _pendingCustomRootName = NormalizeOptionalString(component.customRootName);
             _pendingCustomPresetNames = CloneStrings(component.customPresetNames);
             _pendingCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
             _pendingCustomSaveLabel = component.customSaveLabel ?? string.Empty;
