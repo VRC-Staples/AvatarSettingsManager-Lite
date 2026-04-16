@@ -45,7 +45,7 @@ namespace ASMLite.Editor
         internal const string CtrlParam = "ASMLite_Ctrl";
 
         internal const string DefaultRootControlName = "Settings Manager";
-        internal const string DefaultPresetNameFormat = "Slot {slot}";
+        internal const string DefaultPresetNameFormat = "Preset {slot}";
         internal const string DefaultSaveLabel = "Save";
         internal const string DefaultLoadLabel = "Load";
         internal const string DefaultClearPresetLabel = "Clear Slot";
@@ -2053,7 +2053,7 @@ namespace ASMLite.Editor
         internal static string ResolveEffectivePresetControlName(ASMLiteComponent component, int slot)
         {
             if (component == null || !component.useCustomRootName)
-                return $"Slot {slot}";
+                return DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase);
 
             if (component.customPresetNames != null)
             {
@@ -2076,7 +2076,7 @@ namespace ASMLite.Editor
                 return $"{legacyFormat} {slot}";
             }
 
-            return $"Slot {slot}";
+            return DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
         internal static string ResolveEffectiveSaveLabel(ASMLiteComponent component)
