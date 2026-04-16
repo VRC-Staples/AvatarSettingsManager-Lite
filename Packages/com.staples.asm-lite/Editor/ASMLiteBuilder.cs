@@ -2117,12 +2117,12 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Resolves root wrapper menu control icon for generated/injected paths.
-        /// Master custom-icons gate controls whether custom root icon may apply.
-        /// If custom icon is absent, falls back to bundled presets icon.
+        /// Dedicated root-icon toggle controls whether a custom root icon may apply.
+        /// If the custom root icon is absent, falls back to the bundled presets icon.
         /// </summary>
         internal static Texture2D ResolveEffectiveRootControlIcon(ASMLiteComponent component, Texture2D fallbackIcon)
         {
-            if (component == null || !component.useCustomSlotIcons)
+            if (component == null || !component.useCustomRootIcon)
                 return fallbackIcon;
 
             return component.customRootIcon != null ? component.customRootIcon : fallbackIcon;

@@ -59,6 +59,7 @@ namespace ASMLite.Editor
 
         // Pending customization scaffold state: copied into new prefab instances
         // and refreshed from the selected avatar component when present.
+        private bool _pendingUseCustomRootIcon = false;
         private Texture2D _pendingCustomRootIcon;
         private bool _pendingUseCustomRootName = false;
         private string _pendingCustomRootName = string.Empty;
@@ -2568,6 +2569,17 @@ namespace ASMLite.Editor
 
         private void DrawRootIconSettings(ASMLiteComponent component)
         {
+            bool useCustomRootIcon = component ? component.useCustomRootIcon : _pendingUseCustomRootIcon;
+            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Use custom root icon", useCustomRootIcon);
+
+            if (component)
+                SetComponentBool(component, "Toggle ASM-Lite Custom Root Icon", ref component.useCustomRootIcon, newUseCustomRootIcon);
+            else
+                _pendingUseCustomRootIcon = newUseCustomRootIcon;
+
+            if (!newUseCustomRootIcon)
+                return;
+
             Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
             Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
 
@@ -2918,7 +2930,7 @@ namespace ASMLite.Editor
             Texture2D rootFallbackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets) ?? _previewFallback;
             Texture2D rootPreviewIcon = component
                 ? ASMLiteBuilder.ResolveEffectiveRootControlIcon(component, rootFallbackIcon)
-                : ((_pendingUseCustomSlotIcons && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
+                : ((_pendingUseCustomRootIcon && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
             string rootPreviewName = ResolveEffectiveRootNameForPreview(component);
             string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
 
@@ -4518,7 +4530,7 @@ namespace ASMLite.Editor
             component.useCustomSlotIcons = _pendingUseCustomSlotIcons;
             component.customIcons = CloneTextures(_pendingCustomIcons);
 
-            component.useCustomRootIcon = _pendingUseCustomSlotIcons && _pendingCustomRootIcon != null;
+            component.useCustomRootIcon = _pendingUseCustomRootIcon;
             component.customRootIcon = _pendingCustomRootIcon;
             component.useCustomRootName = _pendingUseCustomRootName;
             component.customRootName = _pendingCustomRootName ?? string.Empty;
@@ -4546,6 +4558,7 @@ namespace ASMLite.Editor
             _pendingUseCustomSlotIcons = component.useCustomSlotIcons;
             _pendingCustomIcons = CloneTextures(component.customIcons);
 
+            _pendingUseCustomRootIcon = component.useCustomRootIcon;
             _pendingCustomRootIcon = component.customRootIcon;
             _pendingUseCustomRootName = component.useCustomRootName;
             _pendingCustomRootName = component.customRootName ?? string.Empty;
@@ -4776,6 +4789,7 @@ namespace ASMLite.Editor
                 bool savedUseCustomSlotIcons = component.useCustomSlotIcons;
                 Texture2D[] savedCustomIcons = CloneTextures(component.customIcons);
                 Texture2D savedCustomRootIcon = component.customRootIcon;
+                bool savedUseCustomRootIcon = component.useCustomRootIcon;
                 bool savedUseCustomRootName = component.useCustomRootName;
                 string savedCustomRootName = component.customRootName ?? string.Empty;
                 string[] savedCustomPresetNames = CloneStrings(component.customPresetNames);
@@ -4818,7 +4832,7 @@ namespace ASMLite.Editor
                     newComponent.customClearIcon = savedCustomClear;
                     newComponent.useCustomSlotIcons = savedUseCustomSlotIcons;
                     newComponent.customIcons = savedCustomIcons;
-                    newComponent.useCustomRootIcon = savedUseCustomSlotIcons && savedCustomRootIcon != null;
+                    newComponent.useCustomRootIcon = savedUseCustomRootIcon;
                     newComponent.customRootIcon = savedCustomRootIcon;
                     newComponent.useCustomRootName = savedUseCustomRootName;
                     newComponent.customRootName = savedCustomRootName;
