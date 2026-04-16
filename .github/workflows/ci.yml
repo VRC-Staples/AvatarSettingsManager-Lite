@@ -168,14 +168,14 @@ jobs:
           fi
 
           UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
-            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt)"
+            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt | tr -d '\r\n')"
           if [ -z "${UNITY_VERSION:-}" ]; then
             echo "::error::Failed to read Unity version from ProjectVersion.txt"
             exit 1
           fi
 
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
-          echo "Using Unity image ${UNITY_IMAGE}"
+          printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
 
           # Derive serial from the .ulf file (machine-independent — only the
           # DeveloperData base64 segment is used, not machine bindings).
