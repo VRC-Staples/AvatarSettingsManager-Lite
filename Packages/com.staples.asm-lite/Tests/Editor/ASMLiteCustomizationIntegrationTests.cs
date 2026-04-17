@@ -38,9 +38,10 @@ namespace ASMLite.Tests.Editor
             var customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[4], "A53");
 
             _ctx.Comp.slotCount = 3;
+            _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  Unified Presets  ";
-            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = customRootIcon;
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "  Avatars/Integrated  ";
@@ -126,9 +127,10 @@ namespace ASMLite.Tests.Editor
         public void A54_CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe()
         {
             _ctx.Comp.slotCount = 2;
+            _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  Repeatable Root  ";
-            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[0], "A54");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "  Avatars/Repeatable  ";
@@ -204,9 +206,10 @@ namespace ASMLite.Tests.Editor
             var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "A55");
 
             _ctx.Comp.slotCount = 2;
+            _ctx.Comp.useCustomSlotIcons = false;
             _ctx.Comp.useCustomRootName = false;
             _ctx.Comp.customRootName = "  Stale Root Name  ";
-            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = staleIcon;
             _ctx.Comp.useCustomInstallPath = false;
             _ctx.Comp.customInstallPath = "  Avatars/StalePrefix  ";
@@ -235,7 +238,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, rootControl.name,
                 "A55: disabled custom root name toggle must keep baseline Settings Manager wrapper name.");
             Assert.AreSame(fallbackIcon, rootControl.icon,
-                "A55: disabled custom root icon toggle must keep bundled presets icon fallback.");
+                "A55: disabled custom icons must keep bundled presets icon fallback even when a stale legacy root-icon toggle remains serialized.");
 
             var generatedFx = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
@@ -291,9 +294,10 @@ namespace ASMLite.Tests.Editor
         public void A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild()
         {
             _ctx.Comp.slotCount = 1;
+            _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = " Enabled First Pass ";
-            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[2], "A56");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = " Avatars/EnabledFirstPass ";
@@ -309,7 +313,8 @@ namespace ASMLite.Tests.Editor
 
             _ctx.Comp.useCustomRootName = false;
             _ctx.Comp.customRootName = " stale disabled name ";
-            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.useCustomSlotIcons = false;
+            _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "A56");
             _ctx.Comp.useCustomInstallPath = false;
             _ctx.Comp.customInstallPath = " stale/disabled/prefix ";

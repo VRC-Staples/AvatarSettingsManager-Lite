@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -143,6 +144,30 @@ namespace ASMLite.Tests.Editor
             var fullPath = Path.GetFullPath(assetPath);
             Assert.IsTrue(File.Exists(fullPath), $"Expected generated asset file at '{fullPath}'.");
             return File.ReadAllText(fullPath);
+        }
+
+        private static int CountDanglingLocalFileIds(string controllerText)
+        {
+            Assert.IsNotNull(controllerText, "Controller text should not be null when scanning for dangling file IDs.");
+
+            var definedIds = Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", RegexOptions.Multiline)
+                .Cast<Match>()
+                .Select(m => m.Groups[1].Value)
+                .ToHashSet();
+
+            int danglingCount = 0;
+            foreach (Match match in Regex.Matches(controllerText, @"\{fileID: (-?\d+)\}"))
+            {
+                string fileId = match.Groups[1].Value;
+                if (fileId == "0" || fileId == "9100000")
+                    continue;
+                if (definedIds.Contains(fileId))
+                    continue;
+
+                danglingCount++;
+            }
+
+            return danglingCount;
         }
 
         // ── A46 ────────────────────────────────────────────────────────────────
@@ -352,6 +377,8 @@ namespace ASMLite.Tests.Editor
                 $"A50: repeated Build() introduced duplicate ASMLite FX param names. duplicateGroups={duplicateFxNames}.");
             Assert.AreEqual(0, duplicateExprNames,
                 $"A50: repeated Build() introduced duplicate ASMLite expression param names. duplicateGroups={duplicateExprNames}.");
+            Assert.AreEqual(0, CountDanglingLocalFileIds(fxSecond),
+                "A50: repeated Build() must not leave dangling local fileID references in the generated FX controller text.");
         }
 
         [Test, Category("Integration")]

@@ -649,6 +649,11 @@ namespace ASMLite.Editor
             for (int i = ctrl.layers.Length - 1; i >= 0; i--)
                 ctrl.RemoveLayer(i);
 
+            // Unity can retain hidden controller sub-assets from prior topologies even
+            // after their parent layers are removed. Prune those stale sub-assets before
+            // rebuilding so the serialized controller cannot carry orphaned local file IDs.
+            RemoveControllerSubAssets(ctrl);
+
             // Clear existing parameters.
             // Iterate until empty rather than foreach: RemoveParameter modifies the
             // underlying list, and a stale controller may contain duplicate-named entries
@@ -765,6 +770,28 @@ namespace ASMLite.Editor
 
             EditorUtility.SetDirty(ctrl);
             // SaveAssets is called once in Build() after all three Populate methods complete.
+        }
+
+        private static void RemoveControllerSubAssets(AnimatorController ctrl)
+        {
+            if (ctrl == null)
+                return;
+
+            string controllerPath = AssetDatabase.GetAssetPath(ctrl);
+            if (string.IsNullOrWhiteSpace(controllerPath))
+                return;
+
+            var subAssets = AssetDatabase.LoadAllAssetsAtPath(controllerPath);
+            for (int i = 0; i < subAssets.Length; i++)
+            {
+                var subAsset = subAssets[i];
+                if (subAsset == null || subAsset == ctrl)
+                    continue;
+                if (!AssetDatabase.IsSubAsset(subAsset))
+                    continue;
+
+                UnityEngine.Object.DestroyImmediate(subAsset, true);
+            }
         }
 
         /// <summary>
@@ -2117,12 +2144,12 @@ namespace ASMLite.Editor
 
         /// <summary>
         /// Resolves root wrapper menu control icon for generated/injected paths.
-        /// Dedicated root-icon toggle controls whether a custom root icon may apply.
+        /// Root icon customization is available whenever custom icons are enabled.
         /// If the custom root icon is absent, falls back to the bundled presets icon.
         /// </summary>
         internal static Texture2D ResolveEffectiveRootControlIcon(ASMLiteComponent component, Texture2D fallbackIcon)
         {
-            if (component == null || !component.useCustomRootIcon)
+            if (component == null || !component.useCustomSlotIcons)
                 return fallbackIcon;
 
             return component.customRootIcon != null ? component.customRootIcon : fallbackIcon;

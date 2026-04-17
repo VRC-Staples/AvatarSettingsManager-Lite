@@ -103,13 +103,14 @@ namespace ASMLite
         public Texture2D customClearIcon;
 
         /// <summary>
-        /// Enables custom root menu icon behavior for the generated ASM-Lite root control.
+        /// Legacy dedicated root-icon toggle retained for backward compatibility.
+        /// Root icon customization now applies whenever custom icons are enabled.
         /// </summary>
         [SerializeField]
         public bool useCustomRootIcon = false;
 
         /// <summary>
-        /// Optional custom root menu icon used when <see cref="useCustomRootIcon"/> is enabled.
+        /// Optional custom root menu icon used when custom icons are enabled.
         /// </summary>
         [SerializeField]
         public Texture2D customRootIcon;

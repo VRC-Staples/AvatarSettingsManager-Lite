@@ -2569,17 +2569,6 @@ namespace ASMLite.Editor
 
         private void DrawRootIconSettings(ASMLiteComponent component)
         {
-            bool useCustomRootIcon = component ? component.useCustomRootIcon : _pendingUseCustomRootIcon;
-            bool newUseCustomRootIcon = EditorGUILayout.ToggleLeft("Use custom root icon", useCustomRootIcon);
-
-            if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Custom Root Icon", ref component.useCustomRootIcon, newUseCustomRootIcon);
-            else
-                _pendingUseCustomRootIcon = newUseCustomRootIcon;
-
-            if (!newUseCustomRootIcon)
-                return;
-
             Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
             Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
 
@@ -2930,7 +2919,7 @@ namespace ASMLite.Editor
             Texture2D rootFallbackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets) ?? _previewFallback;
             Texture2D rootPreviewIcon = component
                 ? ASMLiteBuilder.ResolveEffectiveRootControlIcon(component, rootFallbackIcon)
-                : ((_pendingUseCustomRootIcon && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
+                : ((useCustomSlotIcons && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
             string rootPreviewName = ResolveEffectiveRootNameForPreview(component);
             string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
 
