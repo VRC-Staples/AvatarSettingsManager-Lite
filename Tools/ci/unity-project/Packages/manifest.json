@@ -1,7 +1,8 @@
 {
   "dependencies": {
-    "com.unity.test-framework": "1.1.33",
     "com.staples.asm-lite": "file:../../../../Packages/com.staples.asm-lite",
+    "com.unity.test-framework": "1.1.33",
+    "com.unity.toolchain.linux-x86_64": "2.0.11",
     "com.vrchat.avatars": "file:com.vrchat.avatars",
     "com.vrchat.base": "file:com.vrchat.base"
   },
@@ -9,7 +10,9 @@
     {
       "name": "Unity",
       "url": "https://packages.unity.com",
-      "scopes": ["com.unity"]
+      "scopes": [
+        "com.unity"
+      ]
     }
   ]
 }

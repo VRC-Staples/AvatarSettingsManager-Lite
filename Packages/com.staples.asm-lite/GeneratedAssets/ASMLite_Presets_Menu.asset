@@ -14,27 +14,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Parameters: {fileID: 0}
   controls:
-  - name: Slot 1
+  - name: Preset 1
     icon: {fileID: 2800000, guid: 45f8b84d327c4ea68249eec247392cbc, type: 3}
     type: 103
     parameter:
       name: 
     value: 1
     style: 0
-    subMenu: {fileID: 11400000, guid: 1f74f34b7fcfaec4aaa94bb62a998f2d, type: 2}
+    subMenu: {fileID: 11400000, guid: 36583b30c441f1c05a1a2332ea8977f8, type: 2}
     subParameters: []
     labels: []
-  - name: Slot 2
+  - name: Preset 2
     icon: {fileID: 2800000, guid: 757ae6584e454d59a3f83f3f5f66513b, type: 3}
     type: 103
     parameter:
       name: 
     value: 1
     style: 0
-    subMenu: {fileID: 11400000, guid: bb1fbdfe597b62940b812e5829714edf, type: 2}
+    subMenu: {fileID: 11400000, guid: 11d6c9784dcf9db9ca93824f112d6bb6, type: 2}
     subParameters: []
     labels: []
-  - name: Slot 3
+  - name: Preset 3
     icon: {fileID: 2800000, guid: 0e56767d33d8466c9673d31971902697, type: 3}
     type: 103
     parameter:
@@ -42,35 +42,5 @@ MonoBehaviour:
     value: 1
     style: 0
     subMenu: {fileID: 11400000, guid: 5d1dc8f885504634abead130c8ad1ea4, type: 2}
-    subParameters: []
-    labels: []
-  - name: Slot 4
-    icon: {fileID: 2800000, guid: 8969a59386444ca48112f21c2e00cf14, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: a467703234726484aa7bb3c96b782fe7, type: 2}
-    subParameters: []
-    labels: []
-  - name: Slot 5
-    icon: {fileID: 2800000, guid: 370d91d5df2048fa8d9f7ccf2b3cae1c, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: 5d2e0ed7534091147aed3fd0ab274ec1, type: 2}
-    subParameters: []
-    labels: []
-  - name: Slot 6
-    icon: {fileID: 2800000, guid: c420a379076a44aaa75b95945068ac75, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: 00bb736f940424c408f9031ab9245fe4, type: 2}
     subParameters: []
     labels: []

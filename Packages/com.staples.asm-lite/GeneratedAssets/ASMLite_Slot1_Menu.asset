@@ -34,13 +34,13 @@ MonoBehaviour:
     subMenu: {fileID: 0}
     subParameters: []
     labels: []
-  - name: Clear Slot
+  - name: Clear Preset
     icon: {fileID: 2800000, guid: 1d47b2759d574d7e9b1a7f57cfe9f7aa, type: 3}
     type: 103
     parameter:
       name: 
     value: 1
     style: 0
-    subMenu: {fileID: 11400000, guid: ed59df1918abbad4a9e4122da751432b, type: 2}
+    subMenu: {fileID: 11400000, guid: 1d9d59729e871d1a08c0e5a78464cedc, type: 2}
     subParameters: []
     labels: []

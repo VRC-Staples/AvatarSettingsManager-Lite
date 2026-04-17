@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
-  - component: {fileID: 8328035191541993529}
+  - component: {fileID: 1571339111075648342}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -70,7 +70,7 @@ MonoBehaviour:
   excludedParameterNames: []
   useVendorizedGeneratedAssets: 0
   vendorizedGeneratedAssetsPath: 
---- !u!114 &8328035191541993529
+--- !u!114 &1571339111075648342
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -79,78 +79,39 @@ MonoBehaviour:
   m_GameObject: {fileID: 2447387302260284102}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9e94e501a2d4c95bff3d5601013d923, type: 3}
+  m_Script: {fileID: 0}
   m_Name: 
   m_EditorClassIdentifier: 
-  version: 3
-  unityVersion: 2022.3.22f1
-  vrcfuryVersion: 1.1298.0
-  somethingIsBroken: 0
-  config:
-    features: []
   content:
-    rid: 4657481039153201218
+    rid: 6267503635413073925
+  features: []
+  untouchedMarker: keep
   references:
     version: 2
     RefIds:
-    - rid: 4657481039153201218
-      type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
+    - rid: 6267503635413073925
+      type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}
       data:
-        version: 4
         controllers:
         - controller:
-            version: 0
-            fileID: 0
-            guid: 
-            id: 
             objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
           type: 5
         menus:
         - menu:
-            version: 0
-            fileID: 0
-            guid: 
-            id: 
             objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
           prefix: 
         prms:
         - parameters:
-            version: 0
-            fileID: 0
-            guid: 
-            id: 
             objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
+          parameter:
+            objRef: {fileID: 0}
+          objRef: {fileID: 0}
         smoothedPrms: []
         globalParams:
         - '*'
-        allNonsyncedAreGlobal: 0
-        ignoreSaved: 0
-        toggleParam: 
-        rootObjOverride: {fileID: 0}
-        rootBindingsApplyToAvatar: 0
-        rewriteBindings: []
-        allowMissingAssets: 0
-        injectSpsDepthParam: 
-        injectSpsVelocityParam: 
         controller:
-          version: 1
-          fileID: 0
-          guid: 
-          id: 
           objRef: {fileID: 9100000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c301, type: 2}
         menu:
-          version: 1
-          fileID: 0
-          guid: 
-          id: 
           objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c302, type: 2}
         parameters:
-          version: 1
-          fileID: 0
-          guid: 
-          id: 
           objRef: {fileID: 11400000, guid: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c303, type: 2}
-        submenu: 
-        removePrefixes: []
-        addPrefix: 
-        useSecurityForToggle: 0

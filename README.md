@@ -144,6 +144,16 @@ If you are upgrading from versions that may have an empty FullController paramet
 
 The distributable package lives in `Packages/com.staples.asm-lite/`. Open the project through VCC to ensure the VRChat SDK and VRCFury dependencies resolve correctly.
 
+### Full Validation (Local)
+
+Run full local EditMode validation through the CI-equivalent runner script:
+
+```bash
+Tools/ci/run-editmode-local.sh
+```
+
+For contributor validation, this script is the required full test path before pushing changes.
+
 ---
 
 ## Releases
