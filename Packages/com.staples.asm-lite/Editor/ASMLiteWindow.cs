@@ -4231,6 +4231,153 @@ namespace ASMLite.Editor
             }
         }
 
+        private static bool MenuReferencesAssetPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
+                return false;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control?.subMenu == null)
+                    continue;
+
+                string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(subPath)
+                    && subPath.StartsWith(assetPrefix, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                if (MenuReferencesAssetPrefix(control.subMenu, assetPrefix, visited))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasAvatarGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string assetPrefix)
+        {
+            if (avatar == null || string.IsNullOrWhiteSpace(assetPrefix))
+                return false;
+
+            string normalizedPrefix = assetPrefix.Replace('\\', '/').TrimEnd('/');
+
+            string exprPath = avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/') : string.Empty;
+            if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
+                return true;
+
+            string menuPath = avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/') : string.Empty;
+            if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
+                return true;
+
+            if (MenuReferencesAssetPrefix(avatar.expressionsMenu, normalizedPrefix, new HashSet<VRCExpressionsMenu>()))
+                return true;
+
+            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            {
+                var controller = avatar.baseAnimationLayers[i].animatorController;
+                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
+                if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
+        {
+            if (avatar == null || string.IsNullOrWhiteSpace(vendorizedDir))
+                return true;
+
+            string vendorPrefix = vendorizedDir.Replace('\\', '/').TrimEnd('/');
+            string packagePrefix = ASMLiteAssetPaths.GeneratedDir.Replace('\\', '/').TrimEnd('/');
+
+            if (avatar.expressionParameters != null)
+            {
+                string exprPath = AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                {
+                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(packagePrefix + "/" + Path.GetFileName(exprPath));
+                    if (replacement == null)
+                        return false;
+
+                    avatar.expressionParameters = replacement;
+                    EditorUtility.SetDirty(avatar);
+                }
+            }
+
+            if (avatar.expressionsMenu != null)
+            {
+                string menuPath = AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/');
+                if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                {
+                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(packagePrefix + "/" + Path.GetFileName(menuPath));
+                    if (replacement == null)
+                        return false;
+
+                    avatar.expressionsMenu = replacement;
+                    EditorUtility.SetDirty(avatar);
+                }
+
+                RetargetMenuGeneratedSubmenus(avatar.expressionsMenu, vendorPrefix, packagePrefix, new HashSet<VRCExpressionsMenu>());
+            }
+
+            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            {
+                var layer = avatar.baseAnimationLayers[i];
+                var controller = layer.animatorController;
+                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
+                if (string.IsNullOrWhiteSpace(ctrlPath) || !ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                    continue;
+
+                var replacement = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(packagePrefix + "/" + Path.GetFileName(ctrlPath));
+                if (replacement == null)
+                    return false;
+
+                layer.animatorController = replacement;
+                avatar.baseAnimationLayers[i] = layer;
+                EditorUtility.SetDirty(avatar);
+            }
+
+            return !HasAvatarGeneratedReferencesUnderPrefix(avatar, vendorPrefix);
+        }
+
+        private static void DeleteAssetFolderIfEmpty(string assetFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(assetFolderPath))
+                return;
+
+            string normalizedPath = assetFolderPath.Replace('\\', '/').TrimEnd('/');
+            if (!AssetDatabase.IsValidFolder(normalizedPath))
+                return;
+
+            if (AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath }).Length == 0)
+                AssetDatabase.DeleteAsset(normalizedPath);
+        }
+
+        private static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
+        {
+            if (string.IsNullOrWhiteSpace(vendorizedDir))
+                return true;
+
+            string normalizedDir = vendorizedDir.Replace('\\', '/').TrimEnd('/');
+            if (!AssetDatabase.IsValidFolder(normalizedDir))
+                return true;
+
+            string avatarFolder = Path.GetDirectoryName(normalizedDir)?.Replace('\\', '/');
+            string asmLiteRoot = string.IsNullOrWhiteSpace(avatarFolder)
+                ? string.Empty
+                : Path.GetDirectoryName(avatarFolder)?.Replace('\\', '/');
+
+            if (!AssetDatabase.DeleteAsset(normalizedDir))
+                return false;
+
+            DeleteAssetFolderIfEmpty(avatarFolder);
+            DeleteAssetFolderIfEmpty(asmLiteRoot);
+            return true;
+        }
+
         private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
         {
             vendorizedDir = string.Empty;
@@ -4349,6 +4496,31 @@ namespace ASMLite.Editor
                 return false;
 
             prop.objectReferenceValue = value;
+            return true;
+        }
+
+        internal static bool TryReturnAttachedVendorizedToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        {
+            if (component == null)
+                return false;
+
+            string vendorizedDir = component.vendorizedGeneratedAssetsPath?.Replace('\\', '/').TrimEnd('/');
+
+            if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(component.gameObject, component, "Return To Package Managed"))
+                return false;
+
+            if (!TryRestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir))
+                return false;
+
+            if (!TryDeleteVendorizedGeneratedAssetsFolder(vendorizedDir))
+                return false;
+
+            component.useVendorizedGeneratedAssets = false;
+            component.vendorizedGeneratedAssetsPath = string.Empty;
+            EditorUtility.SetDirty(component);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
             return true;
         }
 
@@ -4485,22 +4657,16 @@ namespace ASMLite.Editor
                 }
 
                 Undo.RecordObject(existing, "Disable ASM-Lite Vendorized Assets");
-                existing.useVendorizedGeneratedAssets = false;
-                existing.vendorizedGeneratedAssetsPath = string.Empty;
-                EditorUtility.SetDirty(existing);
-
-                if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(existing.gameObject, existing, "Return To Package Managed"))
+                if (!TryReturnAttachedVendorizedToPackageManaged(existing, _selectedAvatar))
                 {
                     EditorUtility.DisplayDialog(
                         "Return to Package Managed",
-                        "Failed to restore package-managed FullController wiring on the attached ASM-Lite component.",
+                        "Failed to restore package-managed ASM-Lite references or clean vendorized generated assets on the attached avatar.",
                         "OK");
                     return;
                 }
 
                 _discoveredParamCount = -1;
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
 
                 EditorUtility.DisplayDialog(
                     "Package Managed Restored",

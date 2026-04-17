@@ -5,6 +5,8 @@ using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace ASMLite.Tests.Editor
@@ -18,6 +20,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteCleanupTests
     {
         private AsmLiteTestContext _ctx;
+        private string _cleanupVendorizedAvatarFolder;
 
         [SetUp]
         public void SetUp()
@@ -32,6 +35,20 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
+            if (!string.IsNullOrWhiteSpace(_cleanupVendorizedAvatarFolder)
+                && AssetDatabase.IsValidFolder(_cleanupVendorizedAvatarFolder))
+            {
+                AssetDatabase.DeleteAsset(_cleanupVendorizedAvatarFolder);
+            }
+
+            if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
+                && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
+            {
+                AssetDatabase.DeleteAsset("Assets/ASM-Lite");
+            }
+
+            AssetDatabase.Refresh();
+            _cleanupVendorizedAvatarFolder = null;
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
         }
 
@@ -141,6 +158,66 @@ namespace ASMLite.Tests.Editor
                     return i;
             }
             return -1;
+        }
+
+        private static string EnsureAssetFolder(string parent, string child)
+        {
+            string candidate = parent + "/" + child;
+            if (!AssetDatabase.IsValidFolder(candidate))
+                AssetDatabase.CreateFolder(parent, child);
+            return candidate;
+        }
+
+        private static string CreateVendorizedMirrorForTest(string avatarName)
+        {
+            string root = EnsureAssetFolder("Assets", "ASM-Lite");
+            string avatarFolder = EnsureAssetFolder(root, avatarName);
+            string generatedFolder = EnsureAssetFolder(avatarFolder, "GeneratedAssets");
+
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.FXController, generatedFolder);
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.ExprParams, generatedFolder);
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.Menu, generatedFolder);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            return generatedFolder;
+        }
+
+        private static int CountMenuAssetsUnderPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || visited == null || !visited.Add(menu))
+                return 0;
+
+            int count = 0;
+            string normalizedPrefix = assetPrefix.Replace('\\', '/').TrimEnd('/');
+            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
+            if (!string.IsNullOrWhiteSpace(menuPath)
+                && menuPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal))
+            {
+                count++;
+            }
+
+            if (menu.controls == null)
+                return count;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control?.subMenu == null)
+                    continue;
+
+                count += CountMenuAssetsUnderPrefix(control.subMenu, normalizedPrefix, visited);
+            }
+
+            return count;
+        }
+
+        private static void CopyPackageAssetToMirror(string sourceAssetPath, string targetFolder)
+        {
+            string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
+            AssetDatabase.DeleteAsset(destinationPath);
+            Assert.IsTrue(AssetDatabase.CopyAsset(sourceAssetPath, destinationPath),
+                $"Expected to copy '{sourceAssetPath}' to '{destinationPath}' for vendorized cleanup regression setup.");
         }
 
         // ── A35 ────────────────────────────────────────────────────────────────
@@ -410,6 +487,79 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(0, CountASMLiteFxParams(_ctx.Ctrl), "A54: ASMLite FX params must remain absent after repeated cleanup.");
             Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), "A54: ASMLite expression params must remain absent after repeated cleanup.");
             Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu), "A54: Settings Manager control must remain absent after repeated cleanup.");
+        }
+
+        // ── A55 ────────────────────────────────────────────────────────────────
+
+        [Test, Category("Integration")]
+        public void A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder()
+        {
+            const string avatarName = "A55_ReturnCleanupAvatar";
+            _ctx.AvatarGo.name = avatarName;
+            _ctx.Comp.slotCount = 1;
+            AddAvatarParam(_ctx, "A55_Int", VRCExpressionParameters.ValueType.Int);
+            BuildOrFail(_ctx, "A55");
+
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName);
+            _cleanupVendorizedAvatarFolder = "Assets/ASM-Lite/" + avatarName;
+
+            Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedDir),
+                $"A55: setup failure, expected vendorized folder '{vendorizedDir}' to exist before return-to-managed cleanup.");
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<AnimatorController>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController)),
+                "A55: setup failure, expected mirrored FX controller asset before return-to-managed cleanup.");
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams)),
+                "A55: setup failure, expected mirrored expression params asset before return-to-managed cleanup.");
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu)),
+                "A55: setup failure, expected mirrored menu asset before return-to-managed cleanup.");
+
+            _ctx.Comp.useVendorizedGeneratedAssets = true;
+            _ctx.Comp.vendorizedGeneratedAssetsPath = vendorizedDir;
+            _ctx.AvDesc.expressionParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+            _ctx.AvDesc.expressionsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+
+            int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(fxIndex, 0,
+                "A55: setup failure, expected avatar FX layer before assigning mirrored controller.");
+
+            var fxLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
+            fxLayer.isDefault = false;
+            fxLayer.animatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController));
+            _ctx.AvDesc.baseAnimationLayers[fxIndex] = fxLayer;
+            EditorUtility.SetDirty(_ctx.AvDesc);
+            EditorUtility.SetDirty(_ctx.Comp);
+            AssetDatabase.SaveAssets();
+
+            Assert.AreEqual(1, CountMenuAssetsUnderPrefix(_ctx.AvDesc.expressionsMenu, vendorizedDir, new System.Collections.Generic.HashSet<VRCExpressionsMenu>()),
+                "A55: setup failure, expected mirrored menu root reference before return-to-managed cleanup.");
+
+            bool restored = ASMLiteWindow.TryReturnAttachedVendorizedToPackageManaged(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsTrue(restored,
+                "A55: attached vendorized return helper should succeed for a valid mirrored GeneratedAssets folder.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
+                "A55: return-to-managed should clear attached vendorized mode on the component.");
+            Assert.AreEqual(string.Empty, _ctx.Comp.vendorizedGeneratedAssetsPath,
+                "A55: return-to-managed should clear the tracked vendorized folder path after cleanup.");
+            Assert.IsFalse(AssetDatabase.IsValidFolder(vendorizedDir),
+                $"A55: return-to-managed should delete the vendorized GeneratedAssets folder '{vendorizedDir}'.");
+            Assert.IsFalse(AssetDatabase.IsValidFolder(_cleanupVendorizedAvatarFolder),
+                $"A55: return-to-managed should prune the now-empty avatar vendorized folder '{_cleanupVendorizedAvatarFolder}'.");
+            Assert.AreEqual(ASMLiteAssetPaths.ExprParams,
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
+                "A55: return-to-managed should restore avatar expression parameters back to package-managed generated assets.");
+            Assert.AreEqual(ASMLiteAssetPaths.Menu,
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
+                "A55: return-to-managed should restore avatar expressions menu back to package-managed generated assets.");
+
+            int restoredFxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(restoredFxIndex, 0,
+                "A55: expected avatar FX layer after return-to-managed cleanup.");
+            Assert.AreEqual(ASMLiteAssetPaths.FXController,
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.baseAnimationLayers[restoredFxIndex].animatorController)?.Replace('\\', '/'),
+                "A55: return-to-managed should restore avatar FX controller back to package-managed generated assets.");
+            Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
+                "A55: attached avatar should resolve to PackageManaged state after vendorized cleanup completes.");
         }
     }
 }
