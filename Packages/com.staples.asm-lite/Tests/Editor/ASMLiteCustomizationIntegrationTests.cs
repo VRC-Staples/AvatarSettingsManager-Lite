@@ -59,9 +59,6 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(2, buildResult,
                 "A53: Build() should include only non-excluded discovered parameters when all customization toggles are enabled.");
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
             var generatedMenu = LoadGeneratedRootMenu();
             Assert.AreEqual(1, generatedMenu.controls.Count,
                 "A53: generated root menu must contain exactly one wrapper control under combined customization settings.");

@@ -268,25 +268,31 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BakeAssets_MissingVrcFury_FailsClosedWithDiagnostics()
+        public void BakeAssets_MissingVrcFury_AutoHealsAndContinues()
         {
             _ctx.Comp.useCustomInstallPath = true;
-            _ctx.Comp.customInstallPath = "Avatars/MissingVf";
+            _ctx.Comp.customInstallPath = "  Avatars/MissingVf  ";
+            var staleVf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+            if (staleVf != null)
+                UnityEngine.Object.DestroyImmediate(staleVf);
 
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
                 SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
 
-                LogAssert.Expect(LogType.Error,
-                    $"[ASM-Lite] Bake: Expected VF.Model.VRCFury component was not found on '{_ctx.Comp.gameObject.name}'.");
-                LogAssert.Expect(LogType.Error,
-                    "[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+                LogAssert.Expect(LogType.Warning,
+                    $"[ASM-Lite] Bake: VF.Model.VRCFury component was missing on '{_ctx.Comp.gameObject.name}'. Live FullController wiring was repaired automatically.");
 
                 InvokePrivate(window, "BakeAssets", _ctx.Comp);
 
-                Assert.AreEqual(-1, GetPrivateField<int>(window, "_discoveredParamCount"),
-                    "Bake should abort before rebuild when live VF.Model.VRCFury component is missing.");
+                var repairedVf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+                Assert.IsNotNull(repairedVf,
+                    "Bake should auto-heal missing VF.Model.VRCFury before refreshing install-path routing.");
+                Assert.AreEqual("Avatars/MissingVf", ReadSerializedMenuPrefix(repairedVf),
+                    "Bake auto-heal should still apply normalized install-path prefix deterministically.");
+                Assert.GreaterOrEqual(GetPrivateField<int>(window, "_discoveredParamCount"), 0,
+                    "Bake should continue into rebuild after auto-healing missing VF.Model.VRCFury.");
             }
             finally
             {

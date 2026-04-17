@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
-  - component: {fileID: 1571339111075648342}
+  - component: {fileID: 6288243479311134478}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -70,7 +70,7 @@ MonoBehaviour:
   excludedParameterNames: []
   useVendorizedGeneratedAssets: 0
   vendorizedGeneratedAssetsPath: 
---- !u!114 &1571339111075648342
+--- !u!114 &6288243479311134478
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -83,13 +83,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   content:
-    rid: 6267503635413073925
+    rid: 6267503639729274886
   features: []
   untouchedMarker: keep
   references:
     version: 2
     RefIds:
-    - rid: 6267503635413073925
+    - rid: 6267503639729274886
       type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}
       data:
         controllers:

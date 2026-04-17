@@ -10,6 +10,10 @@ COVERAGE_DIR="${REPO_ROOT}/CodeCoverage"
 DOTENV_FILE="${REPO_ROOT}/.env"
 
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-2700}"
+RUN_LOCK_DIR="${RUN_LOCK_DIR:-/tmp/asmlite-editmode-local.lock}"
+LOCAL_DOCKER_CPUS="${LOCAL_DOCKER_CPUS:-}"
+RUN_LOCK_ACQUIRED=0
+DOCKER_CPU_ARGS=()
 
 load_dotenv_defaults() {
   local file="$1"
@@ -27,7 +31,7 @@ load_dotenv_defaults() {
     raw="${BASH_REMATCH[3]}"
 
     case "$key" in
-      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL) ;;
+      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL|LOCAL_DOCKER_CPUS) ;;
       *) continue ;;
     esac
 
@@ -112,6 +116,52 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 1
 fi
 
+if [[ -n "${LOCAL_DOCKER_CPUS}" ]]; then
+  if ! [[ "${LOCAL_DOCKER_CPUS}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
+    echo "error: LOCAL_DOCKER_CPUS must be a positive number (example: 4 or 3.5)." >&2
+    exit 1
+  fi
+
+  if ! awk -v value="${LOCAL_DOCKER_CPUS}" 'BEGIN { exit (value > 0) ? 0 : 1 }'; then
+    echo "error: LOCAL_DOCKER_CPUS must be greater than zero." >&2
+    exit 1
+  fi
+
+  DOCKER_CPU_ARGS=(--cpus "${LOCAL_DOCKER_CPUS}")
+  echo "note: limiting docker container CPUs to ${LOCAL_DOCKER_CPUS} for this local run."
+fi
+
+acquire_run_lock() {
+  if mkdir "${RUN_LOCK_DIR}" 2>/dev/null; then
+    RUN_LOCK_ACQUIRED=1
+    printf '%s\n' "$$" > "${RUN_LOCK_DIR}/pid"
+    return 0
+  fi
+
+  local existing_pid=""
+  if [[ -f "${RUN_LOCK_DIR}/pid" ]]; then
+    existing_pid="$(tr -d '\r\n' < "${RUN_LOCK_DIR}/pid" || true)"
+  fi
+
+  if [[ -n "${existing_pid}" && "${existing_pid}" =~ ^[0-9]+$ ]] && ps -p "${existing_pid}" >/dev/null 2>&1; then
+    echo "error: another local EditMode run is already active (pid ${existing_pid})." >&2
+    echo "hint: wait for it to finish or remove stale lock: ${RUN_LOCK_DIR}" >&2
+    exit 1
+  fi
+
+  rm -rf "${RUN_LOCK_DIR}"
+  if mkdir "${RUN_LOCK_DIR}" 2>/dev/null; then
+    RUN_LOCK_ACQUIRED=1
+    printf '%s\n' "$$" > "${RUN_LOCK_DIR}/pid"
+    return 0
+  fi
+
+  echo "error: failed to acquire run lock at ${RUN_LOCK_DIR}." >&2
+  exit 1
+}
+
+acquire_run_lock
+
 setup_local_docker_credential_helper() {
   if command -v docker-credential-desktop >/dev/null 2>&1; then
     return 0
@@ -169,6 +219,16 @@ cleanup() {
   rm -f "${SERIAL_FILE}" "${RUNNER_SCRIPT}"
   if [[ -n "${DOCKER_HELPER_SHIM_DIR:-}" ]]; then
     rm -rf "${DOCKER_HELPER_SHIM_DIR}"
+  fi
+  if [[ "${RUN_LOCK_ACQUIRED}" -eq 1 ]]; then
+    local lock_pid=""
+    if [[ -f "${RUN_LOCK_DIR}/pid" ]]; then
+      lock_pid="$(tr -d '\r\n' < "${RUN_LOCK_DIR}/pid" || true)"
+    fi
+
+    if [[ -z "${lock_pid}" || "${lock_pid}" == "$$" ]]; then
+      rm -rf "${RUN_LOCK_DIR}"
+    fi
   fi
 }
 trap cleanup EXIT
@@ -295,6 +355,7 @@ timeout --signal=TERM --kill-after=30 "${RUN_TIMEOUT_SECONDS}" docker run --rm \
   --env UNITY_EMAIL \
   --env UNITY_PASSWORD \
   --env UNITY_SERIAL="${UNITY_SERIAL}" \
+  "${DOCKER_CPU_ARGS[@]}" \
   --volume "${REPO_ROOT}:/github/workspace" \
   --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
   "${UNITY_IMAGE}" \

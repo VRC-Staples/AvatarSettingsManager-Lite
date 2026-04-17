@@ -16,6 +16,7 @@ All notable changes to ASM-Lite are documented here.
   - **Return to Package Managed** recovery path for vendorized/detached states.
 - Vendorized state persistence fields on `ASMLiteComponent` (`useVendorizedGeneratedAssets`, `vendorizedGeneratedAssetsPath`).
 - Expanded EditMode coverage for install-path wiring, root menu overrides, and window customization flows (including MoveMenu adoption/remap behavior).
+- Added repository UAT coverage checklist document at `UAT-QA-Checklist.md` for pre-flight, CI-equivalent validation, customization/migration regressions, and release sign-off.
 
 ### Changed
 
@@ -24,6 +25,17 @@ All notable changes to ASM-Lite are documented here.
 - Parameter exclusions now expand across VRCFury toggle mapping pairs (original global name + assigned deterministic name) so either-side exclusion behaves consistently.
 - Updated README editor workflow docs to reflect detach/vendorize/package-managed action set and current release automation behavior.
 - Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
+- Local CI-equivalent EditMode runner (`Tools/ci/run-editmode-local.sh`) now supports `.env` defaults for Unity credential/license variables, adds local-only Docker Desktop credential helper shim behavior, and enforces bounded timeout handling to fail fast on hangs.
+
+### Fixed
+
+- Migration rebuild now normalizes persisted custom root names before reapplying state so stale-prefab rebuild preserves trimmed customization values consistently.
+- Slot icon resolution now treats `IconMode.Custom` as explicit custom-slot-only mode and fails closed to the bundled presets icon when a slot override is null or out-of-range.
+- `ASMLiteTestFixtures.SetExpressionParams` now guards null `ParamsAsset` by recovering descriptor-bound parameters or creating a fallback expression-parameters asset before dirty/save calls.
+
+### Known Issues
+
+- VRCFury toggles that interact with objects inside the armature hierarchy are currently not being picked up by ASM-Lite parameter discovery. Investigation is in progress.
 
 ## [1.0.9] - 2026-04-10
 

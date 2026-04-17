@@ -4122,11 +4122,19 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            var vf = FindLiveVrcFuryComponent(component);
-            if (vf == null)
+            if (FindLiveVrcFuryComponent(component) == null)
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
-                return false;
+                bool repaired = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(
+                    component.gameObject,
+                    component,
+                    contextLabel + " Auto-Heal");
+                if (!repaired || FindLiveVrcFuryComponent(component) == null)
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
+                    return false;
+                }
+
+                Debug.LogWarning($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component was missing on '{component.gameObject.name}'. Live FullController wiring was repaired automatically.");
             }
 
             if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))

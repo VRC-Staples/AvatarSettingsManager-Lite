@@ -21,26 +21,6 @@ MonoBehaviour:
       name: 
     value: 1
     style: 0
-    subMenu: {fileID: 11400000, guid: 36583b30c441f1c05a1a2332ea8977f8, type: 2}
-    subParameters: []
-    labels: []
-  - name: Preset 2
-    icon: {fileID: 2800000, guid: 757ae6584e454d59a3f83f3f5f66513b, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: 11d6c9784dcf9db9ca93824f112d6bb6, type: 2}
-    subParameters: []
-    labels: []
-  - name: Preset 3
-    icon: {fileID: 2800000, guid: 0e56767d33d8466c9673d31971902697, type: 3}
-    type: 103
-    parameter:
-      name: 
-    value: 1
-    style: 0
-    subMenu: {fileID: 11400000, guid: 5d1dc8f885504634abead130c8ad1ea4, type: 2}
+    subMenu: {fileID: 11400000, guid: 43c3703dfeeb832b5948394aee53cbac, type: 2}
     subParameters: []
     labels: []

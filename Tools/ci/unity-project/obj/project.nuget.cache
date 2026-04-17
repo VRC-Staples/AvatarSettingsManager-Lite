@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Ov58rpv6xaQ=",
+  "dgSpecHash": "HtPyBZES8XU=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Runtime.csproj",
+  "projectFilePath": "C:\\Users\\Staples\\Documents\\GitHub\\AvatarSettingsManager-Lite\\Tools\\ci\\unity-project\\ASMLite.Editor.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }

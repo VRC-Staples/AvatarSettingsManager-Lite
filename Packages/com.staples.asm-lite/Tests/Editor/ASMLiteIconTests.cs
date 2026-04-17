@@ -40,9 +40,6 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"{aid}: Build() failed with result {buildResult}; slotCount={_ctx.Comp.slotCount}, iconMode={_ctx.Comp.iconMode}.");
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
             Assert.IsNotNull(rootMenu, $"{aid}: generated root menu is null after Build() at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(rootMenu.controls, $"{aid}: root menu controls list is null after Build().");

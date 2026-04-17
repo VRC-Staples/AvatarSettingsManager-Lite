@@ -35,9 +35,6 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"{aid}: Build() failed with result {buildResult}.");
 
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
             Assert.IsNotNull(rootMenu,
                 $"{aid}: generated root menu missing at '{ASMLiteAssetPaths.Menu}'.");
