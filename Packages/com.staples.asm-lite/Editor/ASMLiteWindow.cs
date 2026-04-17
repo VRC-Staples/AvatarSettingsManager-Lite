@@ -4791,7 +4791,7 @@ namespace ASMLite.Editor
                 Texture2D savedCustomRootIcon = component.customRootIcon;
                 bool savedUseCustomRootIcon = component.useCustomRootIcon;
                 bool savedUseCustomRootName = component.useCustomRootName;
-                string savedCustomRootName = component.customRootName ?? string.Empty;
+                string savedCustomRootName = NormalizeOptionalString(component.customRootName);
                 string[] savedCustomPresetNames = CloneStrings(component.customPresetNames);
                 string savedCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
                 string savedCustomSaveLabel = component.customSaveLabel ?? string.Empty;

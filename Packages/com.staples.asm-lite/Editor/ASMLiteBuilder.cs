@@ -2206,6 +2206,12 @@ namespace ASMLite.Editor
                         cache[path] = tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                     return tex != null ? tex : fallback;
                 }
+                case IconMode.Custom:
+                {
+                    // Custom mode only uses explicit per-slot overrides; when none exist
+                    // we fail closed to the bundled presets icon instead of gear palettes.
+                    return fallback;
+                }
                 case IconMode.MultiColor:
                 default:
                 {
