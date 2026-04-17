@@ -100,6 +100,52 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void PreviewActionIconMode_UsesComponentGateInsteadOfStalePendingState_WhenComponentPresent()
+        {
+            _ctx.Comp.useCustomSlotIcons = false;
+            _ctx.Comp.actionIconMode = ActionIconMode.Custom;
+
+            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolvePreviewActionIconMode", _ctx.Comp, true, ActionIconMode.Custom);
+
+            Assert.AreEqual(ActionIconMode.Default, resolved,
+                "Preview action icon mode should fail closed to Default when the live component has custom icons disabled, even if pending scaffold state is stale Custom.");
+        }
+
+        [Test]
+        public void PreviewActionIconMode_UsesComponentActionMode_WhenComponentCustomIconsAreEnabled()
+        {
+            _ctx.Comp.useCustomSlotIcons = true;
+            _ctx.Comp.actionIconMode = ActionIconMode.Custom;
+
+            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolvePreviewActionIconMode", _ctx.Comp, false, ActionIconMode.Default);
+
+            Assert.AreEqual(ActionIconMode.Custom, resolved,
+                "Preview action icon mode should honor the live component action icon mode when custom icons are enabled, regardless of stale pending scaffold state.");
+        }
+
+        [Test]
+        public void PreviewActionIconMode_UsesPendingState_WhenNoComponentIsPresent()
+        {
+            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolvePreviewActionIconMode", null, true, ActionIconMode.Custom);
+
+            Assert.AreEqual(ActionIconMode.Custom, resolved,
+                "Preview action icon mode should continue using pending scaffold state before a live component exists.");
+        }
+
+        [Test]
+        public void PreviewActionIconMode_FailsClosedToDefault_WhenPendingCustomIconsAreDisabled()
+        {
+            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolvePreviewActionIconMode", null, false, ActionIconMode.Custom);
+
+            Assert.AreEqual(ActionIconMode.Default, resolved,
+                "Preview action icon mode should fail closed to Default before a live component exists when pending custom icons are disabled, even if pending action mode is stale Custom.");
+        }
+
+        [Test]
         public void AddPrefab_UsesPendingCustomizationState_WithoutArrayAliasing()
         {
             if (_ctx.Comp != null)
@@ -348,6 +394,13 @@ namespace ASMLite.Tests.Editor
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
             method.Invoke(target, args);
+        }
+
+        private static T InvokePrivateStatic<T>(Type targetType, string methodName, params object[] args)
+        {
+            var method = targetType.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Missing private static method '{methodName}' on {targetType.Name}.");
+            return (T)method.Invoke(null, args);
         }
     }
 }

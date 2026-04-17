@@ -716,6 +716,17 @@ namespace ASMLite.Editor
             return ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
         }
 
+        private static ActionIconMode ResolvePreviewActionIconMode(
+            ASMLiteComponent component,
+            bool pendingUseCustomSlotIcons,
+            ActionIconMode pendingActionIconMode)
+        {
+            if (component)
+                return component.useCustomSlotIcons ? component.actionIconMode : ActionIconMode.Default;
+
+            return pendingUseCustomSlotIcons ? pendingActionIconMode : ActionIconMode.Default;
+        }
+
         private void DrawCustomizeSection()
         {
             EditorGUILayout.LabelField("Customize", EditorStyles.boldLabel);
@@ -2897,13 +2908,14 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
 
-            int            slotCount   = component ? component.slotCount          : _pendingSlotCount;
-            IconMode       iconMode    = component ? component.iconMode            : _pendingIconMode;
-            int            gearIndex   = component ? component.selectedGearIndex   : _pendingSelectedGearIndex;
+            int            slotCount   = component ? component.slotCount        : _pendingSlotCount;
+            IconMode       iconMode    = component ? component.iconMode          : _pendingIconMode;
+            int            gearIndex   = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
             bool           useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
-            ActionIconMode actionMode  = (component != null && component.useCustomSlotIcons)
-                ? component.actionIconMode
-                : (_pendingUseCustomSlotIcons ? _pendingActionIconMode : ActionIconMode.Default);
+            ActionIconMode actionMode  = ResolvePreviewActionIconMode(
+                component,
+                _pendingUseCustomSlotIcons,
+                _pendingActionIconMode);
             Texture2D[]    customIcons = component ? component.customIcons         : _pendingCustomIcons;
             Texture2D      customSave  = component ? component.customSaveIcon      : _pendingCustomSaveIcon;
             Texture2D      customLoad  = component ? component.customLoadIcon      : _pendingCustomLoadIcon;

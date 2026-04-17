@@ -233,6 +233,55 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
+          ASMLITE_BATCH_RUNS_JSON="$(python - <<'PY'
+          import json
+
+          core_fixture_patterns = [
+              r"^ASMLite\.Tests\.Editor\.ASMLiteAssetPathsTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteBuilderTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteComponentTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteCustomizationScaffoldTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteInstallPathWiringTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteParameterDiscoveryTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteToggleBrokerTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowActionHierarchyTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowCustomizationTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowNamingGroupingTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowRiskAffordanceTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowStatusPanelTests(?:\.|$)",
+              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowTerminologyTests(?:\.|$)",
+          ]
+
+          payload = {
+              "runs": [
+                  {
+                      "name": "editmode-core",
+                      "resultFile": "editmode-core-results.xml",
+                      "filters": [
+                          {
+                              "groupNames": core_fixture_patterns,
+                          },
+                          {
+                              "testNames": [
+                                  "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
+                              ],
+                          },
+                      ],
+                  },
+                  {
+                      "name": "editmode-integration",
+                      "resultFile": "editmode-integration-results.xml",
+                      "categoryNames": ["Integration"],
+                  },
+              ]
+          }
+
+          print(json.dumps(payload, separators=(",", ":")))
+          PY
+          )"
+          export ASMLITE_BATCH_RUNS_JSON
+          export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
+
           # Write the inner script to a temp file to avoid quoting issues
           # and shellcheck false-positives on the docker run string.
           RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
@@ -278,15 +327,14 @@ jobs:
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
 
 
-          # Run tests against the shadow project.
+          # Run the chained EditMode selections against the shadow project in one Unity process.
           unity-editor \
+            -batchmode \
             -nographics \
             -logFile /github/workspace/artifacts/editmode.log \
             -projectPath Tools/ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
-            -runTests \
-            -testPlatform editmode \
-            -testResults /github/workspace/artifacts/editmode-results.xml \
+            -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine \
             -enableCodeCoverage \
             -debugCodeOptimization \
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
@@ -298,10 +346,16 @@ jobs:
             --env UNITY_EMAIL \
             --env UNITY_PASSWORD \
             --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --env ASMLITE_BATCH_RUNS_JSON \
+            --env ASMLITE_BATCH_RESULTS_DIR \
             --volume "${GITHUB_WORKSPACE}:/github/workspace" \
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
             "${UNITY_IMAGE}" \
             /bin/bash /tmp/unity-runner.sh
+          test -f artifacts/editmode-results.xml || {
+            echo "::error::Missing canonical NUnit result file: artifacts/editmode-results.xml"
+            exit 1
+          }
           rm -f "${RUNNER_SCRIPT}"
       - name: Upload NUnit results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
