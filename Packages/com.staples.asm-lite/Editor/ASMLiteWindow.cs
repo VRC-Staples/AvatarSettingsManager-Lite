@@ -34,6 +34,7 @@ namespace ASMLite.Editor
 
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
+        private AsmLiteToolState? _cachedToolState;
 
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
@@ -263,6 +264,26 @@ namespace ASMLite.Editor
             var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
             win.minSize = new Vector2(600, 680);
             win.Show();
+        }
+
+        private void OnEnable()
+        {
+            Undo.undoRedoPerformed += HandleEditorStateChanged;
+            EditorApplication.hierarchyChanged += HandleEditorStateChanged;
+            EditorApplication.projectChanged += HandleEditorStateChanged;
+        }
+
+        private void OnDisable()
+        {
+            Undo.undoRedoPerformed -= HandleEditorStateChanged;
+            EditorApplication.hierarchyChanged -= HandleEditorStateChanged;
+            EditorApplication.projectChanged -= HandleEditorStateChanged;
+        }
+
+        private void HandleEditorStateChanged()
+        {
+            InvalidateCachedEditorState();
+            Repaint();
         }
 
         // ── GUI ───────────────────────────────────────────────────────────────
@@ -613,7 +634,32 @@ namespace ASMLite.Editor
             Rect fieldRect = EditorGUI.PrefixLabel(rect, id, new GUIContent(label));
 
             GUI.SetNextControlName(controlName);
-            return EditorGUI.TextField(fieldRect, value ?? string.Empty);
+            return ShouldDelayTextFieldCommit(controlName)
+                ? EditorGUI.DelayedTextField(fieldRect, value ?? string.Empty)
+                : EditorGUI.TextField(fieldRect, value ?? string.Empty);
+        }
+
+        private static bool ShouldDelayTextFieldCommit(string controlName)
+        {
+            if (string.IsNullOrEmpty(controlName))
+                return false;
+
+            return controlName.StartsWith("asm_name_", StringComparison.Ordinal);
+        }
+
+        private static bool ShouldRenderWheelPreview(EventType eventType)
+        {
+            return eventType == EventType.Repaint;
+        }
+
+        private static bool ShouldDeferImmediateInstallPathRefresh(string contextLabel)
+        {
+            if (string.IsNullOrEmpty(contextLabel))
+                return false;
+
+            return string.Equals(contextLabel, "Customize Toggle", StringComparison.Ordinal)
+                || string.Equals(contextLabel, "Customize Text", StringComparison.Ordinal)
+                || string.Equals(contextLabel, "Customize Tree", StringComparison.Ordinal);
         }
 
         private static bool IsNamedTextFieldFocused(string controlName)
@@ -652,6 +698,22 @@ namespace ASMLite.Editor
             }
 
             SetComponentStringArray(component, undoLabel, ref target, draftValue);
+        }
+
+        private void CommitInstallPathDraftIfBlurred(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            CommitDraftStringIfBlurred(component, "asm_install_path", "Change ASM-Lite Install Path", ref component.customInstallPath, _pendingCustomInstallPath);
+        }
+
+        private static string ResolveVisibleInstallPathDraft(ASMLiteComponent component, string pendingDraft, bool isFocused)
+        {
+            if (component == null || isFocused)
+                return NormalizeOptionalString(pendingDraft);
+
+            return NormalizeOptionalString(component.customInstallPath);
         }
 
         private void SetComponentExcludedNames(ASMLiteComponent component, string undoLabel, string[] value)
@@ -738,204 +800,210 @@ namespace ASMLite.Editor
             var component = GetOrRefreshComponent();
 
             EditorGUILayout.BeginVertical("box");
-
-            bool useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
-            bool newUseCustomSlotIcons = EditorGUILayout.ToggleLeft("Use custom icons", useCustomSlotIcons);
-            if (component)
+            try
             {
-                SetComponentBool(component, "Toggle ASM-Lite Custom Slot Icons", ref component.useCustomSlotIcons, newUseCustomSlotIcons);
-
-                if (!newUseCustomSlotIcons && component.actionIconMode != ActionIconMode.Default)
+                bool useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+                bool newUseCustomSlotIcons = EditorGUILayout.ToggleLeft("Use custom icons", useCustomSlotIcons);
+                if (component)
                 {
-                    Undo.RecordObject(component, "Disable ASM-Lite Custom Action Icons");
-                    component.actionIconMode = ActionIconMode.Default;
-                    EditorUtility.SetDirty(component);
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Slot Icons", ref component.useCustomSlotIcons, newUseCustomSlotIcons);
+
+                    if (!newUseCustomSlotIcons && component.actionIconMode != ActionIconMode.Default)
+                    {
+                        Undo.RecordObject(component, "Disable ASM-Lite Custom Action Icons");
+                        component.actionIconMode = ActionIconMode.Default;
+                        EditorUtility.SetDirty(component);
+                    }
                 }
+                else
+                {
+                    _pendingUseCustomSlotIcons = newUseCustomSlotIcons;
+                    if (!newUseCustomSlotIcons)
+                        _pendingActionIconMode = ActionIconMode.Default;
+                }
+
+                if (newUseCustomSlotIcons)
+                {
+                    EditorGUILayout.BeginVertical("box");
+
+                    _iconsRootFoldout = EditorGUILayout.Foldout(_iconsRootFoldout, "Root Icon", true);
+                    if (_iconsRootFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawRootIconSettings(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    _iconsActionFoldout = EditorGUILayout.Foldout(_iconsActionFoldout, "Action Icons", true);
+                    if (_iconsActionFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawActionIcons(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, PresetIconsFoldoutTitle, true);
+                    if (_iconsSlotFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawSlotIconSelectors(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.EndVertical();
+                }
+
+                EditorGUILayout.Space(6);
+                bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
+                bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom name", useCustomRootName);
+                if (component)
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, newUseCustomRootName);
+                else
+                    _pendingUseCustomRootName = newUseCustomRootName;
+
+                if (newUseCustomRootName)
+                {
+                    int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
+
+                    // ── Root Menu Name ───────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionRootHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_root", "Change ASM-Lite Root Menu Name", ref component.customRootName, _pendingCustomRootName);
+                    }
+                    else
+                    {
+                        _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    // ── Preset Names ────────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionPresetHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                        string[] controlNames = new string[nameSlotCount];
+                        for (int i = 0; i < nameSlotCount; i++)
+                        {
+                            string controlName = $"asm_name_preset_{i + 1}";
+                            controlNames[i] = controlName;
+                            _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], controlName) ?? string.Empty;
+                        }
+
+                        CommitDraftStringArrayIfBlurred(component, controlNames, "Change ASM-Lite Preset Name", ref component.customPresetNames, _pendingCustomPresetNames);
+                    }
+                    else
+                    {
+                        _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                        for (int i = 0; i < nameSlotCount; i++)
+                        {
+                            _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
+                        }
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    // ── Action Labels ───────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionActionHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_save", "Change ASM-Lite Save Label", ref component.customSaveLabel, _pendingCustomSaveLabel);
+
+                        _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_load", "Change ASM-Lite Load Label", ref component.customLoadLabel, _pendingCustomLoadLabel);
+
+                        _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_clear", "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, _pendingCustomClearPresetLabel);
+
+                        _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_confirm", "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, _pendingCustomConfirmLabel);
+                    }
+                    else
+                    {
+                        _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
+                        _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
+                        _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
+                        _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.HelpBox(
+                        NameFallbackGuidanceText,
+                        MessageType.None);
+                }
+
+                EditorGUILayout.Space(6);
+
+                bool useCustomInstallPath = component ? component.useCustomInstallPath : _pendingUseCustomInstallPath;
+                bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Use custom install path", useCustomInstallPath);
+                if (component)
+                {
+                    bool installToggleChanged = component.useCustomInstallPath != newUseCustomInstallPath;
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, newUseCustomInstallPath);
+                    if (installToggleChanged)
+                        TryRefreshInstallPathPrefix(component, "Customize Toggle");
+                }
+                else
+                {
+                    _pendingUseCustomInstallPath = newUseCustomInstallPath;
+                }
+
+                if (newUseCustomInstallPath)
+                {
+                    bool installPathFocused = IsNamedTextFieldFocused("asm_install_path");
+                    string currentInstallPath = ResolveVisibleInstallPathDraft(component, _pendingCustomInstallPath, installPathFocused);
+
+                    EditorGUI.BeginChangeCheck();
+                    string newInstallPath = DrawTextFieldWithFocusCue("Install Path", currentInstallPath, "asm_install_path");
+                    if (EditorGUI.EndChangeCheck())
+                        _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+
+                    CommitInstallPathDraftIfBlurred(component);
+                    if (component && !installPathFocused)
+                        TryRefreshInstallPathPrefix(component, "Customize Text");
+
+                    DrawInstallPathTree(component);
+                }
+
+                EditorGUILayout.Space(6);
+
+                bool useParameterExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
+                bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Customize parameter backup", useParameterExclusions);
+                if (component)
+                    SetComponentBool(component, "Toggle ASM-Lite Parameter Backup Customization", ref component.useParameterExclusions, newUseParameterExclusions);
+                else
+                    _pendingUseParameterExclusions = newUseParameterExclusions;
+
+                if (newUseParameterExclusions)
+                    DrawParameterChecklist(component);
             }
-            else
+            finally
             {
-                _pendingUseCustomSlotIcons = newUseCustomSlotIcons;
-                if (!newUseCustomSlotIcons)
-                    _pendingActionIconMode = ActionIconMode.Default;
-            }
-
-            if (newUseCustomSlotIcons)
-            {
-                EditorGUILayout.BeginVertical("box");
-
-                _iconsRootFoldout = EditorGUILayout.Foldout(_iconsRootFoldout, "Root Icon", true);
-                if (_iconsRootFoldout)
-                {
-                    EditorGUI.indentLevel++;
-                    DrawRootIconSettings(component);
-                    EditorGUI.indentLevel--;
-                }
-
-                EditorGUILayout.Space(4);
-                _iconsActionFoldout = EditorGUILayout.Foldout(_iconsActionFoldout, "Action Icons", true);
-                if (_iconsActionFoldout)
-                {
-                    EditorGUI.indentLevel++;
-                    DrawActionIcons(component);
-                    EditorGUI.indentLevel--;
-                }
-
-                EditorGUILayout.Space(4);
-                _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, PresetIconsFoldoutTitle, true);
-                if (_iconsSlotFoldout)
-                {
-                    EditorGUI.indentLevel++;
-                    DrawSlotIconSelectors(component);
-                    EditorGUI.indentLevel--;
-                }
-
                 EditorGUILayout.EndVertical();
             }
-
-            EditorGUILayout.Space(6);
-            bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
-            bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom name", useCustomRootName);
-            if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, newUseCustomRootName);
-            else
-                _pendingUseCustomRootName = newUseCustomRootName;
-
-            if (newUseCustomRootName)
-            {
-                int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
-
-                // ── Root Menu Name ───────────────────────────────────────────────
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField(NamingSectionRootHeader, EditorStyles.miniBoldLabel);
-                EditorGUI.indentLevel++;
-
-                if (component)
-                {
-                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root") ?? string.Empty;
-                    CommitDraftRawStringIfBlurred(component, "asm_name_root", "Change ASM-Lite Root Menu Name", ref component.customRootName, _pendingCustomRootName);
-                }
-                else
-                {
-                    _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
-                }
-
-                EditorGUI.indentLevel--;
-
-                // ── Preset Names ────────────────────────────────────────────────
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField(NamingSectionPresetHeader, EditorStyles.miniBoldLabel);
-                EditorGUI.indentLevel++;
-
-                if (component)
-                {
-                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
-                    string[] controlNames = new string[nameSlotCount];
-                    for (int i = 0; i < nameSlotCount; i++)
-                    {
-                        string controlName = $"asm_name_preset_{i + 1}";
-                        controlNames[i] = controlName;
-                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], controlName) ?? string.Empty;
-                    }
-
-                    CommitDraftStringArrayIfBlurred(component, controlNames, "Change ASM-Lite Preset Name", ref component.customPresetNames, _pendingCustomPresetNames);
-                }
-                else
-                {
-                    _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
-                    for (int i = 0; i < nameSlotCount; i++)
-                    {
-                        _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
-                    }
-                }
-
-                EditorGUI.indentLevel--;
-
-                // ── Action Labels ───────────────────────────────────────────────
-                EditorGUILayout.Space(4);
-                EditorGUILayout.LabelField(NamingSectionActionHeader, EditorStyles.miniBoldLabel);
-                EditorGUI.indentLevel++;
-
-                if (component)
-                {
-                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save") ?? string.Empty;
-                    CommitDraftRawStringIfBlurred(component, "asm_name_save", "Change ASM-Lite Save Label", ref component.customSaveLabel, _pendingCustomSaveLabel);
-
-                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load") ?? string.Empty;
-                    CommitDraftRawStringIfBlurred(component, "asm_name_load", "Change ASM-Lite Load Label", ref component.customLoadLabel, _pendingCustomLoadLabel);
-
-                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear") ?? string.Empty;
-                    CommitDraftRawStringIfBlurred(component, "asm_name_clear", "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, _pendingCustomClearPresetLabel);
-
-                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm") ?? string.Empty;
-                    CommitDraftRawStringIfBlurred(component, "asm_name_confirm", "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, _pendingCustomConfirmLabel);
-                }
-                else
-                {
-                    _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
-                    _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
-                    _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
-                    _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
-                }
-
-                EditorGUI.indentLevel--;
-
-                EditorGUILayout.Space(4);
-                EditorGUILayout.HelpBox(
-                    NameFallbackGuidanceText,
-                    MessageType.None);
-            }
-
-            EditorGUILayout.Space(6);
-
-            bool useCustomInstallPath = component ? component.useCustomInstallPath : _pendingUseCustomInstallPath;
-            bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Use custom install path", useCustomInstallPath);
-            if (component)
-            {
-                bool installToggleChanged = component.useCustomInstallPath != newUseCustomInstallPath;
-                SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, newUseCustomInstallPath);
-                if (installToggleChanged)
-                    TryRefreshInstallPathPrefix(component, "Customize Toggle");
-            }
-            else
-            {
-                _pendingUseCustomInstallPath = newUseCustomInstallPath;
-            }
-
-            if (newUseCustomInstallPath)
-            {
-                string currentInstallPath = NormalizeOptionalString(_pendingCustomInstallPath);
-
-                EditorGUI.BeginChangeCheck();
-                string newInstallPath = DrawTextFieldWithFocusCue("Install Path", currentInstallPath, "asm_install_path");
-                if (EditorGUI.EndChangeCheck())
-                    _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
-
-                bool installPathFocused = IsNamedTextFieldFocused("asm_install_path");
-                CommitDraftStringIfBlurred(component, "asm_install_path", "Change ASM-Lite Install Path", ref component.customInstallPath, _pendingCustomInstallPath);
-                if (component && !installPathFocused)
-                    TryRefreshInstallPathPrefix(component, "Customize Text");
-
-                DrawInstallPathTree(component);
-            }
-
-            EditorGUILayout.Space(6);
-
-            bool useParameterExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
-            bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Customize parameter backup", useParameterExclusions);
-            if (component)
-                SetComponentBool(component, "Toggle ASM-Lite Parameter Backup Customization", ref component.useParameterExclusions, newUseParameterExclusions);
-            else
-                _pendingUseParameterExclusions = newUseParameterExclusions;
-
-            if (newUseParameterExclusions)
-                DrawParameterChecklist(component);
-
-            EditorGUILayout.EndVertical();
         }
 
         private void ApplyInstallPathSelection(ASMLiteComponent component, string selectedPath)
         {
             string normalized = NormalizeOptionalString(selectedPath);
+            _pendingCustomInstallPath = normalized;
+
             if (component)
             {
                 bool enableToggle = !string.IsNullOrEmpty(normalized) && !component.useCustomInstallPath;
@@ -944,14 +1012,13 @@ namespace ASMLite.Editor
                     SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, true);
 
                 SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
-                // Always attempt live prefix refresh for explicit tree selection.
-                // This repairs stale VF prefix state even when the selected path text
-                // matches the component's current customInstallPath value.
+                // Defer live VRCFury install-prefix refresh until Bake/Build.
+                // Immediate Customize-time refreshes can trip VRCFury editor debug
+                // rebuild paths before a safe anim object context is available.
                 TryRefreshInstallPathPrefix(component, "Customize Tree");
             }
             else
             {
-                _pendingCustomInstallPath = normalized;
                 if (!string.IsNullOrEmpty(normalized))
                     _pendingUseCustomInstallPath = true;
             }
@@ -960,6 +1027,9 @@ namespace ASMLite.Editor
         private static void TryRefreshInstallPathPrefix(ASMLiteComponent component, string contextLabel)
         {
             if (component == null)
+                return;
+
+            if (ShouldDeferImmediateInstallPathRefresh(contextLabel))
                 return;
 
             if (!TryRefreshLiveInstallPathPrefix(component, contextLabel))
@@ -2906,6 +2976,25 @@ namespace ASMLite.Editor
         /// </summary>
         private void DrawWheelPreview()
         {
+            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField(PreviewFlowSubtitle, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(6f);
+
+            float availWidth = EditorGUIUtility.currentViewWidth - 40f;
+            const float connectorWidth = 60f;
+            const float gap = 8f;
+            const float titleHeight = 16f;
+
+            float dialSize = Mathf.Clamp((availWidth - (connectorWidth * 2f) - (gap * 4f)) / 3f, 120f, 220f);
+            float rootIconSize = Mathf.Clamp(dialSize * 0.22f, 28f, 54f);
+
+            float totalWidth = dialSize * 3f + connectorWidth * 2f + gap * 4f;
+            float rowHeight = titleHeight + dialSize + 2f;
+            Rect rowRect = GUILayoutUtility.GetRect(0f, rowHeight, GUILayout.ExpandWidth(true));
+
+            if (!ShouldRenderWheelPreview(Event.current.type))
+                return;
+
             var component = GetOrRefreshComponent();
 
             int            slotCount   = component ? component.slotCount        : _pendingSlotCount;
@@ -2934,25 +3023,6 @@ namespace ASMLite.Editor
                 : ((useCustomSlotIcons && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
             string rootPreviewName = ResolveEffectiveRootNameForPreview(component);
             string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
-
-            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
-            EditorGUILayout.LabelField(PreviewFlowSubtitle, EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(6f);
-
-            float availWidth = EditorGUIUtility.currentViewWidth - 40f;
-            const float connectorWidth = 60f;
-            const float gap = 8f;
-            const float titleHeight = 16f;
-
-            float dialSize = Mathf.Clamp((availWidth - (connectorWidth * 2f) - (gap * 4f)) / 3f, 120f, 220f);
-            float rootIconSize = Mathf.Clamp(dialSize * 0.22f, 28f, 54f);
-
-            float totalWidth = dialSize * 3f + connectorWidth * 2f + gap * 4f;
-            float rowHeight = titleHeight + dialSize + 2f;
-            Rect rowRect = GUILayoutUtility.GetRect(0f, rowHeight, GUILayout.ExpandWidth(true));
-
-            if (Event.current.type != EventType.Repaint)
-                return;
 
             float startX = rowRect.x + Mathf.Max(0f, (rowRect.width - totalWidth) * 0.5f);
             float y = rowRect.y;
@@ -3231,7 +3301,7 @@ namespace ASMLite.Editor
 
             var component = GetOrRefreshComponent();
             bool hasComponent = component;
-            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            var toolState = GetOrRefreshToolState(component);
 
             int? backedUpCount = null;
             bool parameterImportPending = false;
@@ -3618,7 +3688,7 @@ namespace ASMLite.Editor
         private void DrawActionButton()
         {
             var component = GetOrRefreshComponent();
-            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            var toolState = GetOrRefreshToolState(component);
             var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
 
             EditorGUILayout.LabelField("Primary Actions", EditorStyles.boldLabel);
@@ -3838,7 +3908,7 @@ namespace ASMLite.Editor
         internal AsmLiteActionHierarchy GetActionHierarchyContract()
         {
             var component = GetOrRefreshComponent();
-            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            var toolState = GetOrRefreshToolState(component);
             return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
         }
 
@@ -3893,6 +3963,26 @@ namespace ASMLite.Editor
                 || action == AsmLiteWindowAction.Detach
                 || action == AsmLiteWindowAction.Vendorize
                 || action == AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged;
+        }
+
+        private AsmLiteToolState GetOrRefreshToolState(ASMLiteComponent component)
+        {
+            if (_cachedToolState.HasValue)
+                return _cachedToolState.Value;
+
+            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            _cachedToolState = toolState;
+            return toolState;
+        }
+
+        private void InvalidateCachedEditorState(bool resetDiscoveredParamCount = false)
+        {
+            _cachedComponent = null;
+            _lastRefreshFrame = -1;
+            _cachedToolState = null;
+
+            if (resetDiscoveredParamCount)
+                _discoveredParamCount = -1;
         }
 
         internal static AsmLiteToolState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
@@ -4020,7 +4110,7 @@ namespace ASMLite.Editor
         {
             if (!_selectedAvatar)
             {
-                _cachedComponent = null;
+                InvalidateCachedEditorState();
                 return null;
             }
 
@@ -4477,6 +4567,8 @@ namespace ASMLite.Editor
             applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameters.objRef", parameters);
             applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameter.objRef", parameters);
             applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].objRef", parameters);
+            applied |= EnsureArraySizeIfPresent(so, "content.globalParams", 1);
+            applied |= SetStringIfPresent(so, "content.globalParams.Array.data[0]", "*");
             applied |= SetObjectReferenceIfPresent(so, "content.controller.objRef", fxController);
             applied |= SetObjectReferenceIfPresent(so, "content.menu.objRef", menu);
             applied |= SetObjectReferenceIfPresent(so, "content.parameters.objRef", parameters);
@@ -4496,6 +4588,26 @@ namespace ASMLite.Editor
                 return false;
 
             prop.objectReferenceValue = value;
+            return true;
+        }
+
+        private static bool EnsureArraySizeIfPresent(SerializedObject so, string path, int size)
+        {
+            var prop = so.FindProperty(path);
+            if (prop == null || !prop.isArray)
+                return false;
+
+            prop.arraySize = size;
+            return true;
+        }
+
+        private static bool SetStringIfPresent(SerializedObject so, string path, string value)
+        {
+            var prop = so.FindProperty(path);
+            if (prop == null)
+                return false;
+
+            prop.stringValue = value ?? string.Empty;
             return true;
         }
 
@@ -4574,6 +4686,7 @@ namespace ASMLite.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            InvalidateCachedEditorState();
 
             Debug.Log($"[ASM-Lite] Vendorized generated payload for '{avatar.gameObject.name}' to '{vendorizedDir}' and kept ASM-Lite attached.");
             EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
@@ -4619,9 +4732,7 @@ namespace ASMLite.Editor
             Undo.DestroyObjectImmediate(component.gameObject);
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent = null;
-            _lastRefreshFrame = -1;
-            _discoveredParamCount = -1;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
             string completion;
             if (vendorizeToAssets && !string.IsNullOrWhiteSpace(vendorizedDir))
@@ -4666,7 +4777,7 @@ namespace ASMLite.Editor
                     return;
                 }
 
-                _discoveredParamCount = -1;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
                 EditorUtility.DisplayDialog(
                     "Package Managed Restored",
@@ -4678,9 +4789,7 @@ namespace ASMLite.Editor
 
             ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
 
-            _cachedComponent = null;
-            _lastRefreshFrame = -1;
-            _discoveredParamCount = -1;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
             AddPrefabToAvatar();
 
@@ -4922,8 +5031,7 @@ namespace ASMLite.Editor
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;   // force cache refresh on next draw
+            InvalidateCachedEditorState();
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 
@@ -4932,8 +5040,7 @@ namespace ASMLite.Editor
             // Immediately bake so assets are populated before the user hits Play.
             // Invalidate and re-fetch through the cache so the component reference
             // is consistent with subsequent GetOrRefreshComponent() calls.
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;
+            InvalidateCachedEditorState();
             component = GetOrRefreshComponent();
             if (component != null)
                 BakeAssets(component);
@@ -5034,8 +5141,7 @@ namespace ASMLite.Editor
                 Undo.RegisterCreatedObjectUndo(instance, "Rebuild ASM-Lite (migration)");
                 Undo.CollapseUndoOperations(group);
 
-                _cachedComponent  = null;
-                _lastRefreshFrame = -1;
+                InvalidateCachedEditorState();
                 component = GetOrRefreshComponent();
 
                 if (component == null)
@@ -5109,23 +5215,35 @@ namespace ASMLite.Editor
             if (component == null || component.gameObject == null)
                 return;
 
-            // Remove-path cleanup strips only direct-injection-era descriptor remnants.
-            ASMLiteBuilder.CleanupReport removeCleanupReport = default;
-            if (_selectedAvatar != null)
-                removeCleanupReport = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>(includeInactive: true) ?? _selectedAvatar;
 
             Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
             int group = Undo.GetCurrentGroup();
 
+            int removedRoutingHelpers = 0;
+            if (avatar != null)
+            {
+                Transform routingTransform = avatar.transform.Find("ASM-Lite Install Path Routing");
+                if (routingTransform != null)
+                {
+                    Undo.DestroyObjectImmediate(routingTransform.gameObject);
+                    removedRoutingHelpers++;
+                }
+            }
+
             var prefabRoot = component.gameObject;
             Undo.DestroyObjectImmediate(prefabRoot);
 
+            // Remove-path cleanup strips only direct-injection-era descriptor remnants.
+            ASMLiteBuilder.CleanupReport removeCleanupReport = default;
+            if (avatar != null)
+                removeCleanupReport = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);
+
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
-            Debug.Log($"[ASM-Lite] Prefab removed from avatar. cleanupFxLayers={removeCleanupReport.FxLayersRemoved}, cleanupFxParams={removeCleanupReport.FxParamsRemoved}, cleanupExprParams={removeCleanupReport.ExprParamsRemoved}, cleanupMenuControls={removeCleanupReport.MenuControlsRemoved}.");
+            Debug.Log($"[ASM-Lite] Prefab removed from avatar. removedRoutingHelpers={removedRoutingHelpers}, cleanupFxLayers={removeCleanupReport.FxLayersRemoved}, cleanupFxParams={removeCleanupReport.FxParamsRemoved}, cleanupExprParams={removeCleanupReport.ExprParamsRemoved}, cleanupMenuControls={removeCleanupReport.MenuControlsRemoved}.");
             Repaint();
         }
 
@@ -5163,9 +5281,7 @@ namespace ASMLite.Editor
             if (descriptor != null && descriptor != _selectedAvatar)
             {
                 _selectedAvatar  = descriptor;
-                _cachedComponent = null;
-                _lastRefreshFrame = -1;
-                _discoveredParamCount = -1;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
                 SyncPendingSlotCountFromAvatar();
 
                 Repaint();

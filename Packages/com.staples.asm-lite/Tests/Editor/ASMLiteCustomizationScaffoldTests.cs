@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
+using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
@@ -92,6 +93,205 @@ namespace ASMLite.Tests.Editor
                 var pendingIcons = GetPrivateField<Texture2D[]>(window, "_pendingCustomIcons");
                 Assert.IsNotNull(pendingIcons, "Selection sync should normalize null icon arrays to a safe empty array.");
                 Assert.AreEqual(0, pendingIcons.Length, "Selection sync should clear stale icon arrays when component has null icons.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void CommitInstallPathDraftIfBlurred_NoComponent_DoesNotThrowAndPreservesPendingPath()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_pendingCustomInstallPath", "Tools/Custom");
+
+                Assert.DoesNotThrow(() => InvokePrivate(window, "CommitInstallPathDraftIfBlurred", null),
+                    "Install-path draft commits should fail closed when no live ASMLite component exists, so enabling custom install path before prefab enrollment cannot throw.");
+                Assert.AreEqual("Tools/Custom", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
+                    "Pending install-path text should remain intact when no live component exists yet.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void ResolveVisibleInstallPathDraft_UsesLiveComponentValue_WhenFieldIsNotFocused()
+        {
+            _ctx.Comp.customInstallPath = "Tools/Live";
+
+            var resolved = InvokePrivateStatic<string>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolveVisibleInstallPathDraft", _ctx.Comp, "Tools/StaleDraft", false);
+
+            Assert.AreEqual("Tools/Live", resolved,
+                "When the install-path field is not actively being edited, the visible draft should resync from the live component so tree picks and external updates show up in the text box immediately.");
+        }
+
+        [Test]
+        public void ResolveVisibleInstallPathDraft_PreservesPendingDraft_WhenFieldIsFocused()
+        {
+            _ctx.Comp.customInstallPath = "Tools/Live";
+
+            var resolved = InvokePrivateStatic<string>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "ResolveVisibleInstallPathDraft", _ctx.Comp, "Tools/InProgressDraft", true);
+
+            Assert.AreEqual("Tools/InProgressDraft", resolved,
+                "While the install-path text field is focused, the visible draft should stay on the in-progress user edit instead of snapping back to the last serialized component value.");
+        }
+
+        [Test]
+        public void RetargetLiveFullControllerGeneratedAssets_RestoresWildcardGlobalParams()
+        {
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"Build should succeed before retargeting live FullController assets. result={buildResult}.");
+
+            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Setup"),
+                "Setup should create a live VF.Model.VRCFury FullController payload before retarget validation.");
+
+            var vf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+            Assert.IsNotNull(vf,
+                "Setup should leave a VF.Model.VRCFury component on the ASM-Lite object.");
+
+            var beforeSo = new SerializedObject(vf);
+            beforeSo.Update();
+            var beforeGlobalParams = beforeSo.FindProperty("content.globalParams");
+            Assert.IsNotNull(beforeGlobalParams,
+                "Expected serialized FullController globalParams array at content.globalParams before retarget validation.");
+            beforeGlobalParams.arraySize = 0;
+            beforeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            bool retargeted = InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                "TryRetargetLiveFullControllerGeneratedAssets", _ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+            Assert.IsTrue(retargeted,
+                "Retargeting should succeed for package-managed generated assets when the live FullController payload exists.");
+
+            var afterSo = new SerializedObject(vf);
+            afterSo.Update();
+            var afterGlobalParams = afterSo.FindProperty("content.globalParams");
+            Assert.IsNotNull(afterGlobalParams,
+                "Expected serialized FullController globalParams array at content.globalParams after retarget validation.");
+            Assert.AreEqual(1, afterGlobalParams.arraySize,
+                "Retargeting should restore wildcard global-parameter enrollment so menu button triggers continue resolving against the generated FX controller.");
+            Assert.AreEqual("*", afterSo.FindProperty("content.globalParams.Array.data[0]")?.stringValue,
+                "Retargeting should restore the wildcard global-parameter registration consumed by VRCFury FullController merges.");
+        }
+
+        [Test]
+        public void ApplyInstallPathSelection_WithComponent_SyncsPendingDraftAndSerializedValue()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_pendingCustomInstallPath", "Tools/StaleDraft");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = string.Empty;
+
+                InvokePrivate(window, "ApplyInstallPathSelection", _ctx.Comp, "Tools/Selected");
+
+                Assert.AreEqual("Tools/Selected", _ctx.Comp.customInstallPath,
+                    "Tree selection should still commit the chosen install path onto the live component when ASM-Lite is already attached.");
+                Assert.AreEqual("Tools/Selected", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
+                    "Tree selection should also sync the pending text draft so the install-path field immediately reflects the clicked menu path.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void ShouldRenderWheelPreview_RepaintOnly()
+        {
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldRenderWheelPreview", EventType.Repaint),
+                "Wheel preview rendering should run during repaint events so the UI can draw normally.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldRenderWheelPreview", EventType.Layout),
+                "Wheel preview should skip heavy cache/icon work during layout events to avoid typing lag from repeated editor redraws.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldRenderWheelPreview", EventType.KeyDown),
+                "Wheel preview should also skip heavy redraw work on key events while the user is typing in text fields.");
+        }
+
+        [Test]
+        public void ShouldDelayTextFieldCommit_CustomNamingControls_Only()
+        {
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", "asm_name_root"),
+                "Root name edits should use delayed commit so the preview and scaffold state do not churn on every keystroke.");
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", "asm_name_preset_1"),
+                "Preset name edits should use delayed commit so slot preview labels stay stable until the field blurs.");
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", "asm_name_preset_pending_3"),
+                "Pending preset name edits should also use delayed commit before a live component exists.");
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", "asm_name_save_pending"),
+                "Action label edits should use delayed commit so the preview does not update on every character.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", "asm_install_path"),
+                "Install path edits should keep immediate updates because the delayed-commit optimization is scoped only to custom naming fields.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDelayTextFieldCommit", string.Empty),
+                "Blank control names should fail closed and never opt into delayed commit behavior.");
+        }
+
+        [Test]
+        public void ShouldDeferImmediateInstallPathRefresh_CustomizeContextsOnly()
+        {
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDeferImmediateInstallPathRefresh", "Customize Toggle"),
+                "Customize toggle updates should defer live FullController refresh so VRCFury editor debug does not rebuild against incomplete anim-object state.");
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDeferImmediateInstallPathRefresh", "Customize Text"),
+                "Customize text commits should defer live FullController refresh until Bake/Build.");
+            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDeferImmediateInstallPathRefresh", "Customize Tree"),
+                "Install-path tree picks should also defer live FullController refresh in the editor window.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDeferImmediateInstallPathRefresh", "Bake"),
+                "Bake-time refresh must remain enabled because generated assets and FullController wiring are committed there.");
+            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
+                    "ShouldDeferImmediateInstallPathRefresh", string.Empty),
+                "Blank context labels should fail closed and not suppress refresh behavior outside known customize flows.");
+        }
+
+        [Test]
+        public void RemovePrefab_RemovesAsmLiteVrcFuryArtifactsFromAvatar()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+
+                ASMLiteTestFixtures.EnsureLiveFullControllerPayload(_ctx.Comp);
+
+                var routingRoot = new GameObject("ASM-Lite Install Path Routing");
+                routingRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+                var routingVf = routingRoot.AddComponent<VF.Model.VRCFury>();
+                routingVf.content = new VF.Model.Feature.MoveMenuItem
+                {
+                    fromPath = "Settings Manager",
+                    toPath = "Tools/Settings Manager",
+                };
+
+                Assert.AreEqual(2, _ctx.AvatarGo.GetComponentsInChildren<VF.Model.VRCFury>(true).Length,
+                    "Removal regression setup should include both the live FullController VRCFury component and the install-path routing helper.");
+
+                Assert.DoesNotThrow(() => InvokePrivate(window, "RemovePrefab", _ctx.Comp),
+                    "RemovePrefab should safely remove ASM-Lite and any VRCFury helper artifacts without surfacing editor exceptions during teardown.");
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "RemovePrefab should remove the ASM-Lite component hierarchy from the avatar.");
+                Assert.IsNull(_ctx.AvatarGo.transform.Find("ASM-Lite Install Path Routing"),
+                    "RemovePrefab should also remove the install-path routing helper object so no orphaned VRCFury helper remains on the avatar.");
+                Assert.AreEqual(0, _ctx.AvatarGo.GetComponentsInChildren<VF.Model.VRCFury>(true).Length,
+                    "RemovePrefab should leave no ASM-Lite-owned VRCFury components behind after teardown.");
             }
             finally
             {
@@ -393,7 +593,9 @@ namespace ASMLite.Tests.Editor
         {
             var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
-            method.Invoke(target, args);
+
+            object[] invocationArgs = args ?? new object[] { null };
+            method.Invoke(target, invocationArgs);
         }
 
         private static T InvokePrivateStatic<T>(Type targetType, string methodName, params object[] args)

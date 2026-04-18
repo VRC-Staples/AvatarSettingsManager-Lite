@@ -175,6 +175,41 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void GetActionHierarchyContract_NoComponent_ReusesCachedToolStateUntilExplicitInvalidation()
+        {
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+
+                var initial = window.GetActionHierarchyContract();
+                Assert.True(initial.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab),
+                    "Initial no-component draw should expose Add ASM-Lite Prefab while the avatar is still not installed.");
+
+                ASMLiteTestFixtures.AddExpressionParam(
+                    _ctx,
+                    ASMLite.Editor.ASMLiteBuilder.CtrlParam,
+                    VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Int,
+                    defaultValue: 0f,
+                    saved: false,
+                    networkSynced: false);
+
+                var cached = window.GetActionHierarchyContract();
+                Assert.True(cached.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab),
+                    "Repeated pre-add redraws should reuse cached tool-state detection instead of rescanning the avatar after every unrelated editor change or keypress.");
+                Assert.False(cached.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged),
+                    "Detached recovery should not replace the cached pre-add action set until the window explicitly invalidates tool-state detection.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void GetAsmLiteToolState_ComponentMissingDetachedDetectedFromRuntimeMarkers()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
