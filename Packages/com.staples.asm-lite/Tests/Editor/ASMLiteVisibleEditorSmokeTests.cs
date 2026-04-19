@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
@@ -11,6 +12,8 @@ using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
@@ -19,13 +22,15 @@ namespace ASMLite.Tests.Editor
     {
         private const string OverlayTitle = "ASM-Lite visible smoke test";
         private const int VisibleSmokeTotalSteps = 5;
+        private const string ExternalOverlayStatePathEnvVarName = "ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH";
+        private const string ExternalOverlayAckPathEnvVarName = "ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH";
         private static readonly string[] VisibleSmokeChecklist =
         {
-            "Open the ASM-Lite editor window",
-            "Select the live avatar from the hierarchy",
-            "Execute Add ASM-Lite Prefab from the visible primary action",
-            "Verify the rendered primary action updates to Rebuild",
-            "Confirm the visible smoke run completed successfully",
+            "Load Unity",
+            "Open 'Click ME' scene and wait for load",
+            "Open ASM-Lite Tool",
+            "Add 'Oct25_Dress' as avatar root",
+            "Add ASM-Lite default setup to avatar",
         };
         private const float DefaultStepDelaySeconds = 1.0f;
         private const string StepDelayEnvVarName = "ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS";
@@ -35,6 +40,7 @@ namespace ASMLite.Tests.Editor
         private string _externalOverlayTempDir;
         private string _externalOverlayStatePath;
         private string _externalOverlayAckPath;
+        private bool _ownsExternalOverlayPaths;
 
         [SetUp]
         public void SetUp()
@@ -319,40 +325,48 @@ namespace ASMLite.Tests.Editor
             _window.ConfigureExternalVisibleAutomationOverlay(_externalOverlayStatePath, _externalOverlayAckPath);
             _window.position = new Rect(120f, 120f, 920f, 900f);
             _window.Focus();
-            SetOverlayStep(1, "Opening ASM-Lite editor window");
+            SetOverlayStep(1, "Load Unity");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 1, "Opening ASM-Lite editor window");
+            yield return WaitForVisibleStep(_window, 1, "Load Unity");
+
+            SetOverlayStep(2, "Open 'Click ME' scene and wait for load");
+            _window.Repaint();
+
+            yield return WaitForVisibleStep(_window, 2, "Open 'Click ME' scene and wait for load");
 
             Assert.IsTrue(EditorWindow.HasOpenInstances<ASMLite.Editor.ASMLiteWindow>(),
                 "Visible smoke automation should open the ASM-Lite editor window on screen.");
 
-            Selection.activeGameObject = _ctx.AvatarGo;
-            SetOverlayStep(2, "Selecting avatar from the live editor hierarchy");
+            SetOverlayStep(3, "Open ASM-Lite Tool");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 2, "Selecting avatar from the live editor hierarchy");
+            yield return WaitForVisibleStep(_window, 3, "Open ASM-Lite Tool");
+
+            Selection.activeGameObject = _ctx.AvatarGo;
+            SetOverlayStep(4, "Add 'Oct25_Dress' as avatar root");
+            _window.Repaint();
+
+            yield return WaitForVisibleStep(_window, 4, "Add 'Oct25_Dress' as avatar root");
             yield return WaitForSelectedAvatar(_window, _ctx.AvDesc, 30);
 
             var beforeHierarchy = _window.GetActionHierarchyContract();
             Assert.IsTrue(beforeHierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab),
                 "Visible smoke automation should expose Add ASM-Lite Prefab as the primary action before installation.");
 
-            SetOverlayStep(3, "Executing Add ASM-Lite Prefab through the rendered primary action");
+            SetOverlayStep(5, "Add ASM-Lite default setup to avatar");
             _window.QueueVisibleAutomationAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab);
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 3, "Executing Add ASM-Lite Prefab through the rendered primary action");
+            yield return WaitForVisibleStep(_window, 5, "Add ASM-Lite default setup to avatar");
             yield return WaitForComponent(_window, _ctx.AvDesc, 120);
 
             var component = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
             Assert.IsNotNull(component,
                 "Visible smoke automation should add the ASM-Lite prefab through the rendered primary action path.");
 
-            SetOverlayStep(4, "Verifying the visible UI refreshed to Rebuild after installation");
-            _window.Repaint();
-
-            yield return WaitForVisibleStep(_window, 4, "Verifying the visible UI refreshed to Rebuild after installation");
+            Assert.AreEqual(1, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
+                "Visible smoke automation should attach the default ASM-Lite payload to the avatar menu after installation.");
 
             var afterHierarchy = _window.GetActionHierarchyContract();
             Assert.IsTrue(afterHierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Rebuild),
@@ -360,14 +374,14 @@ namespace ASMLite.Tests.Editor
 
             SetOverlayStep(
                 5,
-                "Visible smoke test completed successfully",
+                "Add ASM-Lite default setup to avatar",
                 ASMLite.Editor.ASMLiteWindow.VisibleAutomationOverlayState.Success);
             _window.Repaint();
 
             yield return WaitForVisibleStep(
                 _window,
                 5,
-                "Visible smoke test completed successfully",
+                "Add ASM-Lite default setup to avatar",
                 ASMLite.Editor.ASMLiteWindow.VisibleAutomationOverlayState.Success);
 
             _window.ShowVisibleAutomationCompletionReview();
@@ -377,6 +391,16 @@ namespace ASMLite.Tests.Editor
             WriteCompletionReviewAcknowledgement(_window);
             yield return WaitForCompletionReviewToBeAcceptedLocal();
             _window.ClearVisibleAutomationOverlay();
+        }
+
+        private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
+        {
+            if (rootMenu?.controls == null)
+                return 0;
+
+            return rootMenu.controls.Count(control => control != null
+                && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                && string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal));
         }
 
         private void SetOverlayStep(
@@ -538,13 +562,28 @@ namespace ASMLite.Tests.Editor
 
         private void ConfigureExternalOverlayPaths()
         {
+            string configuredStatePath = Environment.GetEnvironmentVariable(ExternalOverlayStatePathEnvVarName);
+            string configuredAckPath = Environment.GetEnvironmentVariable(ExternalOverlayAckPathEnvVarName);
+            if (!string.IsNullOrWhiteSpace(configuredStatePath) && !string.IsNullOrWhiteSpace(configuredAckPath))
+            {
+                _externalOverlayStatePath = Path.GetFullPath(configuredStatePath.Trim());
+                _externalOverlayAckPath = Path.GetFullPath(configuredAckPath.Trim());
+                _externalOverlayTempDir = string.Empty;
+                _ownsExternalOverlayPaths = false;
+                return;
+            }
+
             _externalOverlayTempDir = Path.Combine(Path.GetTempPath(), "asmlite-visible-overlay-tests", Guid.NewGuid().ToString("N"));
             _externalOverlayStatePath = Path.Combine(_externalOverlayTempDir, "overlay-state.json");
             _externalOverlayAckPath = Path.Combine(_externalOverlayTempDir, "overlay-ack.json");
+            _ownsExternalOverlayPaths = true;
         }
 
         private void CleanupExternalOverlayPaths()
         {
+            if (!_ownsExternalOverlayPaths)
+                return;
+
             if (string.IsNullOrWhiteSpace(_externalOverlayTempDir) || !Directory.Exists(_externalOverlayTempDir))
                 return;
 

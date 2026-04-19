@@ -89,11 +89,11 @@ MonoBehaviour:
   config:
     features: []
   content:
-    rid: 4657481122243936265
+    rid: 4657481129011183616
   references:
     version: 2
     RefIds:
-    - rid: 4657481122243936265
+    - rid: 4657481129011183616
       type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
       data:
         version: 4

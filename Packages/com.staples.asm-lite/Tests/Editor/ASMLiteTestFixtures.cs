@@ -267,12 +267,13 @@ namespace ASMLite.Tests.Editor
         OpeningWindow = 0,
         SelectingAvatar = 1,
         AddingPrefab = 2,
-        VerifyingRebuild = 3,
-        WaitingForPlayMode = 4,
-        InspectingPlayMode = 5,
-        AwaitingAcceptance = 6,
-        ExitingPlayModeAfterAcceptance = 7,
-        VerifyingInteractivity = 8,
+        AttachingDefaultPayload = 3,
+        VerifyingRebuild = 4,
+        WaitingForPlayMode = 5,
+        InspectingPlayMode = 6,
+        AwaitingAcceptance = 7,
+        ExitingPlayModeAfterAcceptance = 8,
+        VerifyingInteractivity = 9,
     }
 
     [Serializable]
@@ -319,6 +320,7 @@ namespace ASMLite.Tests.Editor
             "Open the ASM-Lite editor window",
             "Select the live avatar from the hierarchy",
             "Execute Add ASM-Lite Prefab from the visible primary action",
+            "Attach the default ASM-Lite payload to the avatar",
             "Verify the rendered primary action updates to Rebuild",
             "Confirm the visible smoke run completed successfully",
         };
@@ -337,6 +339,7 @@ namespace ASMLite.Tests.Editor
             "Open the ASM-Lite editor window",
             "Select the live avatar from the hierarchy",
             "Execute Add ASM-Lite Prefab from the visible primary action",
+            "Attach the default ASM-Lite payload to the avatar",
             "Verify the rendered primary action updates to Rebuild",
             "Enter Play Mode and confirm the runtime component stays live",
             "Confirm the visible playmode smoke run completed successfully",
@@ -729,6 +732,9 @@ namespace ASMLite.Tests.Editor
                     case AsmLiteVisibleAutomationStage.AddingPrefab:
                         TickAddingPrefab();
                         break;
+                    case AsmLiteVisibleAutomationStage.AttachingDefaultPayload:
+                        TickAttachingDefaultPayload();
+                        break;
                     case AsmLiteVisibleAutomationStage.VerifyingRebuild:
                         TickVerifyingRebuild();
                         break;
@@ -817,6 +823,28 @@ namespace ASMLite.Tests.Editor
                     return;
 
                 EnsureOverlayHostSnapshot(expectCompletionReviewWindow: false);
+                StartStage(AsmLiteVisibleAutomationStage.AttachingDefaultPayload);
+            }
+
+            private void TickAttachingDefaultPayload()
+            {
+                if (_context?.AvDesc?.expressionsMenu == null)
+                {
+                    if (HasTimedOut(15d))
+                        FailAndExit("Visible automation expected the avatar expressions menu to remain available while attaching the default ASM-Lite payload.");
+                    return;
+                }
+
+                if (CountSettingsManagerControls(_context.AvDesc.expressionsMenu) != 1)
+                {
+                    if (HasTimedOut(15d))
+                        FailAndExit("Visible automation expected the default ASM-Lite payload to attach exactly one Settings Manager control to the avatar menu after installation.");
+                    return;
+                }
+
+                if (!HasSatisfiedStepDelay())
+                    return;
+
                 StartStage(AsmLiteVisibleAutomationStage.VerifyingRebuild);
             }
 
@@ -989,14 +1017,17 @@ namespace ASMLite.Tests.Editor
                     case AsmLiteVisibleAutomationStage.AddingPrefab:
                         SetOverlayStep(3, "Executing Add ASM-Lite Prefab through the rendered primary action");
                         break;
+                    case AsmLiteVisibleAutomationStage.AttachingDefaultPayload:
+                        SetOverlayStep(4, "Attaching the default ASM-Lite payload to the avatar");
+                        break;
                     case AsmLiteVisibleAutomationStage.VerifyingRebuild:
-                        SetOverlayStep(4, "Verifying the visible UI refreshed to Rebuild after installation");
+                        SetOverlayStep(5, "Verifying the visible UI refreshed to Rebuild after installation");
                         break;
                     case AsmLiteVisibleAutomationStage.WaitingForPlayMode:
-                        SetOverlayStep(5, "Entering Play Mode for runtime inspection");
+                        SetOverlayStep(6, "Entering Play Mode for runtime inspection");
                         break;
                     case AsmLiteVisibleAutomationStage.InspectingPlayMode:
-                        SetOverlayStep(5, "Entering Play Mode for runtime inspection");
+                        SetOverlayStep(6, "Entering Play Mode for runtime inspection");
                         break;
                     case AsmLiteVisibleAutomationStage.VerifyingInteractivity:
                         SetOverlayStep(4, "Verifying the ASM-Lite window remains focused and interactable");
@@ -1017,6 +1048,16 @@ namespace ASMLite.Tests.Editor
                 return (AsmLiteVisibleAutomationMode)_configuration.mode == AsmLiteVisibleAutomationMode.LaunchUnity
                     ? "Loading Assets/Click ME.unity and selecting Oct25_Dress from the hierarchy"
                     : "Selecting avatar from the live editor hierarchy";
+            }
+
+            private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
+            {
+                if (rootMenu?.controls == null)
+                    return 0;
+
+                return rootMenu.controls.Count(control => control != null
+                    && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                    && string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal));
             }
 
             private void ShowCompletionReviewForCurrentMode()

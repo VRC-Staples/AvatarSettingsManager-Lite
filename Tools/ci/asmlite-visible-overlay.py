@@ -20,8 +20,8 @@ else:
     TKINTER_IMPORT_ERROR = None
 
 WINDOW_WIDTH = 460
-WINDOW_MIN_HEIGHT = 220
-WINDOW_MAX_HEIGHT = 760
+WINDOW_MIN_HEIGHT = 260
+WINDOW_MAX_HEIGHT = 920
 WINDOW_MARGIN = 24
 POLL_INTERVAL_MS = 150
 CLOSE_GRACE_SECONDS = 1.25
@@ -212,8 +212,19 @@ class VisibleOverlayApp:
         )
         self.checklist_meta.pack(fill="x", pady=(2, 0))
 
-        self.checklist_frame = tk.Frame(self.outer, bg=BACKGROUND)
-        self.checklist_frame.pack(fill="x", pady=(8, 0))
+        self.checklist_view = tk.Frame(self.outer, bg=BACKGROUND)
+        self.checklist_view.pack(fill="both", expand=True, pady=(8, 0))
+
+        self.checklist_scroll = tk.Canvas(self.checklist_view, bg=BACKGROUND, highlightthickness=0, bd=0)
+        self.checklist_scroll.pack(side="left", fill="both", expand=True)
+
+        self.checklist_scrollbar = tk.Scrollbar(self.checklist_view, orient="vertical", command=self.checklist_scroll.yview)
+        self.checklist_scroll.configure(yscrollcommand=self._handle_checklist_yview)
+
+        self.checklist_frame = tk.Frame(self.checklist_scroll, bg=BACKGROUND)
+        self._checklist_window_id = self.checklist_scroll.create_window((0, 0), window=self.checklist_frame, anchor="nw")
+        self.checklist_frame.bind("<Configure>", self._handle_checklist_frame_configure)
+        self.checklist_scroll.bind("<Configure>", self._handle_checklist_canvas_configure)
 
         self.review_frame = tk.Frame(self.outer, bg=REVIEW_BACKGROUND, padx=14, pady=12)
         self.review_title = tk.Label(
@@ -278,6 +289,32 @@ class VisibleOverlayApp:
             font=("Segoe UI", 8),
         )
         self.footer_label.pack(fill="x", pady=(10, 0))
+
+    def _handle_checklist_frame_configure(self, _event: Any) -> None:
+        self.checklist_scroll.configure(scrollregion=self.checklist_scroll.bbox("all"))
+        self._sync_checklist_scrollbar_visibility()
+
+    def _handle_checklist_canvas_configure(self, event: Any) -> None:
+        self.checklist_scroll.itemconfigure(self._checklist_window_id, width=event.width)
+        self._sync_checklist_scrollbar_visibility()
+
+    def _handle_checklist_yview(self, first: str, last: str) -> None:
+        self.checklist_scrollbar.set(first, last)
+        self._sync_checklist_scrollbar_visibility(first, last)
+
+    def _sync_checklist_scrollbar_visibility(self, first: str | None = None, last: str | None = None) -> None:
+        if first is None or last is None:
+            first, last = self.checklist_scroll.yview()
+
+        needs_scrollbar = float(first) > 0.0 or float(last) < 1.0
+        scrollbar_visible = bool(self.checklist_scrollbar.winfo_manager())
+        if needs_scrollbar == scrollbar_visible:
+            return
+
+        if needs_scrollbar:
+            self.checklist_scrollbar.pack(side="right", fill="y")
+        else:
+            self.checklist_scrollbar.pack_forget()
 
     def run(self) -> int:
         self.root.after(0, self._poll)
@@ -383,7 +420,7 @@ class VisibleOverlayApp:
         checklist_items = checklist if isinstance(checklist, list) else []
         completed = sum(1 for item in checklist_items if str(item.get("state") or "") == "Completed")
         if checklist_items:
-            self.checklist_meta.configure(text=f"Completed {completed}/{len(checklist_items)}")
+            self.checklist_meta.configure(text=f"Completed {completed}/{len(checklist_items)} • Published {len(checklist_items)} items")
         else:
             self.checklist_meta.configure(text="No checklist items published yet")
         self._render_checklist(checklist_items)
@@ -410,7 +447,12 @@ class VisibleOverlayApp:
 
     def _build_footer_text(self, state: dict[str, Any]) -> str:
         updated_ticks = int(state.get("updatedUtcTicks") or 0)
-        footer = f"Updated {self._format_ticks(updated_ticks)}"
+        checklist = state.get("checklist")
+        checklist_items = checklist if isinstance(checklist, list) else []
+        footer_parts = [f"Updated {self._format_ticks(updated_ticks)}"]
+        if checklist_items:
+            footer_parts.append(f"Checklist items {len(checklist_items)}")
+        footer = " • ".join(footer_parts)
         if not bool(state.get("sessionActive")) and self._has_seen_active_session:
             footer = f"Session complete. Closing shortly. {footer}"
         return footer

@@ -1,16 +1,40 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# -----------------------------------------------------------------------------
+# run-UAT-smoke.sh
+#
+# Runs the full ASM-Lite visible UAT smoke suite in one path:
+#   - discovers smoke categories from test source annotations
+#   - generates a visible-suite batch plan
+#   - executes the full run in one visible Unity session
+#
+# The script performs four major responsibilities:
+# 1) Resolve working paths, executable selections, and environment-driven defaults.
+# 2) Discover candidate UAT categories directly from source annotations.
+# 3) Generate a batch JSON plan for Unity's batch runner.
+# 4) Launch visible Unity smoke execution and report PASS/FAIL for the run.
+# -----------------------------------------------------------------------------
+
+# Repository-relative anchors for dependent scripts and output artifacts.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 RUN_EDITMODE_SCRIPT="${SCRIPT_DIR}/run-editmode-local.sh"
 OVERLAY_SCRIPT="${SCRIPT_DIR}/asmlite-visible-overlay.py"
+
+# Timing defaults for smoke execution.
 FIXED_DELAY_SECONDS="1.5"
-DEFAULT_EDITOR_FILTER="${DEFAULT_UAT_EDITOR_FILTER:-launch-unity}"
-DEFAULT_PLAYMODE_FILTER="${DEFAULT_UAT_PLAYMODE_FILTER:-UATPlayModeSmokeScaffold}"
-MODE="overlay"
-TEST_FILTER=""
+
+# Category discovery inputs; these drive which suites get included in the full visible smoke run.
+# UAT_DISCOVERY_ROOT can be overridden if the source tree is relocated.
+# UAT_CATEGORY_INCLUDE_REGEX can be overridden to broaden/narrow the discovered set.
+UAT_DISCOVERY_ROOT="${REPO_ROOT}/Packages/com.staples.asm-lite/Tests/Editor"
+UAT_CATEGORY_INCLUDE_REGEX="${UAT_CATEGORY_INCLUDE_REGEX:-^(Visible.*Automation|.*UAT.*)$}"
+
+# Runtime state used for one visible smoke execution path.
+
+# Overlay process tracking state.
 OVERLAY_PID=""
 OVERLAY_DIR=""
 OVERLAY_STATE_PATH=""
@@ -18,28 +42,25 @@ OVERLAY_ACK_PATH=""
 OVERLAY_LOG_PATH=""
 PYTHON_BIN=""
 
-UAT_SUITE_CATALOG=(
-  "launch-unity|Launch Unity|launch-unity"
-)
-
+# Emit usage and CLI help for the single visible smoke execution path.
 usage() {
   cat <<'EOF'
-Usage: Tools/ci/run-UAT-smoke.sh [options]
+Usage: Tools/ci/run-UAT-smoke.sh
 
-Visible UAT smoke options:
-  --overlay-smoke           Run visible UAT overlay smoke suites (default)
-  --editor-smoke            Run a visible editor UAT selector
-  --playmode-smoke          Run a visible playmode UAT selector
-  --test-filter <filter>    Override selector for editor/playmode smoke
+Runs the full ASM-Lite visible UAT smoke suite.
+
+Options:
   -h, --help                Show this help text
 
 Notes:
   - Visible step delay is fixed at 1.5 seconds.
-  - Default editor selector is launch-unity.
-  - Overlay mode runs configured UAT suite catalog in a single visible Unity session.
+  - Test categories are discovered from Tests/Editor annotations.
+  - Category discovery can be narrowed with UAT_CATEGORY_INCLUDE_REGEX.
 EOF
 }
 
+# Resolve the active Python interpreter for non-Windows helper invocations.
+# Prefers python3, then python, and fails loudly if neither is on PATH.
 ensure_python_bin() {
   if command -v python3 >/dev/null 2>&1; then
     printf 'python3\n'
@@ -55,6 +76,9 @@ ensure_python_bin() {
   exit 1
 }
 
+# Resolve the active Python interpreter for overlay process launch.
+# Tries common Windows launchers first (pythonw.exe/python.exe/py.exe)
+# and falls back to the same resolution used by ensure_python_bin.
 ensure_overlay_python_bin() {
   local candidate=""
 
@@ -68,6 +92,9 @@ ensure_overlay_python_bin() {
   ensure_python_bin
 }
 
+# Convert a local filesystem path to the format expected by the selected
+# overlay Python executable. This is required when using Windows Python binaries
+# from WSL, where overlay expects Windows-style paths.
 path_arg_for_python() {
   local path="$1"
 
@@ -83,6 +110,9 @@ path_arg_for_python() {
   printf '%s\n' "${path}"
 }
 
+# Tear down the background overlay process on script exit/interrupt.
+# Uses set +e around signal handling so cleanup is best-effort and never masks
+# the original exit reason.
 cleanup() {
   set +e
 
@@ -92,6 +122,17 @@ cleanup() {
   fi
 }
 
+# Persist a single overlay state payload for the GUI to consume.
+# Parameters:
+#   $1 step text shown in the overlay
+#   $2 zero-based/one-based step index currently being displayed
+#   $3 total step count for progress context
+#   $4 overlay state label (eg. "Running")
+#   $5 overlay window title
+#   $6 whether completion review UI should be visible
+#
+# The Python snippet writes the same JSON contract as the overlay renderer,
+# including tick timestamps used for stale-data detection.
 write_overlay_state() {
   local step="$1"
   local step_index="$2"
@@ -150,6 +191,9 @@ state_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 PY
 }
 
+# Start the Python overlay helper in the background and capture its PID.
+# The overlay runs in its own process so the Unity session can proceed while
+# the state file is continuously polled by the overlay UI.
 start_overlay() {
   local overlay_script_arg overlay_state_arg overlay_ack_arg overlay_log_arg
   local -a overlay_cmd
@@ -199,15 +243,70 @@ start_overlay() {
   set -e
 }
 
+# Discover UAT categories from source by scanning [Category("...")] attributes.
+# The scan is constrained by:
+#   - a discovery root directory (UAT_DISCOVERY_ROOT)
+#   - a regex filter for category names (UAT_CATEGORY_INCLUDE_REGEX)
+#
+# The resulting category list preserves first-seen order and deduplicates by
+# repeated annotation values.
+discover_uat_categories() {
+  UAT_DISCOVERY_ROOT="${UAT_DISCOVERY_ROOT}" \
+  UAT_CATEGORY_INCLUDE_REGEX="${UAT_CATEGORY_INCLUDE_REGEX}" \
+  "$(ensure_python_bin)" - <<'PY'
+import os
+import re
+import sys
+from pathlib import Path
+
+root = Path(os.environ["UAT_DISCOVERY_ROOT"])
+include_pattern = re.compile(os.environ["UAT_CATEGORY_INCLUDE_REGEX"])
+category_pattern = re.compile(r'\[Category\("([^"]+)"\)\]')
+
+if not root.exists():
+    print(f"error: discovery root does not exist: {root}", file=sys.stderr)
+    sys.exit(1)
+
+categories = []
+seen = set()
+for path in sorted(root.rglob("*.cs")):
+    try:
+        content = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        content = path.read_text(encoding="utf-8-sig")
+
+    for category in category_pattern.findall(content):
+        if not include_pattern.search(category):
+            continue
+        if category in seen:
+            continue
+        seen.add(category)
+        categories.append(category)
+
+if not categories:
+    print(
+        f"error: no UAT categories matched {include_pattern.pattern!r} under {root}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+for category in categories:
+    print(category)
+PY
+}
+
+# Build the overlay batch plan JSON consumed by run-editmode-local.sh's batch
+# runner mode. Each discovered category becomes one run with a category-based
+# filter so newly added tests in that category are automatically included.
 build_overlay_batch_plan() {
   local batch_plan_path="$1"
   local batch_results_dir="$2"
   local canonical_results_path="$3"
-  local catalog_blob
+  local discovered_categories
 
-  catalog_blob="$(printf '%s\n' "${UAT_SUITE_CATALOG[@]:-}")"
+  discovered_categories="$(discover_uat_categories)"
 
-  UAT_SUITE_CATALOG_BLOB="${catalog_blob}" \
+  UAT_DISCOVERED_CATEGORIES="${discovered_categories}" \
   "$(ensure_python_bin)" - <<'PY' \
     "${batch_plan_path}" \
     "${batch_results_dir}" \
@@ -215,6 +314,7 @@ build_overlay_batch_plan() {
     "${OVERLAY_STATE_PATH}"
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -222,33 +322,29 @@ batch_plan_path = Path(sys.argv[1])
 batch_results_dir = Path(sys.argv[2])
 canonical_results_path = Path(sys.argv[3])
 overlay_state_path = sys.argv[4]
-catalog_entries = [line for line in os.environ.get("UAT_SUITE_CATALOG_BLOB", "").splitlines() if line.strip()]
+categories = [line.strip() for line in os.environ.get("UAT_DISCOVERED_CATEGORIES", "").splitlines() if line.strip()]
 
 runs = []
-step_index = 0
-for entry in catalog_entries:
-    suite_id, suite_label, suite_filters = entry.split("|", 2)
-    filters = [item.strip() for item in suite_filters.split(",") if item.strip()]
-    for filter_name in filters:
-        step_index += 1
-        runs.append(
-            {
-                "name": filter_name,
-                "suiteId": suite_id,
-                "suiteLabel": suite_label,
-                "resultFile": str(batch_results_dir / f"{step_index:02d}-{suite_id}-{filter_name}.xml"),
-                "filters": [
-                    {
-                        "testNames": [filter_name],
-                        "groupNames": [],
-                        "categoryNames": [],
-                        "assemblyNames": [],
-                    }
-                ],
-                "runSynchronously": False,
-                "allowEmptySelection": False,
-            }
-        )
+for step_index, category_name in enumerate(categories, start=1):
+    suite_id = re.sub(r"[^A-Za-z0-9]+", "-", category_name).strip("-").lower() or f"category-{step_index:02d}"
+    runs.append(
+        {
+            "name": category_name,
+            "suiteId": suite_id,
+            "suiteLabel": category_name,
+            "resultFile": str(batch_results_dir / f"{step_index:02d}-{suite_id}.xml"),
+            "filters": [
+                {
+                    "testNames": [],
+                    "groupNames": [],
+                    "categoryNames": [category_name],
+                    "assemblyNames": [],
+                }
+            ],
+            "runSynchronously": False,
+            "allowEmptySelection": False,
+        }
+    )
 
 payload = {
     "selection": "ASM-Lite UAT smoke scaffold",
@@ -268,93 +364,90 @@ batch_plan_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8
 PY
 }
 
-count_catalog_runs() {
-  local entry filters_csv
-  local count=0
-
-  for entry in "${UAT_SUITE_CATALOG[@]:-}"; do
-    [[ -n "${entry}" ]] || continue
-    filters_csv="${entry##*|}"
-    IFS=',' read -r -a filters <<< "${filters_csv}"
-    count=$((count + ${#filters[@]}))
-  done
-
-  printf '%s\n' "${count}"
-}
-
+# Execute the full visible smoke run:
+# 1) discover categories in source and write a batch plan
+# 2) launch the overlay and Unity in visible suite mode
+# 3) print the discovered suite list for traceability
+# 4) return Unity exit code for final status reporting
 run_overlay_smoke() {
-  local selector_override="$1"
-  local selector first_entry filters_csv
-  local -a first_filters=()
+  local batch_plan_path batch_results_dir canonical_results_path total_runs discovered_categories
 
-  if [[ -n "${selector_override}" ]]; then
-    selector="${selector_override}"
-  else
-    selector="${DEFAULT_EDITOR_FILTER}"
-    if [[ ${#UAT_SUITE_CATALOG[@]} -gt 0 ]]; then
-      first_entry="${UAT_SUITE_CATALOG[0]}"
-      filters_csv="${first_entry##*|}"
-      IFS=',' read -r -a first_filters <<< "${filters_csv}"
-      if [[ ${#first_filters[@]} -gt 0 && -n "${first_filters[0]}" ]]; then
-        selector="${first_filters[0]}"
-      fi
-    fi
-  fi
+  mkdir -p "${ARTIFACTS_DIR}"
+  batch_plan_path="${ARTIFACTS_DIR}/.uat-smoke-suite-plan.json"
+  batch_results_dir="${ARTIFACTS_DIR}/uat-smoke-suite-runs"
+  canonical_results_path="${ARTIFACTS_DIR}/uat-smoke-suite-results.xml"
 
-  echo "Running visible UAT overlay smoke against:"
-  echo "  Project: ${REPO_ROOT}/../Test Project/TestUnityProject"
-  echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
-  echo "  Mode:    overlay_smoke"
-  echo "  Selector: ${selector}"
-  echo "  Delay:   ${FIXED_DELAY_SECONDS}s"
+  rm -rf "${batch_results_dir}"
+  rm -f "${batch_plan_path}" "${canonical_results_path}"
 
-  ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS="${FIXED_DELAY_SECONDS}" \
-  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-smoke --test-filter "${selector}"
-}
-
-run_selector_smoke() {
-  local selector="$1"
-  local mode_label="$2"
+  discovered_categories="$(discover_uat_categories)"
+  total_runs="$(CATEGORY_BLOB="${discovered_categories}" "$(ensure_python_bin)" - <<'PY'
+import os
+print(sum(1 for line in os.environ.get("CATEGORY_BLOB", "").splitlines() if line.strip()))
+PY
+)"
 
   start_overlay
-  write_overlay_state \
-    "Launching visible ${mode_label} UAT selector in Unity" \
-    0 \
-    1 \
-    "Running" \
-    "ASM-Lite ${mode_label} smoke" \
-    "false"
+  build_overlay_batch_plan "${batch_plan_path}" "${batch_results_dir}" "${canonical_results_path}"
 
-  echo "Running visible ${mode_label} smoke against:"
+  echo "Running full visible UAT smoke suite against:"
   echo "  Project: ${REPO_ROOT}/../Test Project/TestUnityProject"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
-  echo "  Selector: ${selector}"
-  echo "  Delay:    ${FIXED_DELAY_SECONDS}s"
-  echo "  Overlay:  ${OVERLAY_STATE_PATH}"
+  echo "  Mode:    full_visible_smoke"
+  echo "  Suites:  ${total_runs} discovered category run(s)"
+  while IFS= read -r category_name; do
+    [[ -n "${category_name}" ]] || continue
+    echo "  Category: ${category_name}"
+  done <<< "${discovered_categories}"
+  echo "  Delay:   ${FIXED_DELAY_SECONDS}s"
+  echo "  Overlay: ${OVERLAY_STATE_PATH}"
+  echo "  Overlay ack: ${OVERLAY_ACK_PATH}"
 
+  set +e
+  ASMLITE_BATCH_RUNS_JSON_PATH="${batch_plan_path}" \
+  ASMLITE_BATCH_RESULTS_DIR="${batch_results_dir}" \
+  ASMLITE_BATCH_CANONICAL_RESULTS_PATH="${canonical_results_path}" \
+  ASMLITE_BATCH_STEP_DELAY_SECONDS="${FIXED_DELAY_SECONDS}" \
+  ASMLITE_BATCH_SELECTION_LABEL="ASM-Lite UAT smoke scaffold" \
+  ASMLITE_BATCH_SESSION_ID="visible-uat-local" \
+  ASMLITE_BATCH_OVERLAY_TITLE="ASM-Lite UAT smoke suites" \
   ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS="${FIXED_DELAY_SECONDS}" \
-  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-smoke --test-filter "${selector}"
+  ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH="${OVERLAY_STATE_PATH}" \
+  ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH="${OVERLAY_ACK_PATH}" \
+  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-suite
+  run_exit_code=$?
+  set -e
+
+  echo
+  print_run_result "visible-smoke" "${run_exit_code}"
+
+  echo
+  echo "Artifacts:"
+  echo "  Overlay log: ${OVERLAY_LOG_PATH}"
+  echo "  Overlay state: ${OVERLAY_STATE_PATH}"
+  echo "  Batch plan: ${batch_plan_path}"
+  echo "  Batch results: ${batch_results_dir}"
+  echo "  Canonical results: ${canonical_results_path}"
+
+  return "${run_exit_code}"
 }
 
+# Standardized status line formatter for the visible smoke execution path.
+# Keeps PASS/FAIL output stable for this run.
+print_run_result() {
+  local mode_label="$1"
+  local exit_code="$2"
+
+  if [[ "${exit_code}" -eq 0 ]]; then
+    echo "${mode_label}: PASS"
+  else
+    echo "${mode_label}: FAIL (exit code ${exit_code})"
+  fi
+}
+# Parse CLI arguments for the single execution path.
+# Only --help is accepted; any other flag is rejected.
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --overlay-smoke)
-      MODE="overlay"
-      shift
-      ;;
-    --editor-smoke)
-      MODE="editor"
-      shift
-      ;;
-    --playmode-smoke)
-      MODE="playmode"
-      shift
-      ;;
-    --test-filter)
-      [[ $# -ge 2 ]] || { echo "error: --test-filter requires a value." >&2; exit 1; }
-      TEST_FILTER="$2"
-      shift 2
-      ;;
     --help|-h)
       usage
       exit 0
@@ -382,20 +475,8 @@ if [[ ! -f "${OVERLAY_SCRIPT}" ]]; then
   exit 1
 fi
 
+# Validate required dependencies (runner and overlay scripts) before invoking any
+# long-running work, then install cleanup trap.
 trap cleanup EXIT INT TERM HUP
 
-case "${MODE}" in
-  overlay)
-    run_overlay_smoke "${TEST_FILTER:-}"
-    ;;
-  editor)
-    run_selector_smoke "${TEST_FILTER:-${DEFAULT_EDITOR_FILTER}}" "editor"
-    ;;
-  playmode)
-    run_selector_smoke "${TEST_FILTER:-${DEFAULT_PLAYMODE_FILTER}}" "playmode"
-    ;;
-  *)
-    echo "error: unsupported mode '${MODE}'." >&2
-    exit 1
-    ;;
-esac
+run_overlay_smoke
