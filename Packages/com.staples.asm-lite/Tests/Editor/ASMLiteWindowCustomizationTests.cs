@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -66,41 +65,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void SyncPendingSlotCountFromAvatar_NoPrefab_PreservesPendingCustomization()
-        {
-            if (_ctx.Comp != null)
-                Object.DestroyImmediate(_ctx.Comp.gameObject);
-
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                SetPrivateField(window, "_pendingUseCustomRootIcon", true);
-                SetPrivateField(window, "_pendingUseCustomRootName", true);
-                SetPrivateField(window, "_pendingCustomRootName", "Keep Me");
-                SetPrivateField(window, "_pendingUseCustomInstallPath", true);
-                SetPrivateField(window, "_pendingCustomInstallPath", "Packages/Keep");
-                SetPrivateField(window, "_pendingUseParameterExclusions", true);
-                SetPrivateField(window, "_pendingExcludedParameterNames", new[] { "A", "B" });
-
-                InvokePrivate(window, "SyncPendingSlotCountFromAvatar");
-
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomRootIcon"));
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomRootName"));
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomInstallPath"));
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseParameterExclusions"));
-                Assert.AreEqual("Keep Me", GetPrivateField<string>(window, "_pendingCustomRootName"));
-                Assert.AreEqual("Packages/Keep", GetPrivateField<string>(window, "_pendingCustomInstallPath"));
-                CollectionAssert.AreEqual(new[] { "A", "B" }, GetPrivateField<string[]>(window, "_pendingExcludedParameterNames"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void ReopenWindow_SameAvatar_ReloadsPersistedCustomizationFromComponent()
+        public void SelectingAvatar_LoadsPersistedCustomizationFromComponent()
         {
             _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = null;
@@ -111,39 +76,29 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useParameterExclusions = true;
             _ctx.Comp.excludedParameterNames = new[] { " HatVisible ", "", "HatVisible", "Mood" };
 
-            var firstWindow = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(firstWindow, "_selectedAvatar", _ctx.AvDesc);
-                InvokePrivate(firstWindow, "SyncPendingSlotCountFromAvatar");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.AreSame(_ctx.AvDesc, snapshot.SelectedAvatar);
+                Assert.IsTrue(snapshot.UseCustomRootIcon);
+                Assert.IsTrue(snapshot.UseCustomRootName);
+                Assert.IsTrue(snapshot.UseCustomInstallPath);
+                Assert.IsTrue(snapshot.UseParameterExclusions);
+                Assert.AreEqual("Reopen Root", snapshot.CustomRootName);
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath);
+                CollectionAssert.AreEqual(new[] { "HatVisible", "Mood" }, snapshot.ExcludedParameterNames);
             }
             finally
             {
-                Object.DestroyImmediate(firstWindow);
-            }
-
-            var reopenedWindow = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                SetPrivateField(reopenedWindow, "_selectedAvatar", _ctx.AvDesc);
-                InvokePrivate(reopenedWindow, "SyncPendingSlotCountFromAvatar");
-
-                Assert.IsTrue(GetPrivateField<bool>(reopenedWindow, "_pendingUseCustomRootIcon"));
-                Assert.IsTrue(GetPrivateField<bool>(reopenedWindow, "_pendingUseCustomRootName"));
-                Assert.IsTrue(GetPrivateField<bool>(reopenedWindow, "_pendingUseCustomInstallPath"));
-                Assert.IsTrue(GetPrivateField<bool>(reopenedWindow, "_pendingUseParameterExclusions"));
-                Assert.AreEqual("Reopen Root", GetPrivateField<string>(reopenedWindow, "_pendingCustomRootName"));
-                Assert.AreEqual(string.Empty, GetPrivateField<string>(reopenedWindow, "_pendingCustomInstallPath"));
-                CollectionAssert.AreEqual(new[] { "HatVisible", "Mood" }, GetPrivateField<string[]>(reopenedWindow, "_pendingExcludedParameterNames"));
-            }
-            finally
-            {
-                Object.DestroyImmediate(reopenedWindow);
+                Object.DestroyImmediate(window);
             }
         }
 
         [Test]
-        public void OnSelectionChange_SwitchesAvatarAndRefreshesPendingCustomization()
+        public void SelectingDifferentAvatar_RefreshesCustomizationSnapshot()
         {
             _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.useCustomRootName = true;
@@ -164,19 +119,17 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                InvokePrivate(window, "SyncPendingSlotCountFromAvatar");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SelectAvatarForAutomation(_ctxAlt.AvDesc);
 
-                Selection.activeGameObject = _ctxAlt.AvatarGo;
-                InvokePrivate(window, "OnSelectionChange");
-
-                Assert.AreSame(_ctxAlt.AvDesc, GetPrivateField<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(window, "_selectedAvatar"));
-                Assert.IsFalse(GetPrivateField<bool>(window, "_pendingUseCustomRootIcon"));
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomRootName"));
-                Assert.AreEqual("Alternate Root", GetPrivateField<string>(window, "_pendingCustomRootName"));
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomInstallPath"));
-                Assert.AreEqual(string.Empty, GetPrivateField<string>(window, "_pendingCustomInstallPath"));
-                CollectionAssert.AreEqual(new[] { "Alt", "Mood" }, GetPrivateField<string[]>(window, "_pendingExcludedParameterNames"));
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.AreSame(_ctxAlt.AvDesc, snapshot.SelectedAvatar);
+                Assert.IsFalse(snapshot.UseCustomRootIcon);
+                Assert.IsTrue(snapshot.UseCustomRootName);
+                Assert.AreEqual("Alternate Root", snapshot.CustomRootName);
+                Assert.IsTrue(snapshot.UseCustomInstallPath);
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath);
+                CollectionAssert.AreEqual(new[] { "Alt", "Mood" }, snapshot.ExcludedParameterNames);
             }
             finally
             {
@@ -185,7 +138,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetBackableParameterNames_IncludesAssignedPrefabToggleGlobals_PreBake()
+        public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
         {
             var limbRoot = new GameObject("AvatarLimbScaling");
             limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
@@ -202,17 +155,14 @@ namespace ASMLite.Tests.Editor
                 menuPath = "",
             };
 
-            string[] backable = InvokePrivateStatic<string[]>(
-                typeof(ASMLite.Editor.ASMLiteWindow),
-                "GetBackableParameterNames",
-                _ctx.AvDesc);
+            string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
 
             CollectionAssert.Contains(backable, "AvatarLimbScaling_Arms",
-                "Assigned VRCFury globals under nested prefab-style hierarchy should be backable pre-bake.");
+                "Assigned VRCFury globals under nested prefab-style hierarchy should remain visible in the parameter backup checklist before bake.");
         }
 
         [Test]
-        public void GetBackableParameterNames_PrefersDeterministicToggleAlias_OverLegacySourceName()
+        public void VisibleParameterBackupOptions_PreferDeterministicToggleAlias_OverLegacySourceName()
         {
             const string legacySource = "VF300_Clothing/Rezz";
 
@@ -235,10 +185,7 @@ namespace ASMLite.Tests.Editor
                 name = "Rezz",
             };
 
-            string[] backable = InvokePrivateStatic<string[]>(
-                typeof(ASMLite.Editor.ASMLiteWindow),
-                "GetBackableParameterNames",
-                _ctx.AvDesc);
+            string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
 
             string deterministic = ASMLite.Editor.ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
                 "Clothing/Rezz",
@@ -246,13 +193,13 @@ namespace ASMLite.Tests.Editor
                 new HashSet<string>(StringComparer.Ordinal));
 
             CollectionAssert.DoesNotContain(backable, legacySource,
-                "Pre-bake toggle rows should suppress stale legacy source globals when ASM-Lite will deterministically rebind that toggle during build.");
+                "The parameter backup checklist should hide stale legacy toggle names when ASM-Lite will rebind that toggle to a deterministic alias.");
             CollectionAssert.Contains(backable, deterministic,
-                "Pre-bake toggle rows should expose the deterministic ASM_VF alias that ASM-Lite will actually back up after enrollment.");
+                "The parameter backup checklist should show the deterministic alias that ASM-Lite will actually back up after enrollment.");
         }
 
         [Test]
-        public void GetBackableParameterNames_IncludesVrcFuryReferencedParameterAssets_PreBake()
+        public void VisibleParameterBackupOptions_IncludeVrcFuryReferencedParameterAssets_PreBake()
         {
             var mediaRoot = new GameObject("Media");
             mediaRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
@@ -296,15 +243,12 @@ namespace ASMLite.Tests.Editor
                     },
                 };
 
-                string[] backable = InvokePrivateStatic<string[]>(
-                    typeof(ASMLite.Editor.ASMLiteWindow),
-                    "GetBackableParameterNames",
-                    _ctx.AvDesc);
+                string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
 
                 CollectionAssert.Contains(backable, "VRCOSC/Media/Play",
-                    "VRCFury FullController prms references should be included in backable names pre-bake.");
+                    "Referenced parameter assets should contribute visible parameter backup options before bake.");
                 CollectionAssert.Contains(backable, "VRCOSC/Media/Volume",
-                    "All supported value types from referenced parameter assets should be included pre-bake.");
+                    "Supported parameter types from referenced parameter assets should remain visible before bake.");
             }
             finally
             {
@@ -313,8 +257,23 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetVrcFuryMoveMenuPathRemaps_ExtractsFromAndToPaths()
+        public void VisibleInstallPathOptions_ReflectMoveMenuDestinations()
         {
+            var rootMenu = CreateTempMenuAsset("MoveMenuRoot");
+            var userSubmenu = CreateTempMenuAsset("MoveMenuUserSubmenu");
+            _ctx.AvDesc.expressionsMenu = rootMenu;
+            rootMenu.controls = new List<VRCExpressionsMenu.Control>
+            {
+                new VRCExpressionsMenu.Control
+                {
+                    name = "Unrelated",
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = userSubmenu,
+                },
+            };
+            EditorUtility.SetDirty(rootMenu);
+            AssetDatabase.SaveAssets();
+
             var moveMenuRoot = new GameObject("MoveMenuFeature");
             moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
 
@@ -325,52 +284,22 @@ namespace ASMLite.Tests.Editor
                 toPath = "Destination/Source Bucket",
             };
 
-            var remaps = InvokePrivateStatic<Dictionary<string, string>>(
-                typeof(ASMLite.Editor.ASMLiteWindow),
-                "GetVrcFuryMoveMenuPathRemaps",
-                _ctx.AvDesc);
-
-            Assert.IsTrue(remaps.TryGetValue("Source Bucket", out var destination),
-                "Move-menu remaps should include source path from serialized fromPath.");
-            Assert.AreEqual("Destination/Source Bucket", destination,
-                "Move-menu remaps should preserve destination path from serialized toPath.");
-        }
-
-        [Test]
-        public void ApplyInstallPathMoveRemaps_RemovesSourceAndAddsDestinationHierarchy()
-        {
-            var paths = new HashSet<string>(StringComparer.Ordinal)
-            {
-                "Source Bucket",
-                "Source Bucket/Submenu",
-                "Unrelated",
-            };
-
-            var remaps = new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                ["Source Bucket"] = "Destination/Source Bucket",
-            };
-
-            InvokePrivateStatic<object>(
-                typeof(ASMLite.Editor.ASMLiteWindow),
-                "ApplyInstallPathMoveRemaps",
-                paths,
-                remaps);
+            string[] paths = ASMLite.Editor.ASMLiteWindow.GetVisibleInstallPathOptionsForTesting(_ctx.AvDesc);
 
             CollectionAssert.DoesNotContain(paths, "Source Bucket",
-                "Source install path should be suppressed when move remap exists.");
+                "The install-path picker should not offer stale move-menu source paths.");
             CollectionAssert.DoesNotContain(paths, "Source Bucket/Submenu",
-                "Source subtree should be suppressed when move remap exists.");
+                "The install-path picker should not offer stale descendants under a moved source path.");
             CollectionAssert.Contains(paths, "Destination",
-                "Destination parent should be available for install path selection.");
+                "The install-path picker should offer the destination parent created by a move-menu remap.");
             CollectionAssert.Contains(paths, "Destination/Source Bucket",
-                "Destination path should be available for install path selection.");
+                "The install-path picker should offer the remapped destination path.");
             CollectionAssert.Contains(paths, "Unrelated",
-                "Non-moved paths should remain available.");
+                "The install-path picker should keep unrelated user submenu paths visible.");
         }
 
         [Test]
-        public void GetVrcFuryMenuPrefixes_IncludesMoveMenuToPathDestinations()
+        public void VisibleInstallPathOptions_IncludeMoveMenuDestinationHierarchy()
         {
             var moveMenuRoot = new GameObject("MoveMenuFeature");
             moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
@@ -390,20 +319,90 @@ namespace ASMLite.Tests.Editor
                 toPath = destinationPath,
             };
 
-            string[] prefixes = InvokePrivateStatic<string[]>(
-                typeof(ASMLite.Editor.ASMLiteWindow),
-                "GetVrcFuryMenuPrefixes",
-                _ctx.AvDesc);
+            string[] paths = ASMLite.Editor.ASMLiteWindow.GetVisibleInstallPathOptionsForTesting(_ctx.AvDesc);
 
             foreach (var expected in expectedPrefixes)
             {
-                CollectionAssert.Contains(prefixes, expected,
-                    "Move-menu destination path should contribute each parent segment and full path to install path options.");
+                CollectionAssert.Contains(paths, expected,
+                    "The install-path picker should expose each parent segment of a move-menu destination hierarchy.");
             }
         }
 
         [Test]
-        public void SyncPendingSlotCountFromAvatar_AdoptsMoveMenuInstallPathAndRemovesMoveComponent()
+        public void VisibleInstallPathOptions_ExcludeAsmLitePresetsBranchAcrossRootNameReloads()
+        {
+            var rootMenu = CreateTempMenuAsset("RootMenu");
+            _ctx.AvDesc.expressionsMenu = rootMenu;
+
+            var userSubmenu = CreateTempMenuAsset("UserSubmenu");
+            var nestedSubmenu = CreateTempMenuAsset("NestedSubmenu");
+            Assert.IsNotNull(userSubmenu,
+                "Regression setup requires a persisted user submenu asset.");
+            Assert.IsNotNull(nestedSubmenu,
+                "Regression setup requires a persisted nested submenu asset.");
+            userSubmenu.controls = new List<VRCExpressionsMenu.Control>
+            {
+                new VRCExpressionsMenu.Control
+                {
+                    name = "Hats",
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = nestedSubmenu,
+                },
+            };
+            nestedSubmenu.controls = new List<VRCExpressionsMenu.Control>();
+            EditorUtility.SetDirty(userSubmenu);
+            EditorUtility.SetDirty(nestedSubmenu);
+            AssetDatabase.SaveAssets();
+
+            var asmLitePresetsMenu = LoadAsmLitePresetsMenu();
+            rootMenu.controls = new List<VRCExpressionsMenu.Control>
+            {
+                new VRCExpressionsMenu.Control
+                {
+                    name = "Creator Settings",
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = asmLitePresetsMenu,
+                },
+                new VRCExpressionsMenu.Control
+                {
+                    name = "Accessories",
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = userSubmenu,
+                },
+            };
+            EditorUtility.SetDirty(rootMenu);
+            AssetDatabase.SaveAssets();
+
+            string[] firstPaths = ASMLite.Editor.ASMLiteWindow.GetVisibleInstallPathOptionsForTesting(_ctx.AvDesc);
+
+            CollectionAssert.DoesNotContain(firstPaths, "Creator Settings",
+                "ASM-Lite's injected presets branch must not be offered as a custom install destination when the root menu has a custom name.");
+            CollectionAssert.Contains(firstPaths, "Accessories",
+                "Non-ASM-Lite submenu roots should remain available as install destinations.");
+            CollectionAssert.Contains(firstPaths, "Accessories/Hats",
+                "Non-ASM-Lite submenu descendants should remain available as install destinations.");
+
+            rootMenu.controls[0] = new VRCExpressionsMenu.Control
+            {
+                name = "Settings Manager",
+                type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                subMenu = asmLitePresetsMenu,
+            };
+            EditorUtility.SetDirty(rootMenu);
+            AssetDatabase.SaveAssets();
+
+            string[] reloadedPaths = ASMLite.Editor.ASMLiteWindow.GetVisibleInstallPathOptionsForTesting(_ctx.AvDesc);
+
+            CollectionAssert.DoesNotContain(reloadedPaths, "Creator Settings",
+                "Reloaded install-path options must not retain stale custom ASM-Lite root names after the root name is reset.");
+            CollectionAssert.DoesNotContain(reloadedPaths, "Settings Manager",
+                "Reloaded install-path options must also exclude the default ASM-Lite root branch itself.");
+            CollectionAssert.AreEquivalent(new[] { "Accessories", "Accessories/Hats" }, reloadedPaths,
+                "Reloaded install-path options should contain only real user menu paths after ASM-Lite branches are filtered out.");
+        }
+
+        [Test]
+        public void SelectingAvatar_AdoptsMoveMenuInstallPathAndRemovesMoveComponent()
         {
             _ctx.Comp.useCustomInstallPath = false;
             _ctx.Comp.customInstallPath = string.Empty;
@@ -423,18 +422,18 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                InvokePrivate(window, "SyncPendingSlotCountFromAvatar");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 Assert.IsTrue(_ctx.Comp.useCustomInstallPath,
                     "Move-menu migration should enable custom install path on the ASM-Lite component.");
                 Assert.AreEqual("Tools", _ctx.Comp.customInstallPath,
                     "Move-menu migration should adopt destination parent as install prefix.");
 
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomInstallPath"),
-                    "Pending state should mirror adopted install-path enablement.");
-                Assert.AreEqual("Tools", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
-                    "Pending state should mirror adopted install-path prefix.");
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Visible customization state should mirror adopted install-path enablement.");
+                Assert.AreEqual("Tools", snapshot.CustomInstallPath,
+                    "Visible customization state should mirror the adopted install-path prefix.");
 
                 int remainingMoveComponents = _ctx.AvatarGo
                     .GetComponentsInChildren<VF.Model.VRCFury>(true)
@@ -444,7 +443,7 @@ namespace ASMLite.Tests.Editor
                         && string.Equals(move.toPath, "Tools/Settings Manager", StringComparison.Ordinal));
 
                 Assert.AreEqual(0, remainingMoveComponents,
-                    "Move-menu migration should remove consumed MoveMenuItem component to avoid duplicate routing.");
+                    "Move-menu migration should remove the consumed MoveMenuItem component to avoid duplicate routing.");
             }
             finally
             {
@@ -452,32 +451,27 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static void SetPrivateField(object target, string fieldName, object value)
+        private static VRCExpressionsMenu CreateTempMenuAsset(string name)
         {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
-            field.SetValue(target, value);
+            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"Assets/ASMLiteTests_Temp/{name}.asset");
+            var menu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            menu.controls = new List<VRCExpressionsMenu.Control>();
+            AssetDatabase.CreateAsset(menu, assetPath);
+            AssetDatabase.SaveAssets();
+
+            var persistedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(assetPath);
+            Assert.IsNotNull(persistedMenu,
+                $"Expected temporary VRCExpressionsMenu asset at '{assetPath}'.");
+            return persistedMenu;
         }
 
-        private static T GetPrivateField<T>(object target, string fieldName)
+        private static VRCExpressionsMenu LoadAsmLitePresetsMenu()
         {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
-            return (T)field.GetValue(target);
-        }
-
-        private static void InvokePrivate(object target, string methodName, params object[] args)
-        {
-            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
-            method.Invoke(target, args);
-        }
-
-        private static T InvokePrivateStatic<T>(System.Type targetType, string methodName, params object[] args)
-        {
-            var method = targetType.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(method, $"Missing private static method '{methodName}' on {targetType.Name}.");
-            return (T)method.Invoke(null, args);
+            string presetsMenuPath = $"{ASMLite.Editor.ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset";
+            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
+            Assert.IsNotNull(menu,
+                $"Expected generated ASM-Lite presets menu at '{presetsMenuPath}'.");
+            return menu;
         }
     }
 }

@@ -7,6 +7,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -335,6 +336,22 @@ namespace ASMLite.Editor
                 return -1;
             }
 
+            if (!TryRepairPackageGeneratedFxControllerIfCorrupt("Build"))
+            {
+                Debug.LogError($"[ASM-Lite] Build failed: could not repair generated FX controller before rebuilding '{component.gameObject.name}'.");
+                return -1;
+            }
+
+            // Keep live VRCFury FullController asset wiring intact for preprocess/upload
+            // paths where the editor window helpers are not involved. This auto-heals
+            // stale prefab instances whose prms/parameters/globalParams references were
+            // lost before VRCFury merges the generated menu.
+            if (!TryEnsureLiveFullControllerAssetWiring(component, "Build"))
+            {
+                Debug.LogError($"[ASM-Lite] Build failed: could not ensure live VRCFury FullController asset wiring on '{component.gameObject.name}'.");
+                return -1;
+            }
+
             // Keep live VRCFury FullController install-prefix wiring aligned with
             // current component settings for preprocess/upload paths where the
             // editor window helpers are not involved.
@@ -501,6 +518,52 @@ namespace ASMLite.Editor
             return nonTestMatch ?? firstMatch;
         }
 
+        private static bool TryEnsureLiveFullControllerAssetWiring(ASMLiteComponent component, string contextLabel)
+        {
+            if (component == null)
+                return false;
+
+            if (!TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " FullController Wiring"))
+                return false;
+
+            var vfComponent = FindLiveVrcFuryComponent(component);
+            if (vfComponent == null)
+            {
+                bool repaired = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(
+                    component.gameObject,
+                    component,
+                    contextLabel + " Auto-Heal");
+                if (!repaired)
+                    return false;
+
+                vfComponent = FindLiveVrcFuryComponent(component);
+                if (vfComponent == null)
+                    return false;
+            }
+
+            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
+            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
+            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            if (fxController == null || menu == null || parameters == null)
+                return false;
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            bool applied = ASMLitePrefabCreator.TryApplyFullControllerAssetReferences(
+                serializedVf,
+                component,
+                fxController,
+                menu,
+                parameters);
+            if (!applied)
+                return false;
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            return true;
+        }
+
         private static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)
         {
             var vfComponent = FindLiveVrcFuryComponent(component);
@@ -524,6 +587,161 @@ namespace ASMLite.Editor
             }
 
             return true;
+        }
+
+        internal static bool TryRepairPackageGeneratedFxControllerIfCorrupt(string contextLabel)
+        {
+            string controllerPath = ASMLiteAssetPaths.FXController;
+            string fullPath = Path.GetFullPath(controllerPath);
+            if (!File.Exists(fullPath))
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller file was not found at '{controllerPath}'.");
+                return false;
+            }
+
+            string controllerText;
+            try
+            {
+                controllerText = File.ReadAllText(fullPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to read generated FX controller at '{controllerPath}'. {ex.Message}");
+                return false;
+            }
+
+            int danglingCount = CountDanglingLocalFileIds(controllerText);
+            if (danglingCount == 0)
+                return true;
+
+            Debug.LogWarning($"[ASM-Lite] {contextLabel}: Detected {danglingCount} dangling local fileID reference(s) in generated FX controller. Clearing stale controller topology before rebuild.");
+
+            if (!TryOverwriteCorruptedGeneratedFxControllerWithCleanTemplate(controllerPath, fullPath, contextLabel))
+                return false;
+
+            int remainingDanglingCount;
+            try
+            {
+                remainingDanglingCount = CountDanglingLocalFileIds(File.ReadAllText(fullPath));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: FX controller topology was cleared, but the repaired asset could not be re-read from disk. {ex.Message}");
+                return false;
+            }
+
+            if (remainingDanglingCount > 0)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller still contains {remainingDanglingCount} dangling local fileID reference(s) after attempted repair.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryOverwriteCorruptedGeneratedFxControllerWithCleanTemplate(string controllerPath, string fullPath, string contextLabel)
+        {
+            string tempFolderPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLite_FX_Repair_Temp");
+            string tempFolderName = Path.GetFileName(tempFolderPath);
+            AssetDatabase.CreateFolder("Assets", tempFolderName);
+
+            string tempPath = tempFolderPath + "/" + Path.GetFileName(controllerPath);
+            AnimatorController tempController = null;
+            try
+            {
+                tempController = AnimatorController.CreateAnimatorControllerAtPath(tempPath);
+                if (tempController == null)
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to create a temporary AnimatorController repair template at '{tempPath}'.");
+                    return false;
+                }
+
+                tempController.name = Path.GetFileNameWithoutExtension(controllerPath);
+                EditorUtility.SetDirty(tempController);
+                AssetDatabase.SaveAssets();
+
+                string tempFullPath = Path.GetFullPath(tempPath);
+                string cleanControllerText = File.ReadAllText(tempFullPath);
+                cleanControllerText = NormalizeAnimatorControllerMainObjectName(
+                    cleanControllerText,
+                    Path.GetFileNameWithoutExtension(controllerPath));
+                File.WriteAllText(fullPath, cleanControllerText);
+                AssetDatabase.ImportAsset(controllerPath, ImportAssetOptions.ForceUpdate);
+
+                var repairedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+                if (repairedController == null)
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller could not be reloaded after writing a clean repair template.");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to overwrite the corrupted generated FX controller with a clean repair template. {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(tempFolderPath);
+            }
+        }
+
+        private static int CountDanglingLocalFileIds(string controllerText)
+        {
+            if (string.IsNullOrEmpty(controllerText))
+                return 0;
+
+            var definedIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", RegexOptions.Multiline))
+            {
+                if (match.Success)
+                    definedIds.Add(match.Groups[1].Value);
+            }
+
+            int danglingCount = 0;
+            foreach (Match match in Regex.Matches(controllerText, @"\{fileID: (-?\d+)\}"))
+            {
+                if (!match.Success)
+                    continue;
+
+                string fileId = match.Groups[1].Value;
+                if (fileId == "0" || fileId == "9100000")
+                    continue;
+                if (definedIds.Contains(fileId))
+                    continue;
+
+                danglingCount++;
+            }
+
+            return danglingCount;
+        }
+
+        private static string NormalizeAnimatorControllerMainObjectName(string controllerText, string expectedName)
+        {
+            if (string.IsNullOrEmpty(controllerText) || string.IsNullOrEmpty(expectedName))
+                return controllerText;
+
+            return Regex.Replace(
+                controllerText,
+                @"(--- !u!91 &9100000\s+AnimatorController:\s+[\s\S]*?  m_Name: )([^\r\n]*)",
+                match => match.Groups[1].Value + expectedName,
+                RegexOptions.Multiline);
+        }
+
+        private static void ClearGeneratedFxControllerTopology(AnimatorController ctrl)
+        {
+            if (ctrl == null)
+                return;
+
+            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
+                ctrl.RemoveLayer(i);
+
+            RemoveControllerSubAssets(ctrl);
+
+            while (ctrl.parameters.Length > 0)
+                ctrl.RemoveParameter(ctrl.parameters[0]);
         }
 
         private static bool TrySyncInstallPathMoveMenuRouting(ASMLiteComponent component)
@@ -645,21 +863,11 @@ namespace ASMLite.Editor
                 return;
             }
 
-            // Clear existing layers (iterate backwards to avoid index shifting)
-            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
-                ctrl.RemoveLayer(i);
+            string expectedControllerName = Path.GetFileNameWithoutExtension(ASMLiteAssetPaths.FXController);
+            if (!string.Equals(ctrl.name, expectedControllerName, StringComparison.Ordinal))
+                ctrl.name = expectedControllerName;
 
-            // Unity can retain hidden controller sub-assets from prior topologies even
-            // after their parent layers are removed. Prune those stale sub-assets before
-            // rebuilding so the serialized controller cannot carry orphaned local file IDs.
-            RemoveControllerSubAssets(ctrl);
-
-            // Clear existing parameters.
-            // Iterate until empty rather than foreach: RemoveParameter modifies the
-            // underlying list, and a stale controller may contain duplicate-named entries
-            // (from an older build) where a single-pass foreach leaves stragglers.
-            while (ctrl.parameters.Length > 0)
-                ctrl.RemoveParameter(ctrl.parameters[0]);
+            ClearGeneratedFxControllerTopology(ctrl);
 
             // Add one shared control parameter for all slots.
             ctrl.AddParameter(CtrlParam, AnimatorControllerParameterType.Int);
@@ -797,8 +1005,8 @@ namespace ASMLite.Editor
         /// <summary>
         /// Builds one FX animator layer for the given slot with Idle, SaveSlot,
         /// LoadSlot, and ResetSlot states, each backed by a VRCAvatarParameterDriver.
-        /// ResetSlot clears the slot's backup parameters to defaults without
-        /// touching the live avatar parameters.
+        /// ResetSlot restores the slot's backup parameters to defaults and also
+        /// applies those defaults back onto the live avatar parameters.
         ///
         /// Uses a single shared control Int (ASMLite_Ctrl) with encoded values:
         /// Save=(slot-1)*3+1, Load=(slot-1)*3+2, Clear=(slot-1)*3+3.
@@ -892,8 +1100,11 @@ namespace ASMLite.Editor
                 AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name);
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
-                // Live avatar params are NOT touched: only the saved preset is cleared.
+                // Also apply defaults back to the live avatar parameter immediately
+                // so Clear Preset visibly resets the avatar instead of requiring an
+                // extra Load action afterward.
                 AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, p.name);
 
                 AddLegacyAliasDriverCopiesForSlot(
                     slot,
@@ -992,6 +1203,7 @@ namespace ASMLite.Editor
                 AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName);
                 AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName);
                 AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, sourceParamName);
             }
         }
 
@@ -1204,8 +1416,9 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Writes one local shared control trigger param (ASMLite_Ctrl) plus
-        /// slot backup params into the managed VRCExpressionParameters asset.
+        /// Writes one local shared control trigger param (ASMLite_Ctrl), runtime-only
+        /// default params used by Clear Preset, plus slot backup params into the managed
+        /// VRCExpressionParameters asset.
         ///
         /// Legacy backup params from prior schemas are preserved when not colliding
         /// with the current schema to avoid dropping existing user presets.
@@ -1219,7 +1432,8 @@ namespace ASMLite.Editor
                 return;
             }
 
-            int totalCount = 1 + (backupNames != null ? backupNames.Count : 0);
+            int avatarParamCount = avatarParams?.Count ?? 0;
+            int totalCount = 1 + avatarParamCount + (backupNames != null ? backupNames.Count : 0);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
 
             // Control Int used by ASM-Lite's FX layers and menu buttons.
@@ -1233,6 +1447,28 @@ namespace ASMLite.Editor
                 saved         = false,
                 networkSynced = false,
             });
+
+            // Clear Preset restores slot backups from these runtime-only default keys.
+            // Keep them local-only and unsaved so they remain available to VRCFury's
+            // merged parameter set without consuming synced bits or persisting slot data.
+            if (avatarParams != null)
+            {
+                for (int i = 0; i < avatarParams.Count; i++)
+                {
+                    var source = avatarParams[i];
+                    if (source == null || string.IsNullOrWhiteSpace(source.name))
+                        continue;
+
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_Def_{source.name}",
+                        valueType     = source.valueType,
+                        defaultValue  = source.defaultValue,
+                        saved         = false,
+                        networkSynced = false,
+                    });
+                }
+            }
 
             var resolvedBackupNames = backupNames ?? new List<string>();
 

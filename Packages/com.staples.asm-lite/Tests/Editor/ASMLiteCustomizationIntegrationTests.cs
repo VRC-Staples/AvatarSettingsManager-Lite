@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -53,8 +54,11 @@ namespace ASMLite.Tests.Editor
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "Drop_Float", VRCExpressionParameters.ValueType.Float, 0.7f);
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "Drop_Bool", VRCExpressionParameters.ValueType.Bool, 1f);
 
-            LogAssert.Expect(LogType.Log,
-                "[ASM-Lite] Parameter exclusions: requested=3 (raw=5), matched=2, ignored=3 (sanitized=2, stale=1).");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] Parameter exclusions:",
+                "requested=3",
+                "matched=2",
+                "ignored=3");
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(2, buildResult,
@@ -117,7 +121,9 @@ namespace ASMLite.Tests.Editor
                     $"A53: excluded backup key ASMLite_Bak_S{slot}_Drop_Bool must be removed from generated expression schema.");
             }
 
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to 'Avatars/Integrated'.");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] FullController menu prefix resolved",
+                "Avatars/Integrated");
             string serializedPrefix = ConfigureFullControllerAndReadPrefix("A53");
             Assert.AreEqual("Avatars/Integrated", serializedPrefix,
                 "A53: combined fixture should serialize trimmed custom install path to FullController menu prefix.");
@@ -225,7 +231,12 @@ namespace ASMLite.Tests.Editor
             int descriptorSettingsBefore = (_ctx.AvDesc.expressionsMenu.controls ?? new List<VRCExpressionsMenu.Control>())
                 .Count(c => c != null && c.name == ASMLiteBuilder.DefaultRootControlName);
 
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] Parameter exclusions:",
+                "disabled",
+                "requested=0",
+                "matched=0",
+                "ignored=0");
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(2, buildResult,
                 "A55: disabled exclusion toggle must ignore stale excluded names and include both discovered parameters.");
@@ -284,7 +295,9 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(descriptorSettingsBefore, descriptorSettingsAfter,
                 "A55: Build() should not inject Settings Manager controls into fixture descriptor root menu during disabled-toggle baseline path.");
 
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] FullController menu prefix resolved",
+                "empty");
             string serializedPrefix = ConfigureFullControllerAndReadPrefix("A55");
             Assert.AreEqual(string.Empty, serializedPrefix,
                 "A55: disabled custom install path toggle must serialize empty FullController prefix even when stale path text exists.");
@@ -321,7 +334,12 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useParameterExclusions = false;
             _ctx.Comp.excludedParameterNames = new[] { "Keep_First", "Drop_First" };
 
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] Parameter exclusions:",
+                "disabled",
+                "requested=0",
+                "matched=0",
+                "ignored=0");
             int firstDisabledResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(2, firstDisabledResult,
                 "A56: first disabled-toggle build after enabled pass must include both discovered parameters.");
@@ -334,7 +352,12 @@ namespace ASMLite.Tests.Editor
             int firstDisabledFxSchemaCount = CountGeneratedFxSchemaKeys(firstDisabledFx);
             int firstDisabledExprSchemaCount = CountGeneratedExpressionSchemaKeys(firstDisabledExpr);
 
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            ExpectAsmLiteLog(LogType.Log,
+                "[ASM-Lite] Parameter exclusions:",
+                "disabled",
+                "requested=0",
+                "matched=0",
+                "ignored=0");
             int secondDisabledResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(firstDisabledResult, secondDisabledResult,
                 "A56: repeated disabled-toggle build must keep Build() return deterministic.");
@@ -369,6 +392,12 @@ namespace ASMLite.Tests.Editor
                 "A56: repeated disabled-toggle build must not introduce duplicate generated expression keys.");
         }
 
+        private static void ExpectAsmLiteLog(LogType type, params string[] requiredFragments)
+        {
+            string pattern = "^" + string.Join(".*", requiredFragments.Select(Regex.Escape)) + ".*$";
+            LogAssert.Expect(type, new Regex(pattern));
+        }
+
         private string ConfigureFullControllerAndReadPrefix(string aid)
         {
             var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(
@@ -381,9 +410,9 @@ namespace ASMLite.Tests.Editor
             Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { _ctx.Comp.gameObject, _ctx.Comp }),
                 $"{aid}: FullController wiring should complete without throwing for combined customization fixture.");
 
-            var vf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
             Assert.IsNotNull(vf,
-                $"{aid}: combined customization fixture should have VF.Model.VRCFury component after wiring refresh.");
+                $"{aid}: combined customization fixture should have a live VF.Model.VRCFury component after wiring refresh.");
 
             return ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf);
         }

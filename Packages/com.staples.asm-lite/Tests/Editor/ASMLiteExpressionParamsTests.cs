@@ -180,10 +180,10 @@ namespace ASMLite.Tests.Editor
         // ── A23 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
-        public void A23_GeneratedSchema_UsesOnlySharedCtrl_NoLegacySafeBoolControls()
+        public void A23_GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls()
         {
             _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "Param", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "Param", VRCExpressionParameters.ValueType.Int, 4f);
             ASMLiteBuilder.Build(_ctx.Comp);
 
             var generated = LoadGeneratedParams();
@@ -193,8 +193,20 @@ namespace ASMLite.Tests.Editor
                 .Select(p => p.name)
                 .ToList();
 
-            CollectionAssert.AreEquivalent(new[] { "ASMLite_Ctrl" }, nonBackupAsmParams,
-                "Generated expression params must emit ASMLite_Ctrl as the only control key.");
+            CollectionAssert.AreEquivalent(new[] { "ASMLite_Ctrl", "ASMLite_Def_Param" }, nonBackupAsmParams,
+                "Generated expression params must emit the shared control key plus local default keys required by Clear Preset.");
+
+            var defaultParam = generated.FirstOrDefault(p => p.name == "ASMLite_Def_Param");
+            Assert.IsNotNull(defaultParam,
+                "Generated expression params must include ASMLite_Def_Param so Clear Preset can restore the slot backup to avatar defaults at runtime.");
+            Assert.AreEqual(VRCExpressionParameters.ValueType.Int, defaultParam.valueType,
+                "Generated default params must mirror the source avatar param type.");
+            Assert.AreEqual(4f, defaultParam.defaultValue,
+                "Generated default params must mirror the source avatar default value.");
+            Assert.IsFalse(defaultParam.saved,
+                "Generated default params must remain unsaved because they are runtime-only Clear Preset sources, not persisted slot data.");
+            Assert.IsFalse(defaultParam.networkSynced,
+                "Generated default params must remain local-only so Clear Preset still consumes zero synced bits.");
 
             Assert.IsFalse(generated.Any(p => p.name != null && p.name.StartsWith("ASMLite_S", System.StringComparison.Ordinal)),
                 "Legacy SafeBool-style control params (ASMLite_S*) must not be emitted in generated expression params.");

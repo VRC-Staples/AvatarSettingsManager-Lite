@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6169958399936469618}
   - component: {fileID: 299785433407449002}
-  - component: {fileID: 7878257039897679470}
+  - component: {fileID: 2643739540643958161}
   m_Layer: 0
   m_Name: ASM-Lite
   m_TagString: Untagged
@@ -70,7 +70,7 @@ MonoBehaviour:
   excludedParameterNames: []
   useVendorizedGeneratedAssets: 0
   vendorizedGeneratedAssetsPath: 
---- !u!114 &7878257039897679470
+--- !u!114 &2643739540643958161
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -89,11 +89,11 @@ MonoBehaviour:
   config:
     features: []
   content:
-    rid: 4657481072404070426
+    rid: 4657481122243936265
   references:
     version: 2
     RefIds:
-    - rid: 4657481072404070426
+    - rid: 4657481122243936265
       type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
       data:
         version: 4
@@ -123,7 +123,7 @@ MonoBehaviour:
         smoothedPrms: []
         globalParams:
         - '*'
-        allNonsyncedAreGlobal: 0
+        allNonsyncedAreGlobal: 1
         ignoreSaved: 0
         toggleParam: 
         rootObjOverride: {fileID: 0}

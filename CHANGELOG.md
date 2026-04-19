@@ -16,7 +16,6 @@ All notable changes to ASM-Lite are documented here.
   - **Return to Package Managed** recovery path for vendorized/detached states.
 - Vendorized state persistence fields on `ASMLiteComponent` (`useVendorizedGeneratedAssets`, `vendorizedGeneratedAssetsPath`).
 - Expanded EditMode coverage for install-path wiring, root menu overrides, and window customization flows (including MoveMenu adoption/remap behavior).
-- Added repository UAT coverage checklist document at `UAT-QA-Checklist.md` for pre-flight, CI-equivalent validation, customization/migration regressions, and release sign-off.
 
 ### Changed
 

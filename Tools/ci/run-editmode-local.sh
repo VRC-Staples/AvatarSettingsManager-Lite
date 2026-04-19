@@ -3,20 +3,40 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-PROJECT_REL_PATH="Tools/ci/unity-project"
-PROJECT_PATH="${REPO_ROOT}/${PROJECT_REL_PATH}"
+WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
+REPO_DIR_NAME="$(basename "${REPO_ROOT}")"
+PROJECT_REL_PATH="Test Project/TestUnityProject"
+PROJECT_PATH="${WORKSPACE_ROOT}/${PROJECT_REL_PATH}"
 PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 COVERAGE_DIR="${REPO_ROOT}/CodeCoverage"
 DOTENV_FILE="${REPO_ROOT}/.env"
 
+RUN_TIMESTAMP=""
+RUN_ARTIFACT_BASENAME=""
+EDITMODE_LOG_PATH=""
+EDITMODE_RESULTS_PATH=""
+VISIBLE_EDITOR_SMOKE_RESULTS_PATH=""
+RUN_COVERAGE_DIR=""
+VISIBLE_OVERLAY_DIR=""
+VISIBLE_OVERLAY_STATE_PATH=""
+VISIBLE_OVERLAY_ACK_PATH=""
+VISIBLE_OVERLAY_LOG_PATH=""
+VISIBLE_OVERLAY_PID=""
+VISIBLE_OVERLAY_PYTHON_BIN=""
+
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-2700}"
 RUN_LOCK_DIR="${RUN_LOCK_DIR:-/tmp/asmlite-editmode-local.lock}"
+RUN_LOCK_WAIT_SECONDS="${RUN_LOCK_WAIT_SECONDS:-0}"
+RUN_LOCK_POLL_SECONDS="${RUN_LOCK_POLL_SECONDS:-5}"
 LOCAL_DOCKER_CPUS="${LOCAL_DOCKER_CPUS:-}"
 EDITMODE_RUNNER_MODE="${EDITMODE_RUNNER_MODE:-docker}"
+EDITMODE_LOCAL_EXECUTION_STYLE="${EDITMODE_LOCAL_EXECUTION_STYLE:-headless}"
 UNITY_EXECUTABLE="${UNITY_EXECUTABLE:-}"
 EDITMODE_TEST_FILTER="${EDITMODE_TEST_FILTER:-}"
+EDITMODE_VISIBLE_CATEGORY="${EDITMODE_VISIBLE_CATEGORY:-VisibleEditorAutomation}"
 LOCAL_UNITY_MANAGE_LICENSE="${LOCAL_UNITY_MANAGE_LICENSE:-0}"
+VISIBLE_SMOKE_STEP_DELAY_SECONDS="${ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS:-1.0}"
 
 RUN_LOCK_ACQUIRED=0
 DOCKER_CPU_ARGS=()
@@ -32,11 +52,123 @@ UNITY_LICENSE_SECRET="${UNITY_LICENSE_SECRET:-}"
 UNITY_LICENSE_FILE="${UNITY_LICENSE_FILE:-}"
 LOCAL_UNITY_RETURN_LICENSE=0
 
+write_run_lock_metadata() {
+  local started_at
+  started_at="$(date -u +%s)"
+
+  printf '%s\n' "$$" > "${RUN_LOCK_DIR}/pid"
+  printf '%s\n' "${RUN_ARTIFACT_BASENAME}" > "${RUN_LOCK_DIR}/artifact_basename"
+  printf '%s\n' "${EDITMODE_TEST_FILTER}" > "${RUN_LOCK_DIR}/test_filter"
+  printf '%s\n' "${EDITMODE_VISIBLE_CATEGORY}" > "${RUN_LOCK_DIR}/visible_category"
+  printf '%s\n' "${EDITMODE_RUNNER_MODE}" > "${RUN_LOCK_DIR}/runner_mode"
+  printf '%s\n' "${EDITMODE_LOCAL_EXECUTION_STYLE}" > "${RUN_LOCK_DIR}/execution_style"
+  printf '%s\n' "${started_at}" > "${RUN_LOCK_DIR}/started_at"
+}
+
+read_run_lock_metadata_value() {
+  local name="$1"
+  local value_file="${RUN_LOCK_DIR}/${name}"
+
+  if [[ ! -f "${value_file}" ]]; then
+    return 0
+  fi
+
+  tr -d '\r\n' < "${value_file}" || true
+}
+
+format_lock_duration() {
+  local total_seconds="$1"
+  local hours minutes seconds formatted=""
+
+  if ! [[ "${total_seconds}" =~ ^[0-9]+$ ]]; then
+    return 0
+  fi
+
+  hours=$((total_seconds / 3600))
+  minutes=$(((total_seconds % 3600) / 60))
+  seconds=$((total_seconds % 60))
+
+  if [[ "${hours}" -gt 0 ]]; then
+    formatted+="${hours}h"
+  fi
+
+  if [[ "${minutes}" -gt 0 || "${hours}" -gt 0 ]]; then
+    formatted+="${minutes}m"
+  fi
+
+  formatted+="${seconds}s"
+  printf '%s' "${formatted}"
+}
+
+build_lock_wait_message() {
+  local existing_pid="$1"
+  local artifact_basename test_filter visible_category runner_mode execution_style started_at context=""
+  local active_for_seconds="" active_for_label=""
+
+  artifact_basename="$(read_run_lock_metadata_value artifact_basename)"
+  test_filter="$(read_run_lock_metadata_value test_filter)"
+  visible_category="$(read_run_lock_metadata_value visible_category)"
+  runner_mode="$(read_run_lock_metadata_value runner_mode)"
+  execution_style="$(read_run_lock_metadata_value execution_style)"
+  started_at="$(read_run_lock_metadata_value started_at)"
+
+  if [[ -n "${started_at}" && "${started_at}" =~ ^[0-9]+$ ]]; then
+    local now
+    now="$(date -u +%s)"
+    if [[ "${now}" -ge "${started_at}" ]]; then
+      active_for_seconds="$((now - started_at))"
+      active_for_label="$(format_lock_duration "${active_for_seconds}")"
+    fi
+  fi
+
+  if [[ -n "${artifact_basename}" ]]; then
+    context="artifact ${artifact_basename}"
+  fi
+
+  if [[ -n "${test_filter}" ]]; then
+    if [[ -n "${context}" ]]; then
+      context="${context}, filter ${test_filter}"
+    else
+      context="filter ${test_filter}"
+    fi
+  elif [[ "${runner_mode}" == "local" && "${execution_style}" == "visible_smoke" && -n "${visible_category}" ]]; then
+    if [[ -n "${context}" ]]; then
+      context="${context}, visible category ${visible_category}"
+    else
+      context="visible category ${visible_category}"
+    fi
+  fi
+
+  if [[ -n "${active_for_label}" ]]; then
+    if [[ -n "${context}" ]]; then
+      context="${context}, active for ${active_for_label}"
+    else
+      context="active for ${active_for_label}"
+    fi
+  fi
+
+  if [[ -n "${context}" ]]; then
+    printf 'note: another EditMode run is active (pid %s, %s); ' "${existing_pid}" "${context}"
+  else
+    printf 'note: another EditMode run is active (pid %s); ' "${existing_pid}"
+  fi
+
+  if [[ "${RUN_LOCK_WAIT_SECONDS}" -gt 0 ]]; then
+    printf 'waiting up to %ss for %s.\n' "${RUN_LOCK_WAIT_SECONDS}" "${RUN_LOCK_DIR}"
+  else
+    printf 'waiting for %s to clear.\n' "${RUN_LOCK_DIR}"
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage: Tools/ci/run-editmode-local.sh [options]
 
 Run Unity EditMode tests using either Docker (default) or a locally installed Unity editor.
+
+Visible smoke mode now launches the custom visible automation command-line harness via
+-executeMethod instead of the Unity Test Runner. Pass --test-filter playmode (or any
+selector containing playmode/runtime) to exercise the PlayMode-visible path.
 
 Options:
   --mode <docker|local>     Choose execution mode (default: docker)
@@ -46,7 +178,11 @@ Options:
   --test-filter <filter>    Forward a Unity -testFilter value for targeted EditMode runs
   --manage-license          Activate/return a Unity license for local mode
   --no-manage-license       Skip local license activation/return (default for local mode)
+  --visible-editor-smoke    Run visible local EditMode smoke tests in a Unity window (local mode only)
+  --visible-editor-suite    Run visible local EditMode suite filters in a Unity window (local mode only)
   --timeout <seconds>       Override RUN_TIMEOUT_SECONDS for this invocation
+  --lock-wait <seconds>     Queue behind an active run; 0 waits indefinitely (default)
+  --lock-poll <seconds>     Poll interval while waiting on the run lock (default: 5)
   --docker-cpus <value>     Override LOCAL_DOCKER_CPUS for this invocation
   -h, --help                Show this help text
 
@@ -54,9 +190,14 @@ Environment overrides:
   EDITMODE_RUNNER_MODE      Default execution mode when no CLI mode is supplied
   UNITY_EXECUTABLE          Default local Unity executable path/command
   EDITMODE_TEST_FILTER      Default Unity -testFilter value
+  EDITMODE_LOCAL_EXECUTION_STYLE
+                            Local execution style: headless (default), visible_smoke, or visible_suite
+  EDITMODE_VISIBLE_CATEGORY Visible smoke-test category selector (default: VisibleEditorAutomation)
   LOCAL_UNITY_MANAGE_LICENSE
                             Enable license activation/return in local mode (1/0, true/false)
   RUN_TIMEOUT_SECONDS       Timeout applied to Docker or local Unity execution
+  RUN_LOCK_WAIT_SECONDS     Seconds to wait for the active run lock (0 = wait indefinitely)
+  RUN_LOCK_POLL_SECONDS     Poll interval while waiting for the run lock
   LOCAL_DOCKER_CPUS         Optional Docker CPU limit for Docker mode
 
 Docker mode keeps the existing CI-style activation/return flow and requires
@@ -83,7 +224,7 @@ load_dotenv_defaults() {
     raw="${BASH_REMATCH[3]}"
 
     case "$key" in
-      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL|LOCAL_DOCKER_CPUS|EDITMODE_RUNNER_MODE|UNITY_EXECUTABLE|EDITMODE_TEST_FILTER|LOCAL_UNITY_MANAGE_LICENSE) ;;
+      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL|LOCAL_DOCKER_CPUS|EDITMODE_RUNNER_MODE|EDITMODE_LOCAL_EXECUTION_STYLE|UNITY_EXECUTABLE|EDITMODE_TEST_FILTER|EDITMODE_VISIBLE_CATEGORY|LOCAL_UNITY_MANAGE_LICENSE) ;;
       *) continue ;;
     esac
 
@@ -174,6 +315,90 @@ ensure_python_bin() {
 
   echo "error: python3/python not found in PATH." >&2
   exit 1
+}
+
+ensure_visible_overlay_python_bin() {
+  local candidate=""
+
+  if is_windows_executable "${UNITY_EXECUTABLE}"; then
+    for candidate in pythonw.exe python.exe py.exe; do
+      if command -v "${candidate}" >/dev/null 2>&1; then
+        command -v "${candidate}"
+        return 0
+      fi
+    done
+  fi
+
+  ensure_python_bin
+}
+
+initialize_visible_overlay_paths() {
+  if [[ -n "${VISIBLE_OVERLAY_DIR}" && -d "${VISIBLE_OVERLAY_DIR}" ]]; then
+    rm -rf "${VISIBLE_OVERLAY_DIR}"
+  fi
+
+  VISIBLE_OVERLAY_DIR="$(mktemp -d "${ARTIFACTS_DIR}/visible-overlay-${RUN_ARTIFACT_BASENAME}.XXXXXX")"
+  VISIBLE_OVERLAY_STATE_PATH="${VISIBLE_OVERLAY_DIR}/state.json"
+  VISIBLE_OVERLAY_ACK_PATH="${VISIBLE_OVERLAY_DIR}/ack.json"
+  VISIBLE_OVERLAY_LOG_PATH="${VISIBLE_OVERLAY_DIR}/overlay.log"
+}
+
+start_visible_overlay() {
+  local overlay_script overlay_script_arg overlay_state_arg overlay_ack_arg overlay_log_arg
+  local -a overlay_cmd
+
+  overlay_script="${REPO_ROOT}/Tools/ci/asmlite-visible-overlay.py"
+  if [[ ! -f "${overlay_script}" ]]; then
+    echo "error: missing visible overlay script: ${overlay_script}" >&2
+    exit 1
+  fi
+
+  initialize_visible_overlay_paths
+  VISIBLE_OVERLAY_PYTHON_BIN="$(ensure_visible_overlay_python_bin)"
+
+  if [[ "${VISIBLE_OVERLAY_PYTHON_BIN}" == *.exe ]]; then
+    if ! command -v wslpath >/dev/null 2>&1; then
+      echo "error: wslpath is required to launch the visible overlay with a Windows Python executable." >&2
+      exit 1
+    fi
+
+    overlay_script_arg="$(wslpath -w "${overlay_script}")"
+    overlay_state_arg="$(wslpath -w "${VISIBLE_OVERLAY_STATE_PATH}")"
+    overlay_ack_arg="$(wslpath -w "${VISIBLE_OVERLAY_ACK_PATH}")"
+    overlay_log_arg="$(wslpath -w "${VISIBLE_OVERLAY_LOG_PATH}")"
+  else
+    overlay_script_arg="${overlay_script}"
+    overlay_state_arg="${VISIBLE_OVERLAY_STATE_PATH}"
+    overlay_ack_arg="${VISIBLE_OVERLAY_ACK_PATH}"
+    overlay_log_arg="${VISIBLE_OVERLAY_LOG_PATH}"
+  fi
+
+  if [[ "${VISIBLE_OVERLAY_PYTHON_BIN##*/}" == "py.exe" ]]; then
+    overlay_cmd=(
+      "${VISIBLE_OVERLAY_PYTHON_BIN}"
+      -3
+      "${overlay_script_arg}"
+      --state-path "${overlay_state_arg}"
+      --ack-path "${overlay_ack_arg}"
+      --log-path "${overlay_log_arg}"
+    )
+  else
+    overlay_cmd=(
+      "${VISIBLE_OVERLAY_PYTHON_BIN}"
+      "${overlay_script_arg}"
+      --state-path "${overlay_state_arg}"
+      --ack-path "${overlay_ack_arg}"
+      --log-path "${overlay_log_arg}"
+    )
+  fi
+
+  set +e
+  "${overlay_cmd[@]}" >/dev/null 2>&1 &
+  VISIBLE_OVERLAY_PID=$!
+  set -e
+
+  echo "note: launched visible overlay using ${VISIBLE_OVERLAY_PYTHON_BIN}"
+  echo "note: visible overlay state path: ${VISIBLE_OVERLAY_STATE_PATH#"${REPO_ROOT}/"}"
 }
 
 load_license_secret_from_file_if_needed() {
@@ -294,6 +519,23 @@ validate_timeout() {
   fi
 }
 
+validate_lock_wait_settings() {
+  if ! [[ "${RUN_LOCK_WAIT_SECONDS}" =~ ^[0-9]+$ ]]; then
+    echo "error: RUN_LOCK_WAIT_SECONDS must be a non-negative integer (seconds)." >&2
+    exit 1
+  fi
+
+  if ! [[ "${RUN_LOCK_POLL_SECONDS}" =~ ^[0-9]+$ ]]; then
+    echo "error: RUN_LOCK_POLL_SECONDS must be a positive integer (seconds)." >&2
+    exit 1
+  fi
+
+  if [[ "${RUN_LOCK_POLL_SECONDS}" -le 0 ]]; then
+    echo "error: RUN_LOCK_POLL_SECONDS must be greater than zero." >&2
+    exit 1
+  fi
+}
+
 validate_docker_cpus() {
   if [[ -z "${LOCAL_DOCKER_CPUS}" ]]; then
     DOCKER_CPU_ARGS=()
@@ -315,32 +557,48 @@ validate_docker_cpus() {
 }
 
 acquire_run_lock() {
-  if mkdir "${RUN_LOCK_DIR}" 2>/dev/null; then
-    RUN_LOCK_ACQUIRED=1
-    printf '%s\n' "$$" > "${RUN_LOCK_DIR}/pid"
-    return 0
+  local started_waiting_at=0
+  local wait_deadline=0
+  local wait_message_printed=0
+
+  if [[ "${RUN_LOCK_WAIT_SECONDS}" -gt 0 ]]; then
+    started_waiting_at="$(date -u +%s)"
+    wait_deadline=$((started_waiting_at + RUN_LOCK_WAIT_SECONDS))
   fi
 
-  local existing_pid=""
-  if [[ -f "${RUN_LOCK_DIR}/pid" ]]; then
-    existing_pid="$(tr -d '\r\n' < "${RUN_LOCK_DIR}/pid" || true)"
-  fi
+  while true; do
+    if mkdir "${RUN_LOCK_DIR}" 2>/dev/null; then
+      RUN_LOCK_ACQUIRED=1
+      write_run_lock_metadata
+      return 0
+    fi
 
-  if [[ -n "${existing_pid}" && "${existing_pid}" =~ ^[0-9]+$ ]] && ps -p "${existing_pid}" >/dev/null 2>&1; then
-    echo "error: another local EditMode run is already active (pid ${existing_pid})." >&2
-    echo "hint: wait for it to finish or remove stale lock: ${RUN_LOCK_DIR}" >&2
-    exit 1
-  fi
+    local existing_pid=""
+    if [[ -f "${RUN_LOCK_DIR}/pid" ]]; then
+      existing_pid="$(tr -d '\r\n' < "${RUN_LOCK_DIR}/pid" || true)"
+    fi
 
-  rm -rf "${RUN_LOCK_DIR}"
-  if mkdir "${RUN_LOCK_DIR}" 2>/dev/null; then
-    RUN_LOCK_ACQUIRED=1
-    printf '%s\n' "$$" > "${RUN_LOCK_DIR}/pid"
-    return 0
-  fi
+    if [[ -n "${existing_pid}" && "${existing_pid}" =~ ^[0-9]+$ ]] && ps -p "${existing_pid}" >/dev/null 2>&1; then
+      if [[ "${wait_message_printed}" -eq 0 ]]; then
+        build_lock_wait_message "${existing_pid}" >&2
+        wait_message_printed=1
+      fi
 
-  echo "error: failed to acquire run lock at ${RUN_LOCK_DIR}." >&2
-  exit 1
+      if [[ "${RUN_LOCK_WAIT_SECONDS}" -gt 0 ]]; then
+        local now
+        now="$(date -u +%s)"
+        if [[ "${now}" -ge "${wait_deadline}" ]]; then
+          echo "error: timed out waiting ${RUN_LOCK_WAIT_SECONDS}s for active EditMode run ${existing_pid} to release ${RUN_LOCK_DIR}." >&2
+          exit 1
+        fi
+      fi
+
+      sleep "${RUN_LOCK_POLL_SECONDS}"
+      continue
+    fi
+
+    rm -rf "${RUN_LOCK_DIR}"
+  done
 }
 
 setup_local_docker_credential_helper() {
@@ -391,11 +649,11 @@ resolve_unity_executable() {
     exit 1
   fi
 
-  for candidate in "$(command -v Unity 2>/dev/null || true)" \
-                   "$(command -v unity-editor 2>/dev/null || true)" \
-                   "$(command -v Unity.exe 2>/dev/null || true)" \
+  for candidate in "$(command -v Unity.exe 2>/dev/null || true)" \
                    "/mnt/c/Program Files/Unity/Hub/Editor/${UNITY_VERSION}/Editor/Unity.exe" \
-                   "/mnt/c/Program Files/Unity/Editor/Unity.exe"; do
+                   "/mnt/c/Program Files/Unity/Editor/Unity.exe" \
+                   "$(command -v Unity 2>/dev/null || true)" \
+                   "$(command -v unity-editor 2>/dev/null || true)"; do
     [[ -z "${candidate}" ]] && continue
     if [[ -x "${candidate}" || ( "${candidate}" == *.exe && -f "${candidate}" ) ]]; then
       UNITY_EXECUTABLE="${candidate}"
@@ -427,6 +685,15 @@ return_local_license() {
 
 cleanup() {
   set +e
+
+  if [[ -n "${VISIBLE_OVERLAY_PID}" ]]; then
+    kill "${VISIBLE_OVERLAY_PID}" >/dev/null 2>&1 || true
+    wait "${VISIBLE_OVERLAY_PID}" >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "${VISIBLE_OVERLAY_DIR}" ]]; then
+    rm -rf "${VISIBLE_OVERLAY_DIR}"
+  fi
 
   if [[ "${LOCAL_UNITY_RETURN_LICENSE}" -eq 1 ]]; then
     return_local_license
@@ -490,9 +757,29 @@ parse_args() {
         LOCAL_UNITY_MANAGE_LICENSE=0
         shift
         ;;
+      --visible-editor-smoke)
+        EDITMODE_RUNNER_MODE="local"
+        EDITMODE_LOCAL_EXECUTION_STYLE="visible_smoke"
+        shift
+        ;;
+      --visible-editor-suite)
+        EDITMODE_RUNNER_MODE="local"
+        EDITMODE_LOCAL_EXECUTION_STYLE="visible_suite"
+        shift
+        ;;
       --timeout)
         [[ $# -ge 2 ]] || { echo "error: --timeout requires a value." >&2; exit 1; }
         RUN_TIMEOUT_SECONDS="$2"
+        shift 2
+        ;;
+      --lock-wait)
+        [[ $# -ge 2 ]] || { echo "error: --lock-wait requires a value." >&2; exit 1; }
+        RUN_LOCK_WAIT_SECONDS="$2"
+        shift 2
+        ;;
+      --lock-poll)
+        [[ $# -ge 2 ]] || { echo "error: --lock-poll requires a value." >&2; exit 1; }
+        RUN_LOCK_POLL_SECONDS="$2"
         shift 2
         ;;
       --docker-cpus)
@@ -564,10 +851,295 @@ build_test_filter_args() {
   fi
 }
 
+initialize_run_artifact_paths() {
+  local stamp_source
+  stamp_source="$(date -u +%s)"
+  if command -v python3 >/dev/null 2>&1; then
+    RUN_TIMESTAMP="$(python3 - <<'PY'
+import time
+print(int(time.time_ns()))
+PY
+)"
+  elif command -v python >/dev/null 2>&1; then
+    RUN_TIMESTAMP="$(python - <<'PY'
+import time
+print(int(time.time() * 1000000000))
+PY
+)"
+  else
+    RUN_TIMESTAMP="${stamp_source}000000000"
+  fi
+
+  RUN_TIMESTAMP="${RUN_TIMESTAMP//$'\r'/}"
+  RUN_TIMESTAMP="${RUN_TIMESTAMP//$'\n'/}"
+  if [[ -z "${RUN_TIMESTAMP}" ]]; then
+    RUN_TIMESTAMP="${stamp_source}000000000"
+  fi
+
+  RUN_ARTIFACT_BASENAME="editmode-${RUN_TIMESTAMP}"
+  EDITMODE_LOG_PATH="${ARTIFACTS_DIR}/${RUN_ARTIFACT_BASENAME}.log"
+  EDITMODE_RESULTS_PATH="${ARTIFACTS_DIR}/${RUN_ARTIFACT_BASENAME}-results.xml"
+  VISIBLE_EDITOR_SMOKE_RESULTS_PATH="${ARTIFACTS_DIR}/${RUN_ARTIFACT_BASENAME}-visible-editor-smoke.xml"
+  RUN_COVERAGE_DIR="${COVERAGE_DIR}/${RUN_ARTIFACT_BASENAME}"
+}
+
+copy_visible_smoke_artifacts_to_timestamped_paths() {
+  local visible_log_alias visible_results_alias
+  visible_log_alias="${ARTIFACTS_DIR}/editmode.log"
+  visible_results_alias="${ARTIFACTS_DIR}/visible-editor-smoke.xml"
+
+  if [[ -f "${visible_log_alias}" && "${visible_log_alias}" != "${EDITMODE_LOG_PATH}" ]]; then
+    cp "${visible_log_alias}" "${EDITMODE_LOG_PATH}"
+  fi
+
+  if [[ -f "${visible_results_alias}" && "${visible_results_alias}" != "${VISIBLE_EDITOR_SMOKE_RESULTS_PATH}" ]]; then
+    cp "${visible_results_alias}" "${VISIBLE_EDITOR_SMOKE_RESULTS_PATH}"
+  fi
+}
+
+run_local_visible_smoke_mode() {
+  local log_path results_path project_path exit_code=0 visible_log_alias visible_results_alias visible_selector visible_mode
+  local -a unity_cmd
+
+  resolve_unity_executable
+  echo "note: running local visible Unity editor smoke flow with ${UNITY_EXECUTABLE}"
+
+  if [[ "${LOCAL_UNITY_MANAGE_LICENSE}" == "1" ]]; then
+    ensure_license_credentials
+    activate_local_license
+  fi
+
+  rm -rf "${PROJECT_PATH}/Temp"
+  visible_log_alias="${ARTIFACTS_DIR}/editmode.log"
+  visible_results_alias="${ARTIFACTS_DIR}/visible-editor-smoke.xml"
+  rm -f "${visible_log_alias}" "${visible_results_alias}" "${EDITMODE_LOG_PATH}" "${VISIBLE_EDITOR_SMOKE_RESULTS_PATH}"
+
+  visible_selector="${EDITMODE_TEST_FILTER:-ASMLiteVisibleEditorSmokeTests}"
+  if [[ -n "${EDITMODE_TEST_FILTER}" ]]; then
+    echo "note: applying visible automation selector: ${visible_selector}"
+  else
+    echo "note: visible automation defaulting to selector: ${visible_selector}"
+  fi
+
+  visible_mode="editor"
+  if [[ "${visible_selector,,}" == *launch-unity* || "${visible_selector,,}" == *launchunity* ]]; then
+    visible_mode="launch-unity"
+  elif [[ "${visible_selector,,}" == *playmode* || "${visible_selector,,}" == *runtime* ]]; then
+    visible_mode="playmode"
+  fi
+
+  echo "note: visible smoke step delay: ${VISIBLE_SMOKE_STEP_DELAY_SECONDS}s"
+
+  start_visible_overlay
+
+  log_path="$(unity_path_arg "${visible_log_alias}")"
+  results_path="$(unity_path_arg "${visible_results_alias}")"
+  project_path="$(unity_path_arg "${PROJECT_PATH}")"
+
+  unity_cmd=(
+    "${UNITY_EXECUTABLE}"
+    -logFile "${log_path}"
+    -projectPath "${project_path}"
+    -executeMethod ASMLite.Tests.Editor.ASMLiteVisibleAutomationCommandLine.RunFromCommandLine
+    -asmliteVisibleAutomationResultsPath "${results_path}"
+    -asmliteVisibleAutomationSelector "${visible_selector}"
+    -asmliteVisibleAutomationMode "${visible_mode}"
+    -asmliteVisibleAutomationStepDelaySeconds "${VISIBLE_SMOKE_STEP_DELAY_SECONDS}"
+    -asmliteVisibleAutomationExternalOverlayStatePath "$(unity_path_arg "${VISIBLE_OVERLAY_STATE_PATH}")"
+    -asmliteVisibleAutomationExternalOverlayAckPath "$(unity_path_arg "${VISIBLE_OVERLAY_ACK_PATH}")"
+  )
+
+  echo "note: visible smoke uses the command-line automation harness; timeout disabled while waiting for manual acceptance."
+
+  set +e
+  "${unity_cmd[@]}"
+  exit_code=$?
+  set -e
+
+  copy_visible_smoke_artifacts_to_timestamped_paths
+  return "${exit_code}"
+}
+
+run_local_batch_suite_mode() {
+  local presentation_mode="$1"
+  local log_path project_path exit_code=0
+  local -a unity_cmd
+
+  resolve_unity_executable
+  echo "note: running local Unity batch EditMode suite flow with ${UNITY_EXECUTABLE}"
+
+  if [[ "${LOCAL_UNITY_MANAGE_LICENSE}" == "1" ]]; then
+    ensure_license_credentials
+    activate_local_license
+  fi
+
+  rm -rf "${PROJECT_PATH}/Temp"
+
+  : "${ASMLITE_BATCH_RESULTS_DIR:=${ARTIFACTS_DIR}}"
+  : "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH:=${EDITMODE_RESULTS_PATH}}"
+  : "${ASMLITE_BATCH_RUNS_JSON_PATH:=}"
+  : "${ASMLITE_BATCH_OVERLAY_STATE_PATH:=}"
+  : "${ASMLITE_BATCH_STEP_DELAY_SECONDS:=}"
+  : "${ASMLITE_BATCH_SELECTION_LABEL:=}"
+  : "${ASMLITE_BATCH_SESSION_ID:=}"
+  : "${ASMLITE_BATCH_OVERLAY_TITLE:=}"
+  export ASMLITE_BATCH_RESULTS_DIR
+  export ASMLITE_BATCH_CANONICAL_RESULTS_PATH
+
+  mkdir -p "${ASMLITE_BATCH_RESULTS_DIR}"
+
+  log_path="$(unity_path_arg "${EDITMODE_LOG_PATH}")"
+  project_path="$(unity_path_arg "${PROJECT_PATH}")"
+
+  unity_cmd=(
+    "${UNITY_EXECUTABLE}"
+    -logFile "${log_path}"
+    -projectPath "${project_path}"
+    -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine
+    -asmliteBatchResultsDir "$(unity_path_arg "${ASMLITE_BATCH_RESULTS_DIR}")"
+    -asmliteBatchCanonicalResultsPath "$(unity_path_arg "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}")"
+  )
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH}" ]]; then
+    unity_cmd+=( -asmliteBatchRunsJsonPath "$(unity_path_arg "${ASMLITE_BATCH_RUNS_JSON_PATH}")" )
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_OVERLAY_STATE_PATH}" ]]; then
+    unity_cmd+=( -asmliteBatchOverlayStatePath "$(unity_path_arg "${ASMLITE_BATCH_OVERLAY_STATE_PATH}")" )
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_STEP_DELAY_SECONDS}" ]]; then
+    unity_cmd+=( -asmliteBatchStepDelaySeconds "${ASMLITE_BATCH_STEP_DELAY_SECONDS}" )
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_SELECTION_LABEL}" ]]; then
+    unity_cmd+=( -asmliteBatchSelectionLabel "${ASMLITE_BATCH_SELECTION_LABEL}" )
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_SESSION_ID}" ]]; then
+    unity_cmd+=( -asmliteBatchSessionId "${ASMLITE_BATCH_SESSION_ID}" )
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_OVERLAY_TITLE}" ]]; then
+    unity_cmd+=( -asmliteBatchOverlayTitle "${ASMLITE_BATCH_OVERLAY_TITLE}" )
+  fi
+
+  if [[ "${presentation_mode}" == "headless" ]]; then
+    unity_cmd=(
+      "${UNITY_EXECUTABLE}"
+      -batchmode
+      -nographics
+      -logFile "${log_path}"
+      -projectPath "${project_path}"
+      -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine
+      -asmliteBatchResultsDir "$(unity_path_arg "${ASMLITE_BATCH_RESULTS_DIR}")"
+      -asmliteBatchCanonicalResultsPath "$(unity_path_arg "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}")"
+    )
+    if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH}" ]]; then
+      unity_cmd+=( -asmliteBatchRunsJsonPath "$(unity_path_arg "${ASMLITE_BATCH_RUNS_JSON_PATH}")" )
+    fi
+    if [[ -n "${ASMLITE_BATCH_OVERLAY_STATE_PATH}" ]]; then
+      unity_cmd+=( -asmliteBatchOverlayStatePath "$(unity_path_arg "${ASMLITE_BATCH_OVERLAY_STATE_PATH}")" )
+    fi
+    if [[ -n "${ASMLITE_BATCH_STEP_DELAY_SECONDS}" ]]; then
+      unity_cmd+=( -asmliteBatchStepDelaySeconds "${ASMLITE_BATCH_STEP_DELAY_SECONDS}" )
+    fi
+    if [[ -n "${ASMLITE_BATCH_SELECTION_LABEL}" ]]; then
+      unity_cmd+=( -asmliteBatchSelectionLabel "${ASMLITE_BATCH_SELECTION_LABEL}" )
+    fi
+    if [[ -n "${ASMLITE_BATCH_SESSION_ID}" ]]; then
+      unity_cmd+=( -asmliteBatchSessionId "${ASMLITE_BATCH_SESSION_ID}" )
+    fi
+    if [[ -n "${ASMLITE_BATCH_OVERLAY_TITLE}" ]]; then
+      unity_cmd+=( -asmliteBatchOverlayTitle "${ASMLITE_BATCH_OVERLAY_TITLE}" )
+    fi
+    echo "note: single-instance batch suite mode is running headless."
+  else
+    echo "note: single-instance batch suite mode leaves the Unity editor window open while the full batch executes."
+  fi
+
+  set +e
+  timeout --signal=TERM --kill-after=30 "${RUN_TIMEOUT_SECONDS}" "${unity_cmd[@]}"
+  exit_code=$?
+  set -e
+
+  return "${exit_code}"
+}
+
+run_local_visible_suite_mode() {
+  local log_path results_path coverage_path project_path exit_code=0
+  local -a unity_cmd
+  local -a test_filter_args=()
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
+    run_local_batch_suite_mode visible
+    return $?
+  fi
+
+  resolve_unity_executable
+  echo "note: running local visible Unity EditMode suite flow with ${UNITY_EXECUTABLE}"
+
+  if [[ "${LOCAL_UNITY_MANAGE_LICENSE}" == "1" ]]; then
+    ensure_license_credentials
+    activate_local_license
+  fi
+
+  build_test_filter_args
+
+  rm -rf "${PROJECT_PATH}/Temp"
+
+  if [[ -n "${EDITMODE_TEST_FILTER}" ]]; then
+    test_filter_args=(-testFilter "${EDITMODE_TEST_FILTER}")
+  fi
+
+  log_path="$(unity_path_arg "${EDITMODE_LOG_PATH}")"
+  results_path="$(unity_path_arg "${EDITMODE_RESULTS_PATH}")"
+  coverage_path="$(unity_path_arg "${RUN_COVERAGE_DIR}")"
+  project_path="$(unity_path_arg "${PROJECT_PATH}")"
+
+  unity_cmd=(
+    "${UNITY_EXECUTABLE}"
+    -logFile "${log_path}"
+    -projectPath "${project_path}"
+    -coverageResultsPath "${coverage_path}"
+    -runTests
+    -testPlatform editmode
+    "${test_filter_args[@]}"
+    -testResults "${results_path}"
+    -enableCodeCoverage
+    -debugCodeOptimization
+    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+  )
+
+  echo "note: visible suite mode leaves the Unity editor window open while the filtered EditMode run executes."
+
+  set +e
+  timeout --signal=TERM --kill-after=30 "${RUN_TIMEOUT_SECONDS}" "${unity_cmd[@]}"
+  exit_code=$?
+  set -e
+
+  return "${exit_code}"
+}
+
 run_local_mode() {
   local log_path results_path coverage_path project_path exit_code=0
   local -a unity_cmd
   local -a test_filter_args=()
+
+  if [[ "${EDITMODE_LOCAL_EXECUTION_STYLE}" == "visible_smoke" ]]; then
+    run_local_visible_smoke_mode
+    return $?
+  fi
+
+  if [[ "${EDITMODE_LOCAL_EXECUTION_STYLE}" == "visible_suite" ]]; then
+    run_local_visible_suite_mode
+    return $?
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
+    run_local_batch_suite_mode headless
+    return $?
+  fi
 
   resolve_unity_executable
   echo "note: running local Unity EditMode tests with ${UNITY_EXECUTABLE}"
@@ -585,9 +1157,9 @@ run_local_mode() {
     test_filter_args=(-testFilter "${EDITMODE_TEST_FILTER}")
   fi
 
-  log_path="$(unity_path_arg "${ARTIFACTS_DIR}/editmode.log")"
-  results_path="$(unity_path_arg "${ARTIFACTS_DIR}/editmode-results.xml")"
-  coverage_path="$(unity_path_arg "${COVERAGE_DIR}")"
+  log_path="$(unity_path_arg "${EDITMODE_LOG_PATH}")"
+  results_path="$(unity_path_arg "${EDITMODE_RESULTS_PATH}")"
+  coverage_path="$(unity_path_arg "${RUN_COVERAGE_DIR}")"
   project_path="$(unity_path_arg "${PROJECT_PATH}")"
 
   unity_cmd=(
@@ -634,7 +1206,14 @@ run_docker_mode() {
   cat > "${RUNNER_SCRIPT}" <<'RUNNER'
 set -euo pipefail
 export HOME="${HOME:-/root}"
-mkdir -p "$HOME/.cache/unity3d" /github/workspace/artifacts /github/workspace/CodeCoverage
+WORKSPACE_REPO_ROOT="/github/workspace/${REPO_DIR_NAME}"
+mkdir -p "$HOME/.cache/unity3d" "${WORKSPACE_REPO_ROOT}/artifacts" "${WORKSPACE_REPO_ROOT}/CodeCoverage"
+
+RUN_ARTIFACT_BASENAME="${RUN_ARTIFACT_BASENAME:-editmode}"
+EDITMODE_LOG_PATH="${WORKSPACE_REPO_ROOT}/artifacts/${RUN_ARTIFACT_BASENAME}.log"
+EDITMODE_RESULTS_PATH="${WORKSPACE_REPO_ROOT}/artifacts/${RUN_ARTIFACT_BASENAME}-results.xml"
+RUN_COVERAGE_DIR="${WORKSPACE_REPO_ROOT}/CodeCoverage/${RUN_ARTIFACT_BASENAME}"
+mkdir -p "${RUN_COVERAGE_DIR}"
 
 test_filter_args=()
 if [[ -n "${EDITMODE_TEST_FILTER:-}" ]]; then
@@ -669,18 +1248,18 @@ if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
 fi
 rm -f "${ACTIVATE_LOG}"
 
-rm -rf /github/workspace/Tools/ci/unity-project/Temp
+rm -rf "/github/workspace/Test Project/TestUnityProject/Temp"
 
 unity-editor \
   -batchmode \
   -nographics \
-  -logFile /github/workspace/artifacts/editmode.log \
-  -projectPath Tools/ci/unity-project \
-  -coverageResultsPath /github/workspace/CodeCoverage \
+  -logFile "${EDITMODE_LOG_PATH}" \
+  -projectPath "/github/workspace/Test Project/TestUnityProject" \
+  -coverageResultsPath "${RUN_COVERAGE_DIR}" \
   -runTests \
   -testPlatform editmode \
   "${test_filter_args[@]}" \
-  -testResults /github/workspace/artifacts/editmode-results.xml \
+  -testResults "${EDITMODE_RESULTS_PATH}" \
   -enableCodeCoverage \
   -debugCodeOptimization \
   -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
@@ -694,8 +1273,10 @@ RUNNER
     --env UNITY_PASSWORD \
     --env UNITY_SERIAL="${UNITY_SERIAL}" \
     --env EDITMODE_TEST_FILTER="${EDITMODE_TEST_FILTER}" \
+    --env RUN_ARTIFACT_BASENAME="${RUN_ARTIFACT_BASENAME}" \
+    --env REPO_DIR_NAME="${REPO_DIR_NAME}" \
     "${DOCKER_CPU_ARGS[@]}" \
-    --volume "${REPO_ROOT}:/github/workspace" \
+    --volume "${WORKSPACE_ROOT}:/github/workspace" \
     --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
     "${UNITY_IMAGE}" \
     /bin/bash /tmp/unity-runner.sh
@@ -706,18 +1287,44 @@ RUNNER
 }
 
 print_artifact_summary() {
-  if [[ -f "${ARTIFACTS_DIR}/editmode.log" ]]; then
-    echo "done: artifacts/editmode.log"
+  if [[ -f "${EDITMODE_LOG_PATH}" ]]; then
+    echo "done: ${EDITMODE_LOG_PATH#"${REPO_ROOT}/"}"
   fi
 
-  if [[ -f "${ARTIFACTS_DIR}/editmode-results.xml" ]]; then
-    echo "done: artifacts/editmode-results.xml"
+  if [[ -f "${VISIBLE_OVERLAY_LOG_PATH}" ]]; then
+    echo "done: ${VISIBLE_OVERLAY_LOG_PATH#"${REPO_ROOT}/"}"
+  fi
+
+  if [[ "${EDITMODE_RUNNER_MODE}" == "local" && "${EDITMODE_LOCAL_EXECUTION_STYLE}" == "visible_smoke" ]]; then
+    if [[ -f "${VISIBLE_EDITOR_SMOKE_RESULTS_PATH}" ]]; then
+      echo "done: ${VISIBLE_EDITOR_SMOKE_RESULTS_PATH#"${REPO_ROOT}/"}"
+    elif [[ -f "${ARTIFACTS_DIR}/visible-editor-smoke.xml" ]]; then
+      echo "done: artifacts/visible-editor-smoke.xml"
+    else
+      echo "warn: visible smoke results are not available yet; this is expected until the user accepts and closes the visible smoke run." >&2
+    fi
+
+    return 0
+  fi
+
+  if [[ -f "${EDITMODE_RESULTS_PATH}" ]]; then
+    echo "done: ${EDITMODE_RESULTS_PATH#"${REPO_ROOT}/"}"
+  else
+    echo "warn: ${EDITMODE_RESULTS_PATH#"${REPO_ROOT}/"} was not created" >&2
   fi
 }
 
 load_dotenv_defaults "${DOTENV_FILE}"
 parse_args "$@"
 LOCAL_UNITY_MANAGE_LICENSE="$(normalize_bool "${LOCAL_UNITY_MANAGE_LICENSE}")"
+
+case "${EDITMODE_LOCAL_EXECUTION_STYLE}" in
+  headless|visible_smoke|visible_suite) ;;
+  *)
+    echo "error: EDITMODE_LOCAL_EXECUTION_STYLE must be 'headless', 'visible_smoke', or 'visible_suite'." >&2
+    exit 1
+    ;;
+esac
 
 case "${EDITMODE_RUNNER_MODE}" in
   docker|local) ;;
@@ -728,14 +1335,21 @@ case "${EDITMODE_RUNNER_MODE}" in
 esac
 
 validate_timeout
+validate_lock_wait_settings
 ensure_project_version
 mkdir -p "${ARTIFACTS_DIR}" "${COVERAGE_DIR}"
+initialize_run_artifact_paths
+mkdir -p "${RUN_COVERAGE_DIR}"
 acquire_run_lock
-trap cleanup EXIT
+trap cleanup EXIT INT TERM HUP
 
 run_exit=0
 case "${EDITMODE_RUNNER_MODE}" in
   docker)
+    if [[ "${EDITMODE_LOCAL_EXECUTION_STYLE}" != "headless" ]]; then
+      echo "error: visible smoke or visible suite execution is only supported in local mode." >&2
+      exit 1
+    fi
     run_docker_mode || run_exit=$?
     ;;
   local)

@@ -282,12 +282,17 @@ namespace ASMLite.Tests.Editor
                 .Where(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy)
                 .ToList();
 
-            Assert.AreEqual(1, copyEntries.Count,
-                "Reset driver should have 1 Copy entry for 1 avatar param.");
-            Assert.AreEqual("ASMLite_Def_MyBool", copyEntries[0].source,
-                "Reset Copy source should be the default param name.");
-            Assert.AreEqual("ASMLite_Bak_S1_MyBool", copyEntries[0].name,
-                "Reset Copy destination should be the backup param name.");
+            Assert.AreEqual(2, copyEntries.Count,
+                "Reset driver should have 2 Copy entries for 1 avatar param: one for the saved backup and one for the live avatar param.");
+
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    (source: "ASMLite_Def_MyBool", destination: "ASMLite_Bak_S1_MyBool"),
+                    (source: "ASMLite_Def_MyBool", destination: "MyBool"),
+                },
+                copyEntries.Select(entry => (entry.source, entry.name)).ToArray(),
+                "Reset driver should copy defaults into both the slot backup and the live avatar parameter.");
         }
 
         // ── A13 ────────────────────────────────────────────────────────────────

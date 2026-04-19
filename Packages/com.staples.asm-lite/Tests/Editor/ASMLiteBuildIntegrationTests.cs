@@ -111,6 +111,9 @@ namespace ASMLite.Tests.Editor
                 && p.name != null
                 && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
 
+        private static int ExpectedGeneratedExprAsmParamCount(int slotCount, int discoveredParamCount)
+            => 1 + discoveredParamCount + (slotCount * discoveredParamCount);
+
         private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
             => rootMenu.controls.Count(c => c != null
                 && c.name == "Settings Manager"
@@ -170,6 +173,18 @@ namespace ASMLite.Tests.Editor
             return danglingCount;
         }
 
+        private static string ReadAnimatorControllerMainObjectName(string controllerText)
+        {
+            Assert.IsNotNull(controllerText, "Controller text should not be null when reading AnimatorController main object name.");
+
+            var match = Regex.Match(controllerText,
+                @"--- !u!91 &9100000\s+AnimatorController:\s+[\s\S]*?  m_Name: ([^\r\n]*)",
+                RegexOptions.Multiline);
+            Assert.IsTrue(match.Success,
+                "Expected generated FX controller text to contain the AnimatorController main-object block.");
+            return match.Groups[1].Value;
+        }
+
         // ── A46 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -200,10 +215,10 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
                 $"A46: generated FX ASMLite param count mismatch for slotCount=1. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
-            int expectedExprAsmParams = 1 + (1 * discoveredExpected);
+            int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
-                $"A46: generated expression ASMLite param count mismatch for slotCount=1. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
+                $"A46: generated expression ASMLite param count mismatch for slotCount=1 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
             int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
@@ -241,10 +256,10 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
                 $"A47: generated FX ASMLite param count mismatch for slotCount=8. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
-            int expectedExprAsmParams = 1 + (8 * discoveredExpected);
+            int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
-                $"A47: generated expression ASMLite param count mismatch for slotCount=8. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
+                $"A47: generated expression ASMLite param count mismatch for slotCount=8 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
             int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
@@ -270,10 +285,10 @@ namespace ASMLite.Tests.Editor
                 $"A48: Build() must return discovered non-ASMLite param count. expected={discoveredExpected}, got {buildResult}.");
 
             var generatedExpr = LoadGeneratedExprParams();
-            int expectedExprParams = 1 + (_ctx.Comp.slotCount * discoveredExpected);
+            int expectedExprParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprParams, asmExprParamCount,
-                $"A48: generated expression ASMLite param count mismatch for return-path contract validation. expected={expectedExprParams}, got {asmExprParamCount}.");
+                $"A48: generated expression ASMLite param count mismatch for return-path contract validation after accounting for Clear Preset default keys. expected={expectedExprParams}, got {asmExprParamCount}.");
         }
 
         // ── A49 ────────────────────────────────────────────────────────────────
@@ -379,6 +394,8 @@ namespace ASMLite.Tests.Editor
                 $"A50: repeated Build() introduced duplicate ASMLite expression param names. duplicateGroups={duplicateExprNames}.");
             Assert.AreEqual(0, CountDanglingLocalFileIds(fxSecond),
                 "A50: repeated Build() must not leave dangling local fileID references in the generated FX controller text.");
+            Assert.AreEqual("ASMLite_FX", ReadAnimatorControllerMainObjectName(fxSecond),
+                "A50: generated FX controller main object name must stay normalized to the filename without the .controller extension to avoid Unity import warnings.");
         }
 
         [Test, Category("Integration")]
@@ -400,12 +417,12 @@ namespace ASMLite.Tests.Editor
             var generatedExpr = LoadGeneratedExprParams();
 
             int expectedFxAsmParams = 1 + (_ctx.Comp.slotCount * buildResult) + buildResult;
-            int expectedExprAsmParams = 1 + (_ctx.Comp.slotCount * buildResult);
+            int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, buildResult);
 
             Assert.AreEqual(expectedFxAsmParams, CountASMLiteFxParams(generatedCtrl),
                 "A51: FX parameter shape should reflect exclusion-pruned discovery count.");
             Assert.AreEqual(expectedExprAsmParams, CountASMLiteExprParams(generatedExpr),
-                "A51: expression parameter shape should reflect exclusion-pruned discovery count.");
+                "A51: expression parameter shape should reflect exclusion-pruned discovery count plus Clear Preset default keys.");
 
             var fxNames = generatedCtrl.parameters.Select(p => p.name).ToHashSet();
             var exprNames = generatedExpr.parameters.Select(p => p.name).ToHashSet();

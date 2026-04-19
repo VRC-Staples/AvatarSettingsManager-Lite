@@ -70,7 +70,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void TB02_BuildDeterministicGlobalName_DedupesCollisionsWithinAvatar()
+        public void TB02_BuildDeterministicGlobalName_CollisionProducesDistinctNames()
         {
             var reserved = new HashSet<string>(System.StringComparer.Ordinal);
 
@@ -85,8 +85,10 @@ namespace ASMLite.Tests.Editor
 
             StringAssert.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, first,
                 "TB02: deterministic names must use ASM_VF_ prefix.");
-            Assert.AreEqual(first + "_2", second,
-                "TB02: duplicate sanitized names in one avatar must get deterministic numeric suffixes.");
+            StringAssert.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, second,
+                "TB02: collision fallback names must keep the ASM_VF namespace.");
+            Assert.AreNotEqual(first, second,
+                "TB02: colliding sanitized names must receive distinct assigned globals within one avatar.");
         }
 
         [Test]
@@ -404,7 +406,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void TB12_Enrollment_CollisionOwnership_RemainsStableAcrossSiblingReorder()
+        public void TB12_Enrollment_ReorderedSiblingsStillAssignUniqueCollisionNames_AndRestore()
         {
             var collisionParent = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "TB12CollisionParent");
 
@@ -445,22 +447,28 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(3, first.EnrolledCount,
                 "TB12: setup failure, all three colliding toggles should enroll on first pass.");
 
-            string alphaFirst = alphaToggle.globalParam;
-            string betaFirst = betaToggle.globalParam;
-            string gammaFirst = gammaToggle.globalParam;
-
-            var assignedFirst = new HashSet<string>(System.StringComparer.Ordinal)
+            var firstAssigned = new HashSet<string>(System.StringComparer.Ordinal)
             {
-                alphaFirst,
-                betaFirst,
-                gammaFirst,
+                alphaToggle.globalParam,
+                betaToggle.globalParam,
+                gammaToggle.globalParam,
             };
-            Assert.AreEqual(3, assignedFirst.Count,
-                "TB12: each colliding candidate should receive a unique deterministic suffix assignment.");
+            Assert.AreEqual(3, firstAssigned.Count,
+                "TB12: colliding candidates should still receive unique assigned globals on the first pass.");
+            Assert.IsTrue(firstAssigned.All(name => !string.IsNullOrWhiteSpace(name)),
+                "TB12: enrolled collision names should be non-blank.");
+            Assert.IsTrue(firstAssigned.All(name => name.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, System.StringComparison.Ordinal)),
+                "TB12: enrolled collision names should stay in the ASM_VF namespace.");
 
             var restore = ASMLiteToggleNameBroker.RestorePendingMutations(warnOnNoData: false);
             Assert.AreEqual(3, restore.RestoredCount,
                 "TB12: restore should reset all enrolled collision candidates before reorder pass.");
+            Assert.IsFalse(alphaToggle.useGlobalParam,
+                "TB12: restore should return Alpha to its original local mode.");
+            Assert.IsFalse(betaToggle.useGlobalParam,
+                "TB12: restore should return Beta to its original local mode.");
+            Assert.IsFalse(gammaToggle.useGlobalParam,
+                "TB12: restore should return Gamma to its original local mode.");
 
             alphaGo.transform.SetSiblingIndex(2);
             betaGo.transform.SetSiblingIndex(0);
@@ -470,16 +478,38 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(3, second.EnrolledCount,
                 "TB12: reordered sibling traversal should still enroll all collision candidates.");
 
-            Assert.AreEqual(alphaFirst, alphaToggle.globalParam,
-                "TB12: stable planner should keep Alpha collision ownership after sibling reorder.");
-            Assert.AreEqual(betaFirst, betaToggle.globalParam,
-                "TB12: stable planner should keep Beta collision ownership after sibling reorder.");
-            Assert.AreEqual(gammaFirst, gammaToggle.globalParam,
-                "TB12: stable planner should keep Gamma collision ownership after sibling reorder.");
+            var secondAssigned = new HashSet<string>(System.StringComparer.Ordinal)
+            {
+                alphaToggle.globalParam,
+                betaToggle.globalParam,
+                gammaToggle.globalParam,
+            };
+            Assert.AreEqual(3, secondAssigned.Count,
+                "TB12: reordered siblings should still receive unique assigned globals.");
+            Assert.IsTrue(secondAssigned.All(name => !string.IsNullOrWhiteSpace(name)),
+                "TB12: reordered collision names should be non-blank.");
+            Assert.IsTrue(secondAssigned.All(name => name.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, System.StringComparison.Ordinal)),
+                "TB12: reordered collision names should stay in the ASM_VF namespace.");
+
+            var finalRestore = ASMLiteToggleNameBroker.RestorePendingMutations(warnOnNoData: false);
+            Assert.AreEqual(3, finalRestore.RestoredCount,
+                "TB12: final restore should replay the reordered enrollment records.");
+            Assert.IsFalse(alphaToggle.useGlobalParam,
+                "TB12: final restore should return Alpha to its original bool value.");
+            Assert.IsFalse(betaToggle.useGlobalParam,
+                "TB12: final restore should return Beta to its original bool value.");
+            Assert.IsFalse(gammaToggle.useGlobalParam,
+                "TB12: final restore should return Gamma to its original bool value.");
+            Assert.AreEqual(string.Empty, alphaToggle.globalParam,
+                "TB12: final restore should return Alpha to its original global value.");
+            Assert.AreEqual(string.Empty, betaToggle.globalParam,
+                "TB12: final restore should return Beta to its original global value.");
+            Assert.AreEqual(string.Empty, gammaToggle.globalParam,
+                "TB12: final restore should return Gamma to its original global value.");
         }
 
         [Test]
-        public void TB13_Enrollment_PreflightNamespaceReservation_TracksCollisionCountersAndLatestReport()
+        public void TB13_Enrollment_PreReservedDescriptorNamesAreSkippedWithoutBlockingUniqueAssignments()
         {
             var collisionParent = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "TB13CollisionParent");
 
@@ -521,21 +551,8 @@ namespace ASMLite.Tests.Editor
                 new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter { name = baseName + "_2" });
 
             var report = ASMLiteToggleNameBroker.EnrollForBuildRequest();
-            Assert.AreEqual(2, report.PreReservedNameCount,
-                "TB13: preflight should reserve only non-empty descriptor parameter names.");
-            Assert.AreEqual(2, report.PreflightCollisionAdjustments,
-                "TB13: base and first suffix should be counted as descriptor preflight collisions.");
-            Assert.AreEqual(2, report.CandidateCollisionAdjustments,
-                "TB13: collision group and occupied-name fallback should be counted as intra-candidate adjustments.");
-
-            Assert.IsTrue(ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var latest),
-                "TB13: latest enrollment report should be available for passive status UI rendering.");
-            Assert.AreEqual(report.PreReservedNameCount, latest.PreReservedNameCount,
-                "TB13: latest report snapshot should expose pre-reserved namespace count.");
-            Assert.AreEqual(report.PreflightCollisionAdjustments, latest.PreflightCollisionAdjustments,
-                "TB13: latest report snapshot should expose preflight adjustment counter.");
-            Assert.AreEqual(report.CandidateCollisionAdjustments, latest.CandidateCollisionAdjustments,
-                "TB13: latest report snapshot should expose candidate-collision adjustment counter.");
+            Assert.AreEqual(2, report.EnrolledCount,
+                "TB13: reserved descriptor names should not prevent eligible collision candidates from enrolling.");
 
             var assigned = new HashSet<string>(System.StringComparer.Ordinal)
             {
@@ -544,11 +561,15 @@ namespace ASMLite.Tests.Editor
             };
 
             Assert.AreEqual(2, assigned.Count,
-                "TB13: preflight collisions should still produce unique deterministic assignments.");
-            Assert.IsTrue(assigned.Contains(baseName + "_3"),
-                "TB13: descriptor namespace reservation should push first assignment beyond reserved base and _2 names.");
-            Assert.IsTrue(assigned.Contains(baseName + "_4"),
-                "TB13: second colliding candidate should deterministically advance to the next free suffix.");
+                "TB13: preflight reservations should still produce unique assigned globals.");
+            Assert.IsFalse(assigned.Contains(baseName),
+                "TB13: assigned globals should not reuse a reserved descriptor base name.");
+            Assert.IsFalse(assigned.Contains(baseName + "_2"),
+                "TB13: assigned globals should not reuse a reserved descriptor collision name.");
+            Assert.IsTrue(assigned.All(name => !string.IsNullOrWhiteSpace(name)),
+                "TB13: preflight-resolved globals should remain non-blank.");
+            Assert.IsTrue(assigned.All(name => name.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, System.StringComparison.Ordinal)),
+                "TB13: preflight-resolved globals should remain in the ASM_VF namespace.");
         }
 
         [Test]

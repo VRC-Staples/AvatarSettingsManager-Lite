@@ -103,9 +103,9 @@ namespace ASMLite.Tests.Editor
 
             Assert.AreEqual(2, generatedCtrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_")),
                 "VF01: generated FX controller should carry one ASMLite layer per configured slot.");
-            Assert.AreEqual(3,
+            Assert.AreEqual(4,
                 generatedExpr.parameters.Count(p => p != null && p.name != null && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl")),
-                "VF01: generated expression params should contain ASMLite_Ctrl + one backup per slot.");
+                "VF01: generated expression params should contain ASMLite_Ctrl + one Clear-default key + one backup per slot.");
             Assert.AreEqual(1,
                 generatedMenu.controls.Count(c => c != null && c.name == "Settings Manager"),
                 "VF01: generated root menu should contain one Settings Manager wrapper.");
@@ -156,6 +156,8 @@ namespace ASMLite.Tests.Editor
                 "VF02 regression guard: first rebuild must not require a second upload cycle to evict stale FX schema names.");
             Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_VF135_Clothing/Rezz"),
                 "VF02 regression guard: first rebuild must emit backup key for the current VF-scoped parameter.");
+            Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_VF135_Clothing/Rezz"),
+                "VF02 regression guard: first rebuild must emit Clear Preset default key for the current VF-scoped parameter.");
         }
 
         [Test, Category("Integration")]
@@ -285,6 +287,10 @@ namespace ASMLite.Tests.Editor
                 "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
                 "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
         }
 
         [Test, Category("Integration")]

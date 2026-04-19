@@ -1,5 +1,6 @@
 using System;
-using System.Reflection;
+using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -56,7 +57,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void SelectionSync_CopiesAndNormalizesCustomizationState()
+        public void SelectingAvatar_CopiesAndNormalizesCustomizationState()
         {
             _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = null;
@@ -71,28 +72,20 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                SetPrivateField(window, "_pendingCustomRootName", "stale-value");
-                SetPrivateField(window, "_pendingCustomInstallPath", "stale-path");
-                SetPrivateField(window, "_pendingExcludedParameterNames", new[] { "stale" });
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
-                InvokePrivate(window, "SyncPendingSlotCountFromAvatar");
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomRootIcon, "Selection sync should copy root icon toggle.");
+                Assert.IsTrue(snapshot.UseCustomRootName, "Selection sync should copy root name toggle.");
+                Assert.IsTrue(snapshot.UseCustomInstallPath, "Selection sync should copy install path toggle.");
+                Assert.IsTrue(snapshot.UseParameterExclusions, "Selection sync should copy exclusion toggle.");
 
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomRootIcon"), "Selection sync should copy root icon toggle.");
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomRootName"), "Selection sync should copy root name toggle.");
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseCustomInstallPath"), "Selection sync should copy install path toggle.");
-                Assert.IsTrue(GetPrivateField<bool>(window, "_pendingUseParameterExclusions"), "Selection sync should copy exclusion toggle.");
-
-                Assert.AreEqual("Root Menu", GetPrivateField<string>(window, "_pendingCustomRootName"), "Selection sync should trim root name values.");
-                Assert.AreEqual(string.Empty, GetPrivateField<string>(window, "_pendingCustomInstallPath"), "Blank install paths should normalize to empty.");
-
-                var pendingExcluded = GetPrivateField<string[]>(window, "_pendingExcludedParameterNames");
-                CollectionAssert.AreEqual(new[] { "HatVisible", "BodyHue" }, pendingExcluded,
+                Assert.AreEqual("Root Menu", snapshot.CustomRootName, "Selection sync should trim root name values.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath, "Blank install paths should normalize to empty.");
+                CollectionAssert.AreEqual(new[] { "HatVisible", "BodyHue" }, snapshot.ExcludedParameterNames,
                     "Selection sync should trim, de-dup, and drop blank exclusions.");
-
-                var pendingIcons = GetPrivateField<Texture2D[]>(window, "_pendingCustomIcons");
-                Assert.IsNotNull(pendingIcons, "Selection sync should normalize null icon arrays to a safe empty array.");
-                Assert.AreEqual(0, pendingIcons.Length, "Selection sync should clear stale icon arrays when component has null icons.");
+                Assert.IsNotNull(snapshot.CustomIcons, "Selection sync should normalize null icon arrays to a safe empty array.");
+                Assert.AreEqual(0, snapshot.CustomIcons.Length, "Selection sync should clear stale icon arrays when component has null icons.");
             }
             finally
             {
@@ -101,17 +94,18 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CommitInstallPathDraftIfBlurred_NoComponent_DoesNotThrowAndPreservesPendingPath()
+        public void SelectingAvatar_UsesLiveInstallPathValueInVisibleCustomizationSnapshot()
         {
+            _ctx.Comp.customInstallPath = "Tools/Live";
+
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_pendingCustomInstallPath", "Tools/Custom");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
 
-                Assert.DoesNotThrow(() => InvokePrivate(window, "CommitInstallPathDraftIfBlurred", null),
-                    "Install-path draft commits should fail closed when no live ASMLite component exists, so enabling custom install path before prefab enrollment cannot throw.");
-                Assert.AreEqual("Tools/Custom", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
-                    "Pending install-path text should remain intact when no live component exists yet.");
+                Assert.AreEqual("Tools/Live", snapshot.CustomInstallPath,
+                    "Visible customization state should reflect the live install path after avatar selection.");
             }
             finally
             {
@@ -120,31 +114,27 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ResolveVisibleInstallPathDraft_UsesLiveComponentValue_WhenFieldIsNotFocused()
+        public void SelectingAvatar_NormalizesBlankLiveInstallPathInVisibleCustomizationSnapshot()
         {
-            _ctx.Comp.customInstallPath = "Tools/Live";
+            _ctx.Comp.customInstallPath = "   ";
 
-            var resolved = InvokePrivateStatic<string>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolveVisibleInstallPathDraft", _ctx.Comp, "Tools/StaleDraft", false);
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
 
-            Assert.AreEqual("Tools/Live", resolved,
-                "When the install-path field is not actively being edited, the visible draft should resync from the live component so tree picks and external updates show up in the text box immediately.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
+                    "Visible customization state should normalize blank serialized install paths to an empty string.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [Test]
-        public void ResolveVisibleInstallPathDraft_PreservesPendingDraft_WhenFieldIsFocused()
-        {
-            _ctx.Comp.customInstallPath = "Tools/Live";
-
-            var resolved = InvokePrivateStatic<string>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolveVisibleInstallPathDraft", _ctx.Comp, "Tools/InProgressDraft", true);
-
-            Assert.AreEqual("Tools/InProgressDraft", resolved,
-                "While the install-path text field is focused, the visible draft should stay on the in-progress user edit instead of snapping back to the last serialized component value.");
-        }
-
-        [Test]
-        public void RetargetLiveFullControllerGeneratedAssets_RestoresWildcardGlobalParams()
+        public void RetargetLiveFullControllerGeneratedAssets_RestoresPresetParameterEnrollment()
         {
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(buildResult, 0,
@@ -153,25 +143,73 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget validation.");
 
-            var vf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
             Assert.IsNotNull(vf,
                 "Setup should leave a VF.Model.VRCFury component on the ASM-Lite object.");
 
             var beforeSo = new SerializedObject(vf);
             beforeSo.Update();
+            var beforeControllers = beforeSo.FindProperty("content.controllers");
+            Assert.IsNotNull(beforeControllers,
+                "Expected serialized FullController controller registration array at content.controllers before retarget validation.");
+            var beforeMenus = beforeSo.FindProperty("content.menus");
+            Assert.IsNotNull(beforeMenus,
+                "Expected serialized FullController menu registration array at content.menus before retarget validation.");
+            var beforePrms = beforeSo.FindProperty("content.prms");
+            Assert.IsNotNull(beforePrms,
+                "Expected serialized FullController parameter registration array at content.prms before retarget validation.");
             var beforeGlobalParams = beforeSo.FindProperty("content.globalParams");
             Assert.IsNotNull(beforeGlobalParams,
                 "Expected serialized FullController globalParams array at content.globalParams before retarget validation.");
+            beforeControllers.arraySize = 0;
+            beforeMenus.arraySize = 0;
+            beforePrms.arraySize = 0;
             beforeGlobalParams.arraySize = 0;
+            beforeSo.FindProperty("content.controller.objRef").objectReferenceValue = null;
+            beforeSo.FindProperty("content.menu.objRef").objectReferenceValue = null;
+            beforeSo.FindProperty("content.parameters.objRef").objectReferenceValue = null;
             beforeSo.ApplyModifiedPropertiesWithoutUndo();
 
-            bool retargeted = InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "TryRetargetLiveFullControllerGeneratedAssets", _ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+            bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
             Assert.IsTrue(retargeted,
                 "Retargeting should succeed for package-managed generated assets when the live FullController payload exists.");
 
+            var expectedController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(expectedController,
+                "Retarget validation requires the generated FX controller asset to exist.");
+            var expectedMenu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(expectedMenu,
+                "Retarget validation requires the generated menu asset to exist.");
+            var expectedParameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(expectedParameters,
+                "Retarget validation requires the generated expression-parameters asset to exist.");
+
             var afterSo = new SerializedObject(vf);
             afterSo.Update();
+            var afterControllers = afterSo.FindProperty("content.controllers");
+            Assert.IsNotNull(afterControllers,
+                "Expected serialized FullController controller registration array at content.controllers after retarget validation.");
+            Assert.AreEqual(1, afterControllers.arraySize,
+                "Retargeting should restore FullController controller registration so slot action transitions keep resolving against the generated FX controller.");
+            Assert.AreEqual(expectedController, afterSo.FindProperty("content.controllers.Array.data[0].controller.objRef")?.objectReferenceValue,
+                "Retargeting should restore the generated FX controller into content.controllers[0].controller.objRef.");
+
+            var afterMenus = afterSo.FindProperty("content.menus");
+            Assert.IsNotNull(afterMenus,
+                "Expected serialized FullController menu registration array at content.menus after retarget validation.");
+            Assert.AreEqual(1, afterMenus.arraySize,
+                "Retargeting should restore FullController menu registration so preset actions use the generated menu tree.");
+            Assert.AreEqual(expectedMenu, afterSo.FindProperty("content.menus.Array.data[0].menu.objRef")?.objectReferenceValue,
+                "Retargeting should restore the generated menu asset into content.menus[0].menu.objRef.");
+
+            var afterPrms = afterSo.FindProperty("content.prms");
+            Assert.IsNotNull(afterPrms,
+                "Expected serialized FullController parameter registration array at content.prms after retarget validation.");
+            Assert.AreEqual(1, afterPrms.arraySize,
+                "Retargeting should restore FullController parameter registration so preset action buttons keep resolving ASMLite_Ctrl and backup parameter bindings.");
+            Assert.AreEqual(expectedParameters, afterSo.FindProperty("content.prms.Array.data[0].parameters.objRef")?.objectReferenceValue,
+                "Retargeting should restore the generated expression-parameters asset into content.prms[0] so Save/Load/Clear menu actions keep their merged parameter registration.");
+
             var afterGlobalParams = afterSo.FindProperty("content.globalParams");
             Assert.IsNotNull(afterGlobalParams,
                 "Expected serialized FullController globalParams array at content.globalParams after retarget validation.");
@@ -182,21 +220,247 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ApplyInstallPathSelection_WithComponent_SyncsPendingDraftAndSerializedValue()
+        public void Build_AutoHealsMissingFullControllerParameterEnrollment_BeforeGeneratingAssets()
+        {
+            int initialBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(initialBuildResult, 0,
+                $"Initial build should succeed before simulating stale FullController parameter wiring. result={initialBuildResult}.");
+
+            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Build Auto-Heal Setup"),
+                "Setup should create a live VF.Model.VRCFury FullController payload before simulating stale parameter wiring.");
+
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            Assert.IsNotNull(vf,
+                "Setup should leave a VF.Model.VRCFury component on the ASM-Lite object.");
+
+            var beforeSo = new SerializedObject(vf);
+            beforeSo.Update();
+            beforeSo.FindProperty("content.prms").arraySize = 0;
+            beforeSo.FindProperty("content.globalParams").arraySize = 0;
+            beforeSo.FindProperty("content.parameters.objRef").objectReferenceValue = null;
+            beforeSo.ApplyModifiedPropertiesWithoutUndo();
+
+            int healedBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(healedBuildResult, 0,
+                $"Build should auto-heal stale FullController parameter wiring before generating assets. result={healedBuildResult}.");
+
+            var expectedParameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(expectedParameters,
+                "Auto-heal validation requires the generated expression-parameters asset to exist.");
+
+            var afterSo = new SerializedObject(vf);
+            afterSo.Update();
+            var afterPrms = afterSo.FindProperty("content.prms");
+            Assert.IsNotNull(afterPrms,
+                "Expected serialized FullController parameter registration array at content.prms after Build() auto-heal.");
+            Assert.AreEqual(1, afterPrms.arraySize,
+                "Build() auto-heal should restore FullController parameter registration so VRCFury menu merges keep resolving ASMLite_Ctrl.");
+            Assert.AreEqual(expectedParameters, afterSo.FindProperty("content.prms.Array.data[0].parameters.objRef")?.objectReferenceValue,
+                "Build() auto-heal should restore the generated expression-parameters asset into content.prms[0].parameters.objRef.");
+
+            var afterGlobalParams = afterSo.FindProperty("content.globalParams");
+            Assert.IsNotNull(afterGlobalParams,
+                "Expected serialized FullController globalParams array at content.globalParams after Build() auto-heal.");
+            Assert.AreEqual(1, afterGlobalParams.arraySize,
+                "Build() auto-heal should restore wildcard global-parameter enrollment before VRCFury FullController merges.");
+            Assert.AreEqual("*", afterSo.FindProperty("content.globalParams.Array.data[0]")?.stringValue,
+                "Build() auto-heal should restore wildcard global-parameter registration consumed by VRCFury FullController merges.");
+
+            Assert.AreEqual(expectedParameters, afterSo.FindProperty("content.parameters.objRef")?.objectReferenceValue,
+                "Build() auto-heal should also restore the top-level FullController parameters mirror for compatibility.");
+        }
+
+        [Test]
+        public void RetargetLiveFullControllerGeneratedAssetsForTesting_FailsWhenRequiredControllerWiringIsMissing()
+        {
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"Build should succeed before validating retarget failure behavior. result={buildResult}.");
+
+            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Missing Wiring Setup"),
+                "Setup should create a live VF.Model.VRCFury FullController payload before retarget failure validation.");
+
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            Assert.IsNotNull(vf,
+                "Setup should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
+
+            var so = new SerializedObject(vf);
+            so.Update();
+            so.FindProperty("content.controllers").arraySize = 0;
+            so.FindProperty("content.menus").arraySize = 0;
+            so.FindProperty("content.prms").arraySize = 0;
+            so.FindProperty("content.globalParams").arraySize = 0;
+            so.FindProperty("content.controller.objRef").objectReferenceValue = null;
+            so.FindProperty("content.menu.objRef").objectReferenceValue = null;
+            so.FindProperty("content.parameters.objRef").objectReferenceValue = null;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var missingControllerAssetPath = ASMLiteAssetPaths.FXController + ".bak-test";
+            AssetDatabase.MoveAsset(ASMLiteAssetPaths.FXController, missingControllerAssetPath);
+            AssetDatabase.Refresh();
+            try
+            {
+                LogAssert.Expect(LogType.Error,
+                    $"[ASM-Lite] Retarget Generated Assets Generated FX Repair: Generated FX controller file was not found at '{ASMLiteAssetPaths.FXController}'.");
+
+                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+                Assert.IsFalse(retargeted,
+                    "Retargeting should fail closed when a required generated FullController asset is missing, instead of silently reporting success with partial preset-action wiring.");
+            }
+            finally
+            {
+                AssetDatabase.MoveAsset(missingControllerAssetPath, ASMLiteAssetPaths.FXController);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        [Test]
+        public void Build_RepairsGeneratedFxController_WhenDanglingLocalFileIdsExist()
+        {
+            int baselineBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(baselineBuildResult, 0,
+                $"Baseline build should succeed before simulating generated FX corruption. result={baselineBuildResult}.");
+
+            string controllerPath = ASMLiteAssetPaths.FXController;
+            string fullPath = Path.GetFullPath(controllerPath);
+            Assert.IsTrue(File.Exists(fullPath),
+                $"Generated FX controller must exist before corruption simulation at '{fullPath}'.");
+
+            string originalText = File.ReadAllText(fullPath);
+            int corruptionMarker = originalText.IndexOf("m_DefaultState: ", StringComparison.Ordinal);
+            Assert.GreaterOrEqual(corruptionMarker, 0,
+                "Corruption simulation expected to find an AnimatorStateMachine default-state reference to replace.");
+
+            const string brokenDefaultStateLine = "m_DefaultState: {fileID: 5092237740239409533}";
+            string corruptedText = originalText.Remove(corruptionMarker, originalText.IndexOf('\n', corruptionMarker) - corruptionMarker)
+                .Insert(corruptionMarker, brokenDefaultStateLine);
+
+            try
+            {
+                File.WriteAllText(fullPath, corruptedText);
+
+                string corruptedOnDisk = File.ReadAllText(fullPath);
+                Assert.That(CountDanglingLocalFileIdsForTest(corruptedOnDisk), Is.GreaterThan(0),
+                    "Corruption setup should leave at least one dangling local fileID reference in the generated FX controller text.");
+
+                LogAssert.Expect(LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
+
+                int repairedBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+                Assert.GreaterOrEqual(repairedBuildResult, 0,
+                    $"Build should auto-repair dangling generated FX controller references instead of failing. result={repairedBuildResult}.");
+
+                string repairedText = File.ReadAllText(fullPath);
+                Assert.AreEqual(0, CountDanglingLocalFileIdsForTest(repairedText),
+                    "After repair and rebuild, the generated FX controller text should not contain dangling local fileID references.");
+            }
+            finally
+            {
+                File.WriteAllText(fullPath, originalText);
+                AssetDatabase.ImportAsset(controllerPath, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        [Test]
+        public void RetargetLiveFullControllerGeneratedAssets_RepairsCorruptedGeneratedControllerBeforeRebinding()
+        {
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"Build should succeed before retarget corruption validation. result={buildResult}.");
+
+            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Retarget Corruption Setup"),
+                "Setup should create a live VF.Model.VRCFury FullController payload before retarget corruption validation.");
+
+            string controllerPath = ASMLiteAssetPaths.FXController;
+            string fullPath = Path.GetFullPath(controllerPath);
+            Assert.IsTrue(File.Exists(fullPath),
+                $"Generated FX controller must exist before corruption simulation at '{fullPath}'.");
+
+            string originalText = File.ReadAllText(fullPath);
+            int corruptionMarker = originalText.IndexOf("m_DefaultState: ", StringComparison.Ordinal);
+            Assert.GreaterOrEqual(corruptionMarker, 0,
+                "Corruption simulation expected to find an AnimatorStateMachine default-state reference to replace.");
+
+            const string brokenDefaultStateLine = "m_DefaultState: {fileID: 2225763566423020120}";
+            string corruptedText = originalText.Remove(corruptionMarker, originalText.IndexOf('\n', corruptionMarker) - corruptionMarker)
+                .Insert(corruptionMarker, brokenDefaultStateLine);
+
+            try
+            {
+                File.WriteAllText(fullPath, corruptedText);
+
+                Assert.That(CountDanglingLocalFileIdsForTest(File.ReadAllText(fullPath)), Is.GreaterThan(0),
+                    "Corruption setup should leave a dangling local fileID reference before retarget recovery runs.");
+
+                LogAssert.Expect(LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Retarget Generated Assets Generated FX Repair: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
+
+                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+                Assert.IsTrue(retargeted,
+                    "Retargeting should repair the corrupted generated FX controller before reapplying live FullController references.");
+
+                Assert.AreEqual(0, CountDanglingLocalFileIdsForTest(File.ReadAllText(fullPath)),
+                    "Retarget-driven repair should clear dangling local fileID references from the generated FX controller text.");
+            }
+            finally
+            {
+                File.WriteAllText(fullPath, originalText);
+                AssetDatabase.ImportAsset(controllerPath, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh();
+            }
+        }
+
+        [Test]
+        public void SelectingInstallPath_UpdatesSerializedAndVisibleCustomizationState()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_pendingCustomInstallPath", "Tools/StaleDraft");
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = string.Empty;
 
-                InvokePrivate(window, "ApplyInstallPathSelection", _ctx.Comp, "Tools/Selected");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SelectInstallPathForAutomation("Tools/Selected");
 
                 Assert.AreEqual("Tools/Selected", _ctx.Comp.customInstallPath,
-                    "Tree selection should still commit the chosen install path onto the live component when ASM-Lite is already attached.");
-                Assert.AreEqual("Tools/Selected", GetPrivateField<string>(window, "_pendingCustomInstallPath"),
-                    "Tree selection should also sync the pending text draft so the install-path field immediately reflects the clicked menu path.");
+                    "Picking an install path should commit the selected path onto the live component.");
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Picking an install path should keep custom install mode enabled in visible customization state.");
+                Assert.AreEqual("Tools/Selected", snapshot.CustomInstallPath,
+                    "Picking an install path should immediately update the visible customization snapshot.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+
+        [Test]
+        public void SelectingInstallPath_RootSelectionKeepsCustomizationEnabledAndClearsSerializedAndVisiblePath()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/PreviouslySelected";
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SelectInstallPathForAutomation(string.Empty);
+
+                Assert.IsTrue(_ctx.Comp.useCustomInstallPath,
+                    "Choosing the install-tree root should keep custom install mode enabled so the avatar root remains an explicit custom target.");
+                Assert.AreEqual(string.Empty, _ctx.Comp.customInstallPath,
+                    "Choosing the install-tree root should clear the serialized custom install path.");
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Choosing the install-tree root should keep visible customization state in custom install mode.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
+                    "Choosing the install-tree root should clear the visible install-path draft.");
             }
             finally
             {
@@ -205,60 +469,27 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ShouldRenderWheelPreview_RepaintOnly()
+        public void SelectingInstallPath_WithoutComponent_PreservesPendingCustomInstallModeAcrossRootSelection()
         {
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldRenderWheelPreview", EventType.Repaint),
-                "Wheel preview rendering should run during repaint events so the UI can draw normally.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldRenderWheelPreview", EventType.Layout),
-                "Wheel preview should skip heavy cache/icon work during layout events to avoid typing lag from repeated editor redraws.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldRenderWheelPreview", EventType.KeyDown),
-                "Wheel preview should also skip heavy redraw work on key events while the user is typing in text fields.");
-        }
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
 
-        [Test]
-        public void ShouldDelayTextFieldCommit_CustomNamingControls_Only()
-        {
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", "asm_name_root"),
-                "Root name edits should use delayed commit so the preview and scaffold state do not churn on every keystroke.");
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", "asm_name_preset_1"),
-                "Preset name edits should use delayed commit so slot preview labels stay stable until the field blurs.");
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", "asm_name_preset_pending_3"),
-                "Pending preset name edits should also use delayed commit before a live component exists.");
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", "asm_name_save_pending"),
-                "Action label edits should use delayed commit so the preview does not update on every character.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", "asm_install_path"),
-                "Install path edits should keep immediate updates because the delayed-commit optimization is scoped only to custom naming fields.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDelayTextFieldCommit", string.Empty),
-                "Blank control names should fail closed and never opt into delayed commit behavior.");
-        }
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SelectInstallPathForAutomation("Tools/PreviouslySelected");
+                window.SelectInstallPathForAutomation(string.Empty);
 
-        [Test]
-        public void ShouldDeferImmediateInstallPathRefresh_CustomizeContextsOnly()
-        {
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDeferImmediateInstallPathRefresh", "Customize Toggle"),
-                "Customize toggle updates should defer live FullController refresh so VRCFury editor debug does not rebuild against incomplete anim-object state.");
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDeferImmediateInstallPathRefresh", "Customize Text"),
-                "Customize text commits should defer live FullController refresh until Bake/Build.");
-            Assert.IsTrue(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDeferImmediateInstallPathRefresh", "Customize Tree"),
-                "Install-path tree picks should also defer live FullController refresh in the editor window.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDeferImmediateInstallPathRefresh", "Bake"),
-                "Bake-time refresh must remain enabled because generated assets and FullController wiring are committed there.");
-            Assert.IsFalse(InvokePrivateStatic<bool>(typeof(ASMLite.Editor.ASMLiteWindow),
-                    "ShouldDeferImmediateInstallPathRefresh", string.Empty),
-                "Blank context labels should fail closed and not suppress refresh behavior outside known customize flows.");
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Choosing install paths before ASM-Lite is attached should preserve the pending custom-install toggle.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
+                    "Choosing the install-tree root before ASM-Lite is attached should clear the pending install-path draft.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
         }
 
         [Test]
@@ -267,7 +498,7 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 ASMLiteTestFixtures.EnsureLiveFullControllerPayload(_ctx.Comp);
 
@@ -283,7 +514,7 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(2, _ctx.AvatarGo.GetComponentsInChildren<VF.Model.VRCFury>(true).Length,
                     "Removal regression setup should include both the live FullController VRCFury component and the install-path routing helper.");
 
-                Assert.DoesNotThrow(() => InvokePrivate(window, "RemovePrefab", _ctx.Comp),
+                Assert.DoesNotThrow(() => window.RemovePrefabForAutomation(),
                     "RemovePrefab should safely remove ASM-Lite and any VRCFury helper artifacts without surfacing editor exceptions during teardown.");
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
@@ -300,117 +531,71 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void PreviewActionIconMode_UsesComponentGateInsteadOfStalePendingState_WhenComponentPresent()
+        public void AddPrefab_UsesSelectedAvatarCustomizationSnapshot_WithoutArrayAliasing()
         {
-            _ctx.Comp.useCustomSlotIcons = false;
+            var sourceIcons = new Texture2D[] { null, null, null, null };
+            var sourceExclusions = new[] { "ParamA", "", " ParamB ", "ParamA" };
+
+            _ctx.Comp.slotCount = 4;
+            _ctx.Comp.iconMode = IconMode.SameColor;
+            _ctx.Comp.selectedGearIndex = 5;
             _ctx.Comp.actionIconMode = ActionIconMode.Custom;
-
-            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolvePreviewActionIconMode", _ctx.Comp, true, ActionIconMode.Custom);
-
-            Assert.AreEqual(ActionIconMode.Default, resolved,
-                "Preview action icon mode should fail closed to Default when the live component has custom icons disabled, even if pending scaffold state is stale Custom.");
-        }
-
-        [Test]
-        public void PreviewActionIconMode_UsesComponentActionMode_WhenComponentCustomIconsAreEnabled()
-        {
-            _ctx.Comp.useCustomSlotIcons = true;
-            _ctx.Comp.actionIconMode = ActionIconMode.Custom;
-
-            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolvePreviewActionIconMode", _ctx.Comp, false, ActionIconMode.Default);
-
-            Assert.AreEqual(ActionIconMode.Custom, resolved,
-                "Preview action icon mode should honor the live component action icon mode when custom icons are enabled, regardless of stale pending scaffold state.");
-        }
-
-        [Test]
-        public void PreviewActionIconMode_UsesPendingState_WhenNoComponentIsPresent()
-        {
-            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolvePreviewActionIconMode", null, true, ActionIconMode.Custom);
-
-            Assert.AreEqual(ActionIconMode.Custom, resolved,
-                "Preview action icon mode should continue using pending scaffold state before a live component exists.");
-        }
-
-        [Test]
-        public void PreviewActionIconMode_FailsClosedToDefault_WhenPendingCustomIconsAreDisabled()
-        {
-            var resolved = InvokePrivateStatic<ActionIconMode>(typeof(ASMLite.Editor.ASMLiteWindow),
-                "ResolvePreviewActionIconMode", null, false, ActionIconMode.Custom);
-
-            Assert.AreEqual(ActionIconMode.Default, resolved,
-                "Preview action icon mode should fail closed to Default before a live component exists when pending custom icons are disabled, even if pending action mode is stale Custom.");
-        }
-
-        [Test]
-        public void AddPrefab_UsesPendingCustomizationState_WithoutArrayAliasing()
-        {
-            if (_ctx.Comp != null)
-                UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp.customIcons = sourceIcons;
+            _ctx.Comp.useCustomRootIcon = true;
+            _ctx.Comp.customRootIcon = null;
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = "  Custom Root  ";
+            _ctx.Comp.useCustomInstallPath = true;
+            _ctx.Comp.customInstallPath = null;
+            _ctx.Comp.useParameterExclusions = true;
+            _ctx.Comp.excludedParameterNames = sourceExclusions;
 
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                SetPrivateField(window, "_pendingSlotCount", 4);
-                SetPrivateField(window, "_pendingIconMode", IconMode.SameColor);
-                SetPrivateField(window, "_pendingSelectedGearIndex", 5);
-                SetPrivateField(window, "_pendingActionIconMode", ActionIconMode.Custom);
-                SetPrivateField(window, "_pendingCustomSaveIcon", null);
-                SetPrivateField(window, "_pendingCustomLoadIcon", null);
-                SetPrivateField(window, "_pendingCustomClearIcon", null);
-                SetPrivateField(window, "_pendingCustomIcons", new Texture2D[] { null, null, null, null });
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var snapshotBeforeAdd = window.GetPendingCustomizationSnapshotForTesting();
 
-                SetPrivateField(window, "_pendingUseCustomRootIcon", true);
-                SetPrivateField(window, "_pendingCustomRootIcon", null);
-                SetPrivateField(window, "_pendingUseCustomRootName", true);
-                SetPrivateField(window, "_pendingCustomRootName", "  Custom Root  ");
-                SetPrivateField(window, "_pendingUseCustomInstallPath", true);
-                SetPrivateField(window, "_pendingCustomInstallPath", null);
-                SetPrivateField(window, "_pendingUseParameterExclusions", true);
-                SetPrivateField(window, "_pendingExcludedParameterNames", new[] { "ParamA", "", " ParamB ", "ParamA" });
+                if (_ctx.Comp != null)
+                    UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
 
-                InvokePrivate(window, "AddPrefabToAvatar");
+                window.AddPrefabForAutomation();
 
                 var component = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(component, "Add prefab should create an ASMLiteComponent under the selected avatar.");
 
-                Assert.AreEqual(4, component.slotCount, "Pending slotCount should copy into newly added prefab.");
-                Assert.AreEqual(IconMode.SameColor, component.iconMode, "Pending icon mode should copy into newly added prefab.");
-                Assert.AreEqual(5, component.selectedGearIndex, "Pending gear index should copy into newly added prefab.");
-                Assert.AreEqual(ActionIconMode.Custom, component.actionIconMode, "Pending action icon mode should copy into newly added prefab.");
+                Assert.AreEqual(4, component.slotCount, "Selected avatar slotCount should copy into the newly added prefab.");
+                Assert.AreEqual(IconMode.SameColor, component.iconMode, "Selected avatar icon mode should copy into the newly added prefab.");
+                Assert.AreEqual(5, component.selectedGearIndex, "Selected avatar gear index should copy into the newly added prefab.");
+                Assert.AreEqual(ActionIconMode.Custom, component.actionIconMode, "Selected avatar action icon mode should copy into the newly added prefab.");
 
-                Assert.IsTrue(component.useCustomRootIcon, "Pending root icon toggle should copy into newly added prefab.");
-                Assert.IsTrue(component.useCustomRootName, "Pending root name toggle should copy into newly added prefab.");
-                Assert.IsTrue(component.useCustomInstallPath, "Pending install path toggle should copy into newly added prefab.");
-                Assert.IsTrue(component.useParameterExclusions, "Pending exclusion toggle should copy into newly added prefab.");
+                Assert.IsTrue(component.useCustomRootIcon, "Selected avatar root icon toggle should copy into the newly added prefab.");
+                Assert.IsTrue(component.useCustomRootName, "Selected avatar root name toggle should copy into the newly added prefab.");
+                Assert.IsTrue(component.useCustomInstallPath, "Selected avatar install path toggle should copy into the newly added prefab.");
+                Assert.IsTrue(component.useParameterExclusions, "Selected avatar exclusion toggle should copy into the newly added prefab.");
 
-                Assert.AreEqual("Custom Root", component.customRootName, "Pending root name should be trimmed before serialization.");
+                Assert.AreEqual("Custom Root", component.customRootName, "Selected avatar root name should be trimmed before serialization.");
                 Assert.AreEqual(string.Empty, component.customInstallPath, "Null install path should normalize to empty before serialization.");
                 CollectionAssert.AreEqual(new[] { "ParamA", "ParamB" }, component.excludedParameterNames,
-                    "Pending exclusions should be trimmed, de-duplicated, and scrubbed of blanks before serialization.");
+                    "Selected avatar exclusions should be trimmed, de-duplicated, and scrubbed of blanks before serialization.");
 
-                var wiredVf = component.GetComponent<VF.Model.VRCFury>();
+                var wiredVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component.gameObject);
                 Assert.IsNotNull(wiredVf, "Add prefab should keep a live VF.Model.VRCFury component for bake wiring.");
-                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(wiredVf),
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(wiredVf),
                     "Add prefab + immediate bake should normalize null install path to legacy empty FullController prefix.");
 
-                var pendingIcons = GetPrivateField<Texture2D[]>(window, "_pendingCustomIcons");
-                Assert.AreNotSame(pendingIcons, component.customIcons,
-                    "New prefab should receive a copy of pending icon array, not the same reference.");
+                Assert.AreNotSame(snapshotBeforeAdd.CustomIcons, component.customIcons,
+                    "New prefab should receive its own icon array instead of reusing the selected-avatar customization snapshot array.");
+                Assert.AreNotSame(snapshotBeforeAdd.ExcludedParameterNames, component.excludedParameterNames,
+                    "New prefab should receive its own exclusion array instead of reusing the selected-avatar customization snapshot array.");
 
-                var pendingExclusions = GetPrivateField<string[]>(window, "_pendingExcludedParameterNames");
-                Assert.AreNotSame(pendingExclusions, component.excludedParameterNames,
-                    "New prefab should receive a copy of pending exclusions, not the same reference.");
+                snapshotBeforeAdd.CustomIcons[0] = Texture2D.blackTexture;
+                snapshotBeforeAdd.ExcludedParameterNames[0] = "MutatedPending";
 
-                if (pendingExclusions.Length > 0)
-                    pendingExclusions[0] = "MutatedPending";
-
+                Assert.IsNull(component.customIcons[0],
+                    "Mutating the previously captured customization snapshot must not mutate serialized icon data on the newly added prefab.");
                 CollectionAssert.AreEqual(new[] { "ParamA", "ParamB" }, component.excludedParameterNames,
-                    "Mutating pending exclusion state after add must not mutate serialized component data.");
+                    "Mutating the previously captured customization snapshot must not mutate serialized exclusion data on the newly added prefab.");
             }
             finally
             {
@@ -443,8 +628,8 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
 
                 var rebuilt = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(rebuilt, "Migration rebuild should leave an ASMLiteComponent on the avatar.");
@@ -468,9 +653,9 @@ namespace ASMLite.Tests.Editor
                 CollectionAssert.AreEqual(new[] { "Mood", "Hue" }, rebuilt.excludedParameterNames,
                     "Migration rebuild should preserve sanitized exclusion names.");
 
-                var rebuiltVf = rebuilt.GetComponent<VF.Model.VRCFury>();
+                var rebuiltVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(rebuilt.gameObject);
                 Assert.IsNotNull(rebuiltVf, "Migration rebuild should preserve VF.Model.VRCFury delivery component.");
-                Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(rebuiltVf),
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(rebuiltVf),
                     "Migration rebuild should apply normalized blank install path as legacy empty FullController prefix.");
             }
             finally
@@ -487,23 +672,23 @@ namespace ASMLite.Tests.Editor
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = "  Avatars/Primary  ";
-                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                window.RebuildForAutomation();
                 Assert.AreEqual("Avatars/Primary", ReadSerializedMenuPrefix(vf),
                     "Enabled custom install path should serialize trimmed FullController prefix on live bake.");
 
                 _ctx.Comp.useCustomInstallPath = false;
                 _ctx.Comp.customInstallPath = "Avatars/ShouldNotPersist";
-                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                window.RebuildForAutomation();
                 Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(vf),
                     "Disabled custom install path should reset FullController prefix to legacy empty value.");
 
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = "   ";
-                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                window.RebuildForAutomation();
                 Assert.AreEqual(string.Empty, ReadSerializedMenuPrefix(vf),
                     "Enabled whitespace-only custom install path should collapse to legacy empty FullController prefix.");
             }
@@ -518,32 +703,54 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "  Avatars/MissingVf  ";
-            var staleVf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+            var staleVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
             if (staleVf != null)
                 UnityEngine.Object.DestroyImmediate(staleVf);
 
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 LogAssert.Expect(LogType.Warning,
                     $"[ASM-Lite] Bake: VF.Model.VRCFury component was missing on '{_ctx.Comp.gameObject.name}'. Live FullController wiring was repaired automatically.");
 
-                InvokePrivate(window, "BakeAssets", _ctx.Comp);
+                window.RebuildForAutomation();
 
-                var repairedVf = _ctx.Comp.GetComponent<VF.Model.VRCFury>();
+                var repairedVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
                 Assert.IsNotNull(repairedVf,
                     "Bake should auto-heal missing VF.Model.VRCFury before refreshing install-path routing.");
-                Assert.AreEqual("Avatars/MissingVf", ReadSerializedMenuPrefix(repairedVf),
+                Assert.AreEqual("Avatars/MissingVf", ASMLiteTestFixtures.ReadSerializedMenuPrefix(repairedVf),
                     "Bake auto-heal should still apply normalized install-path prefix deterministically.");
-                Assert.GreaterOrEqual(GetPrivateField<int>(window, "_discoveredParamCount"), 0,
-                    "Bake should continue into rebuild after auto-healing missing VF.Model.VRCFury.");
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(window);
             }
+        }
+
+        private static int CountDanglingLocalFileIdsForTest(string controllerText)
+        {
+            Assert.IsNotNull(controllerText, "Controller text should not be null when scanning for dangling file IDs.");
+
+            var definedIds = System.Text.RegularExpressions.Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", System.Text.RegularExpressions.RegexOptions.Multiline)
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Select(m => m.Groups[1].Value)
+                .ToHashSet();
+
+            int danglingCount = 0;
+            foreach (System.Text.RegularExpressions.Match match in System.Text.RegularExpressions.Regex.Matches(controllerText, @"\{fileID: (-?\d+)\}"))
+            {
+                string fileId = match.Groups[1].Value;
+                if (fileId == "0" || fileId == "9100000")
+                    continue;
+                if (definedIds.Contains(fileId))
+                    continue;
+
+                danglingCount++;
+            }
+
+            return danglingCount;
         }
 
         private static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)
@@ -573,36 +780,6 @@ namespace ASMLite.Tests.Editor
                 "Expected serialized FullController menu prefix field at content.menus.Array.data[0].prefix.");
 
             return prefixProperty.stringValue;
-        }
-
-        private static void SetPrivateField(object target, string fieldName, object value)
-        {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
-            field.SetValue(target, value);
-        }
-
-        private static T GetPrivateField<T>(object target, string fieldName)
-        {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
-            return (T)field.GetValue(target);
-        }
-
-        private static void InvokePrivate(object target, string methodName, params object[] args)
-        {
-            var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(method, $"Missing private method '{methodName}' on {target.GetType().Name}.");
-
-            object[] invocationArgs = args ?? new object[] { null };
-            method.Invoke(target, invocationArgs);
-        }
-
-        private static T InvokePrivateStatic<T>(Type targetType, string methodName, params object[] args)
-        {
-            var method = targetType.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(method, $"Missing private static method '{methodName}' on {targetType.Name}.");
-            return (T)method.Invoke(null, args);
         }
     }
 }

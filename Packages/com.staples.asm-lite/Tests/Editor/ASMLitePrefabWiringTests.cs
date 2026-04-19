@@ -48,6 +48,20 @@ namespace ASMLite.Tests.Editor
                     "Prefab wiring must reference generated expression parameters asset through prms.");
                 Assert.AreEqual("*", so.FindProperty("content.globalParams.Array.data[0]")?.stringValue,
                     "Prefab wiring must keep wildcard global parameter enrollment.");
+
+                var allNonsyncedAreGlobal = so.FindProperty("content.allNonsyncedAreGlobal");
+                if (allNonsyncedAreGlobal != null)
+                {
+                    Assert.IsTrue(allNonsyncedAreGlobal.boolValue,
+                        "Prefab wiring must keep non-synced generated params global so Clear Preset default keys remain addressable without VF-local renaming.");
+                }
+
+                var ignoreSaved = so.FindProperty("content.ignoreSaved");
+                if (ignoreSaved != null)
+                {
+                    Assert.IsFalse(ignoreSaved.boolValue,
+                        "Prefab wiring must preserve saved flags from generated parameters asset rather than force-converting them.");
+                }
             }
             finally
             {

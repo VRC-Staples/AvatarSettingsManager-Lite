@@ -1,12 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Reflection;
+using System.Xml;
 using ASMLite;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
@@ -83,6 +89,52 @@ namespace ASMLite.Editor
         // Action hierarchy disclosure state. Advanced maintenance actions stay hidden
         // until explicitly expanded by the user.
         [SerializeField] private bool _showAdvancedActions;
+        [NonSerialized] private AsmLiteWindowAction? _queuedVisibleAutomationAction;
+        [NonSerialized] private VRCAvatarDescriptor _queuedVisibleAutomationAvatar;
+        [NonSerialized] private bool _queuedVisibleAutomationDispatchPending;
+        [NonSerialized] private string _visibleAutomationOverlayTitle = string.Empty;
+        [NonSerialized] private string _visibleAutomationOverlayStep = string.Empty;
+        [NonSerialized] private int _visibleAutomationOverlayStepIndex;
+        [NonSerialized] private int _visibleAutomationOverlayTotalSteps;
+        [NonSerialized] private VisibleAutomationOverlayState _visibleAutomationOverlayState = VisibleAutomationOverlayState.Running;
+        [NonSerialized] private bool _visibleAutomationOverlayPresentationMode;
+        [NonSerialized] private string[] _visibleAutomationChecklistItems = Array.Empty<string>();
+        [NonSerialized] private VisibleAutomationChecklistItemState[] _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+        [NonSerialized] private double[] _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+        [NonSerialized] private VisualElement _visibleAutomationOverlayCanvas;
+        [NonSerialized] private VisualElement _visibleAutomationWindowOverlayCanvas;
+        [NonSerialized] private Label _visibleAutomationWindowOverlayFallbackLabel;
+        [NonSerialized] private bool _visibleAutomationPreferScreenAnchoredOverlay = true;
+        [NonSerialized] private bool _visibleAutomationUsingHostWindowFallbackBounds;
+        [NonSerialized] private Rect _visibleAutomationScreenBounds;
+        [NonSerialized] private VisualElement _visibleAutomationStatusPanel;
+        [NonSerialized] private VisualElement _visibleAutomationStatusAccent;
+        [NonSerialized] private Label _visibleAutomationTitleLabel;
+        [NonSerialized] private Label _visibleAutomationMetaLabel;
+        [NonSerialized] private Label _visibleAutomationStepLabel;
+        [NonSerialized] private VisualElement _visibleAutomationBadgeElement;
+        [NonSerialized] private Label _visibleAutomationBadgeLabel;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistPanel;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistAccent;
+        [NonSerialized] private Label _visibleAutomationChecklistTitleLabel;
+        [NonSerialized] private Label _visibleAutomationChecklistMetaLabel;
+        [NonSerialized] private ScrollView _visibleAutomationChecklistScrollView;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistItemsContainer;
+        [NonSerialized] private readonly List<VisibleAutomationChecklistVisualRefs> _visibleAutomationChecklistItemVisuals = new List<VisibleAutomationChecklistVisualRefs>();
+        [NonSerialized] private bool _visibleAutomationCompletionReviewVisible;
+        [NonSerialized] private bool _visibleAutomationCompletionReviewAcknowledged;
+        [NonSerialized] private string _visibleAutomationCompletionReviewTitle = string.Empty;
+        [NonSerialized] private string _visibleAutomationCompletionReviewMessage = string.Empty;
+        [NonSerialized] private double _visibleAutomationCompletionReviewAutoCloseAt;
+        [NonSerialized] private VisibleAutomationStatusOverlayWindow _visibleAutomationStatusOverlayWindow;
+        [NonSerialized] private VisibleAutomationChecklistOverlayWindow _visibleAutomationChecklistOverlayWindow;
+        [NonSerialized] private VisibleAutomationCompletionReviewOverlayWindow _visibleAutomationCompletionReviewOverlayWindow;
+        [NonSerialized] private string _visibleAutomationExternalOverlayStatePath = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlayAckPath = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlaySessionId = string.Empty;
+        [NonSerialized] private int _visibleAutomationCompletionReviewRequestId;
+        [NonSerialized] private string _visibleAutomationExternalOverlayLastPublishedJson = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
 
         // ── Install Path Tree ─────────────────────────────────────────────────
 
@@ -238,6 +290,19 @@ namespace ASMLite.Editor
         private const string ClearPresetLabel = "Clear Preset";
         private const string PresetIconFieldLabelFormat = "Preset {0} Icon";
         private const string ClearPresetIconFieldLabel = "Clear Preset Icon";
+        private const float VisibleAutomationScreenOverlayTopMargin = 18f;
+        private const float VisibleAutomationScreenOverlaySideMargin = 18f;
+        private const float VisibleAutomationScreenOverlayBottomMargin = 18f;
+        private const float VisibleAutomationScreenChecklistWidthFactor = 0.25f;
+        private const float VisibleAutomationScreenStatusMaxWidthFactor = 0.46f;
+        private const float VisibleAutomationScreenStatusMinWidth = 420f;
+        private const float VisibleAutomationScreenChecklistMinWidth = 260f;
+        private const float VisibleAutomationScreenStatusHeight = 136f;
+        private const float VisibleAutomationReviewPopupWidth = 440f;
+        private const float VisibleAutomationReviewPopupHeight = 210f;
+        private const float VisibleAutomationChecklistCompactItemHeight = 40f;
+        private const string VisibleAutomationScreenOverlayFallbackText =
+            "Screen-anchored overlay unavailable; using window-hosted overlay bounds.";
         private const string RootMenuFieldLabel = "Root Menu";
         private const string SaveFieldLabel = "Save";
         private const string LoadFieldLabel = "Load";
@@ -261,9 +326,15 @@ namespace ASMLite.Editor
         [MenuItem("Tools/.Staples./ASM-Lite")]
         public static void Open()
         {
+            OpenForAutomation();
+        }
+
+        internal static ASMLiteWindow OpenForAutomation()
+        {
             var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
             win.minSize = new Vector2(600, 680);
             win.Show();
+            return win;
         }
 
         private void OnEnable()
@@ -271,6 +342,10 @@ namespace ASMLite.Editor
             Undo.undoRedoPerformed += HandleEditorStateChanged;
             EditorApplication.hierarchyChanged += HandleEditorStateChanged;
             EditorApplication.projectChanged += HandleEditorStateChanged;
+            EditorApplication.update += HandleVisibleAutomationOverlayAnimationTick;
+            EnsureVisibleAutomationOverlayVisualTree();
+            RegisterVisibleAutomationOverlayGeometryCallback();
+            RefreshVisibleAutomationOverlayVisuals();
         }
 
         private void OnDisable()
@@ -278,6 +353,9 @@ namespace ASMLite.Editor
             Undo.undoRedoPerformed -= HandleEditorStateChanged;
             EditorApplication.hierarchyChanged -= HandleEditorStateChanged;
             EditorApplication.projectChanged -= HandleEditorStateChanged;
+            EditorApplication.update -= HandleVisibleAutomationOverlayAnimationTick;
+            UnregisterVisibleAutomationOverlayGeometryCallback();
+            CloseVisibleAutomationOverlayPopupWindows();
         }
 
         private void HandleEditorStateChanged()
@@ -354,6 +432,1640 @@ namespace ASMLite.Editor
             finally
             {
                 EditorGUILayout.EndScrollView();
+                ProcessQueuedVisibleAutomationAction();
+                RefreshVisibleAutomationOverlayVisuals();
+            }
+        }
+
+        private sealed class VisibleAutomationChecklistVisualRefs
+        {
+            public VisualElement Root;
+            public VisualElement Accent;
+            public Label Glyph;
+            public Label Text;
+            public VisualElement Badge;
+            public Label BadgeLabel;
+            public Label StepLabel;
+        }
+
+        private void EnsureVisibleAutomationOverlayVisualTree()
+        {
+            if (rootVisualElement == null)
+                return;
+
+            bool needsFullRebuild = false;
+            if (_visibleAutomationOverlayCanvas == null || _visibleAutomationOverlayCanvas.parent != rootVisualElement)
+                needsFullRebuild = true;
+            else if (_visibleAutomationWindowOverlayCanvas == null || _visibleAutomationWindowOverlayCanvas.parent != rootVisualElement)
+                needsFullRebuild = true;
+
+            if (!needsFullRebuild)
+                return;
+
+            _visibleAutomationOverlayCanvas?.RemoveFromHierarchy();
+            _visibleAutomationWindowOverlayCanvas?.RemoveFromHierarchy();
+            _visibleAutomationChecklistItemVisuals.Clear();
+            _visibleAutomationChecklistScrollView = null;
+            _visibleAutomationWindowOverlayFallbackLabel = null;
+
+            _visibleAutomationWindowOverlayCanvas = new VisualElement
+            {
+                name = "asm-lite-visible-automation-window-overlay-canvas",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationWindowOverlayCanvas.style.position = Position.Absolute;
+            _visibleAutomationWindowOverlayCanvas.style.left = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.top = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.right = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.bottom = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.display = DisplayStyle.None;
+
+            _visibleAutomationWindowOverlayFallbackLabel = new Label(VisibleAutomationScreenOverlayFallbackText)
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationWindowOverlayFallbackLabel.style.position = Position.Absolute;
+            _visibleAutomationWindowOverlayFallbackLabel.style.left = 12f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.bottom = 12f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingLeft = 10f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingRight = 10f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingTop = 6f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingBottom = 6f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.backgroundColor = new Color(0.16f, 0.10f, 0.04f, 0.92f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.color = new Color(1f, 0.92f, 0.72f, 1f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.fontSize = 10;
+            _visibleAutomationWindowOverlayFallbackLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _visibleAutomationWindowOverlayFallbackLabel.style.display = DisplayStyle.None;
+            _visibleAutomationWindowOverlayCanvas.Add(_visibleAutomationWindowOverlayFallbackLabel);
+            rootVisualElement.Add(_visibleAutomationWindowOverlayCanvas);
+
+            _visibleAutomationOverlayCanvas = new VisualElement
+            {
+                name = "asm-lite-visible-automation-overlay-canvas",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationOverlayCanvas.style.position = Position.Absolute;
+            _visibleAutomationOverlayCanvas.style.left = 0f;
+            _visibleAutomationOverlayCanvas.style.top = 0f;
+            _visibleAutomationOverlayCanvas.style.right = 0f;
+            _visibleAutomationOverlayCanvas.style.bottom = 0f;
+            _visibleAutomationOverlayCanvas.style.display = DisplayStyle.None;
+
+            _visibleAutomationStatusPanel = new VisualElement
+            {
+                name = "asm-lite-visible-automation-status-panel",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationStatusPanel.style.position = Position.Absolute;
+            _visibleAutomationStatusPanel.style.display = DisplayStyle.None;
+            _visibleAutomationStatusPanel.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationStatusPanel.style.overflow = Overflow.Hidden;
+
+            _visibleAutomationStatusAccent = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationStatusAccent.style.height = 4f;
+            _visibleAutomationStatusAccent.style.flexShrink = 0f;
+            _visibleAutomationStatusPanel.Add(_visibleAutomationStatusAccent);
+
+            var statusBody = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusBody.style.flexDirection = FlexDirection.Column;
+            statusBody.style.flexGrow = 1f;
+            statusBody.style.paddingLeft = 16f;
+            statusBody.style.paddingRight = 16f;
+            statusBody.style.paddingTop = 14f;
+            statusBody.style.paddingBottom = 14f;
+            _visibleAutomationStatusPanel.Add(statusBody);
+
+            var statusHeaderRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusHeaderRow.style.flexDirection = FlexDirection.Row;
+            statusHeaderRow.style.alignItems = Align.FlexStart;
+            statusHeaderRow.style.flexShrink = 0f;
+            statusBody.Add(statusHeaderRow);
+
+            var statusTitleColumn = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusTitleColumn.style.flexDirection = FlexDirection.Column;
+            statusTitleColumn.style.flexGrow = 1f;
+            statusTitleColumn.style.marginRight = 12f;
+            statusHeaderRow.Add(statusTitleColumn);
+
+            _visibleAutomationTitleLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            statusTitleColumn.Add(_visibleAutomationTitleLabel);
+
+            _visibleAutomationMetaLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            statusTitleColumn.Add(_visibleAutomationMetaLabel);
+
+            _visibleAutomationBadgeElement = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationBadgeElement.style.minWidth = 96f;
+            _visibleAutomationBadgeElement.style.height = 22f;
+            _visibleAutomationBadgeElement.style.justifyContent = Justify.Center;
+            _visibleAutomationBadgeElement.style.alignItems = Align.Center;
+            _visibleAutomationBadgeElement.style.paddingLeft = 10f;
+            _visibleAutomationBadgeElement.style.paddingRight = 10f;
+            _visibleAutomationBadgeElement.style.flexShrink = 0f;
+            statusHeaderRow.Add(_visibleAutomationBadgeElement);
+
+            _visibleAutomationBadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationBadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationBadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationBadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _visibleAutomationBadgeElement.Add(_visibleAutomationBadgeLabel);
+
+            _visibleAutomationStepLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationStepLabel.style.whiteSpace = WhiteSpace.Normal;
+            _visibleAutomationStepLabel.style.unityTextAlign = TextAnchor.UpperLeft;
+            _visibleAutomationStepLabel.style.marginTop = 12f;
+            _visibleAutomationStepLabel.style.flexGrow = 1f;
+            statusBody.Add(_visibleAutomationStepLabel);
+
+            _visibleAutomationChecklistPanel = new VisualElement
+            {
+                name = "asm-lite-visible-automation-checklist-panel",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationChecklistPanel.style.position = Position.Absolute;
+            _visibleAutomationChecklistPanel.style.display = DisplayStyle.None;
+            _visibleAutomationChecklistPanel.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationChecklistPanel.style.overflow = Overflow.Hidden;
+
+            _visibleAutomationChecklistAccent = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistAccent.style.height = 5f;
+            _visibleAutomationChecklistAccent.style.flexShrink = 0f;
+            _visibleAutomationChecklistPanel.Add(_visibleAutomationChecklistAccent);
+
+            var checklistBody = new VisualElement { pickingMode = PickingMode.Ignore };
+            checklistBody.style.flexDirection = FlexDirection.Column;
+            checklistBody.style.flexGrow = 1f;
+            checklistBody.style.paddingLeft = 16f;
+            checklistBody.style.paddingRight = 16f;
+            checklistBody.style.paddingTop = 16f;
+            checklistBody.style.paddingBottom = 16f;
+            _visibleAutomationChecklistPanel.Add(checklistBody);
+
+            _visibleAutomationChecklistTitleLabel = new Label("Visible Smoke Checklist") { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationChecklistTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationChecklistTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            checklistBody.Add(_visibleAutomationChecklistTitleLabel);
+
+            _visibleAutomationChecklistMetaLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationChecklistMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _visibleAutomationChecklistMetaLabel.style.marginTop = 2f;
+            checklistBody.Add(_visibleAutomationChecklistMetaLabel);
+
+            _visibleAutomationChecklistScrollView = new ScrollView(ScrollViewMode.Vertical)
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationChecklistScrollView.style.flexGrow = 1f;
+            _visibleAutomationChecklistScrollView.style.marginTop = 12f;
+            _visibleAutomationChecklistScrollView.style.paddingRight = 2f;
+            _visibleAutomationChecklistScrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+            _visibleAutomationChecklistScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            checklistBody.Add(_visibleAutomationChecklistScrollView);
+
+            _visibleAutomationChecklistItemsContainer = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistItemsContainer.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationChecklistItemsContainer.style.flexGrow = 1f;
+            _visibleAutomationChecklistScrollView.Add(_visibleAutomationChecklistItemsContainer);
+
+            _visibleAutomationOverlayCanvas.Add(_visibleAutomationStatusPanel);
+            _visibleAutomationOverlayCanvas.Add(_visibleAutomationChecklistPanel);
+            rootVisualElement.Add(_visibleAutomationOverlayCanvas);
+            _visibleAutomationWindowOverlayCanvas.BringToFront();
+            _visibleAutomationOverlayCanvas.BringToFront();
+        }
+
+        private void RegisterVisibleAutomationOverlayGeometryCallback()
+        {
+            if (rootVisualElement == null)
+                return;
+
+            rootVisualElement.UnregisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+            rootVisualElement.RegisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+        }
+
+        private void UnregisterVisibleAutomationOverlayGeometryCallback()
+        {
+            rootVisualElement?.UnregisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+        }
+
+        private void HandleVisibleAutomationOverlayGeometryChanged(GeometryChangedEvent _)
+        {
+            RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        private void HandleVisibleAutomationOverlayAnimationTick()
+        {
+            UpdateVisibleAutomationCompletionReviewState();
+
+            if (!HasAnyVisibleAutomationOverlay())
+                return;
+
+            if (ShouldAnimateVisibleAutomationOverlay() || NeedsVisibleAutomationOverlayHostResync())
+                RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        private bool HasAnyVisibleAutomationOverlay()
+        {
+            return !string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                || HasVisibleAutomationChecklist()
+                || _visibleAutomationCompletionReviewVisible;
+        }
+
+        private bool NeedsVisibleAutomationOverlayHostResync()
+        {
+            if (!HasAnyVisibleAutomationOverlay())
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                && _visibleAutomationStatusOverlayWindow == null)
+                return true;
+
+            if (HasVisibleAutomationChecklist()
+                && _visibleAutomationChecklistOverlayWindow == null)
+                return true;
+
+            if (_visibleAutomationCompletionReviewVisible
+                && _visibleAutomationCompletionReviewOverlayWindow == null)
+                return true;
+
+            return false;
+        }
+
+        private bool RefreshVisibleAutomationOverlayVisuals()
+        {
+            bool hasStatusOverlay = !string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep);
+            bool hasChecklistOverlay = HasVisibleAutomationChecklist();
+            bool hasCompletionReview = _visibleAutomationCompletionReviewVisible;
+            bool hasAnyOverlay = hasStatusOverlay || hasChecklistOverlay || hasCompletionReview;
+
+            SyncVisibleAutomationExternalOverlayState(hasAnyOverlay);
+            if (UsesExternalVisibleAutomationOverlay())
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (!hasAnyOverlay)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            // Visible smoke uses detached auxiliary windows as its single hosting model.
+            // If monitor detection cannot resolve native display bounds, those windows still
+            // stay detached and fall back to the owner window's screen rect for anchoring.
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (hasStatusOverlay || hasChecklistOverlay)
+                TrySyncVisibleAutomationOverlayPopupWindows(hasStatusOverlay, hasChecklistOverlay);
+            else
+                CloseVisibleAutomationStatusOverlayWindow();
+
+            SyncVisibleAutomationCompletionReviewOverlayWindow();
+            return true;
+        }
+
+        private bool UsesExternalVisibleAutomationOverlay()
+        {
+            return !string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath);
+        }
+
+        private void SyncVisibleAutomationExternalOverlayState(bool hasAnyOverlay)
+        {
+            if (!UsesExternalVisibleAutomationOverlay())
+                return;
+
+            var document = new VisibleAutomationExternalOverlayStateDocument
+            {
+                sessionId = _visibleAutomationExternalOverlaySessionId,
+                sessionActive = hasAnyOverlay,
+                presentationMode = _visibleAutomationOverlayPresentationMode,
+                title = _visibleAutomationOverlayTitle ?? string.Empty,
+                step = _visibleAutomationOverlayStep ?? string.Empty,
+                stepIndex = _visibleAutomationOverlayStepIndex,
+                totalSteps = _visibleAutomationOverlayTotalSteps,
+                state = _visibleAutomationOverlayState.ToString(),
+                checklist = BuildVisibleAutomationExternalOverlayChecklist(),
+                completionReviewVisible = _visibleAutomationCompletionReviewVisible,
+                completionReviewRequestId = _visibleAutomationCompletionReviewRequestId,
+                completionReviewTitle = _visibleAutomationCompletionReviewTitle ?? string.Empty,
+                completionReviewMessage = _visibleAutomationCompletionReviewMessage ?? string.Empty,
+                completionReviewAcknowledged = _visibleAutomationCompletionReviewAcknowledged,
+                updatedUtcTicks = DateTime.UtcNow.Ticks,
+            };
+
+            string json = JsonUtility.ToJson(document, true);
+            if (string.Equals(json, _visibleAutomationExternalOverlayLastPublishedJson, StringComparison.Ordinal))
+                return;
+
+            TryWriteVisibleAutomationExternalOverlayStateFile(json);
+            _visibleAutomationExternalOverlayLastPublishedJson = json;
+        }
+
+        private VisibleAutomationExternalOverlayChecklistItem[] BuildVisibleAutomationExternalOverlayChecklist()
+        {
+            if (!HasVisibleAutomationChecklist())
+                return Array.Empty<VisibleAutomationExternalOverlayChecklistItem>();
+
+            var checklist = new VisibleAutomationExternalOverlayChecklistItem[_visibleAutomationChecklistItems.Length];
+            for (int i = 0; i < _visibleAutomationChecklistItems.Length; i++)
+            {
+                checklist[i] = new VisibleAutomationExternalOverlayChecklistItem
+                {
+                    text = _visibleAutomationChecklistItems[i] ?? string.Empty,
+                    state = i < _visibleAutomationChecklistStates.Length
+                        ? _visibleAutomationChecklistStates[i].ToString()
+                        : VisibleAutomationChecklistItemState.Pending.ToString(),
+                };
+            }
+
+            return checklist;
+        }
+
+        private void TryWriteVisibleAutomationExternalOverlayStateFile(string json)
+        {
+            if (string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath))
+                return;
+
+            try
+            {
+                string directory = Path.GetDirectoryName(_visibleAutomationExternalOverlayStatePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    Directory.CreateDirectory(directory);
+
+                File.WriteAllText(_visibleAutomationExternalOverlayStatePath, json, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to write visible automation external overlay state: {ex.Message}");
+            }
+        }
+
+        private void DeleteVisibleAutomationExternalOverlayAckFile()
+        {
+            if (string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayAckPath))
+                return;
+
+            try
+            {
+                if (File.Exists(_visibleAutomationExternalOverlayAckPath))
+                    File.Delete(_visibleAutomationExternalOverlayAckPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to clear visible automation external overlay acknowledgement file: {ex.Message}");
+            }
+        }
+
+        private bool TryConsumeVisibleAutomationExternalOverlayAcknowledgement()
+        {
+            if (!_visibleAutomationCompletionReviewVisible
+                || !UsesExternalVisibleAutomationOverlay()
+                || string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayAckPath)
+                || !File.Exists(_visibleAutomationExternalOverlayAckPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(_visibleAutomationExternalOverlayAckPath);
+                if (string.IsNullOrWhiteSpace(json)
+                    || string.Equals(json, _visibleAutomationExternalOverlayLastAckPayload, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                _visibleAutomationExternalOverlayLastAckPayload = json;
+                var acknowledgement = JsonUtility.FromJson<VisibleAutomationExternalOverlayAckDocument>(json);
+                if (acknowledgement == null
+                    || !acknowledgement.acknowledged
+                    || !string.Equals(acknowledgement.sessionId, _visibleAutomationExternalOverlaySessionId, StringComparison.Ordinal)
+                    || acknowledgement.completionReviewRequestId != _visibleAutomationCompletionReviewRequestId)
+                {
+                    return false;
+                }
+
+                DeleteVisibleAutomationExternalOverlayAckFile();
+                AcknowledgeVisibleAutomationCompletionReview();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to read visible automation external overlay acknowledgement: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void UpdateVisibleAutomationStatusPanelGeometry(Rect? explicitStatusRect, Rect? checklistRect, float overlayMargin)
+        {
+            if (explicitStatusRect.HasValue)
+            {
+                Rect rect = explicitStatusRect.Value;
+                SetVisualElementRect(_visibleAutomationStatusPanel, rect.x, rect.y, rect.width, rect.height);
+                return;
+            }
+
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            float overlayHeight = presentationMode ? 132f : 102f;
+            float availableLeftWidth = checklistRect.HasValue
+                ? Mathf.Max(220f, checklistRect.Value.x - overlayMargin * 2f)
+                : Mathf.Max(220f, position.width - overlayMargin * 2f);
+            float preferredWidth = presentationMode
+                ? Mathf.Max(420f, availableLeftWidth * 0.68f)
+                : 360f;
+            float width = Mathf.Min(preferredWidth, availableLeftWidth);
+            float x = overlayMargin + Mathf.Max(0f, (availableLeftWidth - width) * 0.5f);
+            float y = overlayMargin;
+
+            SetVisualElementRect(_visibleAutomationStatusPanel, x, y, width, overlayHeight);
+        }
+
+        private void UpdateVisibleAutomationStatusPanelContent()
+        {
+            GetVisibleAutomationOverlayPalette(
+                _visibleAutomationOverlayState,
+                out Color accentColor,
+                out Color backgroundColor,
+                out Color borderColor,
+                out Color badgeColor,
+                out Color badgeTextColor);
+
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            _visibleAutomationStatusPanel.style.backgroundColor = backgroundColor;
+            SetVisualElementBorder(_visibleAutomationStatusPanel, borderColor);
+            _visibleAutomationStatusAccent.style.backgroundColor = accentColor;
+
+            string title = string.IsNullOrWhiteSpace(_visibleAutomationOverlayTitle)
+                ? "ASM-Lite visible smoke test"
+                : _visibleAutomationOverlayTitle;
+            _visibleAutomationTitleLabel.text = title;
+            _visibleAutomationTitleLabel.style.fontSize = presentationMode ? 15 : 12;
+            _visibleAutomationTitleLabel.style.color = Color.white;
+
+            string metaText = BuildVisibleAutomationOverlayMetaText();
+            _visibleAutomationMetaLabel.text = metaText;
+            _visibleAutomationMetaLabel.style.display = string.IsNullOrEmpty(metaText) ? DisplayStyle.None : DisplayStyle.Flex;
+            _visibleAutomationMetaLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationMetaLabel.style.color = new Color(0.74f, 0.82f, 0.91f, 0.96f);
+
+            _visibleAutomationStepLabel.text = _visibleAutomationOverlayStep;
+            _visibleAutomationStepLabel.style.fontSize = presentationMode ? 16 : 12;
+            _visibleAutomationStepLabel.style.color = new Color(0.95f, 0.97f, 0.99f, 1f);
+
+            _visibleAutomationBadgeElement.style.backgroundColor = badgeColor;
+            _visibleAutomationBadgeLabel.text = GetVisibleAutomationOverlayStatusLabel(_visibleAutomationOverlayState);
+            _visibleAutomationBadgeLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationBadgeLabel.style.color = badgeTextColor;
+        }
+
+        private void UpdateVisibleAutomationChecklistPanelGeometry(Rect overlayRect)
+        {
+            SetVisualElementRect(_visibleAutomationChecklistPanel, overlayRect.x, overlayRect.y, overlayRect.width, overlayRect.height);
+        }
+
+        private void UpdateVisibleAutomationChecklistPanelContent()
+        {
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            int totalItems = _visibleAutomationChecklistItems.Length;
+            int completedItems = CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+
+            _visibleAutomationChecklistPanel.style.backgroundColor = new Color(0.05f, 0.07f, 0.09f, 0.96f);
+            SetVisualElementBorder(_visibleAutomationChecklistPanel, new Color(0.14f, 0.39f, 0.43f, 0.96f));
+            _visibleAutomationChecklistAccent.style.backgroundColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+
+            _visibleAutomationChecklistTitleLabel.text = "Visible Smoke Checklist";
+            _visibleAutomationChecklistTitleLabel.style.fontSize = presentationMode ? 14 : 12;
+            _visibleAutomationChecklistTitleLabel.style.color = Color.white;
+
+            _visibleAutomationChecklistMetaLabel.text = $"Completed {completedItems}/{totalItems} • Right-side execution checklist";
+            _visibleAutomationChecklistMetaLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationChecklistMetaLabel.style.color = new Color(0.76f, 0.84f, 0.92f, 0.95f);
+
+            if (_visibleAutomationChecklistScrollView != null)
+                _visibleAutomationChecklistScrollView.style.marginTop = presentationMode ? 14f : 12f;
+
+            EnsureVisibleAutomationChecklistVisualCount(totalItems);
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < totalItems; i++)
+                UpdateVisibleAutomationChecklistItemVisual(_visibleAutomationChecklistItemVisuals[i], i, now, totalItems);
+        }
+
+        private void EnsureVisibleAutomationChecklistVisualCount(int totalItems)
+        {
+            if (_visibleAutomationChecklistItemsContainer == null)
+                return;
+
+            while (_visibleAutomationChecklistItemVisuals.Count > totalItems)
+            {
+                int lastIndex = _visibleAutomationChecklistItemVisuals.Count - 1;
+                _visibleAutomationChecklistItemVisuals[lastIndex].Root.RemoveFromHierarchy();
+                _visibleAutomationChecklistItemVisuals.RemoveAt(lastIndex);
+            }
+
+            while (_visibleAutomationChecklistItemVisuals.Count < totalItems)
+            {
+                int itemIndex = _visibleAutomationChecklistItemVisuals.Count;
+                var refs = CreateVisibleAutomationChecklistVisual();
+                _visibleAutomationChecklistItemsContainer.Add(refs.Root);
+                _visibleAutomationChecklistItemVisuals.Add(refs);
+            }
+        }
+
+        private VisibleAutomationChecklistVisualRefs CreateVisibleAutomationChecklistVisual()
+        {
+            var refs = new VisibleAutomationChecklistVisualRefs();
+
+            refs.Root = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Root.style.flexDirection = FlexDirection.Row;
+            refs.Root.style.alignItems = Align.Stretch;
+            refs.Root.style.flexGrow = 1f;
+            refs.Root.style.minHeight = VisibleAutomationChecklistCompactItemHeight;
+            refs.Root.style.marginBottom = 6f;
+            refs.Root.style.overflow = Overflow.Hidden;
+
+            refs.Accent = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Accent.style.width = 4f;
+            refs.Accent.style.flexShrink = 0f;
+            refs.Root.Add(refs.Accent);
+
+            var content = new VisualElement { pickingMode = PickingMode.Ignore };
+            content.style.flexDirection = FlexDirection.Column;
+            content.style.flexGrow = 1f;
+            content.style.paddingLeft = 10f;
+            content.style.paddingRight = 10f;
+            content.style.paddingTop = 8f;
+            content.style.paddingBottom = 6f;
+            refs.Root.Add(content);
+
+            var topRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            topRow.style.flexDirection = FlexDirection.Row;
+            topRow.style.alignItems = Align.FlexStart;
+            topRow.style.flexGrow = 1f;
+            content.Add(topRow);
+
+            refs.Glyph = new Label { pickingMode = PickingMode.Ignore };
+            refs.Glyph.style.width = 24f;
+            refs.Glyph.style.minWidth = 24f;
+            refs.Glyph.style.marginRight = 6f;
+            refs.Glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+            refs.Glyph.style.unityTextAlign = TextAnchor.UpperCenter;
+            refs.Glyph.style.whiteSpace = WhiteSpace.NoWrap;
+            topRow.Add(refs.Glyph);
+
+            refs.Text = new Label { pickingMode = PickingMode.Ignore };
+            refs.Text.style.flexGrow = 1f;
+            refs.Text.style.whiteSpace = WhiteSpace.Normal;
+            refs.Text.style.unityTextAlign = TextAnchor.UpperLeft;
+            refs.Text.style.marginRight = 8f;
+            topRow.Add(refs.Text);
+
+            refs.Badge = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Badge.style.minWidth = 60f;
+            refs.Badge.style.height = 20f;
+            refs.Badge.style.justifyContent = Justify.Center;
+            refs.Badge.style.alignItems = Align.Center;
+            refs.Badge.style.paddingLeft = 8f;
+            refs.Badge.style.paddingRight = 8f;
+            refs.Badge.style.flexShrink = 0f;
+            topRow.Add(refs.Badge);
+
+            refs.BadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+            refs.BadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            refs.BadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            refs.BadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            refs.Badge.Add(refs.BadgeLabel);
+
+            refs.StepLabel = new Label { pickingMode = PickingMode.Ignore };
+            refs.StepLabel.style.marginTop = 4f;
+            refs.StepLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            refs.StepLabel.style.unityTextAlign = TextAnchor.LowerLeft;
+            content.Add(refs.StepLabel);
+
+            return refs;
+        }
+
+        private void UpdateVisibleAutomationChecklistItemVisual(VisibleAutomationChecklistVisualRefs refs, int itemIndex, double now, int totalItems)
+        {
+            string itemLabel = _visibleAutomationChecklistItems[itemIndex];
+            var itemState = _visibleAutomationChecklistStates[itemIndex];
+            double changedAt = itemIndex < _visibleAutomationChecklistStateChangedAt.Length
+                ? _visibleAutomationChecklistStateChangedAt[itemIndex]
+                : now;
+            double stateAgeSeconds = Mathf.Max(0f, (float)(now - changedAt));
+
+            GetVisibleAutomationChecklistItemPalette(
+                itemState,
+                stateAgeSeconds,
+                now,
+                _visibleAutomationOverlayPresentationMode,
+                out Color backgroundColor,
+                out Color borderColor,
+                out Color accentColor,
+                out Color textColor,
+                out Color badgeColor,
+                out Color badgeTextColor,
+                out Color glyphColor);
+
+            refs.Root.style.backgroundColor = backgroundColor;
+            SetVisualElementBorder(refs.Root, borderColor);
+            refs.Root.style.minHeight = _visibleAutomationOverlayPresentationMode ? 48f : VisibleAutomationChecklistCompactItemHeight;
+            refs.Root.style.marginBottom = itemIndex < totalItems - 1 ? 6f : 0f;
+            refs.Accent.style.backgroundColor = accentColor;
+            refs.Glyph.text = GetVisibleAutomationChecklistItemGlyph(itemState);
+            refs.Glyph.style.fontSize = _visibleAutomationOverlayPresentationMode ? 18 : 16;
+            refs.Glyph.style.color = glyphColor;
+
+            refs.Text.text = itemLabel;
+            refs.Text.style.fontSize = _visibleAutomationOverlayPresentationMode ? 13 : 12;
+            refs.Text.style.color = textColor;
+
+            refs.Badge.style.backgroundColor = badgeColor;
+            refs.BadgeLabel.text = GetVisibleAutomationChecklistItemStatusLabel(itemState);
+            refs.BadgeLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
+            refs.BadgeLabel.style.color = badgeTextColor;
+
+            refs.StepLabel.text = $"Step {itemIndex + 1}";
+            refs.StepLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
+            refs.StepLabel.style.color = new Color(0.72f, 0.78f, 0.86f, 0.92f);
+        }
+
+        private static void SetVisualElementRect(VisualElement element, float x, float y, float width, float height)
+        {
+            if (element == null)
+                return;
+
+            element.style.left = x;
+            element.style.top = y;
+            element.style.width = width;
+            element.style.height = height;
+        }
+
+        private static void SetVisualElementBorder(VisualElement element, Color color, float width = 1f)
+        {
+            if (element == null)
+                return;
+
+            element.style.borderLeftWidth = width;
+            element.style.borderRightWidth = width;
+            element.style.borderTopWidth = width;
+            element.style.borderBottomWidth = width;
+            element.style.borderLeftColor = color;
+            element.style.borderRightColor = color;
+            element.style.borderTopColor = color;
+            element.style.borderBottomColor = color;
+        }
+
+        private bool TrySyncVisibleAutomationOverlayPopupWindows(bool hasStatusOverlay, bool hasChecklistOverlay)
+        {
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (!TryGetVisibleAutomationScreenOverlayRects(out Rect? statusRect, out Rect? checklistRect)
+                || !statusRect.HasValue
+                || !checklistRect.HasValue)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (hasStatusOverlay)
+            {
+                if (_visibleAutomationStatusOverlayWindow == null)
+                    _visibleAutomationStatusOverlayWindow = VisibleAutomationStatusOverlayWindow.Create(this);
+
+                _visibleAutomationStatusOverlayWindow.SyncFromOwner(this, statusRect.Value);
+            }
+            else
+            {
+                CloseVisibleAutomationStatusOverlayWindow();
+            }
+
+            if (hasChecklistOverlay)
+            {
+                if (_visibleAutomationChecklistOverlayWindow == null)
+                    _visibleAutomationChecklistOverlayWindow = VisibleAutomationChecklistOverlayWindow.Create(this);
+
+                _visibleAutomationChecklistOverlayWindow.SyncFromOwner(this, checklistRect.Value);
+            }
+            else
+            {
+                CloseVisibleAutomationChecklistOverlayWindow();
+            }
+
+            return true;
+        }
+
+        private void SyncVisibleAutomationCompletionReviewOverlayWindow()
+        {
+            if (!_visibleAutomationCompletionReviewVisible)
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (!TryGetVisibleAutomationCompletionReviewOverlayRect(out Rect reviewRect))
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (_visibleAutomationCompletionReviewOverlayWindow == null)
+                _visibleAutomationCompletionReviewOverlayWindow = VisibleAutomationCompletionReviewOverlayWindow.Create(this);
+
+            _visibleAutomationCompletionReviewOverlayWindow.SyncFromOwner(this, reviewRect);
+        }
+
+        private void CloseVisibleAutomationOverlayPopupWindows()
+        {
+            CloseVisibleAutomationStatusOverlayWindow();
+            CloseVisibleAutomationChecklistOverlayWindow();
+            CloseVisibleAutomationCompletionReviewOverlayWindow();
+        }
+
+        private void CloseVisibleAutomationStatusOverlayWindow()
+        {
+            if (_visibleAutomationStatusOverlayWindow == null)
+                return;
+
+            _visibleAutomationStatusOverlayWindow.Close();
+            _visibleAutomationStatusOverlayWindow = null;
+        }
+
+        private void CloseVisibleAutomationChecklistOverlayWindow()
+        {
+            if (_visibleAutomationChecklistOverlayWindow == null)
+                return;
+
+            _visibleAutomationChecklistOverlayWindow.Close();
+            _visibleAutomationChecklistOverlayWindow = null;
+        }
+
+        private void CloseVisibleAutomationCompletionReviewOverlayWindow()
+        {
+            if (_visibleAutomationCompletionReviewOverlayWindow == null)
+                return;
+
+            _visibleAutomationCompletionReviewOverlayWindow.Close();
+            _visibleAutomationCompletionReviewOverlayWindow = null;
+        }
+
+        private Rect GetVisibleAutomationChecklistOverlayRect(float overlayMargin)
+        {
+            float x = Mathf.Clamp(position.width * 0.75f, overlayMargin + 220f, Mathf.Max(overlayMargin + 220f, position.width - 280f));
+            float width = Mathf.Max(220f, position.width - x - overlayMargin);
+            float height = Mathf.Max(220f, position.height - overlayMargin * 2f);
+            return new Rect(x, overlayMargin, width, height);
+        }
+
+        private bool TryGetVisibleAutomationScreenOverlayRects(out Rect? statusRect, out Rect? checklistRect)
+        {
+            statusRect = null;
+            checklistRect = null;
+
+            if (!_visibleAutomationPreferScreenAnchoredOverlay)
+                return false;
+
+            if (!TryGetVisibleAutomationScreenBounds(out Rect screenBounds))
+                return false;
+
+            _visibleAutomationScreenBounds = screenBounds;
+
+            float topMargin = VisibleAutomationScreenOverlayTopMargin;
+            float sideMargin = VisibleAutomationScreenOverlaySideMargin;
+            float bottomMargin = VisibleAutomationScreenOverlayBottomMargin;
+            float availableWidth = Mathf.Max(680f, screenBounds.width - sideMargin * 2f);
+            float availableHeight = Mathf.Max(360f, screenBounds.height - topMargin - bottomMargin);
+            float checklistWidth = Mathf.Max(VisibleAutomationScreenChecklistMinWidth, availableWidth * VisibleAutomationScreenChecklistWidthFactor);
+            checklistWidth = Mathf.Min(checklistWidth, availableWidth * 0.42f);
+            float checklistX = screenBounds.xMax - sideMargin - checklistWidth;
+            float checklistY = screenBounds.yMin + topMargin;
+            float checklistHeight = availableHeight;
+
+            float leftAvailableWidth = Mathf.Max(VisibleAutomationScreenStatusMinWidth, checklistX - sideMargin - screenBounds.xMin - sideMargin);
+            float statusWidth = Mathf.Max(VisibleAutomationScreenStatusMinWidth, availableWidth * VisibleAutomationScreenStatusMaxWidthFactor);
+            statusWidth = Mathf.Min(statusWidth, leftAvailableWidth);
+            float statusHeight = _visibleAutomationOverlayPresentationMode
+                ? VisibleAutomationScreenStatusHeight + 12f
+                : VisibleAutomationScreenStatusHeight;
+            float statusX = screenBounds.xMin + sideMargin + Mathf.Max(0f, (leftAvailableWidth - statusWidth) * 0.5f);
+            float statusY = screenBounds.yMin + topMargin;
+
+            statusRect = new Rect(statusX, statusY, statusWidth, statusHeight);
+            checklistRect = new Rect(checklistX, checklistY, checklistWidth, checklistHeight);
+            return true;
+        }
+
+        private bool TryGetVisibleAutomationCompletionReviewOverlayRect(out Rect reviewRect)
+        {
+            reviewRect = default;
+
+            if (!_visibleAutomationPreferScreenAnchoredOverlay)
+                return false;
+
+            if (!TryGetVisibleAutomationScreenBounds(out Rect screenBounds))
+                return false;
+
+            _visibleAutomationScreenBounds = screenBounds;
+
+            float width = Mathf.Min(VisibleAutomationReviewPopupWidth, Mathf.Max(320f, screenBounds.width - VisibleAutomationScreenOverlaySideMargin * 2f));
+            float height = Mathf.Min(VisibleAutomationReviewPopupHeight, Mathf.Max(180f, screenBounds.height - VisibleAutomationScreenOverlayTopMargin * 2f));
+            float x = screenBounds.xMin + Mathf.Max(VisibleAutomationScreenOverlaySideMargin, (screenBounds.width - width) * 0.5f);
+            float y = screenBounds.yMin + Mathf.Max(VisibleAutomationScreenOverlayTopMargin * 2f, (screenBounds.height - height) * 0.34f);
+            x = Mathf.Min(x, screenBounds.xMax - VisibleAutomationScreenOverlaySideMargin - width);
+            y = Mathf.Min(y, screenBounds.yMax - VisibleAutomationScreenOverlayBottomMargin - height);
+            reviewRect = new Rect(x, y, width, height);
+            return reviewRect.width > 0f && reviewRect.height > 0f;
+        }
+
+        private bool TryGetVisibleAutomationScreenBounds(out Rect screenBounds)
+        {
+            screenBounds = default;
+
+            if (ShouldFreezeVisibleAutomationScreenBoundsToLastKnownRect())
+            {
+                screenBounds = _visibleAutomationScreenBounds;
+                return true;
+            }
+
+            _visibleAutomationUsingHostWindowFallbackBounds = false;
+
+            Rect referenceRect = position;
+            if (TryGetHostContainerScreenRect(out Rect hostContainerRect))
+                referenceRect = hostContainerRect;
+
+            if (referenceRect.width <= 0f || referenceRect.height <= 0f)
+            {
+                if (HasCachedVisibleAutomationScreenBounds())
+                {
+                    screenBounds = _visibleAutomationScreenBounds;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (TryGetDisplayBoundsFromNativeWindow(referenceRect.center, out screenBounds))
+            {
+                _visibleAutomationScreenBounds = screenBounds;
+                return true;
+            }
+
+            // Keep detached overlay windows as the only host model even when native
+            // monitor lookup is unavailable by anchoring them to the owner window rect.
+            _visibleAutomationUsingHostWindowFallbackBounds = true;
+            screenBounds = referenceRect;
+            _visibleAutomationScreenBounds = screenBounds;
+            return true;
+        }
+
+        private bool HasCachedVisibleAutomationScreenBounds()
+        {
+            return _visibleAutomationScreenBounds.width > 0f && _visibleAutomationScreenBounds.height > 0f;
+        }
+
+        private bool ShouldFreezeVisibleAutomationScreenBoundsToLastKnownRect()
+        {
+            return HasCachedVisibleAutomationScreenBounds()
+                && focusedWindow != this
+                && !hasFocus;
+        }
+
+        private bool TryGetHostContainerScreenRect(out Rect screenRect)
+        {
+            screenRect = default;
+
+            object hostView = typeof(EditorWindow)
+                .GetField("m_Parent", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(this);
+            if (hostView == null)
+                return false;
+
+            if (TryReadRectMember(hostView, "screenPosition", out screenRect)
+                || TryReadRectMember(hostView, "windowPosition", out screenRect)
+                || TryReadRectMember(hostView, "position", out screenRect))
+            {
+                return screenRect.width > 0f && screenRect.height > 0f;
+            }
+
+            object containerWindow = hostView.GetType()
+                .GetProperty("window", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                ?.GetValue(hostView, null);
+            if (containerWindow == null)
+                return false;
+
+            if (TryReadRectMember(containerWindow, "position", out screenRect)
+                || TryReadRectMember(containerWindow, "screenPosition", out screenRect)
+                || TryReadRectMember(containerWindow, "windowPosition", out screenRect))
+            {
+                return screenRect.width > 0f && screenRect.height > 0f;
+            }
+
+            return false;
+        }
+
+        private static bool TryReadRectMember(object target, string memberName, out Rect rect)
+        {
+            rect = default;
+            if (target == null || string.IsNullOrWhiteSpace(memberName))
+                return false;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            Type targetType = target.GetType();
+
+            PropertyInfo property = targetType.GetProperty(memberName, flags);
+            if (property != null && property.PropertyType == typeof(Rect))
+            {
+                rect = (Rect)property.GetValue(target, null);
+                return true;
+            }
+
+            FieldInfo field = targetType.GetField(memberName, flags);
+            if (field != null && field.FieldType == typeof(Rect))
+            {
+                rect = (Rect)field.GetValue(target);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetDisplayBoundsFromNativeWindow(Vector2 referencePoint, out Rect screenBounds)
+        {
+            screenBounds = default;
+
+#if UNITY_EDITOR_WIN
+            if (!TryGetWin32MonitorBounds(referencePoint, out screenBounds))
+                return false;
+
+            return screenBounds.width > 0f && screenBounds.height > 0f;
+#else
+            return false;
+#endif
+        }
+
+#if UNITY_EDITOR_WIN
+        private static bool TryGetWin32MonitorBounds(Vector2 referencePoint, out Rect screenBounds)
+        {
+            screenBounds = default;
+
+            POINT point;
+            point.x = (int)Mathf.Round(referencePoint.x);
+            point.y = (int)Mathf.Round(referencePoint.y);
+            IntPtr monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+                return false;
+
+            var monitorInfo = new MONITORINFO();
+            monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+            if (!GetMonitorInfo(monitor, ref monitorInfo))
+                return false;
+
+            RECT workRect = monitorInfo.rcWork;
+            screenBounds = new Rect(
+                workRect.left,
+                workRect.top,
+                Mathf.Max(0, workRect.right - workRect.left),
+                Mathf.Max(0, workRect.bottom - workRect.top));
+            return screenBounds.width > 0f && screenBounds.height > 0f;
+        }
+
+        private const int MONITOR_DEFAULTTONEAREST = 2;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int x;
+            public int y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int left;
+            public int top;
+            public int right;
+            public int bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+#endif
+
+        private bool HasVisibleAutomationChecklist()
+        {
+            return _visibleAutomationChecklistItems != null && _visibleAutomationChecklistItems.Length > 0;
+        }
+
+        private bool ShouldAnimateVisibleAutomationOverlay()
+        {
+            if (_visibleAutomationOverlayPresentationMode)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                && _visibleAutomationOverlayState == VisibleAutomationOverlayState.Running)
+                return true;
+
+            if (!HasVisibleAutomationChecklist())
+                return false;
+
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                if (_visibleAutomationChecklistStates[i] == VisibleAutomationChecklistItemState.Active)
+                    return true;
+
+                if (i < _visibleAutomationChecklistStateChangedAt.Length
+                    && now - _visibleAutomationChecklistStateChangedAt[i] < 1.1d)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private int CountChecklistItemsWithState(VisibleAutomationChecklistItemState state)
+        {
+            if (_visibleAutomationChecklistStates == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                if (_visibleAutomationChecklistStates[i] == state)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static string GetVisibleAutomationChecklistItemGlyph(VisibleAutomationChecklistItemState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    return "✓";
+                case VisibleAutomationChecklistItemState.Failed:
+                    return "!";
+                case VisibleAutomationChecklistItemState.Warning:
+                    return "!";
+                case VisibleAutomationChecklistItemState.Active:
+                    return "•";
+                default:
+                    return "○";
+            }
+        }
+
+        private static string GetVisibleAutomationChecklistItemStatusLabel(VisibleAutomationChecklistItemState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    return "DONE";
+                case VisibleAutomationChecklistItemState.Failed:
+                    return "FAIL";
+                case VisibleAutomationChecklistItemState.Warning:
+                    return "WARN";
+                case VisibleAutomationChecklistItemState.Active:
+                    return "LIVE";
+                default:
+                    return "WAIT";
+            }
+        }
+
+        private static void GetVisibleAutomationChecklistItemPalette(
+            VisibleAutomationChecklistItemState state,
+            double stateAgeSeconds,
+            double now,
+            bool presentationMode,
+            out Color backgroundColor,
+            out Color borderColor,
+            out Color accentColor,
+            out Color textColor,
+            out Color badgeColor,
+            out Color badgeTextColor,
+            out Color glyphColor)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    {
+                        if (presentationMode)
+                        {
+                            backgroundColor = new Color(0.12f, 0.26f, 0.18f, 0.97f);
+                            borderColor = new Color(0.28f, 0.64f, 0.44f, 0.98f);
+                            accentColor = new Color(0.34f, 0.82f, 0.56f, 1f);
+                            textColor = Color.white;
+                            badgeColor = new Color(0.24f, 0.58f, 0.40f, 1f);
+                            badgeTextColor = Color.white;
+                            glyphColor = new Color(0.84f, 1f, 0.90f, 1f);
+                            break;
+                        }
+
+                        float flash = Mathf.Clamp01(1f - (float)(stateAgeSeconds / 0.9d));
+                        backgroundColor = Color.Lerp(
+                            new Color(0.08f, 0.15f, 0.11f, 0.94f),
+                            new Color(0.18f, 0.34f, 0.24f, 0.98f),
+                            flash);
+                        borderColor = Color.Lerp(
+                            new Color(0.20f, 0.48f, 0.32f, 0.95f),
+                            new Color(0.34f, 0.78f, 0.54f, 1f),
+                            flash);
+                        accentColor = Color.Lerp(
+                            new Color(0.22f, 0.62f, 0.40f, 1f),
+                            new Color(0.40f, 0.95f, 0.63f, 1f),
+                            flash);
+                        textColor = Color.white;
+                        badgeColor = Color.Lerp(
+                            new Color(0.18f, 0.44f, 0.30f, 1f),
+                            new Color(0.28f, 0.70f, 0.46f, 1f),
+                            flash);
+                        badgeTextColor = Color.white;
+                        glyphColor = new Color(0.84f, 1f, 0.90f, 1f);
+                        break;
+                    }
+                case VisibleAutomationChecklistItemState.Failed:
+                    backgroundColor = new Color(0.15f, 0.08f, 0.09f, 0.98f);
+                    borderColor = new Color(0.66f, 0.24f, 0.24f, 0.96f);
+                    accentColor = new Color(0.88f, 0.32f, 0.32f, 1f);
+                    textColor = Color.white;
+                    badgeColor = new Color(0.58f, 0.20f, 0.20f, 1f);
+                    badgeTextColor = Color.white;
+                    glyphColor = new Color(1f, 0.88f, 0.88f, 1f);
+                    break;
+                case VisibleAutomationChecklistItemState.Warning:
+                    backgroundColor = new Color(0.15f, 0.12f, 0.07f, 0.98f);
+                    borderColor = new Color(0.72f, 0.54f, 0.16f, 0.96f);
+                    accentColor = new Color(0.94f, 0.72f, 0.20f, 1f);
+                    textColor = Color.white;
+                    badgeColor = new Color(0.66f, 0.50f, 0.14f, 1f);
+                    badgeTextColor = new Color(0.16f, 0.11f, 0.03f, 1f);
+                    glyphColor = new Color(1f, 0.95f, 0.78f, 1f);
+                    break;
+                case VisibleAutomationChecklistItemState.Active:
+                    {
+                        if (presentationMode)
+                        {
+                            backgroundColor = new Color(0.11f, 0.17f, 0.24f, 0.98f);
+                            borderColor = new Color(0.28f, 0.56f, 0.82f, 0.99f);
+                            accentColor = new Color(0.30f, 0.70f, 0.96f, 1f);
+                            textColor = Color.white;
+                            badgeColor = new Color(0.22f, 0.50f, 0.76f, 1f);
+                            badgeTextColor = Color.white;
+                            glyphColor = new Color(0.86f, 0.95f, 1f, 1f);
+                            break;
+                        }
+
+                        float pulse = 0.5f + 0.5f * Mathf.Sin((float)(now * 4.5d));
+                        backgroundColor = Color.Lerp(
+                            new Color(0.08f, 0.11f, 0.16f, 0.95f),
+                            new Color(0.12f, 0.20f, 0.28f, 0.99f),
+                            pulse);
+                        borderColor = Color.Lerp(
+                            new Color(0.20f, 0.40f, 0.58f, 0.96f),
+                            new Color(0.32f, 0.68f, 0.94f, 1f),
+                            pulse);
+                        accentColor = Color.Lerp(
+                            new Color(0.20f, 0.48f, 0.76f, 1f),
+                            new Color(0.34f, 0.78f, 1f, 1f),
+                            pulse);
+                        textColor = Color.white;
+                        badgeColor = Color.Lerp(
+                            new Color(0.16f, 0.40f, 0.62f, 1f),
+                            new Color(0.26f, 0.62f, 0.90f, 1f),
+                            pulse);
+                        badgeTextColor = Color.white;
+                        glyphColor = new Color(0.86f, 0.95f, 1f, 1f);
+                        break;
+                    }
+                default:
+                    backgroundColor = new Color(0.08f, 0.10f, 0.13f, 0.92f);
+                    borderColor = new Color(0.19f, 0.25f, 0.31f, 0.90f);
+                    accentColor = new Color(0.25f, 0.31f, 0.37f, 0.92f);
+                    textColor = new Color(0.84f, 0.88f, 0.93f, 0.95f);
+                    badgeColor = new Color(0.16f, 0.19f, 0.23f, 1f);
+                    badgeTextColor = new Color(0.77f, 0.82f, 0.88f, 0.95f);
+                    glyphColor = new Color(0.74f, 0.79f, 0.85f, 0.95f);
+                    break;
+            }
+        }
+
+        private string BuildVisibleAutomationOverlayMetaText()
+        {
+            string progressText = BuildVisibleAutomationOverlayProgressText(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayTotalSteps);
+            if (_visibleAutomationOverlayPresentationMode)
+            {
+                return string.IsNullOrEmpty(progressText)
+                    ? "Presentation Mode"
+                    : progressText + " • Presentation Mode";
+            }
+
+            return progressText;
+        }
+
+        internal VisibleAutomationOverlayHostSnapshot GetVisibleAutomationOverlayHostSnapshotForTesting()
+        {
+            if (UsesExternalVisibleAutomationOverlay())
+                RefreshVisibleAutomationOverlayVisuals();
+            else if (NeedsVisibleAutomationOverlayHostResync())
+                RefreshVisibleAutomationOverlayVisuals();
+
+            Rect screenBounds = _visibleAutomationScreenBounds;
+            if (screenBounds.width <= 0f || screenBounds.height <= 0f)
+                TryGetVisibleAutomationScreenBounds(out screenBounds);
+
+            if (UsesExternalVisibleAutomationOverlay())
+            {
+                return new VisibleAutomationOverlayHostSnapshot(
+                    VisibleAutomationOverlayHostKind.ExternalPythonProcess,
+                    screenBounds,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    _visibleAutomationUsingHostWindowFallbackBounds,
+                    _visibleAutomationExternalOverlayStatePath,
+                    _visibleAutomationExternalOverlayAckPath,
+                    File.Exists(_visibleAutomationExternalOverlayStatePath));
+            }
+
+            return new VisibleAutomationOverlayHostSnapshot(
+                VisibleAutomationOverlayHostKind.DetachedAuxiliaryWindows,
+                screenBounds,
+                _visibleAutomationStatusOverlayWindow != null,
+                _visibleAutomationStatusOverlayWindow != null ? _visibleAutomationStatusOverlayWindow.position : default,
+                _visibleAutomationChecklistOverlayWindow != null,
+                _visibleAutomationChecklistOverlayWindow != null ? _visibleAutomationChecklistOverlayWindow.position : default,
+                _visibleAutomationCompletionReviewOverlayWindow != null,
+                _visibleAutomationCompletionReviewOverlayWindow != null ? _visibleAutomationCompletionReviewOverlayWindow.position : default,
+                _visibleAutomationUsingHostWindowFallbackBounds,
+                _visibleAutomationExternalOverlayStatePath,
+                _visibleAutomationExternalOverlayAckPath,
+                false);
+        }
+
+        internal VisibleAutomationExternalOverlayStateDocument GetVisibleAutomationExternalOverlayStateForTesting()
+        {
+            if (!UsesExternalVisibleAutomationOverlay() || string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath))
+                return null;
+
+            if (!File.Exists(_visibleAutomationExternalOverlayStatePath))
+                return null;
+
+            try
+            {
+                string json = File.ReadAllText(_visibleAutomationExternalOverlayStatePath);
+                if (string.IsNullOrWhiteSpace(json))
+                    return null;
+
+                return JsonUtility.FromJson<VisibleAutomationExternalOverlayStateDocument>(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to read visible automation external overlay state for testing: {ex.Message}");
+                return null;
+            }
+        }
+
+        internal bool TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting()
+        {
+            return TryConsumeVisibleAutomationExternalOverlayAcknowledgement();
+        }
+
+        internal void ShowVisibleAutomationCompletionReview(string title = null, string message = null)
+        {
+            _visibleAutomationCompletionReviewTitle = string.IsNullOrWhiteSpace(title)
+                ? "Visible smoke results ready"
+                : title.Trim();
+            _visibleAutomationCompletionReviewMessage = string.IsNullOrWhiteSpace(message)
+                ? BuildVisibleAutomationCompletionReviewMessage()
+                : message.Trim();
+            _visibleAutomationCompletionReviewAcknowledged = false;
+            _visibleAutomationCompletionReviewVisible = true;
+            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
+            _visibleAutomationCompletionReviewRequestId++;
+            _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
+            DeleteVisibleAutomationExternalOverlayAckFile();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal void AcknowledgeVisibleAutomationCompletionReview()
+        {
+            _visibleAutomationCompletionReviewAcknowledged = true;
+            _visibleAutomationCompletionReviewVisible = false;
+            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
+            CloseVisibleAutomationCompletionReviewOverlayWindow();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal bool IsVisibleAutomationCompletionReviewVisibleForAutomation()
+        {
+            return _visibleAutomationCompletionReviewVisible;
+        }
+
+        internal bool WasVisibleAutomationCompletionReviewAcknowledgedForAutomation()
+        {
+            return _visibleAutomationCompletionReviewAcknowledged;
+        }
+
+        private void UpdateVisibleAutomationCompletionReviewState()
+        {
+            if (TryConsumeVisibleAutomationExternalOverlayAcknowledgement())
+                return;
+
+            if (!_visibleAutomationCompletionReviewVisible)
+                return;
+
+            if (_visibleAutomationCompletionReviewOverlayWindow != null)
+                _visibleAutomationCompletionReviewOverlayWindow.Repaint();
+        }
+
+        private string BuildVisibleAutomationCompletionReviewMessage()
+        {
+            int totalItems = _visibleAutomationChecklistItems?.Length ?? 0;
+            int completedItems = CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+            string progressText = BuildVisibleAutomationOverlayProgressText(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayTotalSteps);
+            string statusLabel = GetVisibleAutomationOverlayStatusLabel(_visibleAutomationOverlayState);
+            string summaryText = totalItems > 0
+                ? $"Checklist complete: {completedItems}/{totalItems} steps finished."
+                : "Checklist complete.";
+
+            if (!string.IsNullOrWhiteSpace(progressText))
+                return $"{statusLabel} • {progressText}\n{summaryText}\nReview the overlays, then click Accept and close when you are ready to approve this run.";
+
+            return $"{statusLabel}\n{summaryText}\nReview the overlays, then click Accept and close when you are ready to approve this run.";
+        }
+
+        private void SetVisibleAutomationChecklistItems(string[] checklistItems)
+        {
+            if (checklistItems == null || checklistItems.Length == 0)
+            {
+                _visibleAutomationChecklistItems = Array.Empty<string>();
+                _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+                _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+                EnsureVisibleAutomationChecklistVisualCount(0);
+                return;
+            }
+
+            var sanitized = checklistItems
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .ToArray();
+
+            bool sameItems = _visibleAutomationChecklistItems != null
+                && sanitized.Length == _visibleAutomationChecklistItems.Length;
+            if (sameItems)
+            {
+                for (int i = 0; i < sanitized.Length; i++)
+                {
+                    if (!string.Equals(sanitized[i], _visibleAutomationChecklistItems[i], StringComparison.Ordinal))
+                    {
+                        sameItems = false;
+                        break;
+                    }
+                }
+            }
+
+            if (sameItems)
+                return;
+
+            _visibleAutomationChecklistItems = sanitized;
+            _visibleAutomationChecklistStates = new VisibleAutomationChecklistItemState[sanitized.Length];
+            _visibleAutomationChecklistStateChangedAt = new double[sanitized.Length];
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < sanitized.Length; i++)
+                _visibleAutomationChecklistStateChangedAt[i] = now;
+
+            EnsureVisibleAutomationChecklistVisualCount(sanitized.Length);
+        }
+
+        private void UpdateVisibleAutomationChecklistProgress(int stepIndex, VisibleAutomationOverlayState overlayState)
+        {
+            if (!HasVisibleAutomationChecklist())
+                return;
+
+            int clampedActiveIndex = Mathf.Clamp(stepIndex - 1, 0, _visibleAutomationChecklistItems.Length - 1);
+            bool hasActiveIndex = stepIndex > 0 && _visibleAutomationChecklistItems.Length > 0;
+
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                VisibleAutomationChecklistItemState desiredState;
+                if (!hasActiveIndex)
+                {
+                    desiredState = overlayState == VisibleAutomationOverlayState.Success
+                        ? VisibleAutomationChecklistItemState.Completed
+                        : VisibleAutomationChecklistItemState.Pending;
+                }
+                else if (i < clampedActiveIndex)
+                {
+                    desiredState = VisibleAutomationChecklistItemState.Completed;
+                }
+                else if (i > clampedActiveIndex)
+                {
+                    desiredState = VisibleAutomationChecklistItemState.Pending;
+                }
+                else
+                {
+                    desiredState = overlayState switch
+                    {
+                        VisibleAutomationOverlayState.Success => VisibleAutomationChecklistItemState.Completed,
+                        VisibleAutomationOverlayState.Failure => VisibleAutomationChecklistItemState.Failed,
+                        VisibleAutomationOverlayState.Warning => VisibleAutomationChecklistItemState.Warning,
+                        _ => VisibleAutomationChecklistItemState.Active,
+                    };
+                }
+
+                if (_visibleAutomationChecklistStates[i] != desiredState)
+                {
+                    _visibleAutomationChecklistStates[i] = desiredState;
+                    if (i < _visibleAutomationChecklistStateChangedAt.Length)
+                        _visibleAutomationChecklistStateChangedAt[i] = EditorApplication.timeSinceStartup;
+                }
+            }
+        }
+
+        private static string BuildVisibleAutomationOverlayProgressText(int stepIndex, int totalSteps)
+        {
+            if (stepIndex > 0 && totalSteps > 0)
+                return $"Step {stepIndex}/{totalSteps}";
+
+            if (stepIndex > 0)
+                return $"Step {stepIndex}";
+
+            return string.Empty;
+        }
+
+        private static string GetVisibleAutomationOverlayStatusLabel(VisibleAutomationOverlayState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationOverlayState.Success:
+                    return "PASSED";
+                case VisibleAutomationOverlayState.Failure:
+                    return "FAILED";
+                case VisibleAutomationOverlayState.Warning:
+                    return "NOTICE";
+                default:
+                    return "RUNNING";
+            }
+        }
+
+        private static void GetVisibleAutomationOverlayPalette(
+            VisibleAutomationOverlayState state,
+            out Color accentColor,
+            out Color backgroundColor,
+            out Color borderColor,
+            out Color badgeColor,
+            out Color badgeTextColor)
+        {
+            switch (state)
+            {
+                case VisibleAutomationOverlayState.Success:
+                    accentColor = new Color(0.22f, 0.75f, 0.45f, 1f);
+                    backgroundColor = new Color(0.06f, 0.11f, 0.08f, 0.96f);
+                    borderColor = new Color(0.24f, 0.60f, 0.39f, 0.95f);
+                    badgeColor = new Color(0.18f, 0.46f, 0.30f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+                case VisibleAutomationOverlayState.Failure:
+                    accentColor = new Color(0.86f, 0.30f, 0.30f, 1f);
+                    backgroundColor = new Color(0.13f, 0.07f, 0.08f, 0.97f);
+                    borderColor = new Color(0.58f, 0.22f, 0.22f, 0.96f);
+                    badgeColor = new Color(0.52f, 0.18f, 0.18f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+                case VisibleAutomationOverlayState.Warning:
+                    accentColor = new Color(0.90f, 0.67f, 0.22f, 1f);
+                    backgroundColor = new Color(0.13f, 0.10f, 0.06f, 0.97f);
+                    borderColor = new Color(0.62f, 0.47f, 0.17f, 0.95f);
+                    badgeColor = new Color(0.60f, 0.45f, 0.14f, 1f);
+                    badgeTextColor = new Color(0.12f, 0.08f, 0.02f, 1f);
+                    break;
+                default:
+                    accentColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+                    backgroundColor = new Color(0.07f, 0.08f, 0.10f, 0.94f);
+                    borderColor = new Color(0.14f, 0.39f, 0.43f, 0.96f);
+                    badgeColor = new Color(0.15f, 0.39f, 0.43f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+            }
+        }
+
+        private void ProcessQueuedVisibleAutomationAction()
+        {
+            if (!_queuedVisibleAutomationAction.HasValue)
+                return;
+
+            if (Event.current.type == EventType.Repaint)
+                ScheduleQueuedVisibleAutomationAction();
+        }
+
+        private void ScheduleQueuedVisibleAutomationAction()
+        {
+            if (!_queuedVisibleAutomationAction.HasValue || _queuedVisibleAutomationDispatchPending)
+                return;
+
+            _queuedVisibleAutomationDispatchPending = true;
+            EditorApplication.delayCall += ExecuteQueuedVisibleAutomationAction;
+        }
+
+        private void ExecuteQueuedVisibleAutomationAction()
+        {
+            _queuedVisibleAutomationDispatchPending = false;
+
+            if (this == null || !_queuedVisibleAutomationAction.HasValue)
+                return;
+
+            var queuedAction = _queuedVisibleAutomationAction.Value;
+            var queuedAvatar = _queuedVisibleAutomationAvatar;
+            _queuedVisibleAutomationAction = null;
+            _queuedVisibleAutomationAvatar = null;
+
+            if (queuedAvatar != null && queuedAvatar != _selectedAvatar)
+            {
+                _selectedAvatar = queuedAvatar;
+                Selection.activeGameObject = queuedAvatar.gameObject;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+            }
+
+            var component = GetOrRefreshComponent();
+            var toolState = GetOrRefreshToolState(component);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            if (!hierarchy.HasPrimaryAction(queuedAction) && !hierarchy.HasAdvancedAction(queuedAction))
+            {
+                Debug.LogWarning($"[ASM-Lite] Visible automation skipped unavailable action '{queuedAction}' for current tool state '{toolState}'.");
+                return;
+            }
+
+            ExecuteVisibleAutomationAction(queuedAction);
+        }
+
+        private void ExecuteVisibleAutomationAction(AsmLiteWindowAction action)
+        {
+            switch (action)
+            {
+                case AsmLiteWindowAction.AddPrefab:
+                    AddPrefabForAutomation();
+                    break;
+                case AsmLiteWindowAction.Rebuild:
+                    RebuildForAutomation();
+                    break;
+                case AsmLiteWindowAction.ReturnToPackageManaged:
+                case AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged:
+                    ReturnToPackageManagedForAutomation();
+                    break;
+                case AsmLiteWindowAction.Detach:
+                    DetachForAutomation();
+                    break;
+                case AsmLiteWindowAction.Vendorize:
+                    VendorizeForAutomation();
+                    break;
+                default:
+                    Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{action}'.");
+                    break;
             }
         }
 
@@ -641,10 +2353,11 @@ namespace ASMLite.Editor
 
         private static bool ShouldDelayTextFieldCommit(string controlName)
         {
-            if (string.IsNullOrEmpty(controlName))
-                return false;
-
-            return controlName.StartsWith("asm_name_", StringComparison.Ordinal);
+            // Keep all customization text fields on the immediate IMGUI path.
+            // DelayedTextField has been regressing visible caret and selection
+            // rendering after focus moves between custom name inputs and the
+            // install-path tree, even though the fields remain editable.
+            return false;
         }
 
         private static bool ShouldRenderWheelPreview(EventType eventType)
@@ -1209,6 +2922,22 @@ namespace ASMLite.Editor
             return root;
         }
 
+        internal static string[] GetVisibleInstallPathOptionsForTesting(VRCAvatarDescriptor avatar)
+        {
+            var paths = new List<string>();
+            CollectTreePaths(BuildInstallPathTree(avatar), paths);
+            return paths
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        internal static string[] GetVisibleParameterBackupOptionsForTesting(VRCAvatarDescriptor avatar)
+        {
+            return GetBackableParameterNames(avatar);
+        }
+
         private static MenuTreeNode EnsureTreeNodeExists(
             Dictionary<string, MenuTreeNode> nodeMap, string path)
         {
@@ -1232,6 +2961,18 @@ namespace ASMLite.Editor
                 string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
             foreach (var child in node.Children)
                 SortTreeChildren(child);
+        }
+
+        private static void CollectTreePaths(MenuTreeNode node, List<string> paths)
+        {
+            if (node == null || paths == null)
+                return;
+
+            if (!string.IsNullOrEmpty(node.FullPath))
+                paths.Add(node.FullPath);
+
+            for (int i = 0; i < node.Children.Count; i++)
+                CollectTreePaths(node.Children[i], paths);
         }
 
         private static Dictionary<string, string> GetVrcFuryMoveMenuPathRemaps(VRCAvatarDescriptor avatar)
@@ -2330,6 +4071,32 @@ namespace ASMLite.Editor
                 .ToArray();
         }
 
+        private static bool IsAsmLiteGeneratedPresetsMenu(VRCExpressionsMenu menu)
+        {
+            if (menu == null)
+                return false;
+
+            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(menuPath))
+                return false;
+
+            return string.Equals(Path.GetFileName(menuPath), "ASMLite_Presets_Menu.asset", StringComparison.Ordinal);
+        }
+
+        private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
+        {
+            if (menu == null)
+                return false;
+
+            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(menuPath))
+                return false;
+
+            string fileName = Path.GetFileName(menuPath);
+            return fileName.StartsWith("ASMLite_", StringComparison.Ordinal)
+                && fileName.EndsWith("Menu.asset", StringComparison.Ordinal);
+        }
+
         private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
         {
             if (avatar == null)
@@ -2580,6 +4347,9 @@ namespace ASMLite.Editor
                 if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
                     continue;
 
+                if (IsAsmLiteGeneratedMenuAsset(control.subMenu))
+                    continue;
+
                 string segment = NormalizeMenuPathSegment(control.name);
                 string fullPath = string.IsNullOrEmpty(parentPath)
                     ? segment
@@ -2606,6 +4376,9 @@ namespace ASMLite.Editor
             {
                 var control = menu.controls[i];
                 if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
+                    continue;
+
+                if (IsAsmLiteGeneratedPresetsMenu(control.subMenu))
                     continue;
 
                 string segment = NormalizeMenuPathSegment(control.name);
@@ -3733,7 +5506,7 @@ namespace ASMLite.Editor
             {
                 case AsmLiteWindowAction.AddPrefab:
                     if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(40), GUILayout.ExpandWidth(true)))
-                        EditorApplication.delayCall += AddPrefabToAvatar;
+                        EditorApplication.delayCall += () => AddPrefabToAvatar();
                     break;
                 case AsmLiteWindowAction.Rebuild:
                     if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(40), GUILayout.MinWidth(220), GUILayout.ExpandWidth(true)))
@@ -3769,7 +5542,7 @@ namespace ASMLite.Editor
                 "Keeps your current avatar content and restores normal ASM-Lite editing.",
                 EditorStyles.wordWrappedMiniLabel);
             if (GUILayout.Button("Return to Package Managed", GUILayout.Height(32), GUILayout.ExpandWidth(true)))
-                EditorApplication.delayCall += ReturnToPackageManaged;
+                EditorApplication.delayCall += () => ReturnToPackageManaged();
             EditorGUILayout.EndVertical();
         }
 
@@ -3840,7 +5613,7 @@ namespace ASMLite.Editor
                 "Stop using the vendorized payload folder for this attached ASM-Lite component and return to package-managed generated assets.",
                 EditorStyles.wordWrappedMiniLabel);
             if (GUILayout.Button("Return This Avatar to Package Managed", GUILayout.Height(22)))
-                EditorApplication.delayCall += ReturnToPackageManaged;
+                EditorApplication.delayCall += () => ReturnToPackageManaged();
             EditorGUILayout.EndVertical();
         }
 
@@ -4548,6 +6321,9 @@ namespace ASMLite.Editor
             if (component == null || string.IsNullOrWhiteSpace(generatedDir))
                 return false;
 
+            if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(component.gameObject, component, "Retarget Generated Assets"))
+                return false;
+
             var vfComponent = FindLiveVrcFuryComponent(component);
             if (vfComponent == null)
                 return false;
@@ -4561,53 +6337,12 @@ namespace ASMLite.Editor
             var so = new SerializedObject(vfComponent);
             so.Update();
 
-            bool applied = false;
-            applied |= SetObjectReferenceIfPresent(so, "content.controllers.Array.data[0].controller.objRef", fxController);
-            applied |= SetObjectReferenceIfPresent(so, "content.menus.Array.data[0].menu.objRef", menu);
-            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameters.objRef", parameters);
-            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].parameter.objRef", parameters);
-            applied |= SetObjectReferenceIfPresent(so, "content.prms.Array.data[0].objRef", parameters);
-            applied |= EnsureArraySizeIfPresent(so, "content.globalParams", 1);
-            applied |= SetStringIfPresent(so, "content.globalParams.Array.data[0]", "*");
-            applied |= SetObjectReferenceIfPresent(so, "content.controller.objRef", fxController);
-            applied |= SetObjectReferenceIfPresent(so, "content.menu.objRef", menu);
-            applied |= SetObjectReferenceIfPresent(so, "content.parameters.objRef", parameters);
-
+            bool applied = ASMLitePrefabCreator.TryApplyFullControllerAssetReferences(so, component, fxController, menu, parameters);
             if (!applied)
                 return false;
 
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(vfComponent);
-            return true;
-        }
-
-        private static bool SetObjectReferenceIfPresent(SerializedObject so, string path, UnityEngine.Object value)
-        {
-            var prop = so.FindProperty(path);
-            if (prop == null)
-                return false;
-
-            prop.objectReferenceValue = value;
-            return true;
-        }
-
-        private static bool EnsureArraySizeIfPresent(SerializedObject so, string path, int size)
-        {
-            var prop = so.FindProperty(path);
-            if (prop == null || !prop.isArray)
-                return false;
-
-            prop.arraySize = size;
-            return true;
-        }
-
-        private static bool SetStringIfPresent(SerializedObject so, string path, string value)
-        {
-            var prop = so.FindProperty(path);
-            if (prop == null)
-                return false;
-
-            prop.stringValue = value ?? string.Empty;
             return true;
         }
 
@@ -4636,30 +6371,35 @@ namespace ASMLite.Editor
             return true;
         }
 
-        private void VendorizeAsmLite(ASMLiteComponent component)
+        private void VendorizeAsmLite(ASMLiteComponent component, bool requireConfirmation = true, bool showDialogs = true)
         {
             if (component == null)
                 return;
 
             const string modeLabel = "Vendorize ASM-Lite (Keep Attached)";
-            bool confirm = EditorUtility.DisplayDialog(
-                modeLabel,
-                "This will keep ASM-Lite attached and editable, mirror generated payload files into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, and switch this avatar to those mirrored files. Continue?",
-                "Continue",
-                "Cancel");
-            if (!confirm)
-                return;
+            if (requireConfirmation && showDialogs)
+            {
+                bool confirm = EditorUtility.DisplayDialog(
+                    modeLabel,
+                    "This will keep ASM-Lite attached and editable, mirror generated payload files into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, and switch this avatar to those mirrored files. Continue?",
+                    "Continue",
+                    "Cancel");
+                if (!confirm)
+                    return;
+            }
 
             var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avatar == null)
             {
-                EditorUtility.DisplayDialog(modeLabel, "No VRCAvatarDescriptor found for this ASM-Lite component.", "OK");
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, "No VRCAvatarDescriptor found for this ASM-Lite component.", "OK");
                 return;
             }
 
             if (!TryRefreshLiveInstallPathPrefix(component, "Vendorize"))
             {
-                EditorUtility.DisplayDialog(modeLabel, "Failed to refresh FullController install prefix before vendorizing.", "OK");
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, "Failed to refresh FullController install prefix before vendorizing.", "OK");
                 return;
             }
 
@@ -4669,13 +6409,15 @@ namespace ASMLite.Editor
 
             if (!TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out string vendorizedDir))
             {
-                EditorUtility.DisplayDialog(modeLabel, "Failed to mirror generated assets to Assets/ASM-Lite.", "OK");
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, "Failed to mirror generated assets to Assets/ASM-Lite.", "OK");
                 return;
             }
 
             if (!TryRetargetLiveFullControllerGeneratedAssets(component, vendorizedDir))
             {
-                EditorUtility.DisplayDialog(modeLabel, "Mirrored assets were created, but live FullController references could not be retargeted.", "OK");
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, "Mirrored assets were created, but live FullController references could not be retargeted.", "OK");
                 return;
             }
 
@@ -4689,31 +6431,36 @@ namespace ASMLite.Editor
             InvalidateCachedEditorState();
 
             Debug.Log($"[ASM-Lite] Vendorized generated payload for '{avatar.gameObject.name}' to '{vendorizedDir}' and kept ASM-Lite attached.");
-            EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
+            if (showDialogs)
+                EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
             Repaint();
         }
 
-        private void DetachAsmLite(ASMLiteComponent component, bool vendorizeToAssets)
+        private void DetachAsmLite(ASMLiteComponent component, bool vendorizeToAssets, bool requireConfirmation = true, bool showDialogs = true)
         {
             if (component == null)
                 return;
 
             string modeLabel = vendorizeToAssets ? "Vendorize + Detach" : "Detach ASM-Lite";
-            bool confirm = EditorUtility.DisplayDialog(
-                modeLabel,
-                vendorizeToAssets
-                    ? "This will bake ASM-Lite directly into avatar assets, copy generated assets into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, then remove the ASM-Lite prefab object. Continue?"
-                    : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object. Continue?",
-                "Continue",
-                "Cancel");
+            if (requireConfirmation && showDialogs)
+            {
+                bool confirm = EditorUtility.DisplayDialog(
+                    modeLabel,
+                    vendorizeToAssets
+                        ? "This will bake ASM-Lite directly into avatar assets, copy generated assets into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, then remove the ASM-Lite prefab object. Continue?"
+                        : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object. Continue?",
+                    "Continue",
+                    "Cancel");
 
-            if (!confirm)
-                return;
+                if (!confirm)
+                    return;
+            }
 
             if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
             {
                 Debug.LogError(detail);
-                EditorUtility.DisplayDialog(modeLabel, detail, "OK");
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, detail, "OK");
                 return;
             }
 
@@ -4746,11 +6493,12 @@ namespace ASMLite.Editor
                 Debug.Log($"[ASM-Lite] {detail}");
             }
 
-            EditorUtility.DisplayDialog(modeLabel + " Complete", completion, "OK");
+            if (showDialogs)
+                EditorUtility.DisplayDialog(modeLabel + " Complete", completion, "OK");
             Repaint();
         }
 
-        private void ReturnToPackageManaged()
+        private void ReturnToPackageManaged(bool showDialogs = true)
         {
             if (_selectedAvatar == null)
                 return;
@@ -4760,29 +6508,38 @@ namespace ASMLite.Editor
             {
                 if (!existing.useVendorizedGeneratedAssets)
                 {
-                    EditorUtility.DisplayDialog(
-                        "Already Package Managed",
-                        "This avatar already has an ASM-Lite component attached and editable.",
-                        "OK");
+                    if (showDialogs)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Already Package Managed",
+                            "This avatar already has an ASM-Lite component attached and editable.",
+                            "OK");
+                    }
                     return;
                 }
 
                 Undo.RecordObject(existing, "Disable ASM-Lite Vendorized Assets");
                 if (!TryReturnAttachedVendorizedToPackageManaged(existing, _selectedAvatar))
                 {
-                    EditorUtility.DisplayDialog(
-                        "Return to Package Managed",
-                        "Failed to restore package-managed ASM-Lite references or clean vendorized generated assets on the attached avatar.",
-                        "OK");
+                    if (showDialogs)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Return to Package Managed",
+                            "Failed to restore package-managed ASM-Lite references or clean vendorized generated assets on the attached avatar.",
+                            "OK");
+                    }
                     return;
                 }
 
                 InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
-                EditorUtility.DisplayDialog(
-                    "Package Managed Restored",
-                    "ASM-Lite remains attached and editable. This avatar now uses package-managed generated payload references again.",
-                    "OK");
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Package Managed Restored",
+                        "ASM-Lite remains attached and editable. This avatar now uses package-managed generated payload references again.",
+                        "OK");
+                }
                 Repaint();
                 return;
             }
@@ -4791,12 +6548,15 @@ namespace ASMLite.Editor
 
             InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
-            AddPrefabToAvatar();
+            AddPrefabToAvatar(showDialogs: false);
 
-            EditorUtility.DisplayDialog(
-                "Package Managed Restored",
-                "ASM-Lite has been re-attached in package-managed mode for this avatar.\n\nYou can now edit settings and rebuild normally.",
-                "OK");
+            if (showDialogs)
+            {
+                EditorUtility.DisplayDialog(
+                    "Package Managed Restored",
+                    "ASM-Lite has been re-attached in package-managed mode for this avatar.\n\nYou can now edit settings and rebuild normally.",
+                    "OK");
+            }
         }
 
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
@@ -4980,7 +6740,7 @@ namespace ASMLite.Editor
             return changedComponent || removedMoveComponents > 0;
         }
 
-        private void AddPrefabToAvatar()
+        private void AddPrefabToAvatar(bool showDialogs = true)
         {
             if (_selectedAvatar == null)
                 return;
@@ -4988,6 +6748,12 @@ namespace ASMLite.Editor
             var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
             if (existing != null)
             {
+                if (!showDialogs)
+                {
+                    Debug.LogWarning($"[ASM-Lite] Add Prefab: no-dialog mode skipped duplicate add because an ASM-Lite component is already attached to '{_selectedAvatar.gameObject.name}'.");
+                    return;
+                }
+
                 bool replace = EditorUtility.DisplayDialog(
                     "ASM-Lite Already Present",
                     "An ASM-Lite component is already on this avatar.\n\n" +
@@ -5003,10 +6769,14 @@ namespace ASMLite.Editor
 
             if (prefabAsset == null)
             {
-                EditorUtility.DisplayDialog(
-                    "ASM-Lite: Error",
-                    $"Could not load prefab at {ASMLiteAssetPaths.Prefab}.\nCheck the Console for details.",
-                    "OK");
+                Debug.LogError($"[ASM-Lite] Could not load prefab at {ASMLiteAssetPaths.Prefab}.");
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "ASM-Lite: Error",
+                        $"Could not load prefab at {ASMLiteAssetPaths.Prefab}.\nCheck the Console for details.",
+                        "OK");
+                }
                 return;
             }
 
@@ -5043,12 +6813,12 @@ namespace ASMLite.Editor
             InvalidateCachedEditorState();
             component = GetOrRefreshComponent();
             if (component != null)
-                BakeAssets(component);
+                BakeAssets(component, showDialogs);
 
             Repaint();
         }
 
-        private void BakeAssets(ASMLiteComponent component)
+        private void BakeAssets(ASMLiteComponent component, bool showDialogs = true)
         {
             if (component == null)
                 return;
@@ -5202,10 +6972,13 @@ namespace ASMLite.Editor
             }
             catch (System.Exception ex)
             {
-                EditorUtility.DisplayDialog(
-                    "ASM-Lite: Build Error",
-                    $"An error occurred while baking assets:\n\n{ex.Message}\n\nCheck the Console for details.",
-                    "OK");
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "ASM-Lite: Build Error",
+                        $"An error occurred while baking assets:\n\n{ex.Message}\n\nCheck the Console for details.",
+                        "OK");
+                }
                 Debug.LogException(ex);
             }
         }
@@ -5288,9 +7061,831 @@ namespace ASMLite.Editor
             }
         }
 
+        internal void QueueVisibleAutomationAction(AsmLiteWindowAction action)
+        {
+            _queuedVisibleAutomationAction = action;
+            _queuedVisibleAutomationAvatar = _selectedAvatar;
+            ScheduleQueuedVisibleAutomationAction();
+            Repaint();
+        }
+
+        internal void ConfigureExternalVisibleAutomationOverlay(string statePath, string ackPath)
+        {
+            string normalizedStatePath = string.IsNullOrWhiteSpace(statePath)
+                ? string.Empty
+                : Path.GetFullPath(statePath.Trim());
+            string normalizedAckPath = string.IsNullOrWhiteSpace(ackPath)
+                ? string.Empty
+                : Path.GetFullPath(ackPath.Trim());
+            bool changed = !string.Equals(_visibleAutomationExternalOverlayStatePath, normalizedStatePath, StringComparison.Ordinal)
+                || !string.Equals(_visibleAutomationExternalOverlayAckPath, normalizedAckPath, StringComparison.Ordinal);
+
+            if (!changed
+                && string.Equals(_visibleAutomationExternalOverlayStatePath, normalizedStatePath, StringComparison.Ordinal)
+                && string.Equals(_visibleAutomationExternalOverlayAckPath, normalizedAckPath, StringComparison.Ordinal)
+                && (!string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlaySessionId) || string.IsNullOrWhiteSpace(normalizedStatePath)))
+            {
+                return;
+            }
+
+            _visibleAutomationExternalOverlayStatePath = normalizedStatePath;
+            _visibleAutomationExternalOverlayAckPath = normalizedAckPath;
+            _visibleAutomationExternalOverlaySessionId = string.IsNullOrWhiteSpace(normalizedStatePath)
+                ? string.Empty
+                : Guid.NewGuid().ToString("N");
+            _visibleAutomationExternalOverlayLastPublishedJson = string.Empty;
+            _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
+            _visibleAutomationCompletionReviewRequestId = 0;
+            DeleteVisibleAutomationExternalOverlayAckFile();
+            RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        internal void SetVisibleAutomationOverlayStatus(
+            string title,
+            string step,
+            int stepIndex = 0,
+            int totalSteps = 0,
+            VisibleAutomationOverlayState state = VisibleAutomationOverlayState.Running,
+            bool presentationMode = false,
+            string[] checklistItems = null)
+        {
+            _visibleAutomationOverlayTitle = string.IsNullOrWhiteSpace(title)
+                ? "ASM-Lite visible smoke test"
+                : title.Trim();
+            _visibleAutomationOverlayStep = string.IsNullOrWhiteSpace(step)
+                ? string.Empty
+                : step.Trim();
+            _visibleAutomationOverlayStepIndex = Mathf.Max(0, stepIndex);
+            _visibleAutomationOverlayTotalSteps = Mathf.Max(0, totalSteps);
+            _visibleAutomationOverlayState = state;
+            _visibleAutomationOverlayPresentationMode = presentationMode;
+
+            if (checklistItems != null)
+                SetVisibleAutomationChecklistItems(checklistItems);
+
+            UpdateVisibleAutomationChecklistProgress(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayState);
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal void ClearVisibleAutomationOverlay()
+        {
+            _visibleAutomationOverlayTitle = string.Empty;
+            _visibleAutomationOverlayStep = string.Empty;
+            _visibleAutomationOverlayStepIndex = 0;
+            _visibleAutomationOverlayTotalSteps = 0;
+            _visibleAutomationOverlayState = VisibleAutomationOverlayState.Running;
+            _visibleAutomationOverlayPresentationMode = false;
+            _visibleAutomationChecklistItems = Array.Empty<string>();
+            _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+            _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+            _visibleAutomationCompletionReviewVisible = false;
+            _visibleAutomationCompletionReviewAcknowledged = false;
+            _visibleAutomationCompletionReviewTitle = string.Empty;
+            _visibleAutomationCompletionReviewMessage = string.Empty;
+            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
+            _visibleAutomationUsingHostWindowFallbackBounds = false;
+            EnsureVisibleAutomationChecklistVisualCount(0);
+            CloseVisibleAutomationOverlayPopupWindows();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal enum VisibleAutomationOverlayHostKind
+        {
+            DetachedAuxiliaryWindows,
+            ExternalPythonProcess,
+        }
+
+        internal readonly struct VisibleAutomationOverlayHostSnapshot
+        {
+            internal VisibleAutomationOverlayHostSnapshot(
+                VisibleAutomationOverlayHostKind hostKind,
+                Rect screenBounds,
+                bool hasStatusWindow,
+                Rect statusWindowRect,
+                bool hasChecklistWindow,
+                Rect checklistWindowRect,
+                bool hasCompletionReviewWindow,
+                Rect completionReviewWindowRect,
+                bool usingHostWindowFallbackBounds,
+                string externalOverlayStatePath,
+                string externalOverlayAckPath,
+                bool externalOverlayStateFileExists)
+            {
+                HostKind = hostKind;
+                ScreenBounds = screenBounds;
+                HasStatusWindow = hasStatusWindow;
+                StatusWindowRect = statusWindowRect;
+                HasChecklistWindow = hasChecklistWindow;
+                ChecklistWindowRect = checklistWindowRect;
+                HasCompletionReviewWindow = hasCompletionReviewWindow;
+                CompletionReviewWindowRect = completionReviewWindowRect;
+                UsingHostWindowFallbackBounds = usingHostWindowFallbackBounds;
+                ExternalOverlayStatePath = externalOverlayStatePath ?? string.Empty;
+                ExternalOverlayAckPath = externalOverlayAckPath ?? string.Empty;
+                ExternalOverlayStateFileExists = externalOverlayStateFileExists;
+            }
+
+            public VisibleAutomationOverlayHostKind HostKind { get; }
+            public Rect ScreenBounds { get; }
+            public bool HasStatusWindow { get; }
+            public Rect StatusWindowRect { get; }
+            public bool HasChecklistWindow { get; }
+            public Rect ChecklistWindowRect { get; }
+            public bool HasCompletionReviewWindow { get; }
+            public Rect CompletionReviewWindowRect { get; }
+            public bool UsingHostWindowFallbackBounds { get; }
+            public string ExternalOverlayStatePath { get; }
+            public string ExternalOverlayAckPath { get; }
+            public bool ExternalOverlayStateFileExists { get; }
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayChecklistItem
+        {
+            public string text = string.Empty;
+            public string state = string.Empty;
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayStateDocument
+        {
+            public string sessionId = string.Empty;
+            public bool sessionActive;
+            public bool presentationMode;
+            public string title = string.Empty;
+            public string step = string.Empty;
+            public int stepIndex;
+            public int totalSteps;
+            public string state = string.Empty;
+            public VisibleAutomationExternalOverlayChecklistItem[] checklist = Array.Empty<VisibleAutomationExternalOverlayChecklistItem>();
+            public bool completionReviewVisible;
+            public int completionReviewRequestId;
+            public string completionReviewTitle = string.Empty;
+            public string completionReviewMessage = string.Empty;
+            public bool completionReviewAcknowledged;
+            public long updatedUtcTicks;
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayAckDocument
+        {
+            public string sessionId = string.Empty;
+            public int completionReviewRequestId;
+            public bool acknowledged;
+            public long acknowledgedUtcTicks;
+        }
+
+        internal enum VisibleAutomationOverlayState
+        {
+            Running,
+            Success,
+            Failure,
+            Warning,
+        }
+
+        internal enum VisibleAutomationChecklistItemState
+        {
+            Pending,
+            Active,
+            Completed,
+            Failed,
+            Warning,
+        }
+
+        internal struct PendingCustomizationSnapshot
+        {
+            public PendingCustomizationSnapshot(
+                VRCAvatarDescriptor selectedAvatar,
+                bool useCustomRootIcon,
+                bool useCustomRootName,
+                string customRootName,
+                bool useCustomInstallPath,
+                string customInstallPath,
+                bool useParameterExclusions,
+                string[] excludedParameterNames,
+                Texture2D[] customIcons)
+            {
+                SelectedAvatar = selectedAvatar;
+                UseCustomRootIcon = useCustomRootIcon;
+                UseCustomRootName = useCustomRootName;
+                CustomRootName = customRootName ?? string.Empty;
+                UseCustomInstallPath = useCustomInstallPath;
+                CustomInstallPath = customInstallPath ?? string.Empty;
+                UseParameterExclusions = useParameterExclusions;
+                ExcludedParameterNames = excludedParameterNames ?? Array.Empty<string>();
+                CustomIcons = customIcons ?? Array.Empty<Texture2D>();
+            }
+
+            public VRCAvatarDescriptor SelectedAvatar { get; }
+            public bool UseCustomRootIcon { get; }
+            public bool UseCustomRootName { get; }
+            public string CustomRootName { get; }
+            public bool UseCustomInstallPath { get; }
+            public string CustomInstallPath { get; }
+            public bool UseParameterExclusions { get; }
+            public string[] ExcludedParameterNames { get; }
+            public Texture2D[] CustomIcons { get; }
+        }
+
+        internal void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
+        {
+            _selectedAvatar = avatar;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+            SyncPendingSlotCountFromAvatar();
+        }
+
+        internal void SelectInstallPathForAutomation(string selectedPath)
+        {
+            ApplyInstallPathSelection(GetOrRefreshComponent(), selectedPath);
+        }
+
+        internal PendingCustomizationSnapshot GetPendingCustomizationSnapshotForTesting()
+        {
+            return new PendingCustomizationSnapshot(
+                _selectedAvatar,
+                _pendingUseCustomRootIcon,
+                _pendingUseCustomRootName,
+                _pendingCustomRootName,
+                _pendingUseCustomInstallPath,
+                _pendingCustomInstallPath,
+                _pendingUseParameterExclusions,
+                CloneStrings(_pendingExcludedParameterNames),
+                _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>());
+        }
+
+        internal void AddPrefabForAutomation()
+        {
+            AddPrefabToAvatar(showDialogs: false);
+        }
+
+        internal void RebuildForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                BakeAssets(component, showDialogs: false);
+        }
+
+        internal void VendorizeForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                VendorizeAsmLite(component, requireConfirmation: false, showDialogs: false);
+        }
+
+        internal void DetachForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                DetachAsmLite(component, vendorizeToAssets: false, requireConfirmation: false, showDialogs: false);
+        }
+
+        internal static bool TryRetargetLiveFullControllerGeneratedAssetsForTesting(ASMLiteComponent component, string generatedDir)
+        {
+            return TryRetargetLiveFullControllerGeneratedAssets(component, generatedDir);
+        }
+
+        internal void RemovePrefabForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                RemovePrefab(component);
+        }
+
+        internal void ReturnToPackageManagedForAutomation()
+        {
+            ReturnToPackageManaged(showDialogs: false);
+        }
+
+        private abstract class VisibleAutomationOverlayPopupWindowBase : EditorWindow
+        {
+            private const float PositionSyncEpsilon = 0.5f;
+
+            protected ASMLiteWindow Owner;
+            private bool _hasBeenShown;
+
+            protected static void ApplyBorder(VisualElement element, Color color, float width = 1f)
+            {
+                if (element == null)
+                    return;
+
+                element.style.borderLeftWidth = width;
+                element.style.borderRightWidth = width;
+                element.style.borderTopWidth = width;
+                element.style.borderBottomWidth = width;
+                element.style.borderLeftColor = color;
+                element.style.borderRightColor = color;
+                element.style.borderTopColor = color;
+                element.style.borderBottomColor = color;
+            }
+
+            protected void PrepareWindow(ASMLiteWindow owner)
+            {
+                Owner = owner;
+                titleContent = GUIContent.none;
+                minSize = new Vector2(120f, 60f);
+                maxSize = new Vector2(10000f, 10000f);
+            }
+
+            protected void ShowOverlayWindow(Rect rect)
+            {
+                if (!_hasBeenShown)
+                {
+                    position = rect;
+                    ShowAuxWindow();
+                    position = rect;
+                    _hasBeenShown = true;
+                    return;
+                }
+
+                if (!HasMeaningfulPositionChange(position, rect))
+                    return;
+
+                position = rect;
+                Repaint();
+            }
+
+            private static bool HasMeaningfulPositionChange(Rect current, Rect next)
+            {
+                return Mathf.Abs(current.x - next.x) > PositionSyncEpsilon
+                    || Mathf.Abs(current.y - next.y) > PositionSyncEpsilon
+                    || Mathf.Abs(current.width - next.width) > PositionSyncEpsilon
+                    || Mathf.Abs(current.height - next.height) > PositionSyncEpsilon;
+            }
+
+            protected virtual void OnDisable()
+            {
+                _hasBeenShown = false;
+            }
+        }
+
+        private sealed class VisibleAutomationStatusOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _metaLabel;
+            private Label _stepLabel;
+            private VisualElement _badge;
+            private Label _badgeLabel;
+
+            internal static VisibleAutomationStatusOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationStatusOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.style.paddingLeft = 0f;
+                rootVisualElement.style.paddingRight = 0f;
+                rootVisualElement.style.paddingTop = 0f;
+                rootVisualElement.style.paddingBottom = 0f;
+                rootVisualElement.pickingMode = PickingMode.Ignore;
+
+                _panel = new VisualElement { pickingMode = PickingMode.Ignore };
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                _accent.style.height = 4f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement { pickingMode = PickingMode.Ignore };
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 16f;
+                body.style.paddingRight = 16f;
+                body.style.paddingTop = 14f;
+                body.style.paddingBottom = 14f;
+                _panel.Add(body);
+
+                var headerRow = new VisualElement { pickingMode = PickingMode.Ignore };
+                headerRow.style.flexDirection = FlexDirection.Row;
+                headerRow.style.alignItems = Align.FlexStart;
+                body.Add(headerRow);
+
+                var titleColumn = new VisualElement { pickingMode = PickingMode.Ignore };
+                titleColumn.style.flexDirection = FlexDirection.Column;
+                titleColumn.style.flexGrow = 1f;
+                titleColumn.style.marginRight = 12f;
+                headerRow.Add(titleColumn);
+
+                _titleLabel = new Label { pickingMode = PickingMode.Ignore };
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                titleColumn.Add(_titleLabel);
+
+                _metaLabel = new Label { pickingMode = PickingMode.Ignore };
+                titleColumn.Add(_metaLabel);
+
+                _badge = new VisualElement { pickingMode = PickingMode.Ignore };
+                _badge.style.minWidth = 96f;
+                _badge.style.height = 22f;
+                _badge.style.justifyContent = Justify.Center;
+                _badge.style.alignItems = Align.Center;
+                _badge.style.paddingLeft = 10f;
+                _badge.style.paddingRight = 10f;
+                headerRow.Add(_badge);
+
+                _badgeLabel = new Label { pickingMode = PickingMode.Ignore };
+                _badgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _badge.Add(_badgeLabel);
+
+                _stepLabel = new Label { pickingMode = PickingMode.Ignore };
+                _stepLabel.style.whiteSpace = WhiteSpace.Normal;
+                _stepLabel.style.marginTop = 12f;
+                _stepLabel.style.flexGrow = 1f;
+                body.Add(_stepLabel);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                GetVisibleAutomationOverlayPalette(
+                    owner._visibleAutomationOverlayState,
+                    out Color accentColor,
+                    out Color backgroundColor,
+                    out Color borderColor,
+                    out Color badgeColor,
+                    out Color badgeTextColor);
+
+                bool presentationMode = owner._visibleAutomationOverlayPresentationMode;
+                _panel.style.backgroundColor = backgroundColor;
+                ApplyBorder(_panel, borderColor);
+                _accent.style.backgroundColor = accentColor;
+                _titleLabel.text = string.IsNullOrWhiteSpace(owner._visibleAutomationOverlayTitle)
+                    ? "ASM-Lite visible smoke test"
+                    : owner._visibleAutomationOverlayTitle;
+                _titleLabel.style.fontSize = presentationMode ? 15 : 12;
+                _titleLabel.style.color = Color.white;
+
+                string metaText = owner.BuildVisibleAutomationOverlayMetaText();
+                _metaLabel.text = metaText;
+                _metaLabel.style.display = string.IsNullOrEmpty(metaText) ? DisplayStyle.None : DisplayStyle.Flex;
+                _metaLabel.style.fontSize = presentationMode ? 11 : 10;
+                _metaLabel.style.color = new Color(0.74f, 0.82f, 0.91f, 0.96f);
+
+                _stepLabel.text = owner._visibleAutomationOverlayStep;
+                _stepLabel.style.fontSize = presentationMode ? 16 : 12;
+                _stepLabel.style.color = new Color(0.95f, 0.97f, 0.99f, 1f);
+
+                _badge.style.backgroundColor = badgeColor;
+                _badgeLabel.text = GetVisibleAutomationOverlayStatusLabel(owner._visibleAutomationOverlayState);
+                _badgeLabel.style.fontSize = presentationMode ? 11 : 10;
+                _badgeLabel.style.color = badgeTextColor;
+            }
+        }
+
+        private sealed class VisibleAutomationChecklistOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _metaLabel;
+            private ScrollView _scrollView;
+            private VisualElement _itemsContainer;
+            private readonly List<VisibleAutomationChecklistVisualRefs> _itemVisuals = new List<VisibleAutomationChecklistVisualRefs>();
+
+            internal static VisibleAutomationChecklistOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationChecklistOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.pickingMode = PickingMode.Ignore;
+
+                _panel = new VisualElement { pickingMode = PickingMode.Ignore };
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                _accent.style.height = 5f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement { pickingMode = PickingMode.Ignore };
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 12f;
+                body.style.paddingRight = 10f;
+                body.style.paddingTop = 12f;
+                body.style.paddingBottom = 12f;
+                _panel.Add(body);
+
+                _titleLabel = new Label("Visible Smoke Checklist") { pickingMode = PickingMode.Ignore };
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                body.Add(_titleLabel);
+
+                _metaLabel = new Label { pickingMode = PickingMode.Ignore };
+                _metaLabel.style.marginTop = 2f;
+                body.Add(_metaLabel);
+
+                _scrollView = new ScrollView(ScrollViewMode.Vertical)
+                {
+                    pickingMode = PickingMode.Ignore,
+                };
+                _scrollView.style.flexGrow = 1f;
+                _scrollView.style.marginTop = 10f;
+                _scrollView.style.paddingRight = 2f;
+                _scrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+                _scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+                body.Add(_scrollView);
+
+                _itemsContainer = new VisualElement { pickingMode = PickingMode.Ignore };
+                _itemsContainer.style.flexDirection = FlexDirection.Column;
+                _itemsContainer.style.flexGrow = 1f;
+                _scrollView.Add(_itemsContainer);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                bool presentationMode = owner._visibleAutomationOverlayPresentationMode;
+                int totalItems = owner._visibleAutomationChecklistItems.Length;
+                int completedItems = owner.CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+
+                _panel.style.backgroundColor = new Color(0.05f, 0.07f, 0.09f, 0.96f);
+                ApplyBorder(_panel, new Color(0.14f, 0.39f, 0.43f, 0.96f));
+                _accent.style.backgroundColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+
+                _titleLabel.text = "Visible Smoke Checklist";
+                _titleLabel.style.fontSize = presentationMode ? 13 : 11;
+                _titleLabel.style.color = Color.white;
+
+                _metaLabel.text = $"Completed {completedItems}/{totalItems} • Scroll for full test list";
+                _metaLabel.style.fontSize = presentationMode ? 10 : 9;
+                _metaLabel.style.color = new Color(0.76f, 0.84f, 0.92f, 0.95f);
+
+                if (_scrollView != null)
+                    _scrollView.style.marginTop = presentationMode ? 12f : 10f;
+
+                EnsureVisualCount(totalItems);
+                double now = EditorApplication.timeSinceStartup;
+                for (int i = 0; i < totalItems; i++)
+                    UpdateItemVisual(owner, _itemVisuals[i], i, now, totalItems);
+            }
+
+            private void EnsureVisualCount(int totalItems)
+            {
+                if (_itemsContainer == null)
+                    return;
+
+                while (_itemVisuals.Count > totalItems)
+                {
+                    int last = _itemVisuals.Count - 1;
+                    _itemVisuals[last].Root.RemoveFromHierarchy();
+                    _itemVisuals.RemoveAt(last);
+                }
+
+                while (_itemVisuals.Count < totalItems)
+                {
+                    var refs = CreateChecklistVisual();
+                    _itemsContainer.Add(refs.Root);
+                    _itemVisuals.Add(refs);
+                }
+            }
+
+            private static VisibleAutomationChecklistVisualRefs CreateChecklistVisual()
+            {
+                var refs = new VisibleAutomationChecklistVisualRefs();
+                refs.Root = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Root.style.flexDirection = FlexDirection.Row;
+                refs.Root.style.alignItems = Align.Stretch;
+                refs.Root.style.flexGrow = 1f;
+                refs.Root.style.minHeight = VisibleAutomationChecklistCompactItemHeight;
+                refs.Root.style.marginBottom = 6f;
+                refs.Root.style.overflow = Overflow.Hidden;
+
+                refs.Accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Accent.style.width = 4f;
+                refs.Accent.style.flexShrink = 0f;
+                refs.Root.Add(refs.Accent);
+
+                var content = new VisualElement { pickingMode = PickingMode.Ignore };
+                content.style.flexDirection = FlexDirection.Column;
+                content.style.flexGrow = 1f;
+                content.style.paddingLeft = 9f;
+                content.style.paddingRight = 8f;
+                content.style.paddingTop = 7f;
+                content.style.paddingBottom = 5f;
+                refs.Root.Add(content);
+
+                var topRow = new VisualElement { pickingMode = PickingMode.Ignore };
+                topRow.style.flexDirection = FlexDirection.Row;
+                topRow.style.alignItems = Align.FlexStart;
+                topRow.style.flexGrow = 1f;
+                content.Add(topRow);
+
+                refs.Glyph = new Label { pickingMode = PickingMode.Ignore };
+                refs.Glyph.style.width = 20f;
+                refs.Glyph.style.minWidth = 20f;
+                refs.Glyph.style.marginRight = 6f;
+                refs.Glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+                refs.Glyph.style.unityTextAlign = TextAnchor.UpperCenter;
+                refs.Glyph.style.whiteSpace = WhiteSpace.NoWrap;
+                topRow.Add(refs.Glyph);
+
+                refs.Text = new Label { pickingMode = PickingMode.Ignore };
+                refs.Text.style.flexGrow = 1f;
+                refs.Text.style.whiteSpace = WhiteSpace.Normal;
+                refs.Text.style.unityTextAlign = TextAnchor.UpperLeft;
+                refs.Text.style.marginRight = 6f;
+                topRow.Add(refs.Text);
+
+                refs.Badge = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Badge.style.minWidth = 52f;
+                refs.Badge.style.height = 18f;
+                refs.Badge.style.justifyContent = Justify.Center;
+                refs.Badge.style.alignItems = Align.Center;
+                refs.Badge.style.paddingLeft = 6f;
+                refs.Badge.style.paddingRight = 6f;
+                refs.Badge.style.flexShrink = 0f;
+                topRow.Add(refs.Badge);
+
+                refs.BadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+                refs.BadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                refs.BadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                refs.BadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+                refs.Badge.Add(refs.BadgeLabel);
+
+                refs.StepLabel = new Label { pickingMode = PickingMode.Ignore };
+                refs.StepLabel.style.marginTop = 3f;
+                refs.StepLabel.style.whiteSpace = WhiteSpace.NoWrap;
+                refs.StepLabel.style.unityTextAlign = TextAnchor.LowerLeft;
+                content.Add(refs.StepLabel);
+                return refs;
+            }
+
+            private static void UpdateItemVisual(ASMLiteWindow owner, VisibleAutomationChecklistVisualRefs refs, int itemIndex, double now, int totalItems)
+            {
+                string itemLabel = owner._visibleAutomationChecklistItems[itemIndex];
+                var itemState = owner._visibleAutomationChecklistStates[itemIndex];
+                double changedAt = itemIndex < owner._visibleAutomationChecklistStateChangedAt.Length
+                    ? owner._visibleAutomationChecklistStateChangedAt[itemIndex]
+                    : now;
+                double stateAgeSeconds = Mathf.Max(0f, (float)(now - changedAt));
+
+                GetVisibleAutomationChecklistItemPalette(
+                    itemState,
+                    stateAgeSeconds,
+                    now,
+                    owner._visibleAutomationOverlayPresentationMode,
+                    out Color backgroundColor,
+                    out Color borderColor,
+                    out Color accentColor,
+                    out Color textColor,
+                    out Color badgeColor,
+                    out Color badgeTextColor,
+                    out Color glyphColor);
+
+                refs.Root.style.backgroundColor = backgroundColor;
+                ApplyBorder(refs.Root, borderColor);
+                refs.Root.style.minHeight = owner._visibleAutomationOverlayPresentationMode ? 48f : VisibleAutomationChecklistCompactItemHeight;
+                refs.Root.style.marginBottom = itemIndex < totalItems - 1 ? 6f : 0f;
+                refs.Accent.style.backgroundColor = accentColor;
+                refs.Glyph.text = GetVisibleAutomationChecklistItemGlyph(itemState);
+                refs.Glyph.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 16 : 14;
+                refs.Glyph.style.color = glyphColor;
+
+                refs.Text.text = itemLabel;
+                refs.Text.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 12 : 11;
+                refs.Text.style.color = textColor;
+
+                refs.Badge.style.backgroundColor = badgeColor;
+                refs.BadgeLabel.text = GetVisibleAutomationChecklistItemStatusLabel(itemState);
+                refs.BadgeLabel.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 9 : 8;
+                refs.BadgeLabel.style.color = badgeTextColor;
+
+                refs.StepLabel.text = $"Step {itemIndex + 1}";
+                refs.StepLabel.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 9 : 8;
+                refs.StepLabel.style.color = new Color(0.72f, 0.78f, 0.86f, 0.92f);
+            }
+        }
+
+        private sealed class VisibleAutomationCompletionReviewOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _messageLabel;
+            private Label _hintLabel;
+            private Button _finishButton;
+
+            internal static VisibleAutomationCompletionReviewOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationCompletionReviewOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.style.paddingLeft = 0f;
+                rootVisualElement.style.paddingRight = 0f;
+                rootVisualElement.style.paddingTop = 0f;
+                rootVisualElement.style.paddingBottom = 0f;
+
+                _panel = new VisualElement();
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement();
+                _accent.style.height = 5f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement();
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 18f;
+                body.style.paddingRight = 18f;
+                body.style.paddingTop = 16f;
+                body.style.paddingBottom = 16f;
+                _panel.Add(body);
+
+                _titleLabel = new Label();
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _titleLabel.style.fontSize = 15;
+                _titleLabel.style.color = Color.white;
+                _titleLabel.style.whiteSpace = WhiteSpace.Normal;
+                body.Add(_titleLabel);
+
+                _messageLabel = new Label();
+                _messageLabel.style.marginTop = 10f;
+                _messageLabel.style.whiteSpace = WhiteSpace.Normal;
+                _messageLabel.style.flexGrow = 1f;
+                _messageLabel.style.color = new Color(0.92f, 0.96f, 0.99f, 1f);
+                _messageLabel.style.fontSize = 12;
+                body.Add(_messageLabel);
+
+                _hintLabel = new Label();
+                _hintLabel.style.marginTop = 10f;
+                _hintLabel.style.color = new Color(0.77f, 0.84f, 0.91f, 0.96f);
+                _hintLabel.style.fontSize = 10;
+                _hintLabel.style.whiteSpace = WhiteSpace.Normal;
+                body.Add(_hintLabel);
+
+                _finishButton = new Button(() => Owner?.AcknowledgeVisibleAutomationCompletionReview())
+                {
+                    text = "Accept and close"
+                };
+                _finishButton.style.marginTop = 14f;
+                _finishButton.style.height = 28f;
+                _finishButton.style.unityFontStyleAndWeight = FontStyle.Bold;
+                body.Add(_finishButton);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                _panel.style.backgroundColor = new Color(0.06f, 0.09f, 0.12f, 0.98f);
+                ApplyBorder(_panel, new Color(0.24f, 0.53f, 0.62f, 0.98f));
+                _accent.style.backgroundColor = new Color(0.22f, 0.74f, 0.83f, 1f);
+
+                _titleLabel.text = string.IsNullOrWhiteSpace(owner._visibleAutomationCompletionReviewTitle)
+                    ? "Visible smoke results ready"
+                    : owner._visibleAutomationCompletionReviewTitle;
+                _messageLabel.text = owner._visibleAutomationCompletionReviewMessage ?? string.Empty;
+
+                _hintLabel.text = "Review the overlays before exiting, then click Accept and close to approve this visible smoke run.";
+            }
+        }
+
         // ── Nested types ──────────────────────────────────────────────────────
 
-        /// <summary>Node in the install-path menu tree.</summary>
         private class MenuTreeNode
         {
             public string Name;

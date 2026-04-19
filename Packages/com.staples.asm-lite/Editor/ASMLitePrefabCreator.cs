@@ -79,6 +79,9 @@ namespace ASMLite.Editor
                 return false;
             }
 
+            if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " Generated FX Repair"))
+                return false;
+
             ConfigureVRCFuryFullController(root, component);
 
             var vfType = FindTypeByFullName("VF.Model.VRCFury");
@@ -122,6 +125,12 @@ namespace ASMLite.Editor
                 return;
             }
 
+            if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt("Configure FullController Wiring"))
+            {
+                Debug.LogWarning("[ASM-Lite] Generated FX controller could not be repaired while configuring FullController wiring. Prefab wiring was skipped.");
+                return;
+            }
+
             var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
             var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
             var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
@@ -144,40 +153,7 @@ namespace ASMLite.Editor
             if (content.managedReferenceValue == null || content.managedReferenceValue.GetType() != fullControllerType)
                 content.managedReferenceValue = Activator.CreateInstance(fullControllerType, true);
 
-            bool ok = true;
-
-            ok &= EnsureArraySize(so, "content.controllers", 1, required: true);
-            ok &= SetObjectReference(so, "content.controllers.Array.data[0].controller.objRef", fxController, required: true);
-            ok &= SetInt(so, "content.controllers.Array.data[0].type", 5, required: true);
-
-            ok &= EnsureArraySize(so, "content.menus", 1, required: true);
-            ok &= SetObjectReference(so, "content.menus.Array.data[0].menu.objRef", menu, required: true);
-            ok &= ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(so, component);
-
-            // VRCFury consumes FullController parameter registrations from prms.
-            // Keep this populated so merged menu controls (ASMLite_Ctrl triggers)
-            // always resolve against merged parameters at build time.
-            ok &= EnsureArraySize(so, "content.prms", 1, required: true);
-            ok &= SetAnyObjectReference(
-                so,
-                new[]
-                {
-                    "content.prms.Array.data[0].parameters.objRef", // expected schema
-                    "content.prms.Array.data[0].parameter.objRef",  // compatibility fallback
-                    "content.prms.Array.data[0].objRef",            // compatibility fallback
-                },
-                parameters,
-                required: true,
-                fieldLabel: "content.prms[0].parameters.objRef");
-
-            ok &= EnsureArraySize(so, "content.smoothedPrms", 0, required: true);
-            ok &= EnsureArraySize(so, "content.globalParams", 1, required: true);
-            ok &= SetString(so, "content.globalParams.Array.data[0]", "*", required: true);
-
-            ok &= SetObjectReference(so, "content.controller.objRef", fxController, required: true);
-            ok &= SetObjectReference(so, "content.menu.objRef", menu, required: true);
-            // Keep the top-level field in sync as a compatibility mirror.
-            ok &= SetObjectReference(so, "content.parameters.objRef", parameters, required: true);
+            bool ok = TryApplyFullControllerAssetReferences(so, component, fxController, menu, parameters);
 
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(vfComponent);
@@ -188,6 +164,59 @@ namespace ASMLite.Editor
 #endif
             if (!ok)
                 Debug.LogWarning("[ASM-Lite] FullController wiring completed with missing fields. Check VRCFury schema compatibility.");
+        }
+
+        internal static bool TryApplyFullControllerAssetReferences(
+            SerializedObject serializedVfComponent,
+            ASMLiteComponent component,
+            UnityEngine.Object fxController,
+            UnityEngine.Object menu,
+            UnityEngine.Object parameters)
+        {
+            if (serializedVfComponent == null)
+                return false;
+
+            bool ok = true;
+
+            ok &= EnsureArraySize(serializedVfComponent, "content.controllers", 1, required: true);
+            ok &= SetObjectReference(serializedVfComponent, "content.controllers.Array.data[0].controller.objRef", fxController, required: true);
+            ok &= SetInt(serializedVfComponent, "content.controllers.Array.data[0].type", 5, required: true);
+
+            ok &= EnsureArraySize(serializedVfComponent, "content.menus", 1, required: true);
+            ok &= SetObjectReference(serializedVfComponent, "content.menus.Array.data[0].menu.objRef", menu, required: true);
+            ok &= ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(serializedVfComponent, component);
+
+            // VRCFury consumes FullController parameter registrations from prms.
+            // Keep this populated so merged menu controls (ASMLite_Ctrl triggers)
+            // always resolve against merged parameters at build time.
+            ok &= EnsureArraySize(serializedVfComponent, "content.prms", 1, required: true);
+            ok &= SetAnyObjectReference(
+                serializedVfComponent,
+                new[]
+                {
+                    "content.prms.Array.data[0].parameters.objRef", // expected schema
+                    "content.prms.Array.data[0].parameter.objRef",  // compatibility fallback
+                    "content.prms.Array.data[0].objRef",            // compatibility fallback
+                },
+                parameters,
+                required: true,
+                fieldLabel: "content.prms[0].parameters.objRef");
+
+            ok &= EnsureArraySize(serializedVfComponent, "content.smoothedPrms", 0, required: true);
+            ok &= EnsureArraySize(serializedVfComponent, "content.globalParams", 1, required: true);
+            ok &= SetString(serializedVfComponent, "content.globalParams.Array.data[0]", "*", required: true);
+            // Newer VRCFury schemas expose this flag and need it so unsaved/non-synced
+            // Clear Preset defaults remain globally addressable. Older reflected test
+            // schemas may not have the field yet, so treat it as optional.
+            ok &= SetBool(serializedVfComponent, "content.allNonsyncedAreGlobal", true, required: false);
+            ok &= SetBool(serializedVfComponent, "content.ignoreSaved", false, required: false);
+
+            ok &= SetObjectReference(serializedVfComponent, "content.controller.objRef", fxController, required: true);
+            ok &= SetObjectReference(serializedVfComponent, "content.menu.objRef", menu, required: true);
+            // Keep the top-level field in sync as a compatibility mirror.
+            ok &= SetObjectReference(serializedVfComponent, "content.parameters.objRef", parameters, required: true);
+
+            return ok;
         }
 
         private static Type FindTypeByFullName(string fullName)
@@ -276,6 +305,16 @@ namespace ASMLite.Editor
                 return MissingField(path, required);
 
             prop.stringValue = value ?? string.Empty;
+            return true;
+        }
+
+        private static bool SetBool(SerializedObject so, string path, bool value, bool required)
+        {
+            var prop = so.FindProperty(path);
+            if (prop == null)
+                return MissingField(path, required);
+
+            prop.boolValue = value;
             return true;
         }
 

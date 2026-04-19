@@ -30,6 +30,10 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(
                 yaml.Contains("- \"*\"") || yaml.Contains("- '*'"),
                 "Prefab FullController must bind wildcard global params to avoid VF-local name isolation.");
+            StringAssert.Contains("allNonsyncedAreGlobal: 1", yaml,
+                "Prefab FullController must keep non-synced generated params global so Clear Preset default keys avoid VF-local renaming.");
+            StringAssert.Contains("ignoreSaved: 0", yaml,
+                "Prefab FullController must preserve saved flags from generated params so backup keys stay persisted while Clear defaults remain unsaved.");
             StringAssert.Contains("prms:", yaml,
                 "Prefab FullController must declare prms wiring.");
             StringAssert.Contains("- parameters:", yaml,

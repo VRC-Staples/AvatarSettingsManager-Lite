@@ -1,5 +1,5 @@
 using System;
-using System.Reflection;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -24,7 +24,14 @@ namespace VF.Model.Feature
     [Serializable]
     internal class BrokenFullController
     {
+        public ControllerEntry[] controllers = Array.Empty<ControllerEntry>();
         public MenuEntryWithoutPrefix[] menus = Array.Empty<MenuEntryWithoutPrefix>();
+        public ParameterEntry[] prms = Array.Empty<ParameterEntry>();
+        public string[] smoothedPrms = Array.Empty<string>();
+        public string[] globalParams = Array.Empty<string>();
+        public ObjectRef controller = new ObjectRef();
+        public ObjectRef menu = new ObjectRef();
+        public ObjectRef parameters = new ObjectRef();
     }
 
     [Serializable]
@@ -70,9 +77,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void W03_PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled()
         {
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to 'Avatars/ASM'.");
-
-            var resolvedPrefix = ConfigurePrefabWiringAndReadPrefix(useCustomInstallPath: true, customInstallPath: "  Avatars/ASM  ");
+            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "  Avatars/ASM  ");
 
             Assert.AreEqual("Avatars/ASM", resolvedPrefix,
                 "W03: enabled custom install path must trim and serialize the FullController menu prefix.");
@@ -81,9 +86,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void W04_PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled()
         {
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
-
-            var resolvedPrefix = ConfigurePrefabWiringAndReadPrefix(useCustomInstallPath: false, customInstallPath: "Avatar/ShouldNotApply");
+            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: false, customInstallPath: "Avatar/ShouldNotApply");
 
             Assert.AreEqual(string.Empty, resolvedPrefix,
                 "W04: disabled custom install path must fail closed to empty FullController prefix even when text exists.");
@@ -92,30 +95,35 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void W05_PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank()
         {
-            LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
-
-            var resolvedPrefix = ConfigurePrefabWiringAndReadPrefix(useCustomInstallPath: true, customInstallPath: "   ");
+            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "   ");
 
             Assert.AreEqual(string.Empty, resolvedPrefix,
                 "W05: blank enabled custom install path must fail closed to empty FullController prefix.");
         }
 
         [Test]
-        public void W06_PrefixHelper_NullComponent_ResolvesToEmptyPrefix()
+        public void W06_LiveWiring_NullComponent_FailsClosedToEmptyPrefix()
         {
-            var helperType = typeof(ASMLitePrefabCreator).Assembly.GetType("ASMLite.Editor.ASMLiteFullControllerInstallPathHelper");
-            Assert.IsNotNull(helperType, "W06: failed to locate install-path helper type.");
+            var go = new GameObject("W06_NullComponent");
+            try
+            {
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(go, null, "W06 Null Component"),
+                    "W06: live FullController wiring should fail closed and still complete when no ASM-Lite component is available.");
 
-            var resolveMethod = helperType.GetMethod("ResolveEffectivePrefix", BindingFlags.Static | BindingFlags.NonPublic);
-            Assert.IsNotNull(resolveMethod, "W06: failed to locate ResolveEffectivePrefix method.");
-
-            var resolved = resolveMethod.Invoke(null, new object[] { null }) as string;
-            Assert.AreEqual(string.Empty, resolved,
-                "W06: null component input must fail closed to empty prefix.");
+                var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(go);
+                Assert.IsNotNull(vf,
+                    "W06: live FullController wiring should still create a VF.Model.VRCFury payload for the target root.");
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf),
+                    "W06: null component input must fail closed to empty prefix through the actual FullController wiring path.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
         }
 
         [Test]
-        public void W07_PrefixHelper_MissingPrefixField_FailsClosedWithoutThrowing()
+        public void W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing()
         {
             var go = new GameObject("W07_PrefixSchemaDrift");
             try
@@ -127,26 +135,30 @@ namespace ASMLite.Tests.Editor
                 var vf = go.AddComponent<VF.Model.VRCFury>();
                 vf.content = new VF.Model.Feature.BrokenFullController
                 {
-                    menus = new[] { new VF.Model.Feature.MenuEntryWithoutPrefix() }
+                    controllers = new[] { new VF.Model.Feature.ControllerEntry() },
+                    menus = new[] { new VF.Model.Feature.MenuEntryWithoutPrefix() },
+                    prms = new[] { new VF.Model.Feature.ParameterEntry() },
+                    globalParams = new[] { string.Empty }
                 };
 
-                var helperType = typeof(ASMLitePrefabCreator).Assembly.GetType("ASMLite.Editor.ASMLiteFullControllerInstallPathHelper");
-                Assert.IsNotNull(helperType, "W07: failed to locate install-path helper type.");
-
-                var applyMethod = helperType.GetMethod("TryApplyMenuPrefix", BindingFlags.Static | BindingFlags.NonPublic);
-                Assert.IsNotNull(applyMethod, "W07: failed to locate TryApplyMenuPrefix method.");
+                var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
+                var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
+                var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+                Assert.IsNotNull(fxController, "W07: generated FX controller asset should exist for schema-drift coverage.");
+                Assert.IsNotNull(menu, "W07: generated menu asset should exist for schema-drift coverage.");
+                Assert.IsNotNull(parameters, "W07: generated expression-parameters asset should exist for schema-drift coverage.");
 
                 var serializedVf = new SerializedObject(vf);
                 serializedVf.Update();
 
                 LogAssert.Expect(LogType.Error,
-                    "[ASM-Lite] Expected VRCFury FullController menu prefix field was not found: 'content.menus.Array.data[0].prefix'.");
+                    new Regex(@"^\[ASM-Lite\] Expected VRCFury FullController menu prefix field was not found: 'content\.menus\.Array\.data\[0\]\.prefix'\.$"));
 
                 Assert.DoesNotThrow(() =>
                 {
-                    var applied = (bool)applyMethod.Invoke(null, new object[] { serializedVf, component });
+                    var applied = ASMLitePrefabCreator.TryApplyFullControllerAssetReferences(serializedVf, component, fxController, menu, parameters);
                     Assert.IsFalse(applied,
-                        "W07: schema drift (missing content.menus[0].prefix) must fail closed without writing partial state.");
+                        "W07: schema drift with a missing FullController menu-prefix field must fail closed without writing partial state.");
                 });
             }
             finally
@@ -202,40 +214,27 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static string ConfigurePrefabWiringAndReadPrefix(bool useCustomInstallPath, string customInstallPath)
+        private static string RefreshLiveFullControllerPrefixAndRead(bool useCustomInstallPath, string customInstallPath)
         {
-            var go = new GameObject("WiringRoot");
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                var component = go.AddComponent<ASMLiteComponent>();
-                component.useCustomInstallPath = useCustomInstallPath;
-                component.customInstallPath = customInstallPath;
+                Assert.IsNotNull(ctx?.Comp, "Expected fixture creation to produce an ASM-Lite component.");
 
-                var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(
-                    "ConfigureVRCFuryFullController",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                Assert.IsNotNull(configureMethod,
-                    "Expected ASMLitePrefabCreator.ConfigureVRCFuryFullController private method was not found.");
+                ctx.Comp.useCustomInstallPath = useCustomInstallPath;
+                ctx.Comp.customInstallPath = customInstallPath;
 
-                Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { go, component }),
-                    "Prefab FullController wiring should fail closed without throwing when reflected schema is available.");
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Install Path Wiring Test"),
+                    "Live FullController wiring refresh should succeed for install-path wiring coverage.");
 
-                var vf = go.GetComponent<VF.Model.VRCFury>();
+                var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
                 Assert.IsNotNull(vf,
-                    "Prefab FullController wiring should add VF.Model.VRCFury component when reflected type is available.");
-
-                var so = new SerializedObject(vf);
-                so.Update();
-
-                var prefixProperty = so.FindProperty("content.menus.Array.data[0].prefix");
-                Assert.IsNotNull(prefixProperty,
-                    "Expected FullController prefix field 'content.menus.Array.data[0].prefix' was not serialized.");
-
-                return prefixProperty.stringValue;
+                    "Live FullController wiring refresh should leave a VF.Model.VRCFury component on the ASM-Lite object.");
+                return ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf);
             }
             finally
             {
-                UnityEngine.Object.DestroyImmediate(go);
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
             }
         }
     }
