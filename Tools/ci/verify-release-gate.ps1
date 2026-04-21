@@ -38,6 +38,11 @@ Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job bloc
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}needs:\s*\[\s*setup\s*\]\s*$' "Invariant failed: gate job must declare 'needs: [setup]'."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}if:\s*needs\.setup\.outputs\.should_release\s*==\s*''true''\s*$' "Invariant failed: gate job must be conditioned on needs.setup.outputs.should_release == 'true'."
 
+# --- Gate job: compatibility evaluator must run before check polling ---
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Checkout\s*$' "Invariant failed: gate job must checkout repository contents before compatibility evaluation."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?--mode\s+release.*?--contract\s+\.planning/compatibility\.contract\.json.*?^\s{6}-\s*name:\s*Validate\s+compile\s+and\s+lint\s+checks\s+for\s+release\s+SHA\s*$' "Invariant failed: gate job must run enforced compatibility evaluator before compile/lint/test check polling."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Append\s+compatibility\s+summary\s*$.*?^\s{8}if:\s*always\(\)\s*$' "Invariant failed: gate job must append compatibility markdown summary with if: always()."
+
 # --- Gate job: must evaluate checks for the exact release SHA ---
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
 

@@ -172,6 +172,30 @@ jobs:
       checks: read
       statuses: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Evaluate compatibility contract (enforced)
+        run: |
+          set -euo pipefail
+          python3 Tools/ci/evaluate-compatibility-contract.py \
+            --mode release \
+            --contract .planning/compatibility.contract.json \
+            --output-json /tmp/compatibility-contract-report.json \
+            > /tmp/compatibility-contract-summary.md
+
+      - name: Append compatibility summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f /tmp/compatibility-contract-summary.md ]; then
+            cat /tmp/compatibility-contract-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Compatibility Contract Evaluation" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Evaluator did not produce a markdown summary." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Validate compile and lint checks for release SHA
         env:
           REPO: ${{ github.repository }}
