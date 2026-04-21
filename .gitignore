@@ -11,6 +11,7 @@ Thumbs.db
 .gsd/
 .forge/
 .gsd
+# Never force-track files under .planning/ (keep local planning out of git)
 .planning/
 .audits
 .gsd-id
@@ -23,18 +24,13 @@ artifacts/
 .mcp.json
 .githooks/
 
-# Generated analysis outputs
-graphify-out/
-graphify-out.meta
-Packages/com.staples.asm-lite/graphify-out/
-Packages/com.staples.asm-lite/graphify-out.meta
-
 # Unity generated (not part of the package)
 Library/
 Temp/
 UserSettings/
 Logs/
 unity-export.log
+CodeCoverage/
 
 # VPM package — never ignore
 !Packages/com.staples.asm-lite/
@@ -52,6 +48,7 @@ dist/
 build/
 __pycache__/
 *.pyc
+.pytest_cache/
 .venv/
 venv/
 *.log
