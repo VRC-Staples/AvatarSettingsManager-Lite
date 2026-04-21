@@ -126,7 +126,13 @@ class CompatibilityEvaluatorTests(unittest.TestCase):
 
         return temp_dir
 
-    def _run_eval(self, fixture_root: Path, mode: str, contract_rel: str = ".planning/compatibility.contract.json"):
+    def _run_eval(
+        self,
+        fixture_root: Path,
+        mode: str,
+        contract_rel: str = ".planning/compatibility.contract.json",
+        cwd: Path | None = None,
+    ):
         output_path = fixture_root / "compat-report.json"
         cmd = [
             "python3",
@@ -140,7 +146,7 @@ class CompatibilityEvaluatorTests(unittest.TestCase):
         ]
         proc = subprocess.run(
             cmd,
-            cwd=fixture_root,
+            cwd=cwd or fixture_root,
             capture_output=True,
             text=True,
             check=False,
@@ -162,6 +168,23 @@ class CompatibilityEvaluatorTests(unittest.TestCase):
         self.assertIsNotNone(release_report)
         self.assertEqual(ci_report["verdict"], "pass")
         self.assertEqual(release_report["verdict"], "pass")
+        self.assertEqual(ci_report["reasonCodes"], [])
+
+    def test_contract_sources_resolve_relative_to_contract_file_not_cwd(self):
+        fixture = self._create_fixture_repo()
+        foreign_cwd = Path(tempfile.mkdtemp(prefix="compat-eval-cwd-"))
+        absolute_contract = str((fixture / ".planning/compatibility.contract.json").resolve())
+
+        ci_proc, ci_report = self._run_eval(
+            fixture,
+            "ci",
+            contract_rel=absolute_contract,
+            cwd=foreign_cwd,
+        )
+
+        self.assertEqual(ci_proc.returncode, 0)
+        self.assertIsNotNone(ci_report)
+        self.assertEqual(ci_report["verdict"], "pass")
         self.assertEqual(ci_report["reasonCodes"], [])
 
     def test_missing_contract_is_comp_101_and_fails_all_modes(self):

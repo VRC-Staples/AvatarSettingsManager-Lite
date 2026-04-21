@@ -90,11 +90,12 @@ def compare_semver(left: str, right: str) -> int:
     return 1 if left_norm > right_norm else -1
 
 
-def resolve_path(path_value: str) -> Path:
+def resolve_path(path_value: str, base_dir: Path | None = None) -> Path:
     candidate = Path(path_value)
     if candidate.is_absolute():
         return candidate
-    return Path.cwd() / candidate
+    root = base_dir if base_dir is not None else Path.cwd()
+    return root / candidate
 
 
 def load_json_file(path: Path) -> Any:
@@ -318,11 +319,15 @@ def evaluate(contract_path: Path, mode: str) -> EvaluationReport:
         validate_contract_schema(contract)
 
         sources = contract["sources"]
+        contract_dir = contract_path.parent
+        source_base_dir = (
+            contract_dir.parent if contract_dir.name == ".planning" else contract_dir
+        )
 
-        unity_path = resolve_path(sources["unityProjectVersion"]["path"])
-        package_manifest_path = resolve_path(sources["packageManifest"]["path"])
-        shadow_vrchat_manifest_path = resolve_path(sources["shadowVrchatSdk"]["path"])
-        summary_path = resolve_path(sources["compatibilitySummary"]["path"])
+        unity_path = resolve_path(sources["unityProjectVersion"]["path"], source_base_dir)
+        package_manifest_path = resolve_path(sources["packageManifest"]["path"], source_base_dir)
+        shadow_vrchat_manifest_path = resolve_path(sources["shadowVrchatSdk"]["path"], source_base_dir)
+        summary_path = resolve_path(sources["compatibilitySummary"]["path"], source_base_dir)
 
         if not unity_path.exists():
             raise ValueError(f"missing source file: {unity_path}")
@@ -443,7 +448,12 @@ def evaluate(contract_path: Path, mode: str) -> EvaluationReport:
             )
         )
 
-        expected_summary = render_compatibility_markdown(contract, str(contract_path))
+        try:
+            contract_ref = str(contract_path.relative_to(source_base_dir))
+        except ValueError:
+            contract_ref = str(contract_path)
+
+        expected_summary = render_compatibility_markdown(contract, contract_ref)
         summary_exists = summary_path.exists()
         summary_matches = False
         if summary_exists:
