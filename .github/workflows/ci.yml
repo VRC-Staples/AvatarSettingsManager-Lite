@@ -36,6 +36,51 @@ jobs:
           chmod +x Tools/ci/verify-commit-identity.sh
           Tools/ci/verify-commit-identity.sh "$BASE_SHA" "$HEAD_SHA"
 
+  compatibility-guard:
+    name: Compatibility Contract Guard
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Evaluate compatibility contract (warn-only)
+        id: evaluate-compatibility
+        run: |
+          set -euo pipefail
+          python3 Tools/ci/evaluate-compatibility-contract.py \
+            --mode ci \
+            --contract .planning/compatibility.contract.json \
+            --output-json /tmp/compatibility-contract-report.json \
+            > /tmp/compatibility-contract-summary.md
+
+      - name: Append compatibility summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f /tmp/compatibility-contract-summary.md ]; then
+            cat /tmp/compatibility-contract-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Compatibility Contract Evaluation" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Evaluator did not produce a markdown summary." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload compatibility report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compatibility-contract-report
+          path: /tmp/compatibility-contract-report.json
+          if-no-files-found: warn
+
   lint:
     name: Super-Linter
     runs-on: ubuntu-latest
