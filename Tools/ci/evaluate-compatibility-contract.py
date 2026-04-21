@@ -476,7 +476,7 @@ def evaluate(contract_path: Path, mode: str) -> EvaluationReport:
                     code="COMP-106",
                     message=(
                         "Generated compatibility summary is stale or missing. "
-                        "Regenerate .planning/COMPATIBILITY.md from the contract."
+                        "Regenerate compatibility summary from the contract."
                     ),
                     details={
                         "summaryPath": str(summary_path),

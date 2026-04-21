@@ -180,7 +180,7 @@ jobs:
           set -euo pipefail
           python3 Tools/ci/evaluate-compatibility-contract.py \
             --mode release \
-            --contract .planning/compatibility.contract.json \
+            --contract compatibility.contract.json \
             --output-json /tmp/compatibility-contract-report.json \
             > /tmp/compatibility-contract-summary.md
 

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "1.0.0",
+  "compatibility": {
+    "unity": {
+      "policy": "strict",
+      "version": "2022.3.22f1",
+      "sourceRef": "unityProjectVersion"
+    },
+    "vrchatSdk": {
+      "policy": "minimum",
+      "minVersion": "3.7.0",
+      "sourceRef": "packageManifest"
+    },
+    "vrcfury": {
+      "policy": "minimum",
+      "minVersion": "1.999.0",
+      "sourceRef": "packageManifest"
+    }
+  },
+  "sources": {
+    "unityProjectVersion": {
+      "path": "Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt",
+      "kind": "unity-project-version",
+      "field": "m_EditorVersion"
+    },
+    "packageManifest": {
+      "path": "Packages/com.staples.asm-lite/package.json",
+      "kind": "package-manifest",
+      "fields": [
+        "unity",
+        "vpmDependencies.com.vrchat.avatars",
+        "vpmDependencies.com.vrcfury.vrcfury"
+      ]
+    },
+    "shadowVrchatSdk": {
+      "path": "Tools/ci/unity-project/Packages/com.vrchat.avatars/package.json",
+      "kind": "package-manifest",
+      "fields": [
+        "version"
+      ]
+    },
+    "compatibilitySummary": {
+      "path": "COMPATIBILITY.md",
+      "kind": "generated-summary"
+    }
+  },
+  "observedBaselines": {
+    "unityProjectVersion": {
+      "value": "2022.3.22f1",
+      "sourceRef": "unityProjectVersion"
+    },
+    "packageUnityLine": {
+      "value": "2022.3",
+      "sourceRef": "packageManifest"
+    },
+    "shadowVrchatSdkVersion": {
+      "value": "3.10.2",
+      "sourceRef": "shadowVrchatSdk"
+    }
+  }
+}
