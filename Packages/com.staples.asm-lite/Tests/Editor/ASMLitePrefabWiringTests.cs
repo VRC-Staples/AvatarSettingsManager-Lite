@@ -1,9 +1,34 @@
+using System;
+using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using ASMLite.Editor;
+using Object = UnityEngine.Object;
+
+namespace VF.Model.Feature
+{
+    [Serializable]
+    internal class BrokenFullControllerMissingParameterFallback
+    {
+        public ControllerEntry[] controllers = Array.Empty<ControllerEntry>();
+        public MenuEntry[] menus = Array.Empty<MenuEntry>();
+        public ParameterEntryWithoutAnyObjectRef[] prms = Array.Empty<ParameterEntryWithoutAnyObjectRef>();
+        public string[] smoothedPrms = Array.Empty<string>();
+        public string[] globalParams = Array.Empty<string>();
+        public ObjectRef controller = new ObjectRef();
+        public ObjectRef menu = new ObjectRef();
+        public ObjectRef parameters = new ObjectRef();
+    }
+
+    [Serializable]
+    internal class ParameterEntryWithoutAnyObjectRef
+    {
+        public string marker = string.Empty;
+    }
+}
 
 namespace ASMLite.Tests.Editor
 {
@@ -29,7 +54,8 @@ namespace ASMLite.Tests.Editor
                 Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { go, component }),
                     "Prefab FullController wiring should not throw for the reflected VRCFury schema.");
 
-                var vf = go.GetComponent<VF.Model.VRCFury>();
+                var vf = go.GetComponents<MonoBehaviour>()
+                    .FirstOrDefault(mb => mb != null && string.Equals(mb.GetType().FullName, "VF.Model.VRCFury", StringComparison.Ordinal));
                 Assert.IsNotNull(vf,
                     "Prefab FullController wiring should add VF.Model.VRCFury when reflected type is available.");
 
@@ -62,6 +88,53 @@ namespace ASMLite.Tests.Editor
                     Assert.IsFalse(ignoreSaved.boolValue,
                         "Prefab wiring must preserve saved flags from generated parameters asset rather than force-converting them.");
                 }
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202()
+        {
+            var go = new GameObject("W03_MissingParameterFallback");
+            try
+            {
+                var component = go.AddComponent<ASMLiteComponent>();
+                var vf = go.AddComponent<VF.Model.VRCFury>();
+                vf.content = new VF.Model.Feature.BrokenFullControllerMissingParameterFallback
+                {
+                    controllers = new[] { new VF.Model.Feature.ControllerEntry() },
+                    menus = new[] { new VF.Model.Feature.MenuEntry() },
+                    prms = new[] { new VF.Model.Feature.ParameterEntryWithoutAnyObjectRef() },
+                    globalParams = new[] { string.Empty },
+                };
+
+                var fxController = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.FXController);
+                var menu = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.Menu);
+                var parameters = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.ExprParams);
+
+                Assert.IsNotNull(fxController, "W03: generated FX controller asset should exist for drift probe coverage.");
+                Assert.IsNotNull(menu, "W03: generated menu asset should exist for drift probe coverage.");
+                Assert.IsNotNull(parameters, "W03: generated expression-parameters asset should exist for drift probe coverage.");
+
+                var serializedVf = new SerializedObject(vf);
+                serializedVf.Update();
+
+                var diagnostic = ASMLitePrefabCreator.TryApplyFullControllerAssetReferencesWithDiagnostics(
+                    serializedVf,
+                    component,
+                    fxController,
+                    menu,
+                    parameters);
+
+                Assert.IsFalse(diagnostic.Success,
+                    "W03: missing all parameter object-reference fallback fields must fail closed before FullController writes.");
+                Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingParameterFallbackGroup, diagnostic.Code,
+                    "W03: missing parameter fallback group must emit deterministic DRIFT-202.");
+                Assert.AreEqual(ASMLiteDriftProbe.ParameterFallbackGroupKey, diagnostic.ContextPath,
+                    "W03: DRIFT-202 diagnostics must identify the parameter fallback group key.");
             }
             finally
             {

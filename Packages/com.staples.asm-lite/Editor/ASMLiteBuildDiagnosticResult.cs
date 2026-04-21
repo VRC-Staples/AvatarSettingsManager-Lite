@@ -2,7 +2,7 @@ using System;
 
 namespace ASMLite.Editor
 {
-    internal readonly struct ASMLiteBuildDiagnosticResult
+    internal sealed class ASMLiteBuildDiagnosticResult
     {
         internal ASMLiteBuildDiagnosticResult(
             bool success,
@@ -10,7 +10,7 @@ namespace ASMLite.Editor
             string message,
             string contextPath,
             string remediation,
-            ASMLiteBuildDiagnosticResult? innerDiagnostic = null)
+            ASMLiteBuildDiagnosticResult innerDiagnostic = null)
         {
             Success = success;
             Code = code ?? string.Empty;
@@ -25,7 +25,7 @@ namespace ASMLite.Editor
         internal string Message { get; }
         internal string ContextPath { get; }
         internal string Remediation { get; }
-        internal ASMLiteBuildDiagnosticResult? InnerDiagnostic { get; }
+        internal ASMLiteBuildDiagnosticResult InnerDiagnostic { get; }
 
         internal static ASMLiteBuildDiagnosticResult Pass()
         {
@@ -43,7 +43,7 @@ namespace ASMLite.Editor
             string contextPath,
             string remediation,
             string message = null,
-            ASMLiteBuildDiagnosticResult? innerDiagnostic = null)
+            ASMLiteBuildDiagnosticResult innerDiagnostic = null)
         {
             return new ASMLiteBuildDiagnosticResult(
                 success: false,
@@ -67,12 +67,8 @@ namespace ASMLite.Editor
             if (!string.IsNullOrWhiteSpace(Remediation))
                 log += $" Remediation: {Remediation}";
 
-            if (InnerDiagnostic.HasValue)
-            {
-                var inner = InnerDiagnostic.Value;
-                if (!inner.Success)
-                    log += $" Inner: {inner.Code} ({inner.ContextPath})";
-            }
+            if (InnerDiagnostic != null && !InnerDiagnostic.Success)
+                log += $" Inner: {InnerDiagnostic.Code} ({InnerDiagnostic.ContextPath})";
 
             return log;
         }

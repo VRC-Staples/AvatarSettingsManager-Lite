@@ -214,6 +214,12 @@ namespace ASMLite
         /// lookups on every preprocess call.
         /// </summary>
         private static MethodInfo s_buildMethod;
+        private static MethodInfo s_getLatestBuildDiagnosticMethod;
+
+        private static System.Type GetBuilderType()
+        {
+            return System.Type.GetType("ASMLite.Editor.ASMLiteBuilder, ASMLite.Editor");
+        }
 
         /// <summary>
         /// Resolves and caches a reference to the ASMLiteBuilder.Build static method.
@@ -224,7 +230,7 @@ namespace ASMLite
             if (s_buildMethod != null)
                 return s_buildMethod;
 
-            var type = System.Type.GetType("ASMLite.Editor.ASMLiteBuilder, ASMLite.Editor");
+            var type = GetBuilderType();
             if (type == null)
                 return null;
 
@@ -233,6 +239,85 @@ namespace ASMLite
                 BindingFlags.Public | BindingFlags.Static);
 
             return s_buildMethod;
+        }
+
+        private static MethodInfo GetLatestBuildDiagnosticMethod()
+        {
+            if (s_getLatestBuildDiagnosticMethod != null)
+                return s_getLatestBuildDiagnosticMethod;
+
+            var type = GetBuilderType();
+            if (type == null)
+                return null;
+
+            s_getLatestBuildDiagnosticMethod = type.GetMethod(
+                "GetLatestBuildDiagnosticResult",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            return s_getLatestBuildDiagnosticMethod;
+        }
+
+        private static bool ReadBoolProperty(object instance, string name, bool fallback)
+        {
+            if (instance == null)
+                return fallback;
+
+            var property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (property == null)
+                return fallback;
+
+            if (!(property.GetValue(instance) is bool value))
+                return fallback;
+
+            return value;
+        }
+
+        private static string ReadStringProperty(object instance, string name)
+        {
+            if (instance == null)
+                return string.Empty;
+
+            var property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (property == null)
+                return string.Empty;
+
+            return property.GetValue(instance) as string ?? string.Empty;
+        }
+
+        private static void LogBuildFailureDiagnosticFromBuilder()
+        {
+            var diagnosticMethod = GetLatestBuildDiagnosticMethod();
+            if (diagnosticMethod == null)
+                return;
+
+            object diagnosticObject;
+            try
+            {
+                diagnosticObject = diagnosticMethod.Invoke(null, null);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (diagnosticObject == null)
+                return;
+
+            if (ReadBoolProperty(diagnosticObject, "Success", fallback: true))
+                return;
+
+            string code = ReadStringProperty(diagnosticObject, "Code");
+            string message = ReadStringProperty(diagnosticObject, "Message");
+            string contextPath = ReadStringProperty(diagnosticObject, "ContextPath");
+            string remediation = ReadStringProperty(diagnosticObject, "Remediation");
+
+            var diagnosticLog = $"[ASM-Lite] Build diagnostic {code}: {message}";
+            if (!string.IsNullOrWhiteSpace(contextPath))
+                diagnosticLog += $" Context: '{contextPath}'.";
+            if (!string.IsNullOrWhiteSpace(remediation))
+                diagnosticLog += $" Remediation: {remediation}";
+
+            Debug.LogError(diagnosticLog);
         }
 #endif
 
@@ -273,7 +358,13 @@ namespace ASMLite
 
             try
             {
-                buildMethod.Invoke(null, new object[] { this });
+                object result = buildMethod.Invoke(null, new object[] { this });
+                int buildCount = result is int intResult ? intResult : -1;
+                if (buildCount < 0)
+                {
+                    LogBuildFailureDiagnosticFromBuilder();
+                    return false;
+                }
             }
             catch (TargetInvocationException ex)
             {

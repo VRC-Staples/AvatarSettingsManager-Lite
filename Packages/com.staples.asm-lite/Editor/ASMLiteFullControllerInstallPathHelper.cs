@@ -9,7 +9,7 @@ namespace ASMLite.Editor
     /// </summary>
     internal static class ASMLiteFullControllerInstallPathHelper
     {
-        private const string FullControllerMenuPrefixPath = "content.menus.Array.data[0].prefix";
+        private const string FullControllerMenuPrefixPath = ASMLiteDriftProbe.MenuPrefixPath;
 
         /// <summary>
         /// Resolves the effective FullController install prefix from component state.
@@ -36,17 +36,26 @@ namespace ASMLite.Editor
         /// </summary>
         internal static bool TryApplyMenuPrefix(SerializedObject serializedVfComponent, ASMLiteComponent component)
         {
-            if (serializedVfComponent == null)
-            {
-                Debug.LogError("[ASM-Lite] Cannot apply FullController menu prefix: serialized VRCFury component was null.");
-                return false;
-            }
+            var result = TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
+
+            return result.Success;
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryApplyMenuPrefixWithDiagnostics(SerializedObject serializedVfComponent, ASMLiteComponent component)
+        {
+            var probeResult = ASMLiteDriftProbe.ValidateInstallPrefixWritePath(serializedVfComponent);
+            if (!probeResult.Success)
+                return probeResult.ToDiagnosticResult();
 
             var prefixProperty = serializedVfComponent.FindProperty(FullControllerMenuPrefixPath);
             if (prefixProperty == null)
             {
-                Debug.LogError($"[ASM-Lite] Expected VRCFury FullController menu prefix field was not found: '{FullControllerMenuPrefixPath}'.");
-                return false;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath,
+                    contextPath: FullControllerMenuPrefixPath,
+                    remediation: "Update VRCFury FullController schema mapping so menu prefix write path remains available.");
             }
 
             var effectivePrefix = ResolveEffectivePrefix(component);
@@ -61,7 +70,7 @@ namespace ASMLite.Editor
                 Debug.Log($"[ASM-Lite] FullController menu prefix resolved to '{effectivePrefix}'.");
             }
 
-            return true;
+            return ASMLiteBuildDiagnosticResult.Pass();
         }
     }
 }

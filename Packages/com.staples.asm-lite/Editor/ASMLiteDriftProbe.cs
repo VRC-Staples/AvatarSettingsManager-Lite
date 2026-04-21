@@ -24,22 +24,11 @@ namespace ASMLite.Editor
         private static readonly string[] s_requiredPaths =
         {
             ControllersArrayPath,
-            ControllerObjectRefPath,
-            ControllerTypePath,
             MenuArrayPath,
-            MenuObjectRefPath,
-            MenuPrefixPath,
             ParametersArrayPath,
             ControllerMirrorPath,
             MenuMirrorPath,
             ParametersMirrorPath,
-        };
-
-        private static readonly string[] s_parameterFallbackPaths =
-        {
-            ParametersObjectRefPath,
-            ParameterObjectRefPath,
-            ParameterLegacyObjectRefPath,
         };
 
         internal static ASMLiteDriftProbeResult ValidateCriticalFullControllerWritePaths(SerializedObject serializedVfComponent)
@@ -64,17 +53,7 @@ namespace ASMLite.Editor
                     GetRequiredPathRemediation(path));
             }
 
-            for (int i = 0; i < s_parameterFallbackPaths.Length; i++)
-            {
-                string fallbackPath = s_parameterFallbackPaths[i];
-                if (serializedVfComponent.FindProperty(fallbackPath) != null)
-                    return ASMLiteDriftProbeResult.Pass();
-            }
-
-            return ASMLiteDriftProbeResult.Fail(
-                ASMLiteDiagnosticCodes.Drift.MissingParameterFallbackGroup,
-                ParameterFallbackGroupKey,
-                "Expose at least one parameter reference path in FullController: parameters.objRef, parameter.objRef, or objRef.");
+            return ASMLiteDriftProbeResult.Pass();
         }
 
         internal static ASMLiteDriftProbeResult ValidateInstallPrefixWritePath(SerializedObject serializedVfComponent)

@@ -308,6 +308,14 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(-1, buildResult,
                 $"A49: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
 
+            var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
+            Assert.IsFalse(diagnostic.Success,
+                "A49: invalid-slot Build() must expose failing diagnostics instead of returning -1 without context.");
+            Assert.AreEqual(ASMLiteDiagnosticCodes.Build.ValidationFailed, diagnostic.Code,
+                "A49: invalid slotCount must map to deterministic BUILD-301 validation diagnostics.");
+            Assert.AreEqual("slotCount", diagnostic.ContextPath,
+                "A49: BUILD-301 diagnostics should identify slotCount as the failing context.");
+
             string fxAfter = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
             string exprAfter = ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
             string menuAfter = ReadPackageAssetText(ASMLiteAssetPaths.Menu);
@@ -483,5 +491,47 @@ namespace ASMLite.Tests.Editor
             Assert.IsFalse(generatedExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
                 "A52: expression output must remove previously generated excluded backup keys after exclusion toggle.");
         }
+
+        [Test, Category("Integration")]
+        public void A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203()
+        {
+            _ctx.Comp.slotCount = 3;
+            AddParam(_ctx, "A53_User", VRCExpressionParameters.ValueType.Int, 1f);
+
+            var vf = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.BrokenFullController
+            {
+                controllers = new[] { new VF.Model.Feature.ControllerEntry() },
+                menus = new[] { new VF.Model.Feature.MenuEntryWithoutPrefix() },
+                prms = new[] { new VF.Model.Feature.ParameterEntry() },
+                globalParams = new[] { string.Empty },
+            };
+
+            LogAssert.Expect(LogType.Error,
+                "[ASM-Lite] Build failed: could not ensure live VRCFury FullController asset wiring on 'ASMLite'.");
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(-1, buildResult,
+                "A53: Build() must preserve legacy -1 behavior when critical FullController wiring fails.");
+
+            var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
+            Assert.IsFalse(diagnostic.Success,
+                "A53: critical FullController drift must expose failing build diagnostics.");
+            Assert.AreEqual(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, diagnostic.Code,
+                "A53: FullController schema drift during build preflight must map to BUILD-302.");
+            Assert.AreEqual("content", diagnostic.ContextPath,
+                "A53: BUILD-302 wrapper diagnostics should identify FullController content wiring scope.");
+            Assert.IsNotNull(diagnostic.InnerDiagnostic,
+                "A53: BUILD-302 diagnostics should preserve nested DRIFT context for schema remediation.");
+
+            var inner = diagnostic.InnerDiagnostic;
+            Assert.IsFalse(inner.Success,
+                "A53: nested diagnostic for BUILD-302 should be a failing DRIFT diagnostic.");
+            Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, inner.Code,
+                "A53: missing FullController prefix path must be preserved as nested DRIFT-203.");
+            Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, inner.ContextPath,
+                "A53: nested DRIFT diagnostics should expose the exact failing schema path.");
+        }
+
     }
 }

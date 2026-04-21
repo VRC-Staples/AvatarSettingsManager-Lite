@@ -73,32 +73,56 @@ namespace ASMLite.Editor
 
         internal static bool TryRefreshLiveFullControllerWiring(GameObject root, ASMLiteComponent component, string contextLabel)
         {
+            var result = TryRefreshLiveFullControllerWiringWithDiagnostics(root, component, contextLabel);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
+
+            return result.Success;
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryRefreshLiveFullControllerWiringWithDiagnostics(GameObject root, ASMLiteComponent component, string contextLabel)
+        {
             if (root == null)
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh live FullController wiring because the root object was null.");
-                return false;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "root",
+                    remediation: "Pass a valid ASM-Lite root GameObject before refreshing FullController wiring.",
+                    message: $"[ASM-Lite] {contextLabel}: Cannot refresh live FullController wiring because the root object was null.");
             }
 
             if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " Generated FX Repair"))
-                return false;
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: ASMLiteAssetPaths.FXController,
+                    remediation: "Repair the generated FX controller before refreshing FullController wiring.",
+                    message: $"[ASM-Lite] {contextLabel}: Generated FX controller repair failed before live FullController refresh.");
+            }
 
             ConfigureVRCFuryFullController(root, component);
 
             var vfType = FindTypeByFullName("VF.Model.VRCFury");
             if (vfType == null)
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury type was not found while refreshing live FullController wiring.");
-                return false;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury",
+                    remediation: "Ensure VRCFury assemblies are available before refreshing FullController wiring.",
+                    message: $"[ASM-Lite] {contextLabel}: VF.Model.VRCFury type was not found while refreshing live FullController wiring.");
             }
 
             var vfComponent = root.GetComponent(vfType) as MonoBehaviour;
             if (vfComponent == null)
             {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component is missing after live FullController wiring refresh.");
-                return false;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury component",
+                    remediation: "Ensure the live VRCFury component exists after FullController wiring refresh.",
+                    message: $"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component is missing after live FullController wiring refresh.");
             }
 
-            return true;
+            return ASMLiteBuildDiagnosticResult.Pass();
         }
 
         private static void ConfigureVRCFuryFullController(GameObject root, ASMLiteComponent component)
@@ -153,17 +177,21 @@ namespace ASMLite.Editor
             if (content.managedReferenceValue == null || content.managedReferenceValue.GetType() != fullControllerType)
                 content.managedReferenceValue = Activator.CreateInstance(fullControllerType, true);
 
-            bool ok = TryApplyFullControllerAssetReferences(so, component, fxController, menu, parameters);
+            var wiringResult = TryApplyFullControllerAssetReferencesWithDiagnostics(so, component, fxController, menu, parameters);
+            bool ok = wiringResult.Success;
 
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
+            if (ok)
+            {
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(vfComponent);
+            }
 
 #if ASM_LITE_VERBOSE
             if (ok)
                 Debug.Log("[ASM-Lite] Applied deterministic VRCFury FullController wiring to ASM-Lite prefab root.");
 #endif
             if (!ok)
-                Debug.LogWarning("[ASM-Lite] FullController wiring completed with missing fields. Check VRCFury schema compatibility.");
+                Debug.LogWarning(wiringResult.ToLogString());
         }
 
         internal static bool TryApplyFullControllerAssetReferences(
@@ -173,34 +201,81 @@ namespace ASMLite.Editor
             UnityEngine.Object menu,
             UnityEngine.Object parameters)
         {
-            if (serializedVfComponent == null)
-                return false;
+            var result = TryApplyFullControllerAssetReferencesWithDiagnostics(
+                serializedVfComponent,
+                component,
+                fxController,
+                menu,
+                parameters);
 
-            bool ok = true;
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
 
-            ok &= EnsureArraySize(serializedVfComponent, "content.controllers", 1, required: true);
-            ok &= SetObjectReference(serializedVfComponent, "content.controllers.Array.data[0].controller.objRef", fxController, required: true);
-            ok &= SetInt(serializedVfComponent, "content.controllers.Array.data[0].type", 5, required: true);
+            return result.Success;
+        }
 
-            ok &= EnsureArraySize(serializedVfComponent, "content.menus", 1, required: true);
-            ok &= SetObjectReference(serializedVfComponent, "content.menus.Array.data[0].menu.objRef", menu, required: true);
-            ok &= ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefix(serializedVfComponent, component);
+        internal static ASMLiteBuildDiagnosticResult TryApplyFullControllerAssetReferencesWithDiagnostics(
+            SerializedObject serializedVfComponent,
+            ASMLiteComponent component,
+            UnityEngine.Object fxController,
+            UnityEngine.Object menu,
+            UnityEngine.Object parameters)
+        {
+            var probeResult = ASMLiteDriftProbe.ValidateCriticalFullControllerWritePaths(serializedVfComponent);
+            if (!probeResult.Success)
+                return probeResult.ToDiagnosticResult();
+
+            if (!EnsureArraySizeStrict(serializedVfComponent, ASMLiteDriftProbe.ControllersArrayPath, 1))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ControllersArrayPath);
+
+            if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.ControllerObjectRefPath, fxController))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ControllerObjectRefPath);
+
+            if (!SetIntStrict(serializedVfComponent, ASMLiteDriftProbe.ControllerTypePath, 5))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ControllerTypePath);
+
+            if (!EnsureArraySizeStrict(serializedVfComponent, ASMLiteDriftProbe.MenuArrayPath, 1))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.MenuArrayPath);
+
+            if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.MenuObjectRefPath, menu))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.MenuObjectRefPath);
+
+            var prefixResult = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
+            if (!prefixResult.Success)
+                return prefixResult;
 
             // VRCFury consumes FullController parameter registrations from prms.
             // Keep this populated so merged menu controls (ASMLite_Ctrl triggers)
             // always resolve against merged parameters at build time.
-            ok &= EnsureArraySize(serializedVfComponent, "content.prms", 1, required: true);
-            ok &= SetAnyObjectReference(
-                serializedVfComponent,
-                new[]
-                {
-                    "content.prms.Array.data[0].parameters.objRef", // expected schema
-                    "content.prms.Array.data[0].parameter.objRef",  // compatibility fallback
-                    "content.prms.Array.data[0].objRef",            // compatibility fallback
-                },
-                parameters,
-                required: true,
-                fieldLabel: "content.prms[0].parameters.objRef");
+            if (!EnsureArraySizeStrict(serializedVfComponent, ASMLiteDriftProbe.ParametersArrayPath, 1))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ParametersArrayPath);
+
+            if (!SetAnyObjectReferenceStrict(
+                    serializedVfComponent,
+                    new[]
+                    {
+                        ASMLiteDriftProbe.ParametersObjectRefPath,
+                        ASMLiteDriftProbe.ParameterObjectRefPath,
+                        ASMLiteDriftProbe.ParameterLegacyObjectRefPath,
+                    },
+                    parameters))
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Drift.MissingParameterFallbackGroup,
+                    contextPath: ASMLiteDriftProbe.ParameterFallbackGroupKey,
+                    remediation: "Expose at least one parameter reference path in FullController: parameters.objRef, parameter.objRef, or objRef.");
+            }
+
+            if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.ControllerMirrorPath, fxController))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ControllerMirrorPath);
+
+            if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.MenuMirrorPath, menu))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.MenuMirrorPath);
+
+            if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.ParametersMirrorPath, parameters))
+                return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ParametersMirrorPath);
+
+            bool ok = true;
 
             ok &= EnsureArraySize(serializedVfComponent, "content.smoothedPrms", 0, required: true);
             ok &= EnsureArraySize(serializedVfComponent, "content.globalParams", 1, required: true);
@@ -211,12 +286,16 @@ namespace ASMLite.Editor
             ok &= SetBool(serializedVfComponent, "content.allNonsyncedAreGlobal", true, required: false);
             ok &= SetBool(serializedVfComponent, "content.ignoreSaved", false, required: false);
 
-            ok &= SetObjectReference(serializedVfComponent, "content.controller.objRef", fxController, required: true);
-            ok &= SetObjectReference(serializedVfComponent, "content.menu.objRef", menu, required: true);
-            // Keep the top-level field in sync as a compatibility mirror.
-            ok &= SetObjectReference(serializedVfComponent, "content.parameters.objRef", parameters, required: true);
+            if (!ok)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "content.globalParams",
+                    remediation: "Update ASM-Lite FullController non-critical mapping for this VRCFury schema.",
+                    message: "[ASM-Lite] FullController wiring completed with missing non-critical fields. Check VRCFury schema compatibility.");
+            }
 
-            return ok;
+            return ASMLiteBuildDiagnosticResult.Pass();
         }
 
         private static Type FindTypeByFullName(string fullName)
@@ -254,6 +333,70 @@ namespace ASMLite.Editor
             }
 
             return nonTestMatch ?? firstMatch;
+        }
+
+        private static ASMLiteBuildDiagnosticResult CreateCriticalPathDiagnostic(string path)
+        {
+            string code = string.Equals(path, ASMLiteDriftProbe.MenuPrefixPath, StringComparison.Ordinal)
+                ? ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath
+                : ASMLiteDiagnosticCodes.Drift.MissingRequiredPath;
+
+            return ASMLiteBuildDiagnosticResult.Fail(
+                code: code,
+                contextPath: path,
+                remediation: "Update ASM-Lite FullController path mapping for this VRCFury schema before applying writes.");
+        }
+
+        private static bool EnsureArraySizeStrict(SerializedObject so, string path, int size)
+        {
+            var prop = so?.FindProperty(path);
+            if (prop == null || !prop.isArray)
+                return false;
+
+            prop.arraySize = size;
+            return true;
+        }
+
+        private static bool SetObjectReferenceStrict(SerializedObject so, string path, UnityEngine.Object value)
+        {
+            var prop = so?.FindProperty(path);
+            if (prop == null)
+                return false;
+
+            prop.objectReferenceValue = value;
+            return true;
+        }
+
+        private static bool SetAnyObjectReferenceStrict(SerializedObject so, string[] candidatePaths, UnityEngine.Object value)
+        {
+            if (candidatePaths == null || candidatePaths.Length == 0)
+                return false;
+
+            for (int i = 0; i < candidatePaths.Length; i++)
+            {
+                var path = candidatePaths[i];
+                if (string.IsNullOrEmpty(path))
+                    continue;
+
+                var prop = so?.FindProperty(path);
+                if (prop == null)
+                    continue;
+
+                prop.objectReferenceValue = value;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool SetIntStrict(SerializedObject so, string path, int value)
+        {
+            var prop = so?.FindProperty(path);
+            if (prop == null)
+                return false;
+
+            prop.intValue = value;
+            return true;
         }
 
         private static bool EnsureArraySize(SerializedObject so, string path, int size, bool required)

@@ -1,9 +1,7 @@
 using System;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TestTools;
 using ASMLite.Editor;
 
 namespace VF.Model.Feature
@@ -141,24 +139,18 @@ namespace ASMLite.Tests.Editor
                     globalParams = new[] { string.Empty }
                 };
 
-                var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
-                var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
-                var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
-                Assert.IsNotNull(fxController, "W07: generated FX controller asset should exist for schema-drift coverage.");
-                Assert.IsNotNull(menu, "W07: generated menu asset should exist for schema-drift coverage.");
-                Assert.IsNotNull(parameters, "W07: generated expression-parameters asset should exist for schema-drift coverage.");
-
                 var serializedVf = new SerializedObject(vf);
                 serializedVf.Update();
 
-                LogAssert.Expect(LogType.Error,
-                    new Regex(@"^\[ASM-Lite\] Expected VRCFury FullController menu prefix field was not found: 'content\.menus\.Array\.data\[0\]\.prefix'\.$"));
-
                 Assert.DoesNotThrow(() =>
                 {
-                    var applied = ASMLitePrefabCreator.TryApplyFullControllerAssetReferences(serializedVf, component, fxController, menu, parameters);
-                    Assert.IsFalse(applied,
+                    var diagnostic = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component);
+                    Assert.IsFalse(diagnostic.Success,
                         "W07: schema drift with a missing FullController menu-prefix field must fail closed without writing partial state.");
+                    Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, diagnostic.Code,
+                        "W07: missing FullController prefix path must emit deterministic DRIFT-203.");
+                    Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, diagnostic.ContextPath,
+                        "W07: DRIFT-203 diagnostics must include the exact missing prefix path.");
                 });
             }
             finally
