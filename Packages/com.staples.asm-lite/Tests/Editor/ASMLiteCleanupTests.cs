@@ -212,6 +212,35 @@ namespace ASMLite.Tests.Editor
             return count;
         }
 
+        private void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        {
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp != null ? _ctx.Comp.gameObject : null);
+            Assert.IsNotNull(vf,
+                assertionMessage + " Expected a live VF.Model.VRCFury component on the ASM-Lite object.");
+
+            string normalizedPrefix = expectedPrefix.Replace('\\', '/').TrimEnd('/');
+            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
+            var parametersReference = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
+                vf,
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
+
+            Assert.IsTrue(controllerReference.HasReference,
+                assertionMessage + " Expected a populated FullController FX controller reference.");
+            Assert.IsTrue(menuReference.HasReference,
+                assertionMessage + " Expected a populated FullController menu reference.");
+            Assert.IsTrue(parametersReference.HasReference,
+                assertionMessage + " Expected a populated FullController parameter reference.");
+            Assert.IsTrue(controllerReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController FX controller reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(menuReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController menu reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(parametersReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
+        }
+
         private static void CopyPackageAssetToMirror(string sourceAssetPath, string targetFolder)
         {
             string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
@@ -494,9 +523,9 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder()
         {
-            const string avatarName = "A55_ReturnCleanupAvatar";
+            const string avatarName = "CleanupVendorizedAvatar";
+
             _ctx.AvatarGo.name = avatarName;
-            _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "A55_Int", VRCExpressionParameters.ValueType.Int);
             BuildOrFail(_ctx, "A55");
 
@@ -560,6 +589,80 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
                 "A55: attached avatar should resolve to PackageManaged state after vendorized cleanup completes.");
+        }
+
+        [Test, Category("Integration")]
+        public void A56_ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState()
+        {
+            const string avatarName = "CleanupVendorizedRollbackAvatar";
+
+            _ctx.AvatarGo.name = avatarName;
+            AddAvatarParam(_ctx, "A56_Int", VRCExpressionParameters.ValueType.Int);
+            BuildOrFail(_ctx, "A56");
+
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName);
+            _cleanupVendorizedAvatarFolder = "Assets/ASM-Lite/" + avatarName;
+
+            _ctx.Comp.useVendorizedGeneratedAssets = true;
+            _ctx.Comp.vendorizedGeneratedAssetsPath = vendorizedDir;
+            _ctx.AvDesc.expressionParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+            _ctx.AvDesc.expressionsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+
+            int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(fxIndex, 0,
+                "A56: setup failure, expected avatar FX layer before assigning mirrored controller.");
+
+            var fxLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
+            fxLayer.isDefault = false;
+            fxLayer.animatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController));
+            _ctx.AvDesc.baseAnimationLayers[fxIndex] = fxLayer;
+            EditorUtility.SetDirty(_ctx.AvDesc);
+            EditorUtility.SetDirty(_ctx.Comp);
+            AssetDatabase.SaveAssets();
+
+            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "A56 Setup"),
+                "A56: setup should create a live FullController payload before attached-return rollback validation.");
+            Assert.IsTrue(ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, vendorizedDir),
+                "A56: setup should retarget live FullController references to vendorized assets before attached-return rollback validation.");
+            AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir, "A56 setup should leave live FullController references on vendorized assets before return rollback validation.");
+
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringVendorizedFolderDelete))
+            {
+                var result = ASMLiteLifecycleTransactionService.ExecuteAttachedReturnToPackageManaged(_ctx.Comp, _ctx.AvDesc);
+                Assert.IsFalse(result.Success,
+                    "A56: attached return should fail closed when vendorized-folder delete staging is injected to fail.");
+                Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
+                    "A56: delete-stage failure should surface as an execute-stage transaction failure.");
+                Assert.IsTrue(result.RollbackAttempted,
+                    "A56: attached return should attempt rollback after delete-stage failure.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized, result.RollbackState,
+                    "A56: attached return rollback state should resolve back to Vendorized.");
+            }
+
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                "A56: rollback should preserve vendorized mode on the attached component after delete-stage failure.");
+            Assert.AreEqual(vendorizedDir, _ctx.Comp.vendorizedGeneratedAssetsPath,
+                "A56: rollback should preserve the tracked vendorized generated-assets path after delete-stage failure.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedDir),
+                "A56: rollback should restore the vendorized generated-assets folder after delete-stage failure.");
+            Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams),
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
+                "A56: rollback should restore avatar expression parameters back to vendorized assets after delete-stage failure.");
+            Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu),
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
+                "A56: rollback should restore avatar expressions menu back to vendorized assets after delete-stage failure.");
+
+            int rollbackFxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(rollbackFxIndex, 0,
+                "A56: expected avatar FX layer after delete-stage rollback.");
+            Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController),
+                AssetDatabase.GetAssetPath(_ctx.AvDesc.baseAnimationLayers[rollbackFxIndex].animatorController)?.Replace('\\', '/'),
+                "A56: rollback should restore avatar FX controller back to vendorized assets after delete-stage failure.");
+            AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir,
+                "A56: rollback should restore live FullController references back to vendorized assets after delete-stage failure.");
+            Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
+                "A56: attached avatar should resolve to Vendorized state after delete-stage rollback completes.");
         }
     }
 }

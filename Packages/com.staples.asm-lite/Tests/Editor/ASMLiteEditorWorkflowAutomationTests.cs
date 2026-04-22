@@ -1,11 +1,13 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using ASMLite.Editor;
 using Object = UnityEngine.Object;
 
 namespace ASMLite.Tests.Editor
@@ -13,6 +15,7 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     public class ASMLiteEditorWorkflowAutomationTests
     {
+        private const string SuiteName = nameof(ASMLiteEditorWorkflowAutomationTests);
         private AsmLiteTestContext _ctx;
         private string _vendorizedAvatarFolder;
 
@@ -256,6 +259,204 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test, Category("Integration")]
+        public void Automation_RebuildForAutomation_Twice_DoesNotDuplicateFullControllerEntries()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/RebuildTwice";
+
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_RebuildForAutomation_Twice_DoesNotDuplicateFullControllerEntries),
+                    window.RebuildForAutomation);
+
+                var firstComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                var firstVf = EnsureLiveFullControllerPayload(firstComponent);
+                var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(firstComponent, 0);
+                var firstGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(firstVf, "content.globalParams");
+                AssertSingleCriticalFullControllerEntries(firstVf, "Automation rebuild first pass");
+
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_RebuildForAutomation_Twice_DoesNotDuplicateFullControllerEntries),
+                    window.RebuildForAutomation);
+
+                var secondComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                var secondVf = EnsureLiveFullControllerPayload(secondComponent);
+                var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(secondComponent, 0);
+                var secondGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(secondVf, "content.globalParams");
+                AssertSingleCriticalFullControllerEntries(secondVf, "Automation rebuild second pass");
+
+                Assert.AreEqual(1, secondSnapshot.LiveVrcFuryComponentCount,
+                    "Repeated automation rebuilds should keep exactly one live VF.Model.VRCFury component on the ASM-Lite object.");
+                Assert.AreEqual(firstSnapshot.ControllerReferencePath, secondSnapshot.ControllerReferencePath,
+                    "Repeated automation rebuilds should keep the FullController FX reference stable.");
+                Assert.AreEqual(firstSnapshot.MenuReferencePath, secondSnapshot.MenuReferencePath,
+                    "Repeated automation rebuilds should keep the FullController menu reference stable.");
+                Assert.AreEqual(firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
+                    "Repeated automation rebuilds should keep the selected parameter fallback path stable.");
+                Assert.AreEqual(firstSnapshot.ParameterReferenceAssetPath, secondSnapshot.ParameterReferenceAssetPath,
+                    "Repeated automation rebuilds should keep the FullController parameter asset reference stable.");
+                CollectionAssert.AreEqual(firstGlobalParams, secondGlobalParams,
+                    "Repeated automation rebuilds should keep wildcard global parameter enrollment stable.");
+                CollectionAssert.AreEqual(new[] { "*" }, secondGlobalParams,
+                    "Repeated automation rebuilds should keep exactly one wildcard global parameter enrollment entry.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+
+                var prefabInstanceComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(prefabInstanceComponent,
+                    "Repeated vendorize/return characterization requires AddPrefabForAutomation() to attach ASM-Lite first.");
+                prefabInstanceComponent.useCustomInstallPath = true;
+                prefabInstanceComponent.customInstallPath = "Tools/VendorizeTwice";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable),
+                    window.RebuildForAutomation);
+
+                var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                var baselineSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(baselineComponent, 0);
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(baselineComponent)),
+                    "Baseline prefab-instance rebuild should clear direct FullController prefix overrides before vendorize/return cycling.");
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/VendorizeTwice/Settings Manager",
+                    "Baseline prefab-instance rebuild should establish deterministic install-path routing before vendorize/return cycling.");
+
+                for (int cycle = 1; cycle <= 2; cycle++)
+                {
+                    window.SelectAvatarForAutomation(_ctx.AvDesc);
+                    ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                        nameof(Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable),
+                        window.VendorizeForAutomation);
+
+                    var vendorizedComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                    Assert.IsNotNull(vendorizedComponent,
+                        $"Vendorize cycle {cycle} should keep ASM-Lite attached to the avatar.");
+                    Assert.IsTrue(vendorizedComponent.useVendorizedGeneratedAssets,
+                        $"Vendorize cycle {cycle} should toggle vendorized generated-assets mode on the component.");
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(vendorizedComponent.vendorizedGeneratedAssetsPath),
+                        $"Vendorize cycle {cycle} should record the mirrored GeneratedAssets folder path.");
+                    _vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedComponent.vendorizedGeneratedAssetsPath)?.Replace('\\', '/');
+                    AssertSingleCriticalFullControllerEntries(EnsureLiveFullControllerPayload(vendorizedComponent),
+                        $"Vendorize cycle {cycle}");
+
+                    ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                        nameof(Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable),
+                        window.ReturnToPackageManagedForAutomation);
+
+                    var returnedComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                    Assert.IsNotNull(returnedComponent,
+                        $"Return cycle {cycle} should keep ASM-Lite attached to the avatar.");
+                    Assert.IsFalse(returnedComponent.useVendorizedGeneratedAssets,
+                        $"Return cycle {cycle} should clear vendorized generated-assets mode.");
+                    Assert.AreEqual(string.Empty, returnedComponent.vendorizedGeneratedAssetsPath,
+                        $"Return cycle {cycle} should clear the tracked mirrored GeneratedAssets folder path.");
+
+                    var returnSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(returnedComponent, 0);
+                    AssertSingleCriticalFullControllerEntries(EnsureLiveFullControllerPayload(returnedComponent),
+                        $"Return cycle {cycle}");
+                    Assert.AreEqual(baselineSnapshot.ControllerReferencePath, returnSnapshot.ControllerReferencePath,
+                        $"Return cycle {cycle} should restore the canonical FullController FX reference path.");
+                    Assert.AreEqual(baselineSnapshot.MenuReferencePath, returnSnapshot.MenuReferencePath,
+                        $"Return cycle {cycle} should restore the canonical FullController menu reference path.");
+                    Assert.AreEqual(baselineSnapshot.ParameterReferenceResolvedPath, returnSnapshot.ParameterReferenceResolvedPath,
+                        $"Return cycle {cycle} should preserve the selected parameter fallback path.");
+                    Assert.AreEqual(baselineSnapshot.ParameterReferenceAssetPath, returnSnapshot.ParameterReferenceAssetPath,
+                        $"Return cycle {cycle} should restore the canonical FullController parameter asset reference path.");
+                    Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(returnedComponent)),
+                        $"Return cycle {cycle} should keep prefab-instance FullController prefix overrides cleared.");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Automation staged-copy rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before vendorize failure injection.");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/AutomationRollback";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation),
+                    window.RebuildForAutomation);
+
+                var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(baselineComponent,
+                    "Automation staged-copy rollback validation requires ASM-Lite to stay attached after the baseline rebuild.");
+                var baselineSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(baselineComponent, 0);
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/AutomationRollback/Settings Manager",
+                    "Automation staged-copy rollback setup should establish deterministic install-path routing before vendorize failure injection.");
+
+                using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.AfterStagedCopy))
+                {
+                    LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
+                    window.VendorizeForAutomation();
+                }
+
+                var rolledBackComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(rolledBackComponent,
+                    "Automation vendorize rollback should keep ASM-Lite attached after staged-copy failure.");
+                Assert.IsFalse(rolledBackComponent.useVendorizedGeneratedAssets,
+                    "Automation vendorize rollback should restore package-managed mode on the component after staged-copy failure.");
+                Assert.AreEqual(string.Empty, rolledBackComponent.vendorizedGeneratedAssetsPath,
+                    "Automation vendorize rollback should clear the tracked vendorized generated-assets path after staged-copy failure.");
+                Assert.IsFalse(AssetDatabase.IsValidFolder("Assets/ASM-Lite/TestAvatar/GeneratedAssets"),
+                    "Automation vendorize rollback should leave no vendorized generated-assets folder behind after staged-copy failure.");
+
+                var rollbackSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(rolledBackComponent, 0);
+                Assert.AreEqual(baselineSnapshot.ControllerReferencePath, rollbackSnapshot.ControllerReferencePath,
+                    "Automation vendorize rollback should restore the canonical FullController FX reference path after staged-copy failure.");
+                Assert.AreEqual(baselineSnapshot.MenuReferencePath, rollbackSnapshot.MenuReferencePath,
+                    "Automation vendorize rollback should restore the canonical FullController menu reference path after staged-copy failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceResolvedPath, rollbackSnapshot.ParameterReferenceResolvedPath,
+                    "Automation vendorize rollback should preserve the selected parameter fallback path after staged-copy failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceAssetPath, rollbackSnapshot.ParameterReferenceAssetPath,
+                    "Automation vendorize rollback should restore the canonical FullController parameter asset reference path after staged-copy failure.");
+                AssertSingleCriticalFullControllerEntries(EnsureLiveFullControllerPayload(rolledBackComponent),
+                    nameof(Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation));
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(rolledBackComponent)),
+                    "Automation vendorize rollback should keep prefab-instance FullController prefix overrides cleared after staged-copy failure.");
+                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
+                    "Automation vendorize rollback should resolve the attached avatar back to PackageManaged tool state after staged-copy failure.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
         private static void AssertInstallPathRoutingHelper(
             VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatar,
             string expectedFromPath,
@@ -285,12 +486,61 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Unexpected routing helper destination path.");
         }
 
+        private static void ExecuteAutomationActionAndRecordLatestBuildDiagnostic(string testName, Action automationAction)
+        {
+            automationAction?.Invoke();
+            ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
+                SuiteName,
+                testName,
+                ASMLiteBuilder.GetLatestBuildDiagnosticResult());
+        }
+
         private static MonoBehaviour EnsureLiveFullControllerPayload(ASMLiteComponent component)
         {
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component != null ? component.gameObject : null);
             Assert.IsNotNull(vf,
                 "Expected the workflow under test to leave a live VF.Model.VRCFury component on the ASM-Lite object.");
             return vf;
+        }
+
+        private static void AssertSingleCriticalFullControllerEntries(MonoBehaviour vf, string aid)
+        {
+            Assert.IsNotNull(vf, aid + " Expected a live VF.Model.VRCFury component before checking serialized FullController entry counts.");
+
+            var serializedVf = new SerializedObject(vf);
+            serializedVf.Update();
+
+            var controllerArray = serializedVf.FindProperty(ASMLiteDriftProbe.ControllersArrayPath);
+            var menuArray = serializedVf.FindProperty(ASMLiteDriftProbe.MenuArrayPath);
+            var parameterArray = serializedVf.FindProperty(ASMLiteDriftProbe.ParametersArrayPath);
+            Assert.IsNotNull(controllerArray,
+                aid + " Expected the FullController controllers array to exist.");
+            Assert.IsNotNull(menuArray,
+                aid + " Expected the FullController menus array to exist.");
+            Assert.IsNotNull(parameterArray,
+                aid + " Expected the FullController prms array to exist.");
+            Assert.AreEqual(1, controllerArray.arraySize,
+                aid + " Expected exactly one FullController controller entry.");
+            Assert.AreEqual(1, menuArray.arraySize,
+                aid + " Expected exactly one FullController menu entry.");
+            Assert.AreEqual(1, parameterArray.arraySize,
+                aid + " Expected exactly one FullController parameter entry.");
+
+            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
+            Assert.IsTrue(controllerReference.HasReference,
+                aid + " Expected a populated FullController FX controller reference.");
+            Assert.IsTrue(menuReference.HasReference,
+                aid + " Expected a populated FullController menu reference.");
+
+            int populatedParameterFallbackMembers = new[]
+            {
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath,
+            }.Count(path => ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path).HasReference);
+            Assert.AreEqual(1, populatedParameterFallbackMembers,
+                aid + " Expected exactly one populated FullController parameter fallback-group member.");
         }
 
         private static void InvokePrivateMethod(object target, string methodName)

@@ -762,6 +762,82 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void VendorizeTransaction_LiveRetargetFailure_RollsBackPackageManagedRefsAndRouting()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                if (_ctx.Comp != null)
+                    UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Vendorize rollback setup should attach a prefab-managed ASM-Lite component before failure injection.");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/Rollback";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+
+                AssertInstallPathRoutingHelper("Settings Manager", "Tools/Rollback/Settings Manager",
+                    "Vendorize rollback setup should establish deterministic install-path routing before failure injection.");
+                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
+                    "Vendorize rollback setup should leave live FullController references on package-managed generated assets.");
+                string baselineExprPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/');
+                string baselineMenuPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/');
+                int baselineFxIndex = FindFxLayerIndex();
+                Assert.GreaterOrEqual(baselineFxIndex, 0,
+                    "Vendorize rollback setup should leave an FX layer on the avatar before failure injection.");
+                var baselineFxController = _ctx.AvDesc.baseAnimationLayers[baselineFxIndex].animatorController;
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget))
+                {
+                    var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+                    Assert.IsFalse(result.Success,
+                        "Vendorize should fail closed when failure injection triggers after live FullController retarget.");
+                    Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
+                        "Live FullController retarget failure should surface as an execute-stage transaction failure.");
+                    Assert.IsTrue(result.RollbackAttempted,
+                        "Vendorize should attempt rollback after live FullController retarget failure.");
+                    Assert.IsTrue(result.RollbackSucceeded,
+                        "Vendorize rollback should restore the package-managed baseline after live FullController retarget failure.");
+                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged, result.RollbackState,
+                        "Vendorize rollback state should resolve back to PackageManaged after live FullController retarget failure.");
+                }
+
+                Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
+                    "Vendorize rollback should clear vendorized mode on the attached component after live retarget failure.");
+                Assert.AreEqual(string.Empty, _ctx.Comp.vendorizedGeneratedAssetsPath,
+                    "Vendorize rollback should clear the tracked vendorized generated-assets path after live retarget failure.");
+                Assert.AreEqual(baselineExprPath,
+                    AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
+                    "Vendorize rollback should restore avatar expression parameters back to their baseline package-managed/user-owned asset after live retarget failure.");
+                Assert.AreEqual(baselineMenuPath,
+                    AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
+                    "Vendorize rollback should restore avatar expressions menu back to its baseline package-managed/user-owned asset after live retarget failure.");
+
+                int fxIndex = FindFxLayerIndex();
+                Assert.GreaterOrEqual(fxIndex, 0,
+                    "Vendorize rollback should preserve the avatar FX layer after live retarget failure.");
+                Assert.AreEqual(baselineFxController, _ctx.AvDesc.baseAnimationLayers[fxIndex].animatorController,
+                    "Vendorize rollback should preserve the avatar FX controller assignment that existed before vendorize failure injection.");
+                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
+                    "Vendorize rollback should restore live FullController references back to package-managed assets after live retarget failure.");
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(_ctx.Comp)),
+                    "Vendorize rollback should keep prefab-instance FullController prefix overrides cleared after live retarget failure.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
+                    "Vendorize rollback should resolve the attached avatar back to PackageManaged tool state.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void BakeAssets_RewritesLivePrefixDeterministically_WhenCustomizationFlipsEnabledDisabledAndBlank()
         {
             var vf = EnsureLiveFullControllerPayload(_ctx.Comp);
@@ -848,6 +924,70 @@ namespace ASMLite.Tests.Editor
             }
 
             return danglingCount;
+        }
+
+        private int FindFxLayerIndex()
+        {
+            for (int i = 0; i < _ctx.AvDesc.baseAnimationLayers.Length; i++)
+            {
+                if (_ctx.AvDesc.baseAnimationLayers[i].type == VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.AnimLayerType.FX)
+                    return i;
+            }
+
+            return -1;
+        }
+
+        private void AssertInstallPathRoutingHelper(string expectedFromPath, string expectedToPath, string assertionMessage)
+        {
+            var routingTransform = _ctx.AvDesc != null ? _ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing") : null;
+            Assert.IsNotNull(routingTransform,
+                assertionMessage + " Expected the ASM-Lite install-path routing helper object to exist on the avatar.");
+
+            var routingVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(routingTransform.gameObject);
+            Assert.IsNotNull(routingVf,
+                assertionMessage + " Expected the routing helper object to carry a VF.Model.VRCFury component.");
+
+            var serializedRouting = new SerializedObject(routingVf);
+            serializedRouting.Update();
+            var fromPathProperty = serializedRouting.FindProperty("content.fromPath");
+            var toPathProperty = serializedRouting.FindProperty("content.toPath");
+            Assert.IsNotNull(fromPathProperty,
+                assertionMessage + " Expected MoveMenuItem fromPath to be serialized on the routing helper.");
+            Assert.IsNotNull(toPathProperty,
+                assertionMessage + " Expected MoveMenuItem toPath to be serialized on the routing helper.");
+            Assert.AreEqual(expectedFromPath, fromPathProperty.stringValue,
+                assertionMessage + " Unexpected routing helper source path.");
+            Assert.AreEqual(expectedToPath, toPathProperty.stringValue,
+                assertionMessage + " Unexpected routing helper destination path.");
+        }
+
+        private void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        {
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp != null ? _ctx.Comp.gameObject : null);
+            Assert.IsNotNull(vf,
+                assertionMessage + " Expected a live VF.Model.VRCFury component on the ASM-Lite object.");
+
+            string normalizedPrefix = expectedPrefix.Replace('\\', '/').TrimEnd('/');
+            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
+            var parametersReference = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
+                vf,
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
+
+            Assert.IsTrue(controllerReference.HasReference,
+                assertionMessage + " Expected a populated FullController FX controller reference.");
+            Assert.IsTrue(menuReference.HasReference,
+                assertionMessage + " Expected a populated FullController menu reference.");
+            Assert.IsTrue(parametersReference.HasReference,
+                assertionMessage + " Expected a populated FullController parameter reference.");
+            Assert.IsTrue(controllerReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController FX controller reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(menuReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController menu reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(parametersReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
+                assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
         }
 
         private static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)
