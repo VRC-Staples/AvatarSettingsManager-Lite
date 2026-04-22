@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: read
+      statuses: read
     env:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
       zipFile: ${{ vars.PACKAGE_NAME }}-nightly.zip
@@ -29,6 +31,20 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+
+      - name: Validate compile, lint, and test checks for nightly SHA
+        env:
+          TARGET_SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 Tools/ci/check-required-statuses.py \
+            --repo "${{ github.repository }}" \
+            --sha "$TARGET_SHA" \
+            --required-checks Tools/ci/release-required-checks.json \
+            --github-token-env GITHUB_TOKEN \
+            --max-wait-seconds 1800 \
+            --poll-interval-seconds 20
 
       - name: Create Package Zip
         working-directory: "${{ env.packagePath }}"

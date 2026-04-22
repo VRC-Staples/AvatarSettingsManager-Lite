@@ -171,7 +171,7 @@ Optional local-only helpers:
 
 ## Releases
 
-Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch).
+Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. Stable release publication waits for green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch), and nightly prerelease publication also waits on green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds.
 
 ---
 
