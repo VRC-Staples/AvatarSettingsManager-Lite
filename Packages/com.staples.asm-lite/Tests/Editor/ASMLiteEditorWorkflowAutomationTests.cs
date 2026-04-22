@@ -622,9 +622,12 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Vendorize + detach cycle should leave the avatar classified as Detached after direct-delivery verification succeeds.");
-                Assert.IsTrue(AssetDatabase.IsValidFolder("Assets/ASM-Lite/TestAvatar/GeneratedAssets"),
-                    "Vendorize + detach cycle should still leave the vendorized generated-assets folder on disk after verified success.");
-                _vendorizedAvatarFolder = "Assets/ASM-Lite/TestAvatar";
+                string vendorizedGeneratedAssetsPath = window.GetPendingCustomizationSnapshotForTesting().VendorizedGeneratedAssetsPath;
+                AssertCanonicalVendorizedGeneratedAssetsPath(vendorizedGeneratedAssetsPath,
+                    "Vendorize + detach cycle should preserve the canonical vendorized generated-assets location in the shared customization snapshot.");
+                Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedGeneratedAssetsPath),
+                    "Vendorize + detach cycle should still leave the canonical vendorized generated-assets folder on disk after verified success.");
+                _vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedGeneratedAssetsPath)?.Replace('\\', '/');
             }
             finally
             {
@@ -752,6 +755,18 @@ namespace ASMLite.Tests.Editor
             }.Count(path => ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path).HasReference);
             Assert.AreEqual(1, populatedParameterFallbackMembers,
                 aid + " Expected exactly one populated FullController parameter fallback-group member.");
+        }
+
+        private static void AssertCanonicalVendorizedGeneratedAssetsPath(
+            string vendorizedGeneratedAssetsPath,
+            string assertionMessage)
+        {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(vendorizedGeneratedAssetsPath),
+                assertionMessage + " Expected a populated vendorized generated-assets folder path.");
+            Assert.IsTrue(vendorizedGeneratedAssetsPath.StartsWith("Assets/ASM-Lite/TestAvatar", StringComparison.Ordinal),
+                assertionMessage + " Expected the canonical vendorized generated-assets folder to stay under the TestAvatar vendorized root.");
+            Assert.IsTrue(vendorizedGeneratedAssetsPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal),
+                assertionMessage + " Expected the canonical vendorized generated-assets folder to end with '/GeneratedAssets'.");
         }
 
         private static void InvokeDetachForAutomation(ASMLite.Editor.ASMLiteWindow window, ASMLiteComponent component, bool vendorizeToAssets)

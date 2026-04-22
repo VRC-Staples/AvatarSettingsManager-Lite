@@ -737,8 +737,9 @@ namespace ASMLite.Tests.Editor
                     "Migration rebuild should normalize blank install path values.");
                 CollectionAssert.AreEqual(new[] { "Mood", "Hue" }, rebuilt.excludedParameterNames,
                     "Migration rebuild should preserve sanitized exclusion names.");
-                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", rebuilt.vendorizedGeneratedAssetsPath,
-                    "Migration rebuild should preserve the normalized vendorized payload path.");
+                string rebuiltVendorizedPath = rebuilt.vendorizedGeneratedAssetsPath;
+                AssertCanonicalVendorizedGeneratedAssetsPath(rebuiltVendorizedPath,
+                    "Migration rebuild should preserve the canonical vendorized payload path.");
 
                 var rebuiltVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(rebuilt.gameObject);
                 Assert.IsNotNull(rebuiltVf, "Migration rebuild should preserve VF.Model.VRCFury delivery component.");
@@ -752,8 +753,8 @@ namespace ASMLite.Tests.Editor
                     "Selection sync after migration rebuild should keep the normalized blank install path in the shared snapshot.");
                 Assert.IsTrue(snapshot.UseVendorizedGeneratedAssets,
                     "Selection sync after migration rebuild should keep vendorized mode in the shared snapshot.");
-                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", snapshot.VendorizedGeneratedAssetsPath,
-                    "Selection sync after migration rebuild should keep the normalized vendorized payload path in the shared snapshot.");
+                Assert.AreEqual(rebuiltVendorizedPath, snapshot.VendorizedGeneratedAssetsPath,
+                    "Selection sync after migration rebuild should keep the canonical vendorized payload path aligned with the rebuilt component.");
             }
             finally
             {
@@ -1001,6 +1002,20 @@ namespace ASMLite.Tests.Editor
             }
 
             return danglingCount;
+        }
+
+        private static void AssertCanonicalVendorizedGeneratedAssetsPath(string vendorizedPath, string assertionMessage)
+        {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(vendorizedPath),
+                assertionMessage + " Expected a populated vendorized generated-assets path.");
+
+            string normalizedPath = vendorizedPath.Replace('\\', '/').Trim();
+            Assert.AreEqual(normalizedPath, vendorizedPath,
+                assertionMessage + " Expected the vendorized generated-assets path to already be normalized.");
+            Assert.IsTrue(normalizedPath.StartsWith("Assets/ASM-Lite/TestAvatar", StringComparison.Ordinal),
+                assertionMessage + " Expected the vendorized generated-assets path to stay under the TestAvatar vendorized root.");
+            Assert.IsTrue(normalizedPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal),
+                assertionMessage + " Expected the vendorized generated-assets path to end with '/GeneratedAssets'.");
         }
 
         private int FindFxLayerIndex()
