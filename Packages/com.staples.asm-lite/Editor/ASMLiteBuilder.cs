@@ -1396,102 +1396,12 @@ namespace ASMLite.Editor
             ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings,
             HashSet<string> excludedCanonicalNames)
         {
-            var avatarParamNames = new List<string>(avatarParams.Count);
-            var avatarParamSet = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < avatarParams.Count; i++)
-            {
-                var param = avatarParams[i];
-                if (param == null || string.IsNullOrWhiteSpace(param.name))
-                    continue;
-
-                if (avatarParamSet.Add(param.name))
-                    avatarParamNames.Add(param.name);
-            }
-
-            var mappingByOriginal = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (brokerMappings != null)
-            {
-                for (int i = 0; i < brokerMappings.Length; i++)
-                {
-                    var mapping = brokerMappings[i];
-                    if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam))
-                        continue;
-                    if (string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
-                        continue;
-                    if (!mappingByOriginal.ContainsKey(mapping.OriginalGlobalParam))
-                        mappingByOriginal.Add(mapping.OriginalGlobalParam, mapping.AssignedGlobalParam);
-                }
-            }
-
-            var names = new List<string>(slotCount * avatarParamNames.Count);
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int slot = 1; slot <= slotCount; slot++)
-            {
-                for (int i = 0; i < avatarParamNames.Count; i++)
-                {
-                    string name = $"ASMLite_Bak_S{slot}_{avatarParamNames[i]}";
-                    if (seen.Add(name))
-                        names.Add(name);
-                }
-            }
-
-            int mappedCount = 0;
-            int unmatchedCount = 0;
-            int malformedCount = 0;
-            var bindings = new List<LegacyAliasBinding>();
-            var seenBindings = new HashSet<string>(StringComparer.Ordinal);
-
-            if (existingParamNames != null)
-            {
-                for (int i = 0; i < existingParamNames.Length; i++)
-                {
-                    string existingName = existingParamNames[i];
-                    if (string.IsNullOrWhiteSpace(existingName))
-                        continue;
-                    if (!existingName.StartsWith("ASMLite_Bak_", StringComparison.Ordinal))
-                        continue;
-
-                    if (!TryParseBackupName(existingName, out var parsed))
-                    {
-                        malformedCount++;
-                        continue;
-                    }
-
-                    if (excludedCanonicalNames != null
-                        && excludedCanonicalNames.Count > 0
-                        && excludedCanonicalNames.Contains(parsed.SourceParamName))
-                    {
-                        continue;
-                    }
-
-                    if (seen.Add(existingName))
-                        names.Add(existingName);
-
-                    if (!mappingByOriginal.TryGetValue(parsed.SourceParamName, out string assignedSourceName) || string.IsNullOrWhiteSpace(assignedSourceName))
-                    {
-                        if (!avatarParamSet.Contains(parsed.SourceParamName))
-                            unmatchedCount++;
-                        continue;
-                    }
-
-                    if (!avatarParamSet.Contains(assignedSourceName))
-                    {
-                        unmatchedCount++;
-                        continue;
-                    }
-
-                    mappedCount++;
-                    string bindingKey = parsed.Slot + "\u001F" + assignedSourceName + "\u001F" + existingName;
-                    if (seenBindings.Add(bindingKey))
-                    {
-                        bindings.Add(new LegacyAliasBinding(parsed.Slot, assignedSourceName, existingName));
-                    }
-                }
-            }
-
-            int mirroredCount = bindings.Count;
-            var report = new LegacyAliasContinuityReport(mappedCount, mirroredCount, unmatchedCount, malformedCount);
-            return new BackupNamePlan(names, bindings, report);
+            return ASMLiteMigrationContinuityService.BuildBackupNamePlan(
+                slotCount,
+                avatarParams,
+                existingParamNames,
+                brokerMappings,
+                excludedCanonicalNames);
         }
 
         /// <summary>
@@ -1524,15 +1434,7 @@ namespace ASMLite.Editor
 
         private static string[] GetExistingGeneratedBackupNames()
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            if (paramsAsset?.parameters == null)
-                return Array.Empty<string>();
-
-            var existing = new string[paramsAsset.parameters.Length];
-            for (int i = 0; i < paramsAsset.parameters.Length; i++)
-                existing[i] = paramsAsset.parameters[i]?.name;
-
-            return existing;
+            return ASMLiteMigrationContinuityService.GetExistingGeneratedBackupNames();
         }
 
         /// <summary>
@@ -1903,63 +1805,12 @@ namespace ASMLite.Editor
 
         internal static int MigrateStaleVRCFuryComponentsWithReport(ASMLiteComponent component)
         {
-            if (component == null)
-                return 0;
-
-            var go = component.gameObject;
-            // Find VRCFury components by type name since we cannot reference the
-            // internal VF.Model.VRCFury type at compile time.
-            var allComponents = go.GetComponents<Component>();
-            var vfComponents = new List<Component>();
-            foreach (var c in allComponents)
-            {
-                if (c == null) continue; // missing script
-                string typeName = c.GetType().FullName;
-                if (typeName == "VF.Model.VRCFury")
-                    vfComponents.Add(c);
-            }
-
-            if (vfComponents.Count <= 1)
-                return 0;
-
-            int removedCount = 0;
-            for (int i = 1; i < vfComponents.Count; i++)
-            {
-                UnityEngine.Object.DestroyImmediate(vfComponents[i]);
-                removedCount++;
-            }
-
-            if (removedCount > 0)
-                EditorUtility.SetDirty(go);
-
-            return removedCount;
+            return ASMLiteMigrationContinuityService.MigrateStaleVRCFuryComponentsWithReport(component);
         }
 
         internal static RebuildMigrationReport PrepareRevertedDeliveryRebuild(ASMLiteComponent component)
         {
-            if (component == null)
-            {
-                var emptyCleanup = new CleanupReport(0, 0, 0, 0, descriptorMissing: true);
-                return new RebuildMigrationReport(0, emptyCleanup, componentMissing: true, avatarDescriptorFound: false);
-            }
-
-            int staleVfRemoved = MigrateStaleVRCFuryComponentsWithReport(component);
-
-            var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
-            bool avatarDescriptorFound = avDesc != null;
-            var cleanup = CleanUpAvatarAssetsWithReport(avDesc);
-
-            if (staleVfRemoved > 0)
-            {
-                Debug.Log($"[ASM-Lite] Migration: removed {staleVfRemoved} duplicate stale VRCFury component(s) from '{component.gameObject.name}' while preserving one delivery component.");
-            }
-
-            if (avatarDescriptorFound)
-            {
-                Debug.Log($"[ASM-Lite] Rebuild cleanup: removed {cleanup.FxLayersRemoved} legacy FX layer(s), {cleanup.FxParamsRemoved} legacy FX parameter(s), {cleanup.ExprParamsRemoved} expression parameter(s), and {cleanup.MenuControlsRemoved} root menu control(s).");
-            }
-
-            return new RebuildMigrationReport(staleVfRemoved, cleanup, componentMissing: false, avatarDescriptorFound: avatarDescriptorFound);
+            return ASMLiteMigrationContinuityService.PrepareRevertedDeliveryRebuild(component);
         }
 
         internal static bool TryDetachToDirectDelivery(ASMLiteComponent component, out string detail)
@@ -2298,114 +2149,7 @@ namespace ASMLite.Editor
 
         internal static CleanupReport CleanUpAvatarAssetsWithReport(VRCAvatarDescriptor avDesc)
         {
-            if (avDesc == null)
-                return new CleanupReport(0, 0, 0, 0, descriptorMissing: true);
-
-            int removedFxLayers = 0;
-            int removedFxParams = 0;
-            int removedExprParams = 0;
-            int removedMenuControls = 0;
-
-            // Clean FX controller
-            for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
-            {
-                if (avDesc.baseAnimationLayers[i].type != VRCAvatarDescriptor.AnimLayerType.FX)
-                    continue;
-
-                var ctrl = avDesc.baseAnimationLayers[i].animatorController as AnimatorController;
-                if (ctrl == null) break;
-
-                // Remove ASMLite_ layers
-                for (int j = ctrl.layers.Length - 1; j >= 0; j--)
-                {
-                    if (!ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        continue;
-
-                    ctrl.RemoveLayer(j);
-                    removedFxLayers++;
-                }
-
-                // Remove ASMLite_ parameters (drain loop)
-                bool removed;
-                do
-                {
-                    removed = false;
-                    foreach (var p in ctrl.parameters)
-                    {
-                        if (string.IsNullOrEmpty(p.name))
-                            continue;
-                        if (!p.name.StartsWith("ASMLite_", StringComparison.Ordinal) && p.name != CtrlParam)
-                            continue;
-
-                        ctrl.RemoveParameter(p);
-                        removedFxParams++;
-                        removed = true;
-                        break;
-                    }
-                } while (removed);
-
-                EditorUtility.SetDirty(ctrl);
-                break;
-            }
-
-            // Clean expression parameters
-            var exprParams = avDesc.expressionParameters;
-            if (exprParams != null && exprParams.parameters != null)
-            {
-                var filtered = new List<VRCExpressionParameters.Parameter>(exprParams.parameters.Length);
-                foreach (var p in exprParams.parameters)
-                {
-                    if (p == null || string.IsNullOrEmpty(p.name)) continue;
-
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
-                    {
-                        removedExprParams++;
-                        continue;
-                    }
-
-                    filtered.Add(p);
-                }
-
-                exprParams.parameters = filtered.ToArray();
-                EditorUtility.SetDirty(exprParams);
-            }
-
-            // Clean expression menu
-            var rootMenu = avDesc.expressionsMenu;
-            if (rootMenu != null && rootMenu.controls != null)
-            {
-                string generatedPresetsMenuPath = ($"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset").Replace('\\', '/');
-                const string presetsMenuFileName = "ASMLite_Presets_Menu.asset";
-
-                for (int i = rootMenu.controls.Count - 1; i >= 0; i--)
-                {
-                    var control = rootMenu.controls[i];
-                    if (control == null)
-                        continue;
-                    if (control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    string submenuPath = control.subMenu != null
-                        ? (AssetDatabase.GetAssetPath(control.subMenu) ?? string.Empty).Replace('\\', '/')
-                        : string.Empty;
-
-                    bool matchesAsmLiteRootName = string.Equals(control.name, DefaultRootControlName, StringComparison.Ordinal);
-                    bool matchesGeneratedPresetsPath = string.Equals(submenuPath, generatedPresetsMenuPath, StringComparison.Ordinal);
-                    bool matchesPresetsMenuFileName = !string.IsNullOrWhiteSpace(submenuPath)
-                        && string.Equals(Path.GetFileName(submenuPath), presetsMenuFileName, StringComparison.Ordinal);
-
-                    if (!matchesAsmLiteRootName && !matchesGeneratedPresetsPath && !matchesPresetsMenuFileName)
-                        continue;
-
-                    rootMenu.controls.RemoveAt(i);
-                    removedMenuControls++;
-                }
-
-                EditorUtility.SetDirty(rootMenu);
-            }
-
-            AssetDatabase.SaveAssets();
-            return new CleanupReport(removedFxLayers, removedFxParams, removedExprParams, removedMenuControls, descriptorMissing: false);
+            return ASMLiteMigrationContinuityService.CleanUpAvatarAssetsWithReport(avDesc);
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
