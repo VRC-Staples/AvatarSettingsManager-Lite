@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 param(
   [string]$WorkflowPath = ".github/workflows/release.yml"
 )
@@ -33,18 +34,32 @@ function Assert-Regex {
 Assert-Regex '(?ms)^\s{2}setup:\s*$' "Invariant failed: missing 'setup' job block under jobs."
 Assert-Regex '(?ms)^\s{2}gate:\s*$' "Invariant failed: missing 'gate' job block under jobs."
 Assert-Regex '(?ms)^\s{2}build:\s*$' "Invariant failed: missing 'build' job block under jobs."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}name:\s*Release\s+Gate\s*$' "Invariant failed: gate job name must remain 'Release Gate'."
 
 # --- Gate job: must depend on setup and fire only when should_release is true ---
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}needs:\s*\[\s*setup\s*\]\s*$' "Invariant failed: gate job must declare 'needs: [setup]'."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}if:\s*needs\.setup\.outputs\.should_release\s*==\s*''true''\s*$' "Invariant failed: gate job must be conditioned on needs.setup.outputs.should_release == 'true'."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}permissions:\s*$.*?^\s{6}checks:\s*read\s*$.*?^\s{6}statuses:\s*read\s*$' "Invariant failed: gate job must keep checks/statuses read permissions."
 
-# --- Gate job: compatibility evaluator must run before check polling ---
-Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Checkout\s*$' "Invariant failed: gate job must checkout repository contents before compatibility evaluation."
-Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?--mode\s+release.*?--contract\s+compatibility\.contract\.json.*?^\s{6}-\s*name:\s*Validate\s+compile\s+and\s+lint\s+checks\s+for\s+release\s+SHA\s*$' "Invariant failed: gate job must run enforced compatibility evaluator before compile/lint/test check polling."
+# --- Gate job ordering and invariant checker wiring ---
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Checkout\s*$.*?^\s{6}-\s*name:\s*Verify\s+release\s+gate\s+invariants\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?^\s{6}-\s*name:\s*Validate\s+compile\s+and\s+lint\s+checks\s+for\s+release\s+SHA\s*$' "Invariant failed: gate job must run checkout -> invariant checker -> compatibility evaluation -> required-check polling in order."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Verify\s+release\s+gate\s+invariants\s*$.*?^\s{8}run:\s*pwsh\s+-File\s+Tools/ci/verify-release-gate\.ps1\s*$' "Invariant failed: gate job must execute pwsh -File Tools/ci/verify-release-gate.ps1."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?--mode\s+release.*?--contract\s+compatibility\.contract\.json' "Invariant failed: gate job must run enforced compatibility evaluation."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Append\s+compatibility\s+summary\s*$.*?^\s{8}if:\s*always\(\)\s*$' "Invariant failed: gate job must append compatibility markdown summary with if: always()."
 
-# --- Gate job: must evaluate checks for the exact release SHA ---
+# --- Gate job: exact-SHA helper wiring + shared required-check source ---
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?Tools/ci/check-required-statuses\.py' "Invariant failed: gate job must invoke Tools/ci/check-required-statuses.py."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--required-checks\s+Tools/ci/release-required-checks\.json' "Invariant failed: gate job must read shared aliases from Tools/ci/release-required-checks.json."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--github-token-env\s+GITHUB_TOKEN' "Invariant failed: gate job must pass --github-token-env GITHUB_TOKEN to helper."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--max-wait-seconds\s+1800' "Invariant failed: gate job must keep 1800s max wait for required-check polling."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--poll-interval-seconds\s+20' "Invariant failed: gate job must keep 20s polling interval for required-check polling."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--repo\s+"\$\{\{\s*github\.repository\s*\}\}"' "Invariant failed: gate helper invocation must target the current repository."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--sha\s+"\$TARGET_SHA"' "Invariant failed: gate helper invocation must evaluate TARGET_SHA."
+
+if ($content -match '(?s)required_checks\s*=\s*\{') {
+  $failures.Add("Invariant failed: release workflow still contains inline required_checks map; use Tools/ci/release-required-checks.json via helper.")
+}
 
 # --- Build job: must depend on both setup AND gate (fail-closed) ---
 Assert-Regex '(?ms)^\s{2}build:\s*$.*?^\s{4}needs:\s*\[\s*setup\s*,\s*gate\s*\]\s*$' "Invariant failed: build job must depend on setup and gate via needs: [setup, gate]."
@@ -53,19 +68,6 @@ Assert-Regex '(?ms)^\s{2}build:\s*$.*?^\s{4}if:\s*needs\.setup\.outputs\.should_
 # --- Duplicate tag guard and Create Tag: conditioned on create_tag output ---
 Assert-Regex '(?ms)^\s{6}-\s*name:\s*Check\s+for\s+existing\s+release\s+tag\s*$.*?^\s{8}if:\s*needs\.setup\.outputs\.create_tag\s*==\s*''true''\s*$' "Invariant failed: duplicate tag guard step must be conditioned on needs.setup.outputs.create_tag == 'true'."
 Assert-Regex '(?ms)^\s{6}-\s*name:\s*Create\s+Tag\s*$.*?^\s{8}if:\s*needs\.setup\.outputs\.create_tag\s*==\s*''true''\s*$' "Invariant failed: Create Tag step must be conditioned on needs.setup.outputs.create_tag == 'true'."
-
-# --- Gate script: required check aliases ---
-Assert-Regex '(?s)required_checks\s*=\s*\{.*?"compile"\s*:\s*\[.*?"C# Compile \(Unity 2022\.3\.22f1\)".*?"C# Compile Check / C# Compile \(Unity 2022\.3\.22f1\)".*?\].*?\}' "Invariant failed: gate script must require the compile check aliases."
-Assert-Regex '(?s)required_checks\s*=\s*\{.*?"lint"\s*:\s*\[.*?"Super-Linter".*?"Lint / Super-Linter".*?\].*?\}' "Invariant failed: gate script must require the lint check aliases."
-Assert-Regex '(?s)required_checks\s*=\s*\{.*?"test"\s*:\s*\[.*?"EditMode Tests".*?"Unity Test Results / EditMode Tests".*?\].*?\}' "Invariant failed: gate script must require the test check aliases."
-
-# --- Gate script: fail-closed logic ---
-Assert-Regex '(?s)pending_states\s*=\s*\{.*?"queued".*?"in_progress".*?"pending".*?\}' "Invariant failed: gate script must define pending states for check polling."
-Assert-Regex '(?s)if\s+matched_name\s+is\s+None\s*:\s*pending\.append\(' "Invariant failed: gate script must treat missing required aliases as pending while polling."
-Assert-Regex '(?s)if\s+value\s*==\s*"success"\s*:\s*continue.*?if\s+value\s+in\s+pending_states\s*:\s*pending\.append\(.*?else\s*:\s*blocking\.append\(' "Invariant failed: gate script must classify check outcomes into success/pending/blocking."
-Assert-Regex '(?s)while\s+True\s*:\s*.*?pending,\s*blocking\s*=\s*classify\(observed\)' "Invariant failed: gate script must poll check state until terminal outcome."
-Assert-Regex '(?s)if\s+blocking\s*:\s*print\("::error::Release gate blocked\."\)\s*.*?sys\.exit\(1\)' "Invariant failed: gate script must fail closed when blocking reasons exist."
-Assert-Regex '(?s)if\s+remaining\s*<=\s*0\s*:\s*print\("::error::Release gate timed out waiting for required checks\."\)\s*.*?sys\.exit\(1\)' "Invariant failed: gate script must timeout and fail when required checks never complete."
 
 if ($failures.Count -gt 0) {
   Write-Host "Release gate invariant check: FAILED"
