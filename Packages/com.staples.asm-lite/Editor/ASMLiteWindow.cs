@@ -6830,7 +6830,15 @@ namespace ASMLite.Editor
                 }
 
                 AssetDatabase.Refresh();
-                Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. migrationRemoved={migrationReport.StaleVrcFuryRemoved}, cleanupFxLayers={migrationReport.Cleanup.FxLayersRemoved}, cleanupFxParams={migrationReport.Cleanup.FxParamsRemoved}, cleanupExprParams={migrationReport.Cleanup.ExprParamsRemoved}, cleanupMenuControls={migrationReport.Cleanup.MenuControlsRemoved}.");
+                var migrationOutcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                    ASMLiteBuilder.GetLatestLegacyAliasContinuityReport(),
+                    migrationReport,
+                    default);
+                string migrationSummary = migrationOutcome.ToCompactSummary();
+                if (migrationOutcome.HasNonCriticalSignals)
+                    Debug.LogWarning($"[ASM-Lite] Migration outcome: {migrationSummary}");
+                else
+                    Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. {migrationSummary}");
             }
             catch (System.Exception ex)
             {
@@ -6894,10 +6902,14 @@ namespace ASMLite.Editor
             var existing = GetOrRefreshComponent();
             if (existing != null)
             {
-                if (TryAdoptInstallPathFromMoveMenu(existing, _selectedAvatar, out string adoptedPrefix, out int removedMoveComponents))
+                var adoption = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(existing, _selectedAvatar);
+                if (adoption.HasChanges)
                 {
-                    string readablePrefix = string.IsNullOrEmpty(adoptedPrefix) ? "<root>" : adoptedPrefix;
-                    Debug.Log($"[ASM-Lite] Adopted install path from VRCFury Move Menu for '{existing.gameObject.name}': prefix='{readablePrefix}', removedMoveComponents={removedMoveComponents}.");
+                    var adoptionReport = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                        default,
+                        default,
+                        adoption);
+                    Debug.Log($"[ASM-Lite] Migration outcome: {adoptionReport.ToCompactSummary()}");
                 }
 
                 CopyComponentCustomizationToPending(existing);

@@ -259,6 +259,26 @@ namespace ASMLite.Editor
             return new InstallPathAdoptionResult(changedComponent, normalizedPrefix, removedMoveComponents);
         }
 
+        internal static ASMLiteMigrationOutcomeReport CreateOutcomeReport(
+            ASMLiteBuilder.LegacyAliasContinuityReport continuityReport,
+            ASMLiteBuilder.RebuildMigrationReport rebuildReport,
+            InstallPathAdoptionResult adoptionResult)
+        {
+            return new ASMLiteMigrationOutcomeReport(
+                continuityReport.MappedCount,
+                continuityReport.MirroredCount,
+                continuityReport.UnmatchedCount,
+                continuityReport.MalformedCount,
+                rebuildReport.StaleVrcFuryRemoved,
+                rebuildReport.Cleanup.FxLayersRemoved,
+                rebuildReport.Cleanup.FxParamsRemoved,
+                rebuildReport.Cleanup.ExprParamsRemoved,
+                rebuildReport.Cleanup.MenuControlsRemoved,
+                adoptionResult.Adopted,
+                adoptionResult.AdoptedInstallPrefix,
+                adoptionResult.RemovedMoveComponents);
+        }
+
         internal static ASMLiteBuilder.BackupNamePlan BuildBackupNamePlan(
             int slotCount,
             List<VRCExpressionParameters.Parameter> avatarParams,
@@ -424,17 +444,6 @@ namespace ASMLite.Editor
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
             bool avatarDescriptorFound = avDesc != null;
             var cleanup = CleanUpAvatarAssetsWithReport(avDesc);
-
-            if (staleVfRemoved > 0)
-            {
-                Debug.Log($"[ASM-Lite] Migration: removed {staleVfRemoved} duplicate stale VRCFury component(s) from '{component.gameObject.name}' while preserving one delivery component.");
-            }
-
-            if (avatarDescriptorFound)
-            {
-                Debug.Log($"[ASM-Lite] Rebuild cleanup: removed {cleanup.FxLayersRemoved} legacy FX layer(s), {cleanup.FxParamsRemoved} legacy FX parameter(s), {cleanup.ExprParamsRemoved} expression parameter(s), and {cleanup.MenuControlsRemoved} root menu control(s).");
-            }
-
             return new ASMLiteBuilder.RebuildMigrationReport(staleVfRemoved, cleanup, componentMissing: false, avatarDescriptorFound: avatarDescriptorFound);
         }
 
