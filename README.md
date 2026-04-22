@@ -146,13 +146,26 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 
 ### Full Validation (Local)
 
-Run full local EditMode validation through the CI-equivalent runner script:
+Run contributor EditMode validation through the canonical command:
 
 ```bash
 Tools/ci/run-editmode-local.sh
 ```
 
-For contributor validation, this script is the required full test path before pushing changes.
+No-arg execution uses the repo-owned Unity project at `Tools/ci/unity-project` and the shared batch plan at `Tools/ci/editmode-batch-runs.json`.
+
+Expected canonical artifacts from the default run:
+- `artifacts/editmode-results.xml`
+- `artifacts/editmode-core-results.xml`
+- `artifacts/editmode-integration-results.xml`
+- `artifacts/editmode.log`
+- `artifacts/asmlite-generation-wiring-summary.json`
+
+For contributor validation, `Tools/ci/run-editmode-local.sh` remains the only required full test path before pushing changes.
+
+Optional local-only helpers:
+- `Tools/ci/run-visible-smoke-local.sh`
+- `Tools/ci/run-UAT-smoke.sh`
 
 ---
 
