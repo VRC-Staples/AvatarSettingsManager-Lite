@@ -259,6 +259,63 @@ namespace ASMLite.Editor
             return new InstallPathAdoptionResult(changedComponent, normalizedPrefix, removedMoveComponents);
         }
 
+        internal static bool TryResolveInstallPathPrefixFromMoveMenu(
+            VRCAvatarDescriptor avatar,
+            string effectiveRootName,
+            out string resolvedInstallPrefix)
+        {
+            resolvedInstallPrefix = string.Empty;
+            if (avatar == null || string.IsNullOrWhiteSpace(effectiveRootName))
+                return false;
+
+            var remaps = GetVrcFuryMoveMenuPathRemaps(avatar);
+            string normalizedRoot = NormalizeSlashPath(effectiveRootName);
+            foreach (var kv in remaps)
+            {
+                if (!string.Equals(NormalizeSlashPath(kv.Key), normalizedRoot, StringComparison.Ordinal))
+                    continue;
+
+                if (!TryResolveInstallPrefixFromMovedRootPath(effectiveRootName, kv.Value, out string rawPrefix))
+                    return false;
+
+                resolvedInstallPrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(true, rawPrefix);
+                return true;
+            }
+
+            Transform routingTransform = avatar.transform.Find("ASM-Lite Install Path Routing");
+            if (routingTransform == null)
+                return false;
+
+            var routingVf = FindLiveVrcFuryBehaviour(routingTransform.gameObject);
+            if (routingVf == null)
+                return false;
+
+            var so = new SerializedObject(routingVf);
+            so.Update();
+            var fromProp = so.FindProperty("content.fromPath");
+            var toProp = so.FindProperty("content.toPath");
+            if (fromProp == null || toProp == null
+                || fromProp.propertyType != SerializedPropertyType.String
+                || toProp.propertyType != SerializedPropertyType.String)
+            {
+                return false;
+            }
+
+            string helperFromPath = NormalizeSlashPath(fromProp.stringValue);
+            string helperToPath = NormalizeSlashPath(toProp.stringValue);
+            if (!string.Equals(helperFromPath, normalizedRoot, StringComparison.Ordinal)
+                || string.IsNullOrWhiteSpace(helperToPath))
+            {
+                return false;
+            }
+
+            if (!TryResolveInstallPrefixFromMovedRootPath(effectiveRootName, helperToPath, out string helperRawPrefix))
+                return false;
+
+            resolvedInstallPrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(true, helperRawPrefix);
+            return true;
+        }
+
         internal static ASMLiteMigrationOutcomeReport CreateOutcomeReport(
             ASMLiteBuilder.LegacyAliasContinuityReport continuityReport,
             ASMLiteBuilder.RebuildMigrationReport rebuildReport,
@@ -600,6 +657,26 @@ namespace ASMLite.Editor
             }
 
             return removedMoveComponents;
+        }
+
+        private static MonoBehaviour FindLiveVrcFuryBehaviour(GameObject gameObject)
+        {
+            if (gameObject == null)
+                return null;
+
+            var behaviours = gameObject.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type != null && string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    return behaviour;
+            }
+
+            return null;
         }
 
         private static Dictionary<string, string> GetVrcFuryMoveMenuPathRemaps(VRCAvatarDescriptor avatar)

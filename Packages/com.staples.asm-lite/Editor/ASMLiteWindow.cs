@@ -6143,8 +6143,8 @@ namespace ASMLite.Editor
                 bool confirm = EditorUtility.DisplayDialog(
                     modeLabel,
                     vendorizeToAssets
-                        ? "This will bake ASM-Lite directly into avatar assets, copy generated assets into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, then remove the ASM-Lite prefab object. Continue?"
-                        : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object. Continue?",
+                        ? "This will stage vendorized generated assets, verify the vendorized refs, bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object only after the combined transaction verifies successfully. Continue?"
+                        : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object only after detach verification succeeds. Continue?",
                     "Continue",
                     "Cancel");
 
@@ -6152,23 +6152,20 @@ namespace ASMLite.Editor
                     return;
             }
 
-            if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
+            var result = vendorizeToAssets
+                ? ASMLiteLifecycleTransactionService.ExecuteVendorizeAndDetach(component, avatar)
+                : ASMLiteLifecycleTransactionService.ExecuteDetachToDirectDelivery(component, avatar);
+            if (!result.Success)
             {
-                Debug.LogError(detail);
+                Debug.LogError(result.ToLogString());
                 if (showDialogs)
-                    EditorUtility.DisplayDialog(modeLabel, detail, "OK");
+                    EditorUtility.DisplayDialog(modeLabel, result.Message, "OK");
                 return;
             }
 
-            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
-            string vendorizedDir = string.Empty;
-            if (vendorizeToAssets && avatar != null)
-            {
-                if (!TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out vendorizedDir))
-                {
-                    Debug.LogWarning("[ASM-Lite] Vendorize requested, but generated assets could not be copied/rebound. Detached payload still applied.");
-                }
-            }
+            string vendorizedDir = vendorizeToAssets ? NormalizeOptionalString(component.vendorizedGeneratedAssetsPath) : string.Empty;
+            CopyComponentCustomizationToPending(component);
 
             Undo.SetCurrentGroupName(modeLabel);
             int group = Undo.GetCurrentGroup();
@@ -6180,13 +6177,13 @@ namespace ASMLite.Editor
             string completion;
             if (vendorizeToAssets && !string.IsNullOrWhiteSpace(vendorizedDir))
             {
-                completion = $"{detail}\n\nVendorized assets folder:\n{vendorizedDir}";
-                Debug.Log($"[ASM-Lite] {detail} Vendorized generated assets to '{vendorizedDir}'.");
+                completion = $"{result.Message}\n\nVendorized assets folder:\n{vendorizedDir}";
+                Debug.Log($"{result.Message} Vendorized generated assets to '{vendorizedDir}'.");
             }
             else
             {
-                completion = detail;
-                Debug.Log($"[ASM-Lite] {detail}");
+                completion = result.Message;
+                Debug.Log(result.Message);
             }
 
             if (showDialogs)
@@ -6240,12 +6237,30 @@ namespace ASMLite.Editor
                 return;
             }
 
-            ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
+            var pendingSnapshot = CapturePendingCustomizationSnapshot();
+            var result = ASMLiteLifecycleTransactionService.ExecuteDetachedReturnToPackageManagedRecovery(_selectedAvatar, pendingSnapshot);
+            if (!result.Success)
+            {
+                Debug.LogError(result.ToLogString());
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Return to Package Managed",
+                        result.Message,
+                        "OK");
+                }
+                return;
+            }
 
-            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+            if (result.DiscoveredParamCount >= 0)
+                _discoveredParamCount = result.DiscoveredParamCount;
 
-            AddPrefabToAvatar(showDialogs: false);
+            InvalidateCachedEditorState(resetDiscoveredParamCount: false);
+            var recoveredComponent = GetOrRefreshComponent();
+            if (recoveredComponent != null)
+                CopyComponentCustomizationToPending(recoveredComponent);
 
+            Debug.Log(result.ToLogString());
             if (showDialogs)
             {
                 EditorUtility.DisplayDialog(
@@ -6253,6 +6268,7 @@ namespace ASMLite.Editor
                     "ASM-Lite has been re-attached in package-managed mode for this avatar.\n\nYou can now edit settings and rebuild normally.",
                     "OK");
             }
+            Repaint();
         }
 
         private ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CapturePendingCustomizationSnapshot()
