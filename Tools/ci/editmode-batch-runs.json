@@ -1,0 +1,40 @@
+{
+  "runs": [
+    {
+      "name": "editmode-core",
+      "resultFile": "editmode-core-results.xml",
+      "filters": [
+        {
+          "groupNames": [
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteAssetPathsTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteBatchTestRunnerTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationScaffoldTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteGenerationWiringSummaryWriterTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallPathWiringTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowNamingGroupingTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowRiskAffordanceTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowStatusPanelTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowTerminologyTests(?:\\.|$)"
+          ]
+        },
+        {
+          "testNames": [
+            "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "editmode-integration",
+      "resultFile": "editmode-integration-results.xml",
+      "categoryNames": ["Integration"]
+    }
+  ]
+}
