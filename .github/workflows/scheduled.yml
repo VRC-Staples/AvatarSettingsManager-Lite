@@ -31,6 +31,17 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: dev
+
+      - name: Assert nightly source branch is dev
+        run: |
+          set -euo pipefail
+          source_branch=$(git rev-parse --abbrev-ref HEAD)
+          echo "Resolved source branch: ${source_branch}"
+          if [ "${source_branch}" != "dev" ]; then
+            echo "Nightly workflow must publish from dev; resolved '${source_branch}'." >&2
+            exit 1
+          fi
 
       - name: Validate compile, lint, and test checks for nightly SHA
         env:
