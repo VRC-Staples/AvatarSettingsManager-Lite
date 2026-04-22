@@ -46,6 +46,58 @@ namespace ASMLite.Tests.Editor
         private static string FullNameOrNull(Component c)
             => c == null ? "<null>" : c.GetType().FullName ?? "<null>";
 
+        private static void AddAvatarParam(AsmLiteTestContext ctx, string name, VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType type, float defaultValue = 0f)
+        {
+            var existing = ctx.ParamsAsset.parameters ?? new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter[0];
+            var updated = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter[existing.Length + 1];
+            existing.CopyTo(updated, 0);
+            updated[existing.Length] = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
+            {
+                name = name,
+                valueType = type,
+                defaultValue = defaultValue,
+                saved = true,
+                networkSynced = true,
+            };
+            ctx.ParamsAsset.parameters = updated;
+            UnityEditor.EditorUtility.SetDirty(ctx.ParamsAsset);
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
+
+        private static void AddUserOwnedArtifacts(AsmLiteTestContext ctx)
+        {
+            ctx.Ctrl.AddLayer(new UnityEditor.Animations.AnimatorControllerLayer
+            {
+                name = "User_CustomLayer",
+                defaultWeight = 1f,
+                stateMachine = new UnityEditor.Animations.AnimatorStateMachine { name = "UserStateMachine" }
+            });
+            ctx.Ctrl.AddParameter("User_CustomParam", UnityEngine.AnimatorControllerParameterType.Float);
+
+            var existingExpr = ctx.AvDesc.expressionParameters.parameters ?? new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter[0];
+            var mergedExpr = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter[existingExpr.Length + 1];
+            existingExpr.CopyTo(mergedExpr, 0);
+            mergedExpr[existingExpr.Length] = new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
+            {
+                name = "UserExprParam",
+                valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float,
+                defaultValue = 0.5f,
+                saved = true,
+                networkSynced = true,
+            };
+            ctx.AvDesc.expressionParameters.parameters = mergedExpr;
+            ctx.AvDesc.expressionsMenu.controls.Add(new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control
+            {
+                name = "User Control",
+                type = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control.ControlType.Button,
+            });
+
+            UnityEditor.EditorUtility.SetDirty(ctx.Ctrl);
+            UnityEditor.EditorUtility.SetDirty(ctx.AvDesc.expressionParameters);
+            UnityEditor.EditorUtility.SetDirty(ctx.AvDesc.expressionsMenu);
+            UnityEditor.AssetDatabase.SaveAssets();
+        }
+
         // ── A42 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -269,6 +321,72 @@ namespace ASMLite.Tests.Editor
                 "A55: compact migration outcome reporting should summarize selective cleanup counts in one transport object.");
             StringAssert.Contains("staleVrcFury=1", outcome.ToCompactSummary(),
                 "A55: compact migration outcome reporting should include collapsed stale VRCFury counts.");
+        }
+
+        [Test, Category("Integration")]
+        public void A56_DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup()
+        {
+            const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+
+            AddAvatarParam(_ctx, deterministicSource, VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float, 0.5f);
+            AddUserOwnedArtifacts(_ctx);
+
+            var generatedExprParams = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(generatedExprParams, "A56: generated expression-parameters asset must exist for detach/recover continuity setup.");
+            generatedExprParams.parameters = new[]
+            {
+                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter { name = unmatchedLegacy, valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float, defaultValue = 0.1f, saved = true, networkSynced = true },
+                new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S_", valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float, defaultValue = 0.2f, saved = true, networkSynced = true },
+            };
+            UnityEditor.EditorUtility.SetDirty(generatedExprParams);
+            UnityEditor.AssetDatabase.SaveAssets();
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.DetachForAutomation();
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "A56: setup should leave the avatar detached before recovery.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "A56: setup should classify the avatar as Detached before recovery.");
+
+                window.ReturnToPackageManagedForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            var recovered = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(recovered,
+                "A56: detached recovery should reattach ASM-Lite in package-managed mode.");
+            Assert.IsTrue(_ctx.Ctrl.layers.Any(l => l.name == "User_CustomLayer"),
+                "A56: detached recovery cleanup should preserve user-owned FX layers.");
+            Assert.IsTrue(_ctx.Ctrl.parameters.Any(p => p.name == "User_CustomParam"),
+                "A56: detached recovery cleanup should preserve user-owned FX parameters.");
+            Assert.IsTrue(_ctx.AvDesc.expressionParameters.parameters.Any(p => p != null && p.name == "UserExprParam"),
+                "A56: detached recovery cleanup should preserve user-owned expression parameters.");
+            Assert.IsTrue(_ctx.AvDesc.expressionsMenu.controls.Any(c => c != null && c.name == "User Control"),
+                "A56: detached recovery cleanup should preserve user-owned menu controls.");
+
+            int buildResult = ASMLiteBuilder.Build(recovered);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"A56: build should succeed after detach/recover continuity validation. result={buildResult}.");
+
+            generatedExprParams = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(generatedExprParams, "A56: generated expression-parameters asset must exist after detach/recover rebuild.");
+            Assert.IsTrue(generatedExprParams.parameters.Any(p => p != null && p.name == unmatchedLegacy),
+                "A56: unmatched but well-formed legacy backup aliases must remain preserved after detach/recover rebuild.");
+            Assert.IsFalse(generatedExprParams.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S_"),
+                "A56: malformed legacy backup aliases must remain excluded after detach/recover rebuild.");
+
+            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
+            Assert.GreaterOrEqual(report.UnmatchedCount, 1,
+                "A56: detach/recover rebuild should preserve unmatched legacy continuity reporting.");
         }
     }
 }

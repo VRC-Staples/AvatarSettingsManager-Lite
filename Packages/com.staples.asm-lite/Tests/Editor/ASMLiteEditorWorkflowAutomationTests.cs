@@ -457,6 +457,217 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void Automation_DetachForAutomation_VerifyFailure_LeavesPrefabAttachedAndPackageManaged()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                if (_ctx.Comp != null)
+                    Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Detach rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before failure injection.");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/DetachRollback";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_DetachForAutomation_VerifyFailure_LeavesPrefabAttachedAndPackageManaged),
+                    window.RebuildForAutomation);
+
+                var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(baselineComponent,
+                    "Detach rollback validation requires ASM-Lite to remain attached after the baseline rebuild.");
+                var baselineSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(baselineComponent, 0);
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/DetachRollback/Settings Manager",
+                    "Detach rollback setup should establish deterministic install-path routing before failure injection.");
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify))
+                {
+                    LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected detach verification failure after direct-delivery content was applied\..*$"));
+                    window.DetachForAutomation();
+                }
+
+                var rolledBackComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(rolledBackComponent,
+                    "Detach rollback should keep ASM-Lite attached after verify-stage failure.");
+                Assert.IsFalse(rolledBackComponent.useVendorizedGeneratedAssets,
+                    "Detach rollback should restore package-managed mode on the attached component after verify-stage failure.");
+                Assert.AreEqual(string.Empty, rolledBackComponent.vendorizedGeneratedAssetsPath,
+                    "Detach rollback should keep the tracked vendorized path empty after verify-stage failure.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
+                    "Detach rollback should resolve the attached avatar back to PackageManaged tool state.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "Detach rollback should remove direct-delivery runtime markers before leaving the avatar attached again.");
+
+                var rollbackSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(rolledBackComponent, 0);
+                Assert.AreEqual(baselineSnapshot.ControllerReferencePath, rollbackSnapshot.ControllerReferencePath,
+                    "Detach rollback should preserve the FullController FX reference path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.MenuReferencePath, rollbackSnapshot.MenuReferencePath,
+                    "Detach rollback should preserve the FullController menu reference path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceResolvedPath, rollbackSnapshot.ParameterReferenceResolvedPath,
+                    "Detach rollback should preserve the selected parameter fallback path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceAssetPath, rollbackSnapshot.ParameterReferenceAssetPath,
+                    "Detach rollback should preserve the FullController parameter asset reference path after verify-stage failure.");
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/DetachRollback/Settings Manager",
+                    "Detach rollback should preserve install-path routing after verify-stage failure.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void Automation_VendorizeAndDetach_VerifyFailure_LeavesPrefabAttachedAndPackageManaged()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                if (_ctx.Comp != null)
+                    Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Vendorize + detach rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before failure injection.");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/VendorizeDetachRollback";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
+                    nameof(Automation_VendorizeAndDetach_VerifyFailure_LeavesPrefabAttachedAndPackageManaged),
+                    window.RebuildForAutomation);
+
+                var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(baselineComponent,
+                    "Vendorize + detach rollback validation requires ASM-Lite to remain attached after the baseline rebuild.");
+                var baselineSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(baselineComponent, 0);
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/VendorizeDetachRollback/Settings Manager",
+                    "Vendorize + detach rollback setup should establish deterministic install-path routing before failure injection.");
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify))
+                {
+                    LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected vendorize \+ detach verification failure after direct-delivery content was applied to vendorized assets\..*$"));
+                    InvokeDetachForAutomation(window, baselineComponent, vendorizeToAssets: true);
+                }
+
+                var rolledBackComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(rolledBackComponent,
+                    "Vendorize + detach rollback should keep ASM-Lite attached after verify-stage failure.");
+                Assert.IsFalse(rolledBackComponent.useVendorizedGeneratedAssets,
+                    "Vendorize + detach rollback should restore package-managed mode on the attached component after verify-stage failure.");
+                Assert.AreEqual(string.Empty, rolledBackComponent.vendorizedGeneratedAssetsPath,
+                    "Vendorize + detach rollback should clear the tracked vendorized path after verify-stage failure.");
+                Assert.IsFalse(AssetDatabase.IsValidFolder("Assets/ASM-Lite/TestAvatar/GeneratedAssets"),
+                    "Vendorize + detach rollback should not leave the vendorized generated-assets folder behind after verify-stage failure.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
+                    "Vendorize + detach rollback should resolve the attached avatar back to PackageManaged tool state.");
+
+                var rollbackSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(rolledBackComponent, 0);
+                Assert.AreEqual(baselineSnapshot.ControllerReferencePath, rollbackSnapshot.ControllerReferencePath,
+                    "Vendorize + detach rollback should restore the FullController FX reference path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.MenuReferencePath, rollbackSnapshot.MenuReferencePath,
+                    "Vendorize + detach rollback should restore the FullController menu reference path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceResolvedPath, rollbackSnapshot.ParameterReferenceResolvedPath,
+                    "Vendorize + detach rollback should preserve the selected parameter fallback path after verify-stage failure.");
+                Assert.AreEqual(baselineSnapshot.ParameterReferenceAssetPath, rollbackSnapshot.ParameterReferenceAssetPath,
+                    "Vendorize + detach rollback should restore the FullController parameter asset reference path after verify-stage failure.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void Automation_RepeatedLifecycleCycles_PreserveStateAcrossDetachAndVendorizeDetachRecovery()
+        {
+            ASMLiteGeneratedOutputSnapshot firstRecoveredSnapshot;
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/RepeatedLifecycle";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.VendorizeForAutomation();
+                window.ReturnToPackageManagedForAutomation();
+                window.DetachForAutomation();
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "Repeated lifecycle setup should leave the avatar detached after the first detach cycle.");
+                window.ReturnToPackageManagedForAutomation();
+
+                var firstRecovered = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(firstRecovered,
+                    "Repeated lifecycle setup should reattach ASM-Lite after the first detached recovery cycle.");
+                Assert.AreEqual("Tools/RepeatedLifecycle", firstRecovered.customInstallPath,
+                    "First detached recovery cycle should restore the component install-path setting.");
+                firstRecoveredSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(firstRecovered, 0);
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/RepeatedLifecycle/Settings Manager",
+                    "First detached recovery cycle should preserve deterministic install-path routing.");
+
+                InvokeDetachForAutomation(window, firstRecovered, vendorizeToAssets: true);
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "Vendorize + detach cycle should remove the editable ASM-Lite prefab after verified success.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "Vendorize + detach cycle should leave the avatar classified as Detached after direct-delivery verification succeeds.");
+                Assert.IsTrue(AssetDatabase.IsValidFolder("Assets/ASM-Lite/TestAvatar/GeneratedAssets"),
+                    "Vendorize + detach cycle should still leave the vendorized generated-assets folder on disk after verified success.");
+                _vendorizedAvatarFolder = "Assets/ASM-Lite/TestAvatar";
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+
+            var recoveryWindow = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                recoveryWindow.SelectAvatarForAutomation(_ctx.AvDesc);
+                recoveryWindow.ReturnToPackageManagedForAutomation();
+
+                var recovered = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(recovered,
+                    "Fresh-window detached recovery should reattach ASM-Lite after vendorize + detach success.");
+                Assert.IsFalse(recovered.useVendorizedGeneratedAssets,
+                    "Fresh-window detached recovery should restore package-managed mode on the reattached component.");
+                Assert.AreEqual(string.Empty, recovered.vendorizedGeneratedAssetsPath,
+                    "Fresh-window detached recovery should clear the tracked vendorized generated-assets path.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, recovered),
+                    "Fresh-window detached recovery should restore PackageManaged tool state.");
+                Assert.AreEqual("Tools/RepeatedLifecycle", recovered.customInstallPath,
+                    "Fresh-window detached recovery should preserve install-path continuity through the migration helper seam.");
+                AssertInstallPathRoutingHelper(_ctx.AvDesc, "Settings Manager", "Tools/RepeatedLifecycle/Settings Manager",
+                    "Fresh-window detached recovery should preserve deterministic install-path routing after vendorize + detach.");
+
+                var recoveredSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(recovered, 0);
+                Assert.AreEqual(firstRecoveredSnapshot.ControllerReferencePath, recoveredSnapshot.ControllerReferencePath,
+                    "Fresh-window detached recovery should restore the canonical FullController FX reference path after repeated detach cycles.");
+                Assert.AreEqual(firstRecoveredSnapshot.MenuReferencePath, recoveredSnapshot.MenuReferencePath,
+                    "Fresh-window detached recovery should restore the canonical FullController menu reference path after repeated detach cycles.");
+                Assert.AreEqual(firstRecoveredSnapshot.ParameterReferenceResolvedPath, recoveredSnapshot.ParameterReferenceResolvedPath,
+                    "Fresh-window detached recovery should preserve the selected parameter fallback path after repeated detach cycles.");
+                Assert.AreEqual(firstRecoveredSnapshot.ParameterReferenceAssetPath, recoveredSnapshot.ParameterReferenceAssetPath,
+                    "Fresh-window detached recovery should restore the canonical FullController parameter asset reference path after repeated detach cycles.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(recoveryWindow);
+            }
+        }
+
         private static void AssertInstallPathRoutingHelper(
             VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatar,
             string expectedFromPath,
@@ -541,6 +752,13 @@ namespace ASMLite.Tests.Editor
             }.Count(path => ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path).HasReference);
             Assert.AreEqual(1, populatedParameterFallbackMembers,
                 aid + " Expected exactly one populated FullController parameter fallback-group member.");
+        }
+
+        private static void InvokeDetachForAutomation(ASMLite.Editor.ASMLiteWindow window, ASMLiteComponent component, bool vendorizeToAssets)
+        {
+            var method = window.GetType().GetMethod("DetachAsmLite", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.IsNotNull(method, "Missing private method 'DetachAsmLite' on ASMLiteWindow.");
+            method.Invoke(window, new object[] { component, vendorizeToAssets, false, false });
         }
 
         private static void InvokePrivateMethod(object target, string methodName)

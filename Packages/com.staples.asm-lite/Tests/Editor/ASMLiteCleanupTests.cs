@@ -664,5 +664,58 @@ namespace ASMLite.Tests.Editor
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
                 "A56: attached avatar should resolve to Vendorized state after delete-stage rollback completes.");
         }
+
+        [Test, Category("Integration")]
+        public void A57_DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/RecoveryFailure";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+                var pendingSnapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp);
+                window.DetachForAutomation();
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "A57: setup should leave the avatar detached before recovery failure injection.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "A57: setup should classify the detached avatar as Detached before recovery failure injection.");
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify))
+                {
+                    var result = ASMLiteLifecycleTransactionService.ExecuteDetachedReturnToPackageManagedRecovery(
+                        _ctx.AvDesc,
+                        pendingSnapshot);
+
+                    Assert.IsFalse(result.Success,
+                        "A57: detached recovery should fail closed when verify-stage failure is injected after reattachment completes.");
+                    Assert.AreEqual(ASMLiteLifecycleTransactionStage.Verify, result.FailedStage,
+                        "A57: injected detached recovery failure should surface as a verify-stage transaction failure.");
+                    Assert.IsTrue(result.CleanupAttempted,
+                        "A57: detached recovery should record that cleanup ran before the reattach attempt.");
+                    Assert.IsTrue(result.CleanupSucceeded,
+                        "A57: detached recovery should report cleanup success even when later verify-stage recovery fails.");
+                    Assert.IsTrue(result.ReattachAttempted,
+                        "A57: detached recovery should record the reattach attempt before verify-stage failure.");
+                    Assert.IsFalse(result.ReattachSucceeded,
+                        "A57: detached recovery should report reattach failure after verify-stage failure destroys the partial prefab.");
+                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled, result.RecoveredState,
+                        "A57: detached recovery should report the best-effort recovered state after tearing down the partial prefab.");
+                }
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "A57: detached recovery verify failure should not leave a partial ASM-Lite prefab attached.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "A57: detached recovery verify failure should clean direct-delivery runtime markers instead of leaving the avatar half-restored.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
     }
 }

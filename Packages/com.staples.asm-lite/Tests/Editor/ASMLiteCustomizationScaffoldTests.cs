@@ -838,6 +838,83 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void DetachTransaction_VerifyFailure_RollsBackAttachedCustomizationAndRouting()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                if (_ctx.Comp != null)
+                    UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Detach rollback setup should attach a prefab-managed ASM-Lite component before failure injection.");
+                _ctx.Comp.useCustomInstallPath = true;
+                _ctx.Comp.customInstallPath = "Tools/DetachRollback";
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+
+                AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
+                    "Detach rollback setup should establish deterministic install-path routing before failure injection.");
+                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
+                    "Detach rollback setup should leave live FullController references on package-managed generated assets.");
+                string baselineExprPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/');
+                string baselineMenuPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/');
+                int baselineFxIndex = FindFxLayerIndex();
+                Assert.GreaterOrEqual(baselineFxIndex, 0,
+                    "Detach rollback setup should leave an FX layer on the avatar before failure injection.");
+                var baselineFxController = _ctx.AvDesc.baseAnimationLayers[baselineFxIndex].animatorController;
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify))
+                {
+                    var result = ASMLiteLifecycleTransactionService.ExecuteDetachToDirectDelivery(_ctx.Comp, _ctx.AvDesc);
+                    Assert.IsFalse(result.Success,
+                        "Detach should fail closed when verify-stage failure is injected after direct-delivery content is applied.");
+                    Assert.AreEqual(ASMLiteLifecycleTransactionStage.Verify, result.FailedStage,
+                        "Detach verify-stage failure should surface as a verify-stage transaction failure.");
+                    Assert.IsTrue(result.RollbackAttempted,
+                        "Detach should attempt rollback after verify-stage failure.");
+                    Assert.IsTrue(result.RollbackSucceeded,
+                        "Detach rollback should restore the attached package-managed baseline after verify-stage failure.");
+                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged, result.RollbackState,
+                        "Detach rollback state should resolve back to PackageManaged after verify-stage failure.");
+                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled, result.RecoveredState,
+                        "Detach rollback should report the detached baseline state after attached package-managed recovery.");
+                }
+
+                var rolledBackComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(rolledBackComponent,
+                    "Detach rollback should keep ASM-Lite attached after verify-stage failure.");
+                Assert.AreEqual(baselineExprPath,
+                    AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
+                    "Detach rollback should restore avatar expression parameters back to the baseline asset after verify-stage failure.");
+                Assert.AreEqual(baselineMenuPath,
+                    AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
+                    "Detach rollback should restore avatar expressions menu back to the baseline asset after verify-stage failure.");
+
+                int fxIndex = FindFxLayerIndex();
+                Assert.GreaterOrEqual(fxIndex, 0,
+                    "Detach rollback should preserve the avatar FX layer after verify-stage failure.");
+                Assert.AreEqual(baselineFxController, _ctx.AvDesc.baseAnimationLayers[fxIndex].animatorController,
+                    "Detach rollback should preserve the avatar FX controller assignment that existed before failure injection.");
+                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
+                    "Detach rollback should restore live FullController references back to package-managed assets after verify-stage failure.");
+                AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
+                    "Detach rollback should preserve install-path routing after verify-stage failure.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "Detach rollback should remove detached runtime markers before leaving the avatar attached again.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void BakeAssets_RewritesLivePrefixDeterministically_WhenCustomizationFlipsEnabledDisabledAndBlank()
         {
             var vf = EnsureLiveFullControllerPayload(_ctx.Comp);
