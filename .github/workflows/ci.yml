@@ -105,6 +105,9 @@ jobs:
             --required-checks Tools/ci/release-required-checks.json \
             --validate-config-only
 
+      - name: Run required-check status helper tests
+        run: python3 Tools/ci/tests/test_check_required_statuses.py
+
   lint:
     name: Super-Linter
     runs-on: ubuntu-latest
