@@ -20,6 +20,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
+CANONICAL_PROJECT_PATH="${REPO_ROOT}/Tools/ci/unity-project"
 RUN_EDITMODE_SCRIPT="${SCRIPT_DIR}/run-editmode-local.sh"
 OVERLAY_SCRIPT="${SCRIPT_DIR}/asmlite-visible-overlay.py"
 
@@ -391,7 +392,7 @@ PY
   build_overlay_batch_plan "${batch_plan_path}" "${batch_results_dir}" "${canonical_results_path}"
 
   echo "Running full visible UAT smoke suite against:"
-  echo "  Project: ${REPO_ROOT}/../Test Project/TestUnityProject"
+  echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    full_visible_smoke"
   echo "  Suites:  ${total_runs} discovered category run(s)"
@@ -414,7 +415,7 @@ PY
   ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS="${FIXED_DELAY_SECONDS}" \
   ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH="${OVERLAY_STATE_PATH}" \
   ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH="${OVERLAY_ACK_PATH}" \
-  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-suite
+  bash "${RUN_EDITMODE_SCRIPT}" --local --project-path "${CANONICAL_PROJECT_PATH}" --visible-editor-suite
   run_exit_code=$?
   set -e
 

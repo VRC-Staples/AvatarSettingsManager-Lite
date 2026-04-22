@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
+CANONICAL_PROJECT_PATH="${REPO_ROOT}/Tools/ci/unity-project"
 RUN_EDITMODE_SCRIPT="${SCRIPT_DIR}/run-editmode-local.sh"
 OVERLAY_SCRIPT="${SCRIPT_DIR}/asmlite-visible-overlay.py"
 FIXED_DELAY_SECONDS="1.5"
@@ -253,7 +254,7 @@ run_overlay_smoke() {
   build_overlay_batch_plan "${batch_plan_path}" "${batch_results_dir}" "${canonical_results_path}"
 
   echo "Running visible UAT overlay smoke suite against:"
-  echo "  Project: ${REPO_ROOT}/../Test Project/TestUnityProject"
+  echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    overlay_smoke"
   echo "  Delay:   ${FIXED_DELAY_SECONDS}s"
@@ -267,7 +268,7 @@ run_overlay_smoke() {
   ASMLITE_BATCH_SELECTION_LABEL="UAT checklist smoke suites" \
   ASMLITE_BATCH_SESSION_ID="visible-smoke-local" \
   ASMLITE_BATCH_OVERLAY_TITLE="ASM-Lite UAT smoke suites" \
-  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-suite
+  bash "${RUN_EDITMODE_SCRIPT}" --local --project-path "${CANONICAL_PROJECT_PATH}" --visible-editor-suite
 
   echo
   echo "Artifacts:"
@@ -283,13 +284,13 @@ run_selector_smoke() {
   local mode_label="$2"
 
   echo "Running visible ${mode_label} smoke against:"
-  echo "  Project: ${REPO_ROOT}/../Test Project/TestUnityProject"
+  echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Selector: ${selector}"
   echo "  Delay:    ${FIXED_DELAY_SECONDS}s"
 
   ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS="${FIXED_DELAY_SECONDS}" \
-  bash "${RUN_EDITMODE_SCRIPT}" --local --visible-editor-smoke --test-filter "${selector}"
+  bash "${RUN_EDITMODE_SCRIPT}" --local --project-path "${CANONICAL_PROJECT_PATH}" --visible-editor-smoke --test-filter "${selector}"
 }
 
 while [[ $# -gt 0 ]]; do
