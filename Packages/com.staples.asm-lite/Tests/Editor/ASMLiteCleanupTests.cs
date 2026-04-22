@@ -241,6 +241,19 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
         }
 
+        private static int CountMatchingMoveMenuHelpers(VRCAvatarDescriptor avatar, string fromPath, string toPath)
+        {
+            if (avatar == null)
+                return 0;
+
+            return avatar
+                .GetComponentsInChildren<VF.Model.VRCFury>(true)
+                .Count(component => component != null
+                    && component.content is VF.Model.Feature.MoveMenuItem move
+                    && string.Equals(move.fromPath, fromPath, System.StringComparison.Ordinal)
+                    && string.Equals(move.toPath, toPath, System.StringComparison.Ordinal));
+        }
+
         private static void CopyPackageAssetToMirror(string sourceAssetPath, string targetFolder)
         {
             string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
@@ -729,6 +742,67 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A57: detached recovery verify failure should clean direct-delivery runtime markers instead of leaving the avatar half-restored.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void A57b_DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry()
+        {
+            const string legacyFromPath = "Settings Manager";
+            const string legacyToPath = "Tools/DetachedRetry/Settings Manager";
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.useCustomInstallPath = false;
+                _ctx.Comp.customInstallPath = string.Empty;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+                var pendingSnapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp);
+                window.DetachForAutomation();
+
+                var legacyMoveMenuRoot = new GameObject("DetachedRecoveryLegacyMoveMenu");
+                legacyMoveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+                var legacyMoveMenu = legacyMoveMenuRoot.AddComponent<VF.Model.VRCFury>();
+                legacyMoveMenu.content = new VF.Model.Feature.MoveMenuItem
+                {
+                    fromPath = legacyFromPath,
+                    toPath = legacyToPath,
+                };
+
+                Assert.AreEqual(1, CountMatchingMoveMenuHelpers(_ctx.AvDesc, legacyFromPath, legacyToPath),
+                    "A58: setup should leave exactly one matching legacy MoveMenu helper on the detached avatar before recovery failure injection.");
+                Assert.IsNull(_ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing"),
+                    "A58: setup should rely on the legacy MoveMenu helper rather than the package-managed routing helper.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "A58: setup should classify the avatar as Detached before pre-finalize recovery failure injection.");
+
+                using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.BeforeDetachedRecoveryRoutingFinalize))
+                {
+                    var result = ASMLiteLifecycleTransactionService.ExecuteDetachedReturnToPackageManagedRecovery(
+                        _ctx.AvDesc,
+                        pendingSnapshot);
+
+                    Assert.IsFalse(result.Success,
+                        "A58: detached recovery should fail closed when a pre-finalize recovery failure is injected after legacy MoveMenu adoption begins.");
+                    Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
+                        "A58: the injected pre-finalize recovery failure should surface as an execute-stage transaction failure.");
+                    Assert.IsTrue(result.InstallPathAdoptionAttempted,
+                        "A58: detached recovery should record that install-path adoption was attempted before the injected pre-finalize failure.");
+                }
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "A58: pre-finalize recovery failure should not leave a partial ASM-Lite prefab attached.");
+                Assert.AreEqual(1, CountMatchingMoveMenuHelpers(_ctx.AvDesc, legacyFromPath, legacyToPath),
+                    "A58: detached recovery must preserve the legacy MoveMenu continuity helper when recovery fails before finalization succeeds.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "A58: pre-finalize recovery failure should still report the cleaned best-effort state after tearing down the partial prefab.");
             }
             finally
             {

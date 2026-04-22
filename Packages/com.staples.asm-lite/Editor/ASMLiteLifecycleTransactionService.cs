@@ -19,6 +19,7 @@ namespace ASMLite.Editor
         DuringDetachVerify = 6,
         DuringVendorizeDetachVerify = 7,
         DuringDetachedRecoveryVerify = 8,
+        BeforeDetachedRecoveryRoutingFinalize = 9,
     }
 
     internal static class ASMLiteLifecycleTransactionService
@@ -727,6 +728,7 @@ namespace ASMLite.Editor
             bool installPathAdoptionAttempted = false;
             bool installPathAdoptionSucceeded = false;
             ASMLiteMigrationContinuityService.InstallPathAdoptionResult adoption = default;
+            int pendingLegacyMoveMenuHelpers = 0;
 
             try
             {
@@ -803,16 +805,45 @@ namespace ASMLite.Editor
                         adoption);
                 }
 
-                var adoptedInstallPath = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(component, avatar);
-                if (adoptedInstallPath.Adopted || adoptedInstallPath.RemovedMoveComponents > 0)
+                var adoptedInstallPath = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(
+                    component,
+                    avatar,
+                    consumeLegacyMoveMenuHelpers: false);
+                pendingLegacyMoveMenuHelpers = ASMLiteMigrationContinuityService.CountMatchingMoveMenuHelpers(component, avatar);
+                if (adoptedInstallPath.Adopted || pendingLegacyMoveMenuHelpers > 0)
                 {
-                    adoption = adoptedInstallPath;
+                    adoption = MergeInstallPathAdoptionResult(adoption, adoptedInstallPath, removedMoveComponents: 0);
                     installPathAdoptionAttempted = true;
-                    installPathAdoptionSucceeded = adoptedInstallPath.Adopted;
+                    installPathAdoptionSucceeded = adoption.Adopted;
                     migrationOutcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
                         default,
                         new ASMLiteBuilder.RebuildMigrationReport(0, cleanup, componentMissing: false, avatarDescriptorFound: true),
                         adoption);
+                }
+
+                if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.BeforeDetachedRecoveryRoutingFinalize))
+                {
+                    UnityEngine.Object.DestroyImmediate(instance);
+                    instance = null;
+                    return ASMLiteLifecycleTransactionResult.Fail(
+                        operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
+                        failedStage: ASMLiteLifecycleTransactionStage.Execute,
+                        beforeState: beforeState,
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackAttempted: true,
+                        rollbackSucceeded: true,
+                        contextPath: avatar.gameObject.name,
+                        remediation: "Disable the detached-recovery pre-finalize failure injection after validating continuity-marker retention.",
+                        message: "[ASM-Lite] Injected detached recovery failure before install-path routing finalization completed.",
+                        migrationOutcomeReport: migrationOutcome,
+                        cleanupAttempted: true,
+                        cleanupSucceeded: true,
+                        reattachAttempted: true,
+                        reattachSucceeded: false,
+                        installPathAdoptionAttempted: installPathAdoptionAttempted,
+                        installPathAdoptionSucceeded: installPathAdoptionSucceeded,
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 EditorUtility.SetDirty(component);
@@ -963,6 +994,19 @@ namespace ASMLite.Editor
                         recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
+                if (pendingLegacyMoveMenuHelpers > 0)
+                {
+                    int removedMoveMenuHelpers = ASMLiteMigrationContinuityService.RemoveMatchingMoveMenuHelpers(component, avatar);
+                    if (removedMoveMenuHelpers > 0)
+                    {
+                        adoption = MergeInstallPathAdoptionResult(adoption, default, removedMoveComponents: removedMoveMenuHelpers);
+                        migrationOutcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                            default,
+                            new ASMLiteBuilder.RebuildMigrationReport(0, cleanup, componentMissing: false, avatarDescriptorFound: true),
+                            adoption);
+                    }
+                }
+
                 return ASMLiteLifecycleTransactionResult.Pass(
                     operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                     beforeState: beforeState,
@@ -1003,6 +1047,19 @@ namespace ASMLite.Editor
                     installPathAdoptionSucceeded: installPathAdoptionSucceeded,
                     recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
             }
+        }
+
+        private static ASMLiteMigrationContinuityService.InstallPathAdoptionResult MergeInstallPathAdoptionResult(
+            ASMLiteMigrationContinuityService.InstallPathAdoptionResult existing,
+            ASMLiteMigrationContinuityService.InstallPathAdoptionResult incoming,
+            int removedMoveComponents)
+        {
+            bool adopted = existing.Adopted || incoming.Adopted;
+            string adoptedInstallPrefix = !string.IsNullOrWhiteSpace(incoming.AdoptedInstallPrefix)
+                ? incoming.AdoptedInstallPrefix
+                : existing.AdoptedInstallPrefix;
+            int totalRemovedMoveComponents = existing.RemovedMoveComponents + incoming.RemovedMoveComponents + Math.Max(0, removedMoveComponents);
+            return new ASMLiteMigrationContinuityService.InstallPathAdoptionResult(adopted, adoptedInstallPrefix, totalRemovedMoveComponents);
         }
 
         private static ASMLiteLifecycleTransactionResult FailAttachedVendorizeAndRollback(

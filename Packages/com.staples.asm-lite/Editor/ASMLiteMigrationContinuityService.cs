@@ -187,7 +187,10 @@ namespace ASMLite.Editor
             component.vendorizedGeneratedAssetsPath = snapshot.VendorizedGeneratedAssetsPath;
         }
 
-        internal static InstallPathAdoptionResult TryAdoptInstallPathFromMoveMenu(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        internal static InstallPathAdoptionResult TryAdoptInstallPathFromMoveMenu(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            bool consumeLegacyMoveMenuHelpers = true)
         {
             if (component == null || avatar == null)
                 return default;
@@ -255,8 +258,26 @@ namespace ASMLite.Editor
                 EditorUtility.SetDirty(component);
             }
 
-            int removedMoveComponents = RemoveMatchingMoveMenuHelpers(avatar, normalizedRoot);
+            int removedMoveComponents = consumeLegacyMoveMenuHelpers
+                ? RemoveMatchingMoveMenuHelpers(avatar, normalizedRoot)
+                : 0;
             return new InstallPathAdoptionResult(changedComponent, normalizedPrefix, removedMoveComponents);
+        }
+
+        internal static int CountMatchingMoveMenuHelpers(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        {
+            if (!TryResolveNormalizedEffectiveRoot(component, out string normalizedRoot))
+                return 0;
+
+            return CountMatchingMoveMenuHelpers(avatar, normalizedRoot);
+        }
+
+        internal static int RemoveMatchingMoveMenuHelpers(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        {
+            if (!TryResolveNormalizedEffectiveRoot(component, out string normalizedRoot))
+                return 0;
+
+            return RemoveMatchingMoveMenuHelpers(avatar, normalizedRoot);
         }
 
         internal static bool TryResolveInstallPathPrefixFromMoveMenu(
@@ -613,8 +634,38 @@ namespace ASMLite.Editor
             return new ASMLiteBuilder.CleanupReport(removedFxLayers, removedFxParams, removedExprParams, removedMenuControls, descriptorMissing: false);
         }
 
+        private static bool TryResolveNormalizedEffectiveRoot(ASMLiteComponent component, out string normalizedRoot)
+        {
+            normalizedRoot = string.Empty;
+            if (component == null)
+                return false;
+
+            string effectiveRootName = ASMLiteBuilder.ResolveEffectiveRootControlName(component);
+            if (string.IsNullOrWhiteSpace(effectiveRootName))
+                return false;
+
+            normalizedRoot = NormalizeSlashPath(effectiveRootName);
+            return !string.IsNullOrWhiteSpace(normalizedRoot);
+        }
+
+        private static int CountMatchingMoveMenuHelpers(VRCAvatarDescriptor avatar, string normalizedRoot)
+        {
+            return CountOrRemoveMatchingMoveMenuHelpers(avatar, normalizedRoot, removeMatchingHelpers: false);
+        }
+
         private static int RemoveMatchingMoveMenuHelpers(VRCAvatarDescriptor avatar, string normalizedRoot)
         {
+            return CountOrRemoveMatchingMoveMenuHelpers(avatar, normalizedRoot, removeMatchingHelpers: true);
+        }
+
+        private static int CountOrRemoveMatchingMoveMenuHelpers(
+            VRCAvatarDescriptor avatar,
+            string normalizedRoot,
+            bool removeMatchingHelpers)
+        {
+            if (avatar == null || string.IsNullOrWhiteSpace(normalizedRoot))
+                return 0;
+
             int removedMoveComponents = 0;
             var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
             for (int i = 0; i < behaviours.Length; i++)
@@ -652,7 +703,9 @@ namespace ASMLite.Editor
                 if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
                     continue;
 
-                Undo.DestroyObjectImmediate(behaviour);
+                if (removeMatchingHelpers)
+                    Undo.DestroyObjectImmediate(behaviour);
+
                 removedMoveComponents++;
             }
 
