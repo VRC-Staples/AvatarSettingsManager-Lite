@@ -249,6 +249,24 @@ namespace ASMLite.Tests.Editor
                 $"Expected to copy '{sourceAssetPath}' to '{destinationPath}' for vendorized cleanup regression setup.");
         }
 
+        private static void DeleteVendorizedAvatarFolderIfPresent(string generatedAssetsFolder)
+        {
+            if (string.IsNullOrWhiteSpace(generatedAssetsFolder))
+                return;
+
+            string avatarFolder = Path.GetDirectoryName(generatedAssetsFolder)?.Replace('\\', '/');
+            if (!string.IsNullOrWhiteSpace(avatarFolder) && AssetDatabase.IsValidFolder(avatarFolder))
+                AssetDatabase.DeleteAsset(avatarFolder);
+
+            if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
+                && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
+            {
+                AssetDatabase.DeleteAsset("Assets/ASM-Lite");
+            }
+
+            AssetDatabase.Refresh();
+        }
+
         // ── A35 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -715,6 +733,44 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void A58_VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName()
+        {
+            var otherAvatarGo = new GameObject("CollisionAvatar");
+            var otherAvatar = otherAvatarGo.AddComponent<VRCAvatarDescriptor>();
+            ASMLiteGeneratedAssetMirrorResult firstMirror = null;
+            ASMLiteGeneratedAssetMirrorResult secondMirror = null;
+
+            try
+            {
+                _ctx.AvatarGo.name = "CollisionAvatar";
+
+                firstMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc);
+                secondMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(otherAvatar);
+
+                Assert.IsTrue(firstMirror != null && firstMirror.Success,
+                    firstMirror?.Message ?? "A58: expected first vendorized mirror stage to succeed.");
+                Assert.IsTrue(secondMirror != null && secondMirror.Success,
+                    secondMirror?.Message ?? "A58: expected second vendorized mirror stage to succeed.");
+                Assert.AreNotEqual(firstMirror.TargetPath, secondMirror.TargetPath,
+                    "A58: distinct avatars that share the same GameObject name must not collide onto the same vendorized GeneratedAssets folder.");
+                Assert.AreNotEqual(
+                    Path.GetDirectoryName(firstMirror.TargetPath)?.Replace('\\', '/'),
+                    Path.GetDirectoryName(secondMirror.TargetPath)?.Replace('\\', '/'),
+                    "A58: distinct avatars that share the same GameObject name must receive separate vendorized avatar folders.");
+                Assert.IsTrue(AssetDatabase.IsValidFolder(firstMirror.TargetPath),
+                    $"A58: expected first vendorized GeneratedAssets folder '{firstMirror.TargetPath}' to exist.");
+                Assert.IsTrue(AssetDatabase.IsValidFolder(secondMirror.TargetPath),
+                    $"A58: expected second vendorized GeneratedAssets folder '{secondMirror.TargetPath}' to exist.");
+            }
+            finally
+            {
+                DeleteVendorizedAvatarFolderIfPresent(firstMirror?.TargetPath);
+                DeleteVendorizedAvatarFolderIfPresent(secondMirror?.TargetPath);
+                Object.DestroyImmediate(otherAvatarGo);
             }
         }
     }

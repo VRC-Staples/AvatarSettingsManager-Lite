@@ -869,7 +869,76 @@ namespace ASMLite.Editor
         private static string EnsureVendorizeAvatarFolder(VRCAvatarDescriptor avatar)
         {
             string root = EnsureAssetFolder("Assets", "ASM-Lite");
-            return EnsureAssetFolder(root, SanitizePathFragment(avatar != null ? avatar.gameObject.name : "Avatar"));
+            return EnsureAssetFolder(root, BuildVendorizeAvatarFolderKey(avatar));
+        }
+
+        private static string BuildVendorizeAvatarFolderKey(VRCAvatarDescriptor avatar)
+        {
+            string avatarName = SanitizePathFragment(avatar != null ? avatar.gameObject.name : "Avatar");
+            string avatarKey = ResolveVendorizeAvatarFolderSuffix(avatar);
+            return string.IsNullOrEmpty(avatarKey)
+                ? avatarName
+                : $"{avatarName}__{avatarKey}";
+        }
+
+        private static string ResolveVendorizeAvatarFolderSuffix(VRCAvatarDescriptor avatar)
+        {
+            GameObject avatarObject = avatar != null ? avatar.gameObject : null;
+            if (avatarObject == null)
+                return "avatar";
+
+            if (CanUseStableAvatarFolderKey(avatarObject)
+                && TryGetStableAvatarFolderKeyMaterial(avatarObject, out string stableKeyMaterial))
+            {
+                return ShortHashPathFragment(stableKeyMaterial);
+            }
+
+            return unchecked((uint)avatarObject.GetInstanceID()).ToString("x8");
+        }
+
+        private static bool CanUseStableAvatarFolderKey(GameObject avatarObject)
+        {
+            if (avatarObject == null)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(avatarObject.scene.path))
+                return true;
+
+            return !string.IsNullOrWhiteSpace(AssetDatabase.GetAssetPath(avatarObject));
+        }
+
+        private static bool TryGetStableAvatarFolderKeyMaterial(GameObject avatarObject, out string stableKeyMaterial)
+        {
+            stableKeyMaterial = string.Empty;
+            if (avatarObject == null)
+                return false;
+
+            try
+            {
+                string globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(avatarObject).ToString();
+                if (string.IsNullOrWhiteSpace(globalObjectId))
+                    return false;
+
+                stableKeyMaterial = globalObjectId;
+                return true;
+            }
+            catch
+            {
+                stableKeyMaterial = string.Empty;
+                return false;
+            }
+        }
+
+        private static string ShortHashPathFragment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "avatar";
+
+            string hash = Hash128.Compute(value).ToString();
+            if (string.IsNullOrWhiteSpace(hash))
+                return "avatar";
+
+            return hash.Length <= 12 ? hash : hash.Substring(0, 12);
         }
 
         private static string EnsureAssetFolder(string parent, string child)

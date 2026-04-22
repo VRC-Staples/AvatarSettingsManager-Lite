@@ -72,6 +72,8 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     public class ASMLiteInstallPathWiringTests
     {
+        private const string SuiteName = nameof(ASMLiteInstallPathWiringTests);
+
         [Test]
         public void W03_PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled()
         {
@@ -145,6 +147,10 @@ namespace ASMLite.Tests.Editor
                 Assert.DoesNotThrow(() =>
                 {
                     var diagnostic = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component);
+                    ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
+                        SuiteName,
+                        nameof(W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing),
+                        diagnostic);
                     Assert.IsFalse(diagnostic.Success,
                         "W07: schema drift with a missing FullController menu-prefix field must fail closed without writing partial state.");
                     Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, diagnostic.Code,
@@ -206,6 +212,118 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test, Category("Integration")]
+        public void W09_BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            ASMLite.Editor.ASMLiteWindow window = null;
+            try
+            {
+                UnityEngine.Object.DestroyImmediate(ctx.Comp.gameObject);
+                ctx.Comp = null;
+
+                window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+                window.SelectAvatarForAutomation(ctx.AvDesc);
+                window.AddPrefabForAutomation();
+
+                var component = ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(component,
+                    "W09: prefab-instance rebuild characterization requires AddPrefabForAutomation() to attach ASM-Lite first.");
+                Assert.IsTrue(PrefabUtility.IsPartOfPrefabInstance(component.gameObject),
+                    "W09: AddPrefabForAutomation() should attach ASM-Lite as a prefab instance before rebuild routing checks.");
+
+                component.useCustomInstallPath = true;
+                component.customInstallPath = "  Tools/PrefabRouting  ";
+                window.SelectAvatarForAutomation(ctx.AvDesc);
+                window.RebuildForAutomation();
+
+                var liveVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component.gameObject);
+                Assert.IsNotNull(liveVf,
+                    "W09: prefab-instance rebuild should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
+                    "W09: prefab-instance rebuilds must clear direct FullController menu-prefix overrides after routing through the helper object.");
+                AssertRoutingHelperPaths(ctx.AvDesc, "Settings Manager", "Tools/PrefabRouting/Settings Manager",
+                    "W09: prefab-instance rebuild should route install-path changes through the deterministic avatar helper object.");
+            }
+            finally
+            {
+                if (window != null)
+                    UnityEngine.Object.DestroyImmediate(window);
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
+        [Test]
+        public void W10_BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess()
+        {
+            string prefabPath = string.Empty;
+            var prefabSource = new GameObject("W10_RoutingFailureSource");
+            GameObject prefabInstance = null;
+
+            try
+            {
+                var sourceComponent = prefabSource.AddComponent<ASMLiteComponent>();
+                sourceComponent.useCustomInstallPath = true;
+                sourceComponent.customInstallPath = "Tools/BlockedRouting";
+
+                if (!AssetDatabase.IsValidFolder("Assets/ASMLiteTests_Temp"))
+                    AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+
+                prefabPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLiteTests_Temp/W10_RoutingFailure.prefab");
+                var prefabAsset = PrefabUtility.SaveAsPrefabAsset(prefabSource, prefabPath);
+                Assert.IsNotNull(prefabAsset,
+                    $"W10: expected prefab asset at '{prefabPath}' for prefab-instance routing failure coverage.");
+
+                prefabInstance = PrefabUtility.InstantiatePrefab(prefabAsset) as GameObject;
+                Assert.IsNotNull(prefabInstance,
+                    "W10: expected prefab instantiation to produce a GameObject instance.");
+
+                var component = prefabInstance.GetComponent<ASMLiteComponent>();
+                var liveVf = prefabInstance.GetComponent<VF.Model.VRCFury>();
+                if (liveVf == null)
+                    liveVf = prefabInstance.AddComponent<VF.Model.VRCFury>();
+
+                liveVf.content = new VF.Model.Feature.FullController
+                {
+                    menus = new[]
+                    {
+                        new VF.Model.Feature.MenuEntry
+                        {
+                            prefix = "Stale/Prefix"
+                        }
+                    }
+                };
+
+                Assert.IsNotNull(component,
+                    "W10: expected prefab instance to preserve the ASMLiteComponent.");
+                Assert.IsNotNull(liveVf,
+                    "W10: expected prefab instance to provide a live VF.Model.VRCFury payload for stale-prefix clearing coverage.");
+                Assert.IsTrue(PrefabUtility.IsPartOfPrefabInstance(component.gameObject),
+                    "W10: regression coverage requires the target component to be part of a prefab instance.");
+                Assert.AreEqual("Stale/Prefix", ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
+                    "W10: setup should start with a stale direct FullController prefix override before sync.");
+
+                var diagnostic = ASMLiteBuilder.TrySyncInstallPathRoutingWithDiagnostics(component);
+                Assert.IsFalse(diagnostic.Success,
+                    "W10: prefab-instance install-path sync must fail closed when a custom install prefix is enabled but MoveMenu routing cannot be created.");
+                Assert.AreEqual(ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed, diagnostic.Code,
+                    "W10: routing failure should surface the deterministic build diagnostic for install-prefix sync failure.");
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
+                    "W10: stale direct FullController prefixes may still be cleared, but clearing alone must not report success when routing failed.");
+                Assert.IsNull(prefabInstance.transform.Find("ASM-Lite Install Path Routing"),
+                    "W10: sync should not fabricate a routing helper when no avatar descriptor exists to parent it.");
+            }
+            finally
+            {
+                if (prefabInstance != null)
+                    UnityEngine.Object.DestroyImmediate(prefabInstance);
+                if (prefabSource != null)
+                    UnityEngine.Object.DestroyImmediate(prefabSource);
+                if (!string.IsNullOrWhiteSpace(prefabPath) && AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
+                    AssetDatabase.DeleteAsset(prefabPath);
+            }
+        }
+
         private static string RefreshLiveFullControllerPrefixAndRead(bool useCustomInstallPath, string customInstallPath)
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
@@ -228,6 +346,35 @@ namespace ASMLite.Tests.Editor
             {
                 ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
             }
+        }
+
+        private static void AssertRoutingHelperPaths(
+            VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatar,
+            string expectedFromPath,
+            string expectedToPath,
+            string aid)
+        {
+            var routingTransform = avatar != null ? avatar.transform.Find("ASM-Lite Install Path Routing") : null;
+            Assert.IsNotNull(routingTransform,
+                aid + " Expected the ASM-Lite install-path routing helper object to exist on the avatar.");
+
+            var routingVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(routingTransform.gameObject);
+            Assert.IsNotNull(routingVf,
+                aid + " Expected the install-path routing helper object to carry a VF.Model.VRCFury component.");
+
+            var serializedRouting = new SerializedObject(routingVf);
+            serializedRouting.Update();
+
+            var fromPathProperty = serializedRouting.FindProperty("content.fromPath");
+            var toPathProperty = serializedRouting.FindProperty("content.toPath");
+            Assert.IsNotNull(fromPathProperty,
+                aid + " Expected MoveMenuItem fromPath to be serialized on the routing helper.");
+            Assert.IsNotNull(toPathProperty,
+                aid + " Expected MoveMenuItem toPath to be serialized on the routing helper.");
+            Assert.AreEqual(expectedFromPath, fromPathProperty.stringValue,
+                aid + " Unexpected routing helper source path.");
+            Assert.AreEqual(expectedToPath, toPathProperty.stringValue,
+                aid + " Unexpected routing helper destination path.");
         }
     }
 }

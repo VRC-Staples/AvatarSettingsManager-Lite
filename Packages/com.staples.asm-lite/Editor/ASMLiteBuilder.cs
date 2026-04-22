@@ -929,15 +929,19 @@ namespace ASMLite.Editor
             // route install path through a dedicated MoveMenuItem helper component.
             if (PrefabUtility.IsPartOfPrefabInstance(component.gameObject))
             {
+                string effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+                bool requiresRouting = !string.IsNullOrEmpty(effectivePrefix);
                 bool routed = TrySyncInstallPathMoveMenuRouting(component);
                 bool cleared = TryClearLiveFullControllerMenuPrefixOverride(component);
-                if (routed || cleared)
+                if (requiresRouting ? routed : (routed || cleared))
                     return ASMLiteBuildDiagnosticResult.Pass();
 
                 return ASMLiteBuildDiagnosticResult.Fail(
                     code: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
                     contextPath: "MoveMenu routing",
-                    remediation: "Ensure prefab-instance install-path routing can either update MoveMenu or clear stale FullController prefix override.");
+                    remediation: requiresRouting
+                        ? "Ensure prefab-instance install-path routing can update MoveMenu when a custom install prefix is enabled."
+                        : "Ensure prefab-instance install-path sync can either remove routing helpers or clear stale FullController prefix overrides when no custom install prefix is enabled.");
             }
 
             var vfComponent = FindLiveVrcFuryComponent(component);

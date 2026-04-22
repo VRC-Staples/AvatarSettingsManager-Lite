@@ -451,6 +451,48 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void SelectingAvatar_DoesNotAdoptMalformedMoveMenuDestinationOrRemoveHelper()
+        {
+            _ctx.Comp.useCustomInstallPath = false;
+            _ctx.Comp.customInstallPath = string.Empty;
+            _ctx.Comp.useCustomRootName = false;
+            _ctx.Comp.customRootName = string.Empty;
+
+            var moveMenuRoot = new GameObject("MalformedMoveMenuFeature");
+            moveMenuRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var vf = moveMenuRoot.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Settings Manager",
+                toPath = "Tools/BrokenDestination",
+            };
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                Assert.IsFalse(_ctx.Comp.useCustomInstallPath,
+                    "Malformed move-menu destinations must fail closed without enabling custom install path on the ASM-Lite component.");
+                Assert.AreEqual(string.Empty, _ctx.Comp.customInstallPath,
+                    "Malformed move-menu destinations must fail closed without writing an adopted install prefix.");
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsFalse(snapshot.UseCustomInstallPath,
+                    "Visible customization state should remain unchanged when move-menu adoption rejects a malformed destination.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
+                    "Visible customization state should not surface any adopted prefix when move-menu adoption rejects a malformed destination.");
+                Assert.IsTrue(moveMenuRoot.TryGetComponent<VF.Model.VRCFury>(out _),
+                    "Malformed move-menu destinations must not remove the legacy helper when install-prefix resolution fails.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
         private static VRCExpressionsMenu CreateTempMenuAsset(string name)
         {
             string assetPath = AssetDatabase.GenerateUniqueAssetPath($"Assets/ASMLiteTests_Temp/{name}.asset");

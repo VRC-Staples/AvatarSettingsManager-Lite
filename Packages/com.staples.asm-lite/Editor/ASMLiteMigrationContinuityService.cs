@@ -785,8 +785,7 @@ namespace ASMLite.Editor
                 return true;
             }
 
-            installPrefix = destination;
-            return true;
+            return false;
         }
 
         private static Texture2D[] CloneTextures(Texture2D[] source)
