@@ -278,53 +278,12 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
-          ASMLITE_BATCH_RUNS_JSON="$(python - <<'PY'
-          import json
+          BATCH_PLAN_PATH="/github/workspace/Tools/ci/editmode-batch-runs.json"
+          if [ ! -f "${BATCH_PLAN_PATH}" ]; then
+            echo "::error::Missing canonical EditMode batch plan: ${BATCH_PLAN_PATH}"
+            exit 1
+          fi
 
-          core_fixture_patterns = [
-              r"^ASMLite\.Tests\.Editor\.ASMLiteAssetPathsTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteBuilderTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteComponentTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteCustomizationScaffoldTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteInstallPathWiringTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteParameterDiscoveryTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteToggleBrokerTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowActionHierarchyTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowCustomizationTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowNamingGroupingTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowRiskAffordanceTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowStatusPanelTests(?:\.|$)",
-              r"^ASMLite\.Tests\.Editor\.ASMLiteWindowTerminologyTests(?:\.|$)",
-          ]
-
-          payload = {
-              "runs": [
-                  {
-                      "name": "editmode-core",
-                      "resultFile": "editmode-core-results.xml",
-                      "filters": [
-                          {
-                              "groupNames": core_fixture_patterns,
-                          },
-                          {
-                              "testNames": [
-                                  "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
-                              ],
-                          },
-                      ],
-                  },
-                  {
-                      "name": "editmode-integration",
-                      "resultFile": "editmode-integration-results.xml",
-                      "categoryNames": ["Integration"],
-                  },
-              ]
-          }
-
-          print(json.dumps(payload, separators=(",", ":")))
-          PY
-          )"
-          export ASMLITE_BATCH_RUNS_JSON
           export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
 
           # Write the inner script to a temp file to avoid quoting issues
@@ -380,6 +339,7 @@ jobs:
             -projectPath Tools/ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
             -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine \
+            -asmliteBatchRunsJsonPath /github/workspace/Tools/ci/editmode-batch-runs.json \
             -enableCodeCoverage \
             -debugCodeOptimization \
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
@@ -391,7 +351,6 @@ jobs:
             --env UNITY_EMAIL \
             --env UNITY_PASSWORD \
             --env UNITY_SERIAL="${UNITY_SERIAL}" \
-            --env ASMLITE_BATCH_RUNS_JSON \
             --env ASMLITE_BATCH_RESULTS_DIR \
             --volume "${GITHUB_WORKSPACE}:/github/workspace" \
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
