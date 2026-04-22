@@ -260,6 +260,15 @@ namespace ASMLite.Tests.Editor
                 $"A55: repeated rebuild prep should be a no-op for expression parameter cleanup. removed={second.Cleanup.ExprParamsRemoved}.");
             Assert.AreEqual(0, second.Cleanup.MenuControlsRemoved,
                 $"A55: repeated rebuild prep should be a no-op for menu cleanup. removed={second.Cleanup.MenuControlsRemoved}.");
+
+            var outcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                default,
+                first,
+                default);
+            StringAssert.Contains("cleaned ASM-Lite-owned state", outcome.ToCompactSummary(),
+                "A55: compact migration outcome reporting should summarize selective cleanup counts in one transport object.");
+            StringAssert.Contains("staleVrcFury=1", outcome.ToCompactSummary(),
+                "A55: compact migration outcome reporting should include collapsed stale VRCFury counts.");
         }
     }
 }

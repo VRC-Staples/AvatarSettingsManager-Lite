@@ -457,6 +457,56 @@ namespace ASMLite.Tests.Editor
             Assert.IsFalse(result.Contains("ASMLite_Bak_S0_ZeroSlot"), "Malformed backup with slot 0 should be dropped.");
         }
 
+        [Test]
+        public void P08_BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs()
+        {
+            var avatarParams = new List<VRCExpressionParameters.Parameter>
+            {
+                new VRCExpressionParameters.Parameter { name = "ASM_VF_Menu_Hat__Avatar", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "CurrentOnly", valueType = VRCExpressionParameters.ValueType.Float },
+            };
+
+            var plan = ASMLiteMigrationContinuityService.BuildBackupNamePlan(
+                slotCount: 1,
+                avatarParams: avatarParams,
+                existingParamNames: new[]
+                {
+                    "ASMLite_Bak_S1_VF_Menu/Hat",
+                    "ASMLite_Bak_S2_LegacyUnmatched",
+                    "ASMLite_Bak_S_",
+                    "ASMLite_Bak_S1_ASM_VF_Menu_Hat__Avatar",
+                },
+                brokerMappings: new[]
+                {
+                    new ASMLiteToggleNameBroker.GlobalParamMapping("VF_Menu/Hat", "ASM_VF_Menu_Hat__Avatar"),
+                },
+                excludedCanonicalNames: null);
+
+            CollectionAssert.Contains(plan.Names, "ASMLite_Bak_S1_ASM_VF_Menu_Hat__Avatar",
+                "The deterministic backup key should appear exactly once even when legacy assets already contain it.");
+            CollectionAssert.Contains(plan.Names, "ASMLite_Bak_S1_VF_Menu/Hat",
+                "Mapped legacy aliases should remain preserved in the continuity plan.");
+            CollectionAssert.Contains(plan.Names, "ASMLite_Bak_S2_LegacyUnmatched",
+                "Unmatched but well-formed legacy aliases should remain preserved and inert in the continuity plan.");
+
+            Assert.AreEqual(1, plan.Report.MappedCount,
+                "Mapped continuity count should include aliases that remap onto deterministic source parameters.");
+            Assert.AreEqual(1, plan.Report.MirroredCount,
+                "Mirrored continuity count should match the mapped legacy alias bindings emitted for save/load/reset.");
+            Assert.AreEqual(1, plan.Report.UnmatchedCount,
+                "Unmatched continuity count should only include well-formed aliases with no valid deterministic destination.");
+            Assert.AreEqual(1, plan.Report.MalformedCount,
+                "Malformed continuity count should include invalid legacy backup names that are excluded from the plan.");
+            Assert.AreEqual(1, plan.LegacyAliasBindings.Count,
+                "Only mapped legacy aliases should create behavior-affecting continuity bindings.");
+            Assert.AreEqual("ASM_VF_Menu_Hat__Avatar", plan.LegacyAliasBindings[0].SourceParamName,
+                "Mapped continuity bindings should target the deterministic enrolled source parameter.");
+
+            var duplicateCount = plan.Names.GroupBy(name => name).Count(group => group.Count() > 1);
+            Assert.AreEqual(0, duplicateCount,
+                "Continuity extraction must not emit duplicate backup parameter names when legacy and deterministic schemas overlap.");
+        }
+
         private static VRCExpressionsMenu LoadGeneratedRootMenuOrFail()
         {
             var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);

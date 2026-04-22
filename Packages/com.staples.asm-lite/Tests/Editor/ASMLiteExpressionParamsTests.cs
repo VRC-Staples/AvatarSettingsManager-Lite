@@ -418,6 +418,41 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
+        public void A27B_LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState()
+        {
+            const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+
+            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for duplicate-preservation validation.");
+            stubAsset.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter { name = unmatchedLegacy, valueType = VRCExpressionParameters.ValueType.Float, defaultValue = 0.1f, saved = true, networkSynced = true },
+                new VRCExpressionParameters.Parameter { name = $"ASMLite_Bak_S1_{deterministicSource}", valueType = VRCExpressionParameters.ValueType.Float, defaultValue = 0.2f, saved = true, networkSynced = true },
+            };
+            EditorUtility.SetDirty(stubAsset);
+            AssetDatabase.SaveAssets();
+
+            AddParam(_ctx, deterministicSource, VRCExpressionParameters.ValueType.Float, 0.5f);
+            _ctx.Comp.slotCount = 1;
+
+            ASMLiteBuilder.Build(_ctx.Comp);
+
+            var generatedParams = LoadGeneratedParams();
+            var duplicateNames = generatedParams
+                .Where(p => p != null && !string.IsNullOrWhiteSpace(p.name))
+                .GroupBy(p => p.name)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToArray();
+
+            CollectionAssert.Contains(generatedParams.Select(p => p.name).ToArray(), unmatchedLegacy,
+                "Unmatched but well-formed legacy aliases must still survive in the generated expression parameter asset.");
+            Assert.AreEqual(0, duplicateNames.Length,
+                "Legacy preservation must not emit duplicate expression-parameter names when current deterministic backups overlap with preserved legacy keys.");
+        }
+
+        [Test, Category("Integration")]
         public void A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset()
         {
             _ctx.Comp.slotCount = 2;
