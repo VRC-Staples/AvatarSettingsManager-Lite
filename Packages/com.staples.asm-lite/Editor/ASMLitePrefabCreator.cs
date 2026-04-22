@@ -14,6 +14,20 @@ namespace ASMLite.Editor
     /// </summary>
     public static class ASMLitePrefabCreator
     {
+        internal readonly struct ASMLiteLiveFullControllerReferenceSnapshot
+        {
+            internal ASMLiteLiveFullControllerReferenceSnapshot(string controllerAssetPath, string menuAssetPath, string parametersAssetPath)
+            {
+                ControllerAssetPath = controllerAssetPath ?? string.Empty;
+                MenuAssetPath = menuAssetPath ?? string.Empty;
+                ParametersAssetPath = parametersAssetPath ?? string.Empty;
+            }
+
+            internal string ControllerAssetPath { get; }
+            internal string MenuAssetPath { get; }
+            internal string ParametersAssetPath { get; }
+        }
+
         /// <summary>
         /// Detects stale pre-1.0.5 prefab state where a legacy "prms" child/object path
         /// can cause double parameter registration during bake.
@@ -108,7 +122,7 @@ namespace ASMLite.Editor
                 return ASMLiteBuildDiagnosticResult.Fail(
                     code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
                     contextPath: "VF.Model.VRCFury",
-                    remediation: "Ensure VRCFury assemblies are available before refreshing FullController wiring.",
+                    remediation: "Ensure VRCFury assemblies are available before refreshing live FullController wiring.",
                     message: $"[ASM-Lite] {contextLabel}: VF.Model.VRCFury type was not found while refreshing live FullController wiring.");
             }
 
@@ -122,6 +136,125 @@ namespace ASMLite.Editor
                     message: $"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component is missing after live FullController wiring refresh.");
             }
 
+            return ASMLiteBuildDiagnosticResult.Pass();
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
+            ASMLiteComponent component,
+            string generatedDir,
+            string contextLabel)
+        {
+            if (component == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "component",
+                    remediation: "Pass a valid ASM-Lite component before retargeting live FullController references.",
+                    message: $"[ASM-Lite] {contextLabel}: ASM-Lite component was null while retargeting live FullController references.");
+            }
+
+            string normalizedDir = string.IsNullOrWhiteSpace(generatedDir)
+                ? string.Empty
+                : generatedDir.Replace('\\', '/').TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(normalizedDir))
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "generatedDir",
+                    remediation: "Pass a valid generated-assets directory before retargeting live FullController references.",
+                    message: $"[ASM-Lite] {contextLabel}: Generated-assets directory was blank while retargeting live FullController references.");
+            }
+
+            var refreshResult = TryRefreshLiveFullControllerWiringWithDiagnostics(component.gameObject, component, contextLabel);
+            if (!refreshResult.Success)
+                return refreshResult;
+
+            var vfComponent = FindLiveVrcFuryComponent(component.gameObject);
+            if (vfComponent == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury component",
+                    remediation: "Ensure the live VRCFury component exists before retargeting generated assets.",
+                    message: $"[ASM-Lite] {contextLabel}: Live VF.Model.VRCFury component was missing while retargeting generated assets.");
+            }
+
+            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.FXController));
+            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.Menu));
+            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+            if (fxController == null || menu == null || parameters == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: normalizedDir,
+                    remediation: "Ensure the generated FX controller, menu, and expression-parameters assets exist before retargeting live FullController references.",
+                    message: $"[ASM-Lite] {contextLabel}: Required generated assets were missing under '{normalizedDir}' while retargeting live FullController references.");
+            }
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+            var applyResult = TryApplyFullControllerAssetReferencesWithDiagnostics(serializedVf, component, fxController, menu, parameters);
+            if (!applyResult.Success)
+                return applyResult;
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            return ASMLiteBuildDiagnosticResult.Pass();
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryCaptureLiveFullControllerReferenceSnapshot(
+            ASMLiteComponent component,
+            string contextLabel,
+            out ASMLiteLiveFullControllerReferenceSnapshot snapshot)
+        {
+            snapshot = default;
+            if (component == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "component",
+                    remediation: "Pass a valid ASM-Lite component before capturing live FullController references.",
+                    message: $"[ASM-Lite] {contextLabel}: ASM-Lite component was null while capturing live FullController references.");
+            }
+
+            var vfComponent = FindLiveVrcFuryComponent(component.gameObject);
+            if (vfComponent == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury component",
+                    remediation: "Ensure the live VRCFury component exists before capturing FullController references.",
+                    message: $"[ASM-Lite] {contextLabel}: Live VF.Model.VRCFury component was missing while capturing FullController references.");
+            }
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+            var probeResult = ASMLiteDriftProbe.ValidateCriticalFullControllerWritePaths(serializedVf);
+            if (!probeResult.Success)
+                return probeResult.ToDiagnosticResult();
+
+            var controllerProperty = serializedVf.FindProperty(ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuObjectRefPath);
+            var parametersProperty = FindWritableObjectReferenceProperty(
+                serializedVf,
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
+            if (controllerProperty == null || menuProperty == null || parametersProperty == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: ASMLiteDriftProbe.ParameterFallbackGroupKey,
+                    remediation: "Ensure critical FullController object-reference paths remain available before capturing live references.",
+                    message: $"[ASM-Lite] {contextLabel}: Critical FullController reference paths were missing while capturing live references.");
+            }
+
+            snapshot = new ASMLiteLiveFullControllerReferenceSnapshot(
+                AssetDatabase.GetAssetPath(controllerProperty.objectReferenceValue) ?? string.Empty,
+                AssetDatabase.GetAssetPath(menuProperty.objectReferenceValue) ?? string.Empty,
+                AssetDatabase.GetAssetPath(parametersProperty.objectReferenceValue) ?? string.Empty);
             return ASMLiteBuildDiagnosticResult.Pass();
         }
 
@@ -333,6 +466,42 @@ namespace ASMLite.Editor
             }
 
             return nonTestMatch ?? firstMatch;
+        }
+
+        private static MonoBehaviour FindLiveVrcFuryComponent(GameObject root)
+        {
+            if (root == null)
+                return null;
+
+            var behaviors = root.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                var behavior = behaviors[i];
+                var type = behavior != null ? behavior.GetType() : null;
+                if (type != null && string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    return behavior;
+            }
+
+            return null;
+        }
+
+        private static SerializedProperty FindWritableObjectReferenceProperty(SerializedObject serializedObject, params string[] candidatePaths)
+        {
+            if (serializedObject == null || candidatePaths == null)
+                return null;
+
+            for (int i = 0; i < candidatePaths.Length; i++)
+            {
+                string path = candidatePaths[i];
+                if (string.IsNullOrWhiteSpace(path))
+                    continue;
+
+                var property = serializedObject.FindProperty(path);
+                if (property != null && property.propertyType == SerializedPropertyType.ObjectReference)
+                    return property;
+            }
+
+            return null;
         }
 
         private static ASMLiteBuildDiagnosticResult CreateCriticalPathDiagnostic(string path)

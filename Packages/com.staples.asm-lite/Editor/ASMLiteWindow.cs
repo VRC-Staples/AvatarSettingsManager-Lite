@@ -6018,359 +6018,72 @@ namespace ASMLite.Editor
             return true;
         }
 
-        private static string SanitizePathFragment(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return "Avatar";
-
-            var invalid = Path.GetInvalidFileNameChars();
-            var sb = new System.Text.StringBuilder(value.Length);
-            for (int i = 0; i < value.Length; i++)
-            {
-                char c = value[i];
-                if (invalid.Contains(c))
-                    sb.Append('_');
-                else
-                    sb.Append(c);
-            }
-
-            string cleaned = sb.ToString().Trim();
-            return string.IsNullOrWhiteSpace(cleaned) ? "Avatar" : cleaned;
-        }
-
-        private static string EnsureAssetFolder(string parent, string child)
-        {
-            string normalizedParent = parent.Replace('\\', '/').TrimEnd('/');
-            string candidate = normalizedParent + "/" + child;
-            if (!AssetDatabase.IsValidFolder(candidate))
-                AssetDatabase.CreateFolder(normalizedParent, child);
-            return candidate;
-        }
-
-        private static string EnsureVendorizeRootFolder(VRCAvatarDescriptor avatar)
-        {
-            string root = EnsureAssetFolder("Assets", "ASM-Lite");
-            string avatarFolder = EnsureAssetFolder(root, SanitizePathFragment(avatar != null ? avatar.gameObject.name : "Avatar"));
-            return EnsureAssetFolder(avatarFolder, "GeneratedAssets");
-        }
-
-        private static void CopyAssetIfPresent(string sourcePath, string destinationPath)
-        {
-            if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
-                return;
-
-            if (!AssetDatabase.LoadMainAssetAtPath(sourcePath))
-                return;
-
-            AssetDatabase.DeleteAsset(destinationPath);
-            AssetDatabase.CopyAsset(sourcePath, destinationPath);
-        }
-
-        private static void RetargetMenuGeneratedSubmenus(VRCExpressionsMenu menu, string sourcePrefix, string destinationPrefix, HashSet<VRCExpressionsMenu> visited)
-        {
-            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
-                return;
-
-            for (int i = 0; i < menu.controls.Count; i++)
-            {
-                var control = menu.controls[i];
-                if (control == null || control.subMenu == null)
-                    continue;
-
-                string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(subPath)
-                    && subPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
-                {
-                    string fileName = Path.GetFileName(subPath);
-                    string newPath = destinationPrefix + "/" + fileName;
-                    var replaced = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(newPath);
-                    if (replaced != null)
-                    {
-                        control.subMenu = replaced;
-                        menu.controls[i] = control;
-                        EditorUtility.SetDirty(menu);
-                    }
-                }
-
-                RetargetMenuGeneratedSubmenus(control.subMenu, sourcePrefix, destinationPrefix, visited);
-            }
-        }
-
-        private static bool MenuReferencesAssetPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
-        {
-            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
-                return false;
-
-            for (int i = 0; i < menu.controls.Count; i++)
-            {
-                var control = menu.controls[i];
-                if (control?.subMenu == null)
-                    continue;
-
-                string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(subPath)
-                    && subPath.StartsWith(assetPrefix, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-
-                if (MenuReferencesAssetPrefix(control.subMenu, assetPrefix, visited))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool HasAvatarGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string assetPrefix)
-        {
-            if (avatar == null || string.IsNullOrWhiteSpace(assetPrefix))
-                return false;
-
-            string normalizedPrefix = assetPrefix.Replace('\\', '/').TrimEnd('/');
-
-            string exprPath = avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
-                return true;
-
-            string menuPath = avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
-                return true;
-
-            if (MenuReferencesAssetPrefix(avatar.expressionsMenu, normalizedPrefix, new HashSet<VRCExpressionsMenu>()))
-                return true;
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var controller = avatar.baseAnimationLayers[i].animatorController;
-                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
-                if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(normalizedPrefix, StringComparison.Ordinal))
-                    return true;
-            }
-
-            return false;
-        }
-
         private static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
         {
-            if (avatar == null || string.IsNullOrWhiteSpace(vendorizedDir))
-                return true;
+            var result = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
 
-            string vendorPrefix = vendorizedDir.Replace('\\', '/').TrimEnd('/');
-            string packagePrefix = ASMLiteAssetPaths.GeneratedDir.Replace('\\', '/').TrimEnd('/');
-
-            if (avatar.expressionParameters != null)
-            {
-                string exprPath = AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                {
-                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(packagePrefix + "/" + Path.GetFileName(exprPath));
-                    if (replacement == null)
-                        return false;
-
-                    avatar.expressionParameters = replacement;
-                    EditorUtility.SetDirty(avatar);
-                }
-            }
-
-            if (avatar.expressionsMenu != null)
-            {
-                string menuPath = AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                {
-                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(packagePrefix + "/" + Path.GetFileName(menuPath));
-                    if (replacement == null)
-                        return false;
-
-                    avatar.expressionsMenu = replacement;
-                    EditorUtility.SetDirty(avatar);
-                }
-
-                RetargetMenuGeneratedSubmenus(avatar.expressionsMenu, vendorPrefix, packagePrefix, new HashSet<VRCExpressionsMenu>());
-            }
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var layer = avatar.baseAnimationLayers[i];
-                var controller = layer.animatorController;
-                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
-                if (string.IsNullOrWhiteSpace(ctrlPath) || !ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                    continue;
-
-                var replacement = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(packagePrefix + "/" + Path.GetFileName(ctrlPath));
-                if (replacement == null)
-                    return false;
-
-                layer.animatorController = replacement;
-                avatar.baseAnimationLayers[i] = layer;
-                EditorUtility.SetDirty(avatar);
-            }
-
-            return !HasAvatarGeneratedReferencesUnderPrefix(avatar, vendorPrefix);
-        }
-
-        private static void DeleteAssetFolderIfEmpty(string assetFolderPath)
-        {
-            if (string.IsNullOrWhiteSpace(assetFolderPath))
-                return;
-
-            string normalizedPath = assetFolderPath.Replace('\\', '/').TrimEnd('/');
-            if (!AssetDatabase.IsValidFolder(normalizedPath))
-                return;
-
-            if (AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath }).Length == 0)
-                AssetDatabase.DeleteAsset(normalizedPath);
+            return result.Success;
         }
 
         private static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
         {
-            if (string.IsNullOrWhiteSpace(vendorizedDir))
-                return true;
-
-            string normalizedDir = vendorizedDir.Replace('\\', '/').TrimEnd('/');
-            if (!AssetDatabase.IsValidFolder(normalizedDir))
-                return true;
-
-            string avatarFolder = Path.GetDirectoryName(normalizedDir)?.Replace('\\', '/');
-            string asmLiteRoot = string.IsNullOrWhiteSpace(avatarFolder)
-                ? string.Empty
-                : Path.GetDirectoryName(avatarFolder)?.Replace('\\', '/');
-
-            if (!AssetDatabase.DeleteAsset(normalizedDir))
+            var backupResult = ASMLiteGeneratedAssetMirrorService.BackupVendorizedFolderForDelete(vendorizedDir);
+            if (!backupResult.Success)
+            {
+                Debug.LogError(backupResult.ToLogString());
                 return false;
+            }
 
-            DeleteAssetFolderIfEmpty(avatarFolder);
-            DeleteAssetFolderIfEmpty(asmLiteRoot);
+            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedFolderDelete(backupResult);
+            if (!finalizeResult.Success)
+            {
+                Debug.LogError(finalizeResult.ToLogString());
+                return false;
+            }
+
             return true;
         }
 
         private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
         {
-            vendorizedDir = string.Empty;
-            if (avatar == null)
+            var result = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
+            if (!result.Success)
+            {
+                Debug.LogError(result.ToLogString());
+                vendorizedDir = string.Empty;
                 return false;
-
-            string sourcePrefix = ASMLiteAssetPaths.GeneratedDir.Replace('\\', '/').TrimEnd('/');
-            string targetDir = EnsureVendorizeRootFolder(avatar);
-
-            var generatedGuids = AssetDatabase.FindAssets(string.Empty, new[] { sourcePrefix });
-            for (int i = 0; i < generatedGuids.Length; i++)
-            {
-                string sourcePath = AssetDatabase.GUIDToAssetPath(generatedGuids[i])?.Replace('\\', '/');
-                if (string.IsNullOrWhiteSpace(sourcePath) || Directory.Exists(sourcePath))
-                    continue;
-
-                string fileName = Path.GetFileName(sourcePath);
-                string destinationPath = targetDir + "/" + fileName;
-                CopyAssetIfPresent(sourcePath, destinationPath);
             }
 
-            // Retarget descriptor-level generated assets.
-            if (avatar.expressionParameters != null)
+            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(result);
+            if (!finalizeResult.Success)
             {
-                string exprPath = AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
-                {
-                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(targetDir + "/" + Path.GetFileName(exprPath));
-                    if (replacement != null)
-                    {
-                        avatar.expressionParameters = replacement;
-                        EditorUtility.SetDirty(avatar);
-                    }
-                }
+                Debug.LogError(finalizeResult.ToLogString());
+                vendorizedDir = string.Empty;
+                return false;
             }
 
-            if (avatar.expressionsMenu != null)
-            {
-                string menuPath = AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
-                {
-                    var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(targetDir + "/" + Path.GetFileName(menuPath));
-                    if (replacement != null)
-                    {
-                        avatar.expressionsMenu = replacement;
-                        EditorUtility.SetDirty(avatar);
-                    }
-                }
-
-                RetargetMenuGeneratedSubmenus(avatar.expressionsMenu, sourcePrefix, targetDir, new HashSet<VRCExpressionsMenu>());
-            }
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var layer = avatar.baseAnimationLayers[i];
-                var controller = layer.animatorController;
-                string ctrlPath = controller ? AssetDatabase.GetAssetPath(controller)?.Replace('\\', '/') : string.Empty;
-                if (string.IsNullOrWhiteSpace(ctrlPath) || !ctrlPath.StartsWith(sourcePrefix, StringComparison.Ordinal))
-                    continue;
-
-                var replacement = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(targetDir + "/" + Path.GetFileName(ctrlPath));
-                if (replacement == null)
-                    continue;
-
-                layer.animatorController = replacement;
-                avatar.baseAnimationLayers[i] = layer;
-                EditorUtility.SetDirty(avatar);
-            }
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            vendorizedDir = targetDir;
+            vendorizedDir = result.TargetPath;
             return true;
         }
 
         private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
-            if (component == null || string.IsNullOrWhiteSpace(generatedDir))
-                return false;
+            var result = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
 
-            if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(component.gameObject, component, "Retarget Generated Assets"))
-                return false;
-
-            var vfComponent = FindLiveVrcFuryComponent(component);
-            if (vfComponent == null)
-                return false;
-
-            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController));
-            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
-            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(generatedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
-            if (fxController == null || menu == null || parameters == null)
-                return false;
-
-            var so = new SerializedObject(vfComponent);
-            so.Update();
-
-            bool applied = ASMLitePrefabCreator.TryApplyFullControllerAssetReferences(so, component, fxController, menu, parameters);
-            if (!applied)
-                return false;
-
-            so.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-            return true;
+            return result.Success;
         }
 
         internal static bool TryReturnAttachedVendorizedToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
         {
-            if (component == null)
-                return false;
+            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedReturnToPackageManaged(component, avatar);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
 
-            string vendorizedDir = component.vendorizedGeneratedAssetsPath?.Replace('\\', '/').TrimEnd('/');
-
-            if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(component.gameObject, component, "Return To Package Managed"))
-                return false;
-
-            if (!TryRestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir))
-                return false;
-
-            if (!TryDeleteVendorizedGeneratedAssetsFolder(vendorizedDir))
-                return false;
-
-            component.useVendorizedGeneratedAssets = false;
-            component.vendorizedGeneratedAssetsPath = string.Empty;
-            EditorUtility.SetDirty(component);
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            return true;
+            return result.Success;
         }
 
         private void VendorizeAsmLite(ASMLiteComponent component, bool requireConfirmation = true, bool showDialogs = true)
@@ -6398,41 +6111,22 @@ namespace ASMLite.Editor
                 return;
             }
 
-            if (!TryRefreshLiveInstallPathPrefix(component, "Vendorize"))
+            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(component, avatar);
+            if (!result.Success)
             {
+                Debug.LogError(result.ToLogString());
                 if (showDialogs)
-                    EditorUtility.DisplayDialog(modeLabel, "Failed to refresh FullController install prefix before vendorizing.", "OK");
+                    EditorUtility.DisplayDialog(modeLabel, result.Message, "OK");
                 return;
             }
 
-            int count = ASMLiteBuilder.Build(component);
-            if (count >= 0)
-                _discoveredParamCount = count;
+            if (result.DiscoveredParamCount >= 0)
+                _discoveredParamCount = result.DiscoveredParamCount;
 
-            if (!TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out string vendorizedDir))
-            {
-                if (showDialogs)
-                    EditorUtility.DisplayDialog(modeLabel, "Failed to mirror generated assets to Assets/ASM-Lite.", "OK");
-                return;
-            }
-
-            if (!TryRetargetLiveFullControllerGeneratedAssets(component, vendorizedDir))
-            {
-                if (showDialogs)
-                    EditorUtility.DisplayDialog(modeLabel, "Mirrored assets were created, but live FullController references could not be retargeted.", "OK");
-                return;
-            }
-
-            Undo.RecordObject(component, "Enable ASM-Lite Vendorized Assets");
-            component.useVendorizedGeneratedAssets = true;
-            component.vendorizedGeneratedAssetsPath = vendorizedDir;
-            EditorUtility.SetDirty(component);
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
             InvalidateCachedEditorState();
 
-            Debug.Log($"[ASM-Lite] Vendorized generated payload for '{avatar.gameObject.name}' to '{vendorizedDir}' and kept ASM-Lite attached.");
+            string vendorizedDir = result.MirrorResult?.TargetPath ?? component.vendorizedGeneratedAssetsPath;
+            Debug.Log(result.Message);
             if (showDialogs)
                 EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
             Repaint();
