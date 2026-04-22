@@ -80,6 +80,8 @@ namespace ASMLite.Editor
         private string _pendingCustomInstallPath = string.Empty;
         private bool _pendingUseParameterExclusions = false;
         private string[] _pendingExcludedParameterNames = Array.Empty<string>();
+        private bool _pendingUseVendorizedGeneratedAssets;
+        private string _pendingVendorizedGeneratedAssetsPath = string.Empty;
 
         // Icon settings foldouts (hierarchy-style UI groups).
         private bool _iconsRootFoldout = true;
@@ -6559,91 +6561,81 @@ namespace ASMLite.Editor
             }
         }
 
+        private ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CapturePendingCustomizationSnapshot()
+        {
+            return new ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot(
+                _pendingSlotCount,
+                _pendingIconMode,
+                _pendingSelectedGearIndex,
+                _pendingActionIconMode,
+                _pendingCustomSaveIcon,
+                _pendingCustomLoadIcon,
+                _pendingCustomClearIcon,
+                _pendingUseCustomSlotIcons,
+                _pendingCustomIcons,
+                _pendingUseCustomRootIcon,
+                _pendingCustomRootIcon,
+                _pendingUseCustomRootName,
+                _pendingCustomRootName,
+                _pendingCustomPresetNames,
+                _pendingCustomPresetNameFormat,
+                _pendingCustomSaveLabel,
+                _pendingCustomLoadLabel,
+                _pendingCustomClearPresetLabel,
+                _pendingCustomConfirmLabel,
+                _pendingUseCustomInstallPath,
+                _pendingCustomInstallPath,
+                _pendingUseParameterExclusions,
+                _pendingExcludedParameterNames,
+                _pendingUseVendorizedGeneratedAssets,
+                _pendingVendorizedGeneratedAssetsPath);
+        }
+
+        private void ApplyCustomizationSnapshotToPending(ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot snapshot)
+        {
+            _pendingSlotCount = snapshot.SlotCount;
+            _pendingIconMode = snapshot.IconMode;
+            _pendingSelectedGearIndex = snapshot.SelectedGearIndex;
+            _pendingActionIconMode = snapshot.ActionIconMode;
+            _pendingCustomSaveIcon = snapshot.CustomSaveIcon;
+            _pendingCustomLoadIcon = snapshot.CustomLoadIcon;
+            _pendingCustomClearIcon = snapshot.CustomClearIcon;
+            _pendingUseCustomSlotIcons = snapshot.UseCustomSlotIcons;
+            _pendingCustomIcons = CloneTextures(snapshot.CustomIcons);
+            _pendingUseCustomRootIcon = snapshot.UseCustomRootIcon;
+            _pendingCustomRootIcon = snapshot.CustomRootIcon;
+            _pendingUseCustomRootName = snapshot.UseCustomRootName;
+            _pendingCustomRootName = snapshot.CustomRootName;
+            _pendingCustomPresetNames = CloneStrings(snapshot.CustomPresetNames);
+            _pendingCustomPresetNameFormat = snapshot.CustomPresetNameFormat;
+            _pendingCustomSaveLabel = snapshot.CustomSaveLabel;
+            _pendingCustomLoadLabel = snapshot.CustomLoadLabel;
+            _pendingCustomClearPresetLabel = snapshot.CustomClearPresetLabel;
+            _pendingCustomConfirmLabel = snapshot.CustomConfirmLabel;
+            _pendingUseCustomInstallPath = snapshot.UseCustomInstallPath;
+            _pendingCustomInstallPath = snapshot.CustomInstallPath;
+            _pendingUseParameterExclusions = snapshot.UseParameterExclusions;
+            _pendingExcludedParameterNames = SanitizeExcludedParameterNames(snapshot.ExcludedParameterNames);
+            _pendingUseVendorizedGeneratedAssets = snapshot.UseVendorizedGeneratedAssets;
+            _pendingVendorizedGeneratedAssetsPath = snapshot.VendorizedGeneratedAssetsPath;
+        }
+
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
         {
             if (component == null)
                 return;
 
-            component.slotCount = _pendingSlotCount;
-            component.iconMode = _pendingIconMode;
-            component.selectedGearIndex = _pendingSelectedGearIndex;
-            component.actionIconMode = _pendingActionIconMode;
-            component.customSaveIcon = _pendingCustomSaveIcon;
-            component.customLoadIcon = _pendingCustomLoadIcon;
-            component.customClearIcon = _pendingCustomClearIcon;
-            component.useCustomSlotIcons = _pendingUseCustomSlotIcons;
-            component.customIcons = CloneTextures(_pendingCustomIcons);
-
-            component.useCustomRootIcon = _pendingUseCustomRootIcon;
-            component.customRootIcon = _pendingCustomRootIcon;
-            component.useCustomRootName = _pendingUseCustomRootName;
-            component.customRootName = NormalizeOptionalString(_pendingCustomRootName);
-            component.customPresetNames = CloneStrings(_pendingCustomPresetNames);
-            component.customPresetNameFormat = NormalizeOptionalString(_pendingCustomPresetNameFormat);
-            component.customSaveLabel = _pendingCustomSaveLabel ?? string.Empty;
-            component.customLoadLabel = _pendingCustomLoadLabel ?? string.Empty;
-            component.customClearPresetLabel = _pendingCustomClearPresetLabel ?? string.Empty;
-            component.customConfirmLabel = _pendingCustomConfirmLabel ?? string.Empty;
-            component.useCustomInstallPath = _pendingUseCustomInstallPath;
-            component.customInstallPath = NormalizeOptionalString(_pendingCustomInstallPath);
-            component.useParameterExclusions = _pendingUseParameterExclusions;
-            component.excludedParameterNames = SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+            var snapshot = CapturePendingCustomizationSnapshot();
+            ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, snapshot);
         }
 
         private void CopyComponentCustomizationToPending(ASMLiteComponent component)
         {
-            _pendingSlotCount = component.slotCount;
-            _pendingIconMode = component.iconMode;
-            _pendingSelectedGearIndex = component.selectedGearIndex;
-            _pendingActionIconMode = component.actionIconMode;
-            _pendingCustomSaveIcon = component.customSaveIcon;
-            _pendingCustomLoadIcon = component.customLoadIcon;
-            _pendingCustomClearIcon = component.customClearIcon;
-            _pendingUseCustomSlotIcons = component.useCustomSlotIcons;
-            _pendingCustomIcons = CloneTextures(component.customIcons);
+            if (component == null)
+                return;
 
-            _pendingUseCustomRootIcon = component.useCustomRootIcon;
-            _pendingCustomRootIcon = component.customRootIcon;
-            _pendingUseCustomRootName = component.useCustomRootName;
-            _pendingCustomRootName = NormalizeOptionalString(component.customRootName);
-            _pendingCustomPresetNames = CloneStrings(component.customPresetNames);
-            _pendingCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
-            _pendingCustomSaveLabel = component.customSaveLabel ?? string.Empty;
-            _pendingCustomLoadLabel = component.customLoadLabel ?? string.Empty;
-            _pendingCustomClearPresetLabel = component.customClearPresetLabel ?? string.Empty;
-            _pendingCustomConfirmLabel = component.customConfirmLabel ?? string.Empty;
-            _pendingUseCustomInstallPath = component.useCustomInstallPath;
-            _pendingCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
-            _pendingUseParameterExclusions = component.useParameterExclusions;
-            _pendingExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
-        }
-
-        private static bool TryResolveInstallPrefixFromMovedRootPath(string rootControlName, string movedDestinationPath, out string installPrefix)
-        {
-            installPrefix = string.Empty;
-
-            string root = NormalizeOptionalString(rootControlName);
-            string destination = NormalizeSlashPath(movedDestinationPath);
-            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(destination))
-                return false;
-
-            if (string.Equals(destination, root, StringComparison.Ordinal))
-            {
-                installPrefix = string.Empty;
-                return true;
-            }
-
-            string suffix = "/" + root;
-            if (destination.EndsWith(suffix, StringComparison.Ordinal))
-            {
-                installPrefix = destination.Substring(0, destination.Length - suffix.Length);
-                return true;
-            }
-
-            // Fallback: treat destination as direct prefix if it does not include
-            // the root segment explicitly.
-            installPrefix = destination;
-            return true;
+            var snapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component);
+            ApplyCustomizationSnapshotToPending(snapshot);
         }
 
         private static bool TryAdoptInstallPathFromMoveMenu(
@@ -6652,92 +6644,10 @@ namespace ASMLite.Editor
             out string adoptedInstallPrefix,
             out int removedMoveComponents)
         {
-            adoptedInstallPrefix = string.Empty;
-            removedMoveComponents = 0;
-
-            if (component == null || avatar == null)
-                return false;
-
-            string effectiveRootName = ASMLiteBuilder.ResolveEffectiveRootControlName(component);
-            if (string.IsNullOrWhiteSpace(effectiveRootName))
-                return false;
-
-            var remaps = GetVrcFuryMoveMenuPathRemaps(avatar);
-            if (remaps.Count == 0)
-                return false;
-
-            string normalizedRoot = NormalizeSlashPath(effectiveRootName);
-            string matchedDestination = null;
-            foreach (var kv in remaps)
-            {
-                string fromPath = NormalizeSlashPath(kv.Key);
-                if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
-                    continue;
-
-                matchedDestination = kv.Value;
-                break;
-            }
-
-            if (string.IsNullOrWhiteSpace(matchedDestination))
-                return false;
-
-            if (!TryResolveInstallPrefixFromMovedRootPath(effectiveRootName, matchedDestination, out string resolvedPrefix))
-                return false;
-
-            resolvedPrefix = NormalizeOptionalString(resolvedPrefix);
-
-            bool changedComponent = !component.useCustomInstallPath
-                || !string.Equals(NormalizeOptionalString(component.customInstallPath), resolvedPrefix, StringComparison.Ordinal);
-
-            if (changedComponent)
-            {
-                Undo.RecordObject(component, "Adopt ASM-Lite Install Path From Move Menu");
-                component.useCustomInstallPath = true;
-                component.customInstallPath = resolvedPrefix;
-                EditorUtility.SetDirty(component);
-            }
-
-            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                var behaviour = behaviours[i];
-                if (behaviour == null)
-                    continue;
-
-                var type = behaviour.GetType();
-                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    continue;
-
-                // Preserve ASM-Lite managed install-path routing helper.
-                if (string.Equals(behaviour.gameObject.name, "ASM-Lite Install Path Routing", StringComparison.Ordinal))
-                    continue;
-
-                var so = new SerializedObject(behaviour);
-                so.Update();
-
-                var content = so.FindProperty("content");
-                if (content == null || content.propertyType != SerializedPropertyType.ManagedReference)
-                    continue;
-
-                string managedRefType = content.managedReferenceFullTypename;
-                if (string.IsNullOrWhiteSpace(managedRefType)
-                    || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
-                    continue;
-
-                var fromProp = so.FindProperty("content.fromPath");
-                if (fromProp == null || fromProp.propertyType != SerializedPropertyType.String)
-                    continue;
-
-                string fromPath = NormalizeSlashPath(fromProp.stringValue);
-                if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
-                    continue;
-
-                Undo.DestroyObjectImmediate(behaviour);
-                removedMoveComponents++;
-            }
-
-            adoptedInstallPrefix = resolvedPrefix;
-            return changedComponent || removedMoveComponents > 0;
+            var adoption = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(component, avatar);
+            adoptedInstallPrefix = adoption.AdoptedInstallPrefix;
+            removedMoveComponents = adoption.RemovedMoveComponents;
+            return adoption.HasChanges;
         }
 
         private void AddPrefabToAvatar(bool showDialogs = true)
@@ -6831,31 +6741,7 @@ namespace ASMLite.Editor
                 Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
 
                 // Capture settings before destroying the instance.
-                int savedSlotCount = component.slotCount;
-                IconMode savedIconMode = component.iconMode;
-                int savedGearIndex = component.selectedGearIndex;
-                ActionIconMode savedActionIconMode = component.actionIconMode;
-                Texture2D savedCustomSave = component.customSaveIcon;
-                Texture2D savedCustomLoad = component.customLoadIcon;
-                Texture2D savedCustomClear = component.customClearIcon;
-                bool savedUseCustomSlotIcons = component.useCustomSlotIcons;
-                Texture2D[] savedCustomIcons = CloneTextures(component.customIcons);
-                Texture2D savedCustomRootIcon = component.customRootIcon;
-                bool savedUseCustomRootIcon = component.useCustomRootIcon;
-                bool savedUseCustomRootName = component.useCustomRootName;
-                string savedCustomRootName = NormalizeOptionalString(component.customRootName);
-                string[] savedCustomPresetNames = CloneStrings(component.customPresetNames);
-                string savedCustomPresetNameFormat = NormalizeOptionalString(component.customPresetNameFormat);
-                string savedCustomSaveLabel = component.customSaveLabel ?? string.Empty;
-                string savedCustomLoadLabel = component.customLoadLabel ?? string.Empty;
-                string savedCustomClearPresetLabel = component.customClearPresetLabel ?? string.Empty;
-                string savedCustomConfirmLabel = component.customConfirmLabel ?? string.Empty;
-                bool savedUseCustomInstallPath = component.useCustomInstallPath;
-                string savedCustomInstallPath = NormalizeOptionalString(component.customInstallPath);
-                bool savedUseParameterExclusions = component.useParameterExclusions;
-                string[] savedExcludedParameterNames = SanitizeExcludedParameterNames(component.excludedParameterNames);
-                bool savedUseVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
-                string savedVendorizedGeneratedAssetsPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+                var migrationSnapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component);
                 Transform savedParent = component.gameObject.transform.parent;
 
                 Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
@@ -6875,31 +6761,7 @@ namespace ASMLite.Editor
                 var newComponent = instance.GetComponent<ASMLiteComponent>();
                 if (newComponent != null)
                 {
-                    newComponent.slotCount = savedSlotCount;
-                    newComponent.iconMode = savedIconMode;
-                    newComponent.selectedGearIndex = savedGearIndex;
-                    newComponent.actionIconMode = savedActionIconMode;
-                    newComponent.customSaveIcon = savedCustomSave;
-                    newComponent.customLoadIcon = savedCustomLoad;
-                    newComponent.customClearIcon = savedCustomClear;
-                    newComponent.useCustomSlotIcons = savedUseCustomSlotIcons;
-                    newComponent.customIcons = savedCustomIcons;
-                    newComponent.useCustomRootIcon = savedUseCustomRootIcon;
-                    newComponent.customRootIcon = savedCustomRootIcon;
-                    newComponent.useCustomRootName = savedUseCustomRootName;
-                    newComponent.customRootName = savedCustomRootName;
-                    newComponent.customPresetNames = savedCustomPresetNames;
-                    newComponent.customPresetNameFormat = savedCustomPresetNameFormat;
-                    newComponent.customSaveLabel = savedCustomSaveLabel;
-                    newComponent.customLoadLabel = savedCustomLoadLabel;
-                    newComponent.customClearPresetLabel = savedCustomClearPresetLabel;
-                    newComponent.customConfirmLabel = savedCustomConfirmLabel;
-                    newComponent.useCustomInstallPath = savedUseCustomInstallPath;
-                    newComponent.customInstallPath = savedCustomInstallPath;
-                    newComponent.useParameterExclusions = savedUseParameterExclusions;
-                    newComponent.excludedParameterNames = savedExcludedParameterNames;
-                    newComponent.useVendorizedGeneratedAssets = savedUseVendorizedGeneratedAssets;
-                    newComponent.vendorizedGeneratedAssetsPath = savedVendorizedGeneratedAssetsPath;
+                    ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(newComponent, migrationSnapshot);
 
                     if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
                     {
@@ -7039,7 +6901,11 @@ namespace ASMLite.Editor
                 }
 
                 CopyComponentCustomizationToPending(existing);
+                return;
             }
+
+            _pendingUseVendorizedGeneratedAssets = false;
+            _pendingVendorizedGeneratedAssetsPath = string.Empty;
         }
 
         private void OnSelectionChange()
@@ -7265,7 +7131,9 @@ namespace ASMLite.Editor
                 string customInstallPath,
                 bool useParameterExclusions,
                 string[] excludedParameterNames,
-                Texture2D[] customIcons)
+                Texture2D[] customIcons,
+                bool useVendorizedGeneratedAssets,
+                string vendorizedGeneratedAssetsPath)
             {
                 SelectedAvatar = selectedAvatar;
                 UseCustomRootIcon = useCustomRootIcon;
@@ -7276,6 +7144,8 @@ namespace ASMLite.Editor
                 UseParameterExclusions = useParameterExclusions;
                 ExcludedParameterNames = excludedParameterNames ?? Array.Empty<string>();
                 CustomIcons = customIcons ?? Array.Empty<Texture2D>();
+                UseVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
+                VendorizedGeneratedAssetsPath = vendorizedGeneratedAssetsPath ?? string.Empty;
             }
 
             public VRCAvatarDescriptor SelectedAvatar { get; }
@@ -7287,6 +7157,8 @@ namespace ASMLite.Editor
             public bool UseParameterExclusions { get; }
             public string[] ExcludedParameterNames { get; }
             public Texture2D[] CustomIcons { get; }
+            public bool UseVendorizedGeneratedAssets { get; }
+            public string VendorizedGeneratedAssetsPath { get; }
         }
 
         internal void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
@@ -7312,7 +7184,9 @@ namespace ASMLite.Editor
                 _pendingCustomInstallPath,
                 _pendingUseParameterExclusions,
                 CloneStrings(_pendingExcludedParameterNames),
-                _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>());
+                _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>(),
+                _pendingUseVendorizedGeneratedAssets,
+                _pendingVendorizedGeneratedAssetsPath);
         }
 
         internal void AddPrefabForAutomation()

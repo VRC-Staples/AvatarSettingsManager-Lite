@@ -20,12 +20,17 @@ namespace ASMLite.Editor
             if (component == null)
                 return string.Empty;
 
-            if (!component.useCustomInstallPath)
+            return ResolveEffectivePrefix(component.useCustomInstallPath, component.customInstallPath);
+        }
+
+        internal static string ResolveEffectivePrefix(bool useCustomInstallPath, string customInstallPath)
+        {
+            if (!useCustomInstallPath)
                 return string.Empty;
 
-            var trimmed = string.IsNullOrWhiteSpace(component.customInstallPath)
+            var trimmed = string.IsNullOrWhiteSpace(customInstallPath)
                 ? string.Empty
-                : component.customInstallPath.Trim();
+                : customInstallPath.Trim();
 
             return string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed;
         }

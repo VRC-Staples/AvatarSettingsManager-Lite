@@ -302,6 +302,8 @@ namespace ASMLite.Tests.Editor
             {
                 LogAssert.Expect(LogType.Error,
                     $"[ASM-Lite] Retarget Generated Assets Generated FX Repair: Generated FX controller file was not found at '{ASMLiteAssetPaths.FXController}'.");
+                LogAssert.Expect(LogType.Error,
+                    $"[ASM-Lite] BUILD-302: [ASM-Lite] Retarget Generated Assets: Generated FX controller repair failed before live FullController refresh. Context: '{ASMLiteAssetPaths.FXController}'. Remediation: Repair the generated FX controller before refreshing FullController wiring.");
 
                 bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
                 Assert.IsFalse(retargeted,
@@ -531,6 +533,85 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void SelectingAvatar_AdoptsMatchingMoveMenuInstallPath_WithoutTouchingVendorizedSnapshotState()
+        {
+            _ctx.Comp.useCustomInstallPath = false;
+            _ctx.Comp.customInstallPath = string.Empty;
+            _ctx.Comp.useVendorizedGeneratedAssets = true;
+            _ctx.Comp.vendorizedGeneratedAssetsPath = "  Assets/ASM-Lite/TestAvatar/GeneratedAssets  ";
+
+            ASMLiteTestFixtures.EnsureLiveFullControllerPayload(_ctx.Comp);
+
+            var matchingHelperGo = new GameObject("Legacy Move Menu Helper");
+            matchingHelperGo.transform.SetParent(_ctx.AvatarGo.transform, false);
+            var matchingHelper = matchingHelperGo.AddComponent<VF.Model.VRCFury>();
+            matchingHelper.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Settings Manager",
+                toPath = "Tools/Settings Manager",
+            };
+
+            var unrelatedHelperGo = new GameObject("Unrelated Move Menu Helper");
+            unrelatedHelperGo.transform.SetParent(_ctx.AvatarGo.transform, false);
+            var unrelatedHelper = unrelatedHelperGo.AddComponent<VF.Model.VRCFury>();
+            unrelatedHelper.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Other Root",
+                toPath = "Elsewhere/Other Root",
+            };
+
+            var managedRoutingGo = new GameObject("ASM-Lite Install Path Routing");
+            managedRoutingGo.transform.SetParent(_ctx.AvatarGo.transform, false);
+            var managedRouting = managedRoutingGo.AddComponent<VF.Model.VRCFury>();
+            managedRouting.content = new VF.Model.Feature.MoveMenuItem
+            {
+                fromPath = "Settings Manager",
+                toPath = "Managed/Settings Manager",
+            };
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                Assert.AreEqual(4, _ctx.AvatarGo.GetComponentsInChildren<VF.Model.VRCFury>(true).Length,
+                    "Adoption setup should include the live payload plus matching, unrelated, and managed routing helpers.");
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                Assert.IsTrue(_ctx.Comp.useCustomInstallPath,
+                    "Move-menu adoption should enable custom install mode on the live component.");
+                Assert.AreEqual("Tools", _ctx.Comp.customInstallPath,
+                    "Move-menu adoption should write the helper-normalized prefix back onto the live component.");
+                Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                    "Move-menu adoption must preserve vendorized mode on the live component.");
+                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", _ctx.Comp.vendorizedGeneratedAssetsPath,
+                    "Move-menu adoption must preserve the normalized vendorized payload path on the live component.");
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Selection sync should surface the adopted install path in the pending snapshot.");
+                Assert.AreEqual("Tools", snapshot.CustomInstallPath,
+                    "Selection sync should report the adopted helper-normalized install prefix.");
+                Assert.IsTrue(snapshot.UseVendorizedGeneratedAssets,
+                    "Selection sync should preserve vendorized mode in the pending snapshot.");
+                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", snapshot.VendorizedGeneratedAssetsPath,
+                    "Selection sync should preserve the normalized vendorized payload path in the pending snapshot.");
+
+                Assert.IsFalse(matchingHelperGo.TryGetComponent<VF.Model.VRCFury>(out _),
+                    "Selection sync should remove only the matching detached MoveMenuItem helper component after adoption.");
+                Assert.IsNotNull(_ctx.AvatarGo.transform.Find("Unrelated Move Menu Helper"),
+                    "Selection sync should preserve unrelated MoveMenuItem helpers when their fromPath does not match ASM-Lite's root.");
+                Assert.IsNotNull(_ctx.AvatarGo.transform.Find("ASM-Lite Install Path Routing"),
+                    "Selection sync should preserve the managed install-path routing helper rather than deleting ASM-Lite-owned routing state.");
+                Assert.AreEqual(3, _ctx.AvatarGo.GetComponentsInChildren<VF.Model.VRCFury>(true).Length,
+                    "Selection sync should remove exactly one matching detached MoveMenuItem helper.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void AddPrefab_UsesSelectedAvatarCustomizationSnapshot_WithoutArrayAliasing()
         {
             var sourceIcons = new Texture2D[] { null, null, null, null };
@@ -619,6 +700,8 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.customInstallPath = " ";
             _ctx.Comp.useParameterExclusions = true;
             _ctx.Comp.excludedParameterNames = new[] { "Mood", "", " Mood", "Hue " };
+            _ctx.Comp.useVendorizedGeneratedAssets = true;
+            _ctx.Comp.vendorizedGeneratedAssetsPath = "  Assets/ASM-Lite/TestAvatar/GeneratedAssets  ";
 
             var stale = new GameObject("prms");
             stale.transform.SetParent(_ctx.Comp.transform);
@@ -630,6 +713,7 @@ namespace ASMLite.Tests.Editor
             {
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
                 window.RebuildForAutomation();
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 var rebuilt = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(rebuilt, "Migration rebuild should leave an ASMLiteComponent on the avatar.");
@@ -645,6 +729,7 @@ namespace ASMLite.Tests.Editor
                 Assert.IsTrue(rebuilt.useCustomRootName, "Migration rebuild should preserve root name toggle.");
                 Assert.IsTrue(rebuilt.useCustomInstallPath, "Migration rebuild should preserve install path toggle.");
                 Assert.IsTrue(rebuilt.useParameterExclusions, "Migration rebuild should preserve exclusions toggle.");
+                Assert.IsTrue(rebuilt.useVendorizedGeneratedAssets, "Migration rebuild should preserve vendorized mode.");
 
                 Assert.AreEqual("Migrated Root", rebuilt.customRootName,
                     "Migration rebuild should normalize and preserve root name values.");
@@ -652,11 +737,23 @@ namespace ASMLite.Tests.Editor
                     "Migration rebuild should normalize blank install path values.");
                 CollectionAssert.AreEqual(new[] { "Mood", "Hue" }, rebuilt.excludedParameterNames,
                     "Migration rebuild should preserve sanitized exclusion names.");
+                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", rebuilt.vendorizedGeneratedAssetsPath,
+                    "Migration rebuild should preserve the normalized vendorized payload path.");
 
                 var rebuiltVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(rebuilt.gameObject);
                 Assert.IsNotNull(rebuiltVf, "Migration rebuild should preserve VF.Model.VRCFury delivery component.");
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(rebuiltVf),
                     "Migration rebuild should apply normalized blank install path as legacy empty FullController prefix.");
+
+                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Selection sync after migration rebuild should keep the normalized install-path toggle in the shared snapshot.");
+                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
+                    "Selection sync after migration rebuild should keep the normalized blank install path in the shared snapshot.");
+                Assert.IsTrue(snapshot.UseVendorizedGeneratedAssets,
+                    "Selection sync after migration rebuild should keep vendorized mode in the shared snapshot.");
+                Assert.AreEqual("Assets/ASM-Lite/TestAvatar/GeneratedAssets", snapshot.VendorizedGeneratedAssetsPath,
+                    "Selection sync after migration rebuild should keep the normalized vendorized payload path in the shared snapshot.");
             }
             finally
             {

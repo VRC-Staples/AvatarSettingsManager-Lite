@@ -12,6 +12,104 @@ namespace ASMLite.Editor
 {
     internal static class ASMLiteMigrationContinuityService
     {
+        internal readonly struct ComponentCustomizationSnapshot
+        {
+            internal ComponentCustomizationSnapshot(
+                int slotCount,
+                IconMode iconMode,
+                int selectedGearIndex,
+                ActionIconMode actionIconMode,
+                Texture2D customSaveIcon,
+                Texture2D customLoadIcon,
+                Texture2D customClearIcon,
+                bool useCustomSlotIcons,
+                Texture2D[] customIcons,
+                bool useCustomRootIcon,
+                Texture2D customRootIcon,
+                bool useCustomRootName,
+                string customRootName,
+                string[] customPresetNames,
+                string customPresetNameFormat,
+                string customSaveLabel,
+                string customLoadLabel,
+                string customClearPresetLabel,
+                string customConfirmLabel,
+                bool useCustomInstallPath,
+                string customInstallPath,
+                bool useParameterExclusions,
+                string[] excludedParameterNames,
+                bool useVendorizedGeneratedAssets,
+                string vendorizedGeneratedAssetsPath)
+            {
+                SlotCount = slotCount;
+                IconMode = iconMode;
+                SelectedGearIndex = selectedGearIndex;
+                ActionIconMode = actionIconMode;
+                CustomSaveIcon = customSaveIcon;
+                CustomLoadIcon = customLoadIcon;
+                CustomClearIcon = customClearIcon;
+                UseCustomSlotIcons = useCustomSlotIcons;
+                CustomIcons = CloneTextures(customIcons);
+                UseCustomRootIcon = useCustomRootIcon;
+                CustomRootIcon = customRootIcon;
+                UseCustomRootName = useCustomRootName;
+                CustomRootName = NormalizeOptionalString(customRootName);
+                CustomPresetNames = CloneStrings(customPresetNames);
+                CustomPresetNameFormat = NormalizeOptionalString(customPresetNameFormat);
+                CustomSaveLabel = customSaveLabel ?? string.Empty;
+                CustomLoadLabel = customLoadLabel ?? string.Empty;
+                CustomClearPresetLabel = customClearPresetLabel ?? string.Empty;
+                CustomConfirmLabel = customConfirmLabel ?? string.Empty;
+                UseCustomInstallPath = useCustomInstallPath;
+                CustomInstallPath = NormalizeOptionalString(customInstallPath);
+                UseParameterExclusions = useParameterExclusions;
+                ExcludedParameterNames = SanitizeExcludedParameterNames(excludedParameterNames);
+                UseVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
+                VendorizedGeneratedAssetsPath = NormalizeOptionalString(vendorizedGeneratedAssetsPath);
+            }
+
+            internal int SlotCount { get; }
+            internal IconMode IconMode { get; }
+            internal int SelectedGearIndex { get; }
+            internal ActionIconMode ActionIconMode { get; }
+            internal Texture2D CustomSaveIcon { get; }
+            internal Texture2D CustomLoadIcon { get; }
+            internal Texture2D CustomClearIcon { get; }
+            internal bool UseCustomSlotIcons { get; }
+            internal Texture2D[] CustomIcons { get; }
+            internal bool UseCustomRootIcon { get; }
+            internal Texture2D CustomRootIcon { get; }
+            internal bool UseCustomRootName { get; }
+            internal string CustomRootName { get; }
+            internal string[] CustomPresetNames { get; }
+            internal string CustomPresetNameFormat { get; }
+            internal string CustomSaveLabel { get; }
+            internal string CustomLoadLabel { get; }
+            internal string CustomClearPresetLabel { get; }
+            internal string CustomConfirmLabel { get; }
+            internal bool UseCustomInstallPath { get; }
+            internal string CustomInstallPath { get; }
+            internal bool UseParameterExclusions { get; }
+            internal string[] ExcludedParameterNames { get; }
+            internal bool UseVendorizedGeneratedAssets { get; }
+            internal string VendorizedGeneratedAssetsPath { get; }
+        }
+
+        internal readonly struct InstallPathAdoptionResult
+        {
+            internal InstallPathAdoptionResult(bool adopted, string adoptedInstallPrefix, int removedMoveComponents)
+            {
+                Adopted = adopted;
+                AdoptedInstallPrefix = adoptedInstallPrefix ?? string.Empty;
+                RemovedMoveComponents = removedMoveComponents;
+            }
+
+            internal bool Adopted { get; }
+            internal string AdoptedInstallPrefix { get; }
+            internal int RemovedMoveComponents { get; }
+            internal bool HasChanges => Adopted || RemovedMoveComponents > 0;
+        }
+
         private readonly struct ParsedBackupName
         {
             internal ParsedBackupName(int slot, string sourceParamName)
@@ -22,6 +120,143 @@ namespace ASMLite.Editor
 
             internal int Slot { get; }
             internal string SourceParamName { get; }
+        }
+
+        internal static ComponentCustomizationSnapshot CaptureCustomizationSnapshot(ASMLiteComponent component)
+        {
+            if (component == null)
+                return default;
+
+            return new ComponentCustomizationSnapshot(
+                component.slotCount,
+                component.iconMode,
+                component.selectedGearIndex,
+                component.actionIconMode,
+                component.customSaveIcon,
+                component.customLoadIcon,
+                component.customClearIcon,
+                component.useCustomSlotIcons,
+                component.customIcons,
+                component.useCustomRootIcon,
+                component.customRootIcon,
+                component.useCustomRootName,
+                component.customRootName,
+                component.customPresetNames,
+                component.customPresetNameFormat,
+                component.customSaveLabel,
+                component.customLoadLabel,
+                component.customClearPresetLabel,
+                component.customConfirmLabel,
+                component.useCustomInstallPath,
+                component.customInstallPath,
+                component.useParameterExclusions,
+                component.excludedParameterNames,
+                component.useVendorizedGeneratedAssets,
+                component.vendorizedGeneratedAssetsPath);
+        }
+
+        internal static void ApplyCustomizationSnapshot(ASMLiteComponent component, ComponentCustomizationSnapshot snapshot)
+        {
+            if (component == null)
+                return;
+
+            component.slotCount = snapshot.SlotCount;
+            component.iconMode = snapshot.IconMode;
+            component.selectedGearIndex = snapshot.SelectedGearIndex;
+            component.actionIconMode = snapshot.ActionIconMode;
+            component.customSaveIcon = snapshot.CustomSaveIcon;
+            component.customLoadIcon = snapshot.CustomLoadIcon;
+            component.customClearIcon = snapshot.CustomClearIcon;
+            component.useCustomSlotIcons = snapshot.UseCustomSlotIcons;
+            component.customIcons = CloneTextures(snapshot.CustomIcons);
+            component.useCustomRootIcon = snapshot.UseCustomRootIcon;
+            component.customRootIcon = snapshot.CustomRootIcon;
+            component.useCustomRootName = snapshot.UseCustomRootName;
+            component.customRootName = snapshot.CustomRootName;
+            component.customPresetNames = CloneStrings(snapshot.CustomPresetNames);
+            component.customPresetNameFormat = snapshot.CustomPresetNameFormat;
+            component.customSaveLabel = snapshot.CustomSaveLabel;
+            component.customLoadLabel = snapshot.CustomLoadLabel;
+            component.customClearPresetLabel = snapshot.CustomClearPresetLabel;
+            component.customConfirmLabel = snapshot.CustomConfirmLabel;
+            component.useCustomInstallPath = snapshot.UseCustomInstallPath;
+            component.customInstallPath = snapshot.CustomInstallPath;
+            component.useParameterExclusions = snapshot.UseParameterExclusions;
+            component.excludedParameterNames = SanitizeExcludedParameterNames(snapshot.ExcludedParameterNames);
+            component.useVendorizedGeneratedAssets = snapshot.UseVendorizedGeneratedAssets;
+            component.vendorizedGeneratedAssetsPath = snapshot.VendorizedGeneratedAssetsPath;
+        }
+
+        internal static InstallPathAdoptionResult TryAdoptInstallPathFromMoveMenu(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        {
+            if (component == null || avatar == null)
+                return default;
+
+            string effectiveRootName = ASMLiteBuilder.ResolveEffectiveRootControlName(component);
+            if (string.IsNullOrWhiteSpace(effectiveRootName))
+                return default;
+
+            var remaps = GetVrcFuryMoveMenuPathRemaps(avatar);
+            if (remaps.Count == 0)
+                return default;
+
+            string normalizedRoot = NormalizeSlashPath(effectiveRootName);
+            string matchedDestination = null;
+            foreach (var kv in remaps)
+            {
+                if (!string.Equals(NormalizeSlashPath(kv.Key), normalizedRoot, StringComparison.Ordinal))
+                    continue;
+
+                matchedDestination = kv.Value;
+                break;
+            }
+
+            if (string.IsNullOrWhiteSpace(matchedDestination))
+                return default;
+
+            if (!TryResolveInstallPrefixFromMovedRootPath(effectiveRootName, matchedDestination, out string resolvedPrefix))
+                return default;
+
+            var currentSnapshot = CaptureCustomizationSnapshot(component);
+            string normalizedPrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(true, resolvedPrefix);
+            bool changedComponent = !currentSnapshot.UseCustomInstallPath
+                || !string.Equals(currentSnapshot.CustomInstallPath, normalizedPrefix, StringComparison.Ordinal);
+
+            if (changedComponent)
+            {
+                Undo.RecordObject(component, "Adopt ASM-Lite Install Path From Move Menu");
+                var adoptedSnapshot = new ComponentCustomizationSnapshot(
+                    currentSnapshot.SlotCount,
+                    currentSnapshot.IconMode,
+                    currentSnapshot.SelectedGearIndex,
+                    currentSnapshot.ActionIconMode,
+                    currentSnapshot.CustomSaveIcon,
+                    currentSnapshot.CustomLoadIcon,
+                    currentSnapshot.CustomClearIcon,
+                    currentSnapshot.UseCustomSlotIcons,
+                    currentSnapshot.CustomIcons,
+                    currentSnapshot.UseCustomRootIcon,
+                    currentSnapshot.CustomRootIcon,
+                    currentSnapshot.UseCustomRootName,
+                    currentSnapshot.CustomRootName,
+                    currentSnapshot.CustomPresetNames,
+                    currentSnapshot.CustomPresetNameFormat,
+                    currentSnapshot.CustomSaveLabel,
+                    currentSnapshot.CustomLoadLabel,
+                    currentSnapshot.CustomClearPresetLabel,
+                    currentSnapshot.CustomConfirmLabel,
+                    true,
+                    normalizedPrefix,
+                    currentSnapshot.UseParameterExclusions,
+                    currentSnapshot.ExcludedParameterNames,
+                    currentSnapshot.UseVendorizedGeneratedAssets,
+                    currentSnapshot.VendorizedGeneratedAssetsPath);
+                ApplyCustomizationSnapshot(component, adoptedSnapshot);
+                EditorUtility.SetDirty(component);
+            }
+
+            int removedMoveComponents = RemoveMatchingMoveMenuHelpers(avatar, normalizedRoot);
+            return new InstallPathAdoptionResult(changedComponent, normalizedPrefix, removedMoveComponents);
         }
 
         internal static ASMLiteBuilder.BackupNamePlan BuildBackupNamePlan(
@@ -312,6 +547,114 @@ namespace ASMLite.Editor
             return new ASMLiteBuilder.CleanupReport(removedFxLayers, removedFxParams, removedExprParams, removedMenuControls, descriptorMissing: false);
         }
 
+        private static int RemoveMatchingMoveMenuHelpers(VRCAvatarDescriptor avatar, string normalizedRoot)
+        {
+            int removedMoveComponents = 0;
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                if (string.Equals(behaviour.gameObject.name, "ASM-Lite Install Path Routing", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                var content = so.FindProperty("content");
+                if (content == null || content.propertyType != SerializedPropertyType.ManagedReference)
+                    continue;
+
+                string managedRefType = content.managedReferenceFullTypename;
+                if (string.IsNullOrWhiteSpace(managedRefType)
+                    || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                var fromProp = so.FindProperty("content.fromPath");
+                if (fromProp == null || fromProp.propertyType != SerializedPropertyType.String)
+                    continue;
+
+                string fromPath = NormalizeSlashPath(fromProp.stringValue);
+                if (!string.Equals(fromPath, normalizedRoot, StringComparison.Ordinal))
+                    continue;
+
+                Undo.DestroyObjectImmediate(behaviour);
+                removedMoveComponents++;
+            }
+
+            return removedMoveComponents;
+        }
+
+        private static Dictionary<string, string> GetVrcFuryMoveMenuPathRemaps(VRCAvatarDescriptor avatar)
+        {
+            var remaps = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (avatar == null)
+                return remaps;
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                var iterator = so.GetIterator();
+                if (!iterator.NextVisible(true))
+                    continue;
+
+                var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+                do
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                        continue;
+
+                    string managedRefType = iterator.managedReferenceFullTypename;
+                    if (string.IsNullOrWhiteSpace(managedRefType)
+                        || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        continue;
+                    }
+
+                    string managedPath = iterator.propertyPath;
+                    if (!seenPaths.Add(managedPath))
+                        continue;
+
+                    var fromProp = so.FindProperty(managedPath + ".fromPath");
+                    var toProp = so.FindProperty(managedPath + ".toPath");
+                    if (fromProp == null || toProp == null)
+                        continue;
+                    if (fromProp.propertyType != SerializedPropertyType.String
+                        || toProp.propertyType != SerializedPropertyType.String)
+                    {
+                        continue;
+                    }
+
+                    string fromPath = NormalizeSlashPath(fromProp.stringValue);
+                    string toPath = NormalizeSlashPath(toProp.stringValue);
+                    if (string.IsNullOrWhiteSpace(toPath))
+                        continue;
+
+                    if (!remaps.ContainsKey(fromPath ?? string.Empty))
+                        remaps[fromPath ?? string.Empty] = toPath;
+                } while (iterator.NextVisible(true));
+            }
+
+            return remaps;
+        }
+
         private static bool TryParseBackupName(string backupName, out ParsedBackupName parsed)
         {
             parsed = default;
@@ -332,6 +675,101 @@ namespace ASMLite.Editor
 
             parsed = new ParsedBackupName(slot, source);
             return true;
+        }
+
+        private static bool TryResolveInstallPrefixFromMovedRootPath(string rootControlName, string movedDestinationPath, out string installPrefix)
+        {
+            installPrefix = string.Empty;
+
+            string root = NormalizeOptionalString(rootControlName);
+            string destination = NormalizeSlashPath(movedDestinationPath);
+            if (string.IsNullOrWhiteSpace(root) || string.IsNullOrWhiteSpace(destination))
+                return false;
+
+            if (string.Equals(destination, root, StringComparison.Ordinal))
+            {
+                installPrefix = string.Empty;
+                return true;
+            }
+
+            string suffix = "/" + root;
+            if (destination.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                installPrefix = destination.Substring(0, destination.Length - suffix.Length);
+                return true;
+            }
+
+            installPrefix = destination;
+            return true;
+        }
+
+        private static Texture2D[] CloneTextures(Texture2D[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<Texture2D>();
+
+            var clone = new Texture2D[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string[] CloneStrings(string[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<string>();
+
+            var clone = new string[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string NormalizeOptionalString(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string NormalizeMenuPathSegment(string value)
+        {
+            return NormalizeOptionalString(value)
+                .Replace('\\', '/')
+                .Trim('/');
+        }
+
+        private static string NormalizeSlashPath(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            string normalized = value.Replace('\\', '/');
+            var rawSegments = normalized.Split('/');
+            var cleanSegments = new List<string>(rawSegments.Length);
+            for (int i = 0; i < rawSegments.Length; i++)
+            {
+                string segment = NormalizeMenuPathSegment(rawSegments[i]);
+                if (!string.IsNullOrEmpty(segment))
+                    cleanSegments.Add(segment);
+            }
+
+            return cleanSegments.Count == 0 ? string.Empty : string.Join("/", cleanSegments);
+        }
+
+        private static string[] SanitizeExcludedParameterNames(string[] names)
+        {
+            if (names == null || names.Length == 0)
+                return Array.Empty<string>();
+
+            var sanitized = new List<string>(names.Length);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < names.Length; i++)
+            {
+                string candidate = NormalizeOptionalString(names[i]);
+                if (string.IsNullOrEmpty(candidate) || !seen.Add(candidate))
+                    continue;
+
+                sanitized.Add(candidate);
+            }
+
+            return sanitized.Count == 0 ? Array.Empty<string>() : sanitized.ToArray();
         }
     }
 }
