@@ -43,9 +43,16 @@ jobs:
             exit 1
           fi
 
+      - id: resolve_source
+        name: Resolve nightly source SHA
+        run: |
+          set -euo pipefail
+          source_sha=$(git rev-parse HEAD)
+          echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
+
       - name: Validate compile, lint, and test checks for nightly SHA
         env:
-          TARGET_SHA: ${{ github.sha }}
+          TARGET_SHA: ${{ steps.resolve_source.outputs.source_sha }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
