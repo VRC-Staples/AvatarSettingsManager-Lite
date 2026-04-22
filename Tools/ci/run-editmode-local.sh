@@ -5,9 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 REPO_DIR_NAME="$(basename "${REPO_ROOT}")"
-PROJECT_REL_PATH="Test Project/TestUnityProject"
-PROJECT_PATH="${WORKSPACE_ROOT}/${PROJECT_REL_PATH}"
+PROJECT_REL_PATH="Tools/ci/unity-project"
+PROJECT_PATH="${REPO_ROOT}/${PROJECT_REL_PATH}"
 PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
+CANONICAL_BATCH_RUNS_JSON_REL_PATH="Tools/ci/editmode-batch-runs.json"
+CANONICAL_BATCH_RUNS_JSON_PATH="${REPO_ROOT}/${CANONICAL_BATCH_RUNS_JSON_REL_PATH}"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 COVERAGE_DIR="${REPO_ROOT}/CodeCoverage"
 DOTENV_FILE="${REPO_ROOT}/.env"
@@ -174,6 +176,7 @@ Options:
   --mode <docker|local>     Choose execution mode (default: docker)
   --docker                  Shortcut for --mode docker
   --local                   Shortcut for --mode local
+  --project-path <path>     Override Unity project path (default: Tools/ci/unity-project)
   --unity-path <path>       Path or command name for the local Unity executable
   --test-filter <filter>    Forward a Unity -testFilter value for targeted EditMode runs
   --manage-license          Activate/return a Unity license for local mode
@@ -202,6 +205,9 @@ Environment overrides:
 
 Docker mode keeps the existing CI-style activation/return flow and requires
 UNITY_EMAIL, UNITY_PASSWORD, plus UNITY_SERIAL or UNITY_LICENSE_SECRET/UNITY_LICENSE_FILE.
+
+When --test-filter is not supplied and no ASMLITE_BATCH_RUNS_JSON/ASMLITE_BATCH_RUNS_JSON_PATH
+override is set, the run defaults to Tools/ci/editmode-batch-runs.json.
 
 Local mode assumes an already activated Unity installation unless --manage-license
 (or LOCAL_UNITY_MANAGE_LICENSE=1) is provided.
@@ -281,6 +287,48 @@ normalize_executable_path() {
   fi
 
   printf '%s\n' "$value"
+}
+
+resolve_repo_relative_path() {
+  local value="$1"
+
+  if [[ "$value" =~ ^[A-Za-z]:\\ ]]; then
+    if ! command -v wslpath >/dev/null 2>&1; then
+      echo "error: wslpath is required to convert Windows paths." >&2
+      exit 1
+    fi
+    wslpath -u "$value"
+    return 0
+  fi
+
+  if [[ "$value" == /* ]]; then
+    printf '%s\n' "$value"
+    return 0
+  fi
+
+  printf '%s\n' "${REPO_ROOT}/${value}"
+}
+
+to_docker_workspace_path() {
+  local host_path="$1"
+
+  if [[ "$host_path" == "/github/workspace" || "$host_path" == /github/workspace/* ]]; then
+    printf '%s\n' "$host_path"
+    return 0
+  fi
+
+  if [[ "$host_path" == "${WORKSPACE_ROOT}" ]]; then
+    printf '/github/workspace\n'
+    return 0
+  fi
+
+  if [[ "$host_path" == "${WORKSPACE_ROOT}/"* ]]; then
+    printf '/github/workspace/%s\n' "${host_path#"${WORKSPACE_ROOT}/"}"
+    return 0
+  fi
+
+  echo "error: path '${host_path}' is outside workspace root '${WORKSPACE_ROOT}' and is not available in Docker mode." >&2
+  exit 1
 }
 
 is_windows_executable() {
@@ -739,6 +787,11 @@ parse_args() {
         EDITMODE_RUNNER_MODE="local"
         shift
         ;;
+      --project-path)
+        [[ $# -ge 2 ]] || { echo "error: --project-path requires a value." >&2; exit 1; }
+        PROJECT_PATH="$2"
+        shift 2
+        ;;
       --unity-path)
         [[ $# -ge 2 ]] || { echo "error: --unity-path requires a value." >&2; exit 1; }
         UNITY_EXECUTABLE="$2"
@@ -800,7 +853,25 @@ parse_args() {
   done
 }
 
+configure_batch_defaults() {
+  PROJECT_PATH="$(resolve_repo_relative_path "${PROJECT_PATH}")"
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" ]]; then
+    ASMLITE_BATCH_RUNS_JSON_PATH="$(resolve_repo_relative_path "${ASMLITE_BATCH_RUNS_JSON_PATH}")"
+  fi
+
+  if [[ -z "${EDITMODE_TEST_FILTER:-}" && -z "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" && -z "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
+    : "${ASMLITE_BATCH_RUNS_JSON_PATH:=${CANONICAL_BATCH_RUNS_JSON_PATH}}"
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" && ! -f "${ASMLITE_BATCH_RUNS_JSON_PATH}" ]]; then
+    echo "error: ASMLITE_BATCH_RUNS_JSON_PATH does not exist: ${ASMLITE_BATCH_RUNS_JSON_PATH}" >&2
+    exit 1
+  fi
+}
+
 ensure_project_version() {
+  PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
   if [[ ! -f "${PROJECT_VERSION_FILE}" ]]; then
     echo "error: missing project version file: ${PROJECT_VERSION_FILE}" >&2
     exit 1
@@ -1188,6 +1259,10 @@ run_local_mode() {
 
 run_docker_mode() {
   local docker_run_exit=0
+  local docker_project_path
+  local docker_batch_runs_json_path=""
+  local docker_batch_results_dir=""
+  local docker_batch_canonical_results_path=""
 
   if ! command -v docker >/dev/null 2>&1; then
     echo "error: docker not found in PATH." >&2
@@ -1201,6 +1276,25 @@ run_docker_mode() {
   UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
   printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
 
+  EDITMODE_LOG_PATH="${ARTIFACTS_DIR}/editmode.log"
+  EDITMODE_RESULTS_PATH="${ARTIFACTS_DIR}/editmode-results.xml"
+
+  docker_project_path="$(to_docker_workspace_path "${PROJECT_PATH}")"
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" ]]; then
+    docker_batch_runs_json_path="$(to_docker_workspace_path "${ASMLITE_BATCH_RUNS_JSON_PATH}")"
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_RESULTS_DIR:-}" ]]; then
+    ASMLITE_BATCH_RESULTS_DIR="$(resolve_repo_relative_path "${ASMLITE_BATCH_RESULTS_DIR}")"
+    docker_batch_results_dir="$(to_docker_workspace_path "${ASMLITE_BATCH_RESULTS_DIR}")"
+  fi
+
+  if [[ -n "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH:-}" ]]; then
+    ASMLITE_BATCH_CANONICAL_RESULTS_PATH="$(resolve_repo_relative_path "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}")"
+    docker_batch_canonical_results_path="$(to_docker_workspace_path "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}")"
+  fi
+
   RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
 
   cat > "${RUNNER_SCRIPT}" <<'RUNNER'
@@ -1209,16 +1303,14 @@ export HOME="${HOME:-/root}"
 WORKSPACE_REPO_ROOT="/github/workspace/${REPO_DIR_NAME}"
 mkdir -p "$HOME/.cache/unity3d" "${WORKSPACE_REPO_ROOT}/artifacts" "${WORKSPACE_REPO_ROOT}/CodeCoverage"
 
-RUN_ARTIFACT_BASENAME="${RUN_ARTIFACT_BASENAME:-editmode}"
-EDITMODE_LOG_PATH="${WORKSPACE_REPO_ROOT}/artifacts/${RUN_ARTIFACT_BASENAME}.log"
-EDITMODE_RESULTS_PATH="${WORKSPACE_REPO_ROOT}/artifacts/${RUN_ARTIFACT_BASENAME}-results.xml"
-RUN_COVERAGE_DIR="${WORKSPACE_REPO_ROOT}/CodeCoverage/${RUN_ARTIFACT_BASENAME}"
+EDITMODE_LOG_PATH="${WORKSPACE_REPO_ROOT}/artifacts/editmode.log"
+EDITMODE_RESULTS_PATH="${WORKSPACE_REPO_ROOT}/artifacts/editmode-results.xml"
+RUN_COVERAGE_DIR="${WORKSPACE_REPO_ROOT}/CodeCoverage"
 mkdir -p "${RUN_COVERAGE_DIR}"
 
-test_filter_args=()
-if [[ -n "${EDITMODE_TEST_FILTER:-}" ]]; then
-  test_filter_args=(-testFilter "$EDITMODE_TEST_FILTER")
-  printf 'note: applying EditMode test filter: %s\n' "$EDITMODE_TEST_FILTER"
+if [[ -z "${DOCKER_PROJECT_PATH:-}" ]]; then
+  echo "error: DOCKER_PROJECT_PATH is required." >&2
+  exit 1
 fi
 
 return_license() {
@@ -1248,21 +1340,50 @@ if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
 fi
 rm -f "${ACTIVATE_LOG}"
 
-rm -rf "/github/workspace/Test Project/TestUnityProject/Temp"
+rm -rf "${DOCKER_PROJECT_PATH}/Temp"
 
-unity-editor \
-  -batchmode \
-  -nographics \
-  -logFile "${EDITMODE_LOG_PATH}" \
-  -projectPath "/github/workspace/Test Project/TestUnityProject" \
-  -coverageResultsPath "${RUN_COVERAGE_DIR}" \
-  -runTests \
-  -testPlatform editmode \
-  "${test_filter_args[@]}" \
-  -testResults "${EDITMODE_RESULTS_PATH}" \
-  -enableCodeCoverage \
-  -debugCodeOptimization \
-  -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+if [[ -n "${EDITMODE_TEST_FILTER:-}" ]]; then
+  printf 'note: applying EditMode test filter override: %s\n' "$EDITMODE_TEST_FILTER"
+  unity-editor \
+    -batchmode \
+    -nographics \
+    -logFile "${EDITMODE_LOG_PATH}" \
+    -projectPath "${DOCKER_PROJECT_PATH}" \
+    -coverageResultsPath "${RUN_COVERAGE_DIR}" \
+    -runTests \
+    -testPlatform editmode \
+    -testFilter "${EDITMODE_TEST_FILTER}" \
+    -testResults "${EDITMODE_RESULTS_PATH}" \
+    -enableCodeCoverage \
+    -debugCodeOptimization \
+    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+else
+  : "${ASMLITE_BATCH_RESULTS_DIR:=${WORKSPACE_REPO_ROOT}/artifacts}"
+  : "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH:=${WORKSPACE_REPO_ROOT}/artifacts/editmode-results.xml}"
+
+  mkdir -p "${ASMLITE_BATCH_RESULTS_DIR}"
+
+  unity_cmd=(
+    unity-editor
+    -batchmode
+    -nographics
+    -logFile "${EDITMODE_LOG_PATH}"
+    -projectPath "${DOCKER_PROJECT_PATH}"
+    -coverageResultsPath "${RUN_COVERAGE_DIR}"
+    -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine
+    -asmliteBatchResultsDir "${ASMLITE_BATCH_RESULTS_DIR}"
+    -asmliteBatchCanonicalResultsPath "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}"
+    -enableCodeCoverage
+    -debugCodeOptimization
+    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+  )
+
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" ]]; then
+    unity_cmd+=( -asmliteBatchRunsJsonPath "${ASMLITE_BATCH_RUNS_JSON_PATH}" )
+  fi
+
+  "${unity_cmd[@]}"
+fi
 RUNNER
 
   set +e
@@ -1273,7 +1394,11 @@ RUNNER
     --env UNITY_PASSWORD \
     --env UNITY_SERIAL="${UNITY_SERIAL}" \
     --env EDITMODE_TEST_FILTER="${EDITMODE_TEST_FILTER}" \
-    --env RUN_ARTIFACT_BASENAME="${RUN_ARTIFACT_BASENAME}" \
+    --env ASMLITE_BATCH_RUNS_JSON="${ASMLITE_BATCH_RUNS_JSON:-}" \
+    --env ASMLITE_BATCH_RUNS_JSON_PATH="${docker_batch_runs_json_path}" \
+    --env ASMLITE_BATCH_RESULTS_DIR="${docker_batch_results_dir}" \
+    --env ASMLITE_BATCH_CANONICAL_RESULTS_PATH="${docker_batch_canonical_results_path}" \
+    --env DOCKER_PROJECT_PATH="${docker_project_path}" \
     --env REPO_DIR_NAME="${REPO_DIR_NAME}" \
     "${DOCKER_CPU_ARGS[@]}" \
     --volume "${WORKSPACE_ROOT}:/github/workspace" \
@@ -1312,10 +1437,23 @@ print_artifact_summary() {
   else
     echo "warn: ${EDITMODE_RESULTS_PATH#"${REPO_ROOT}/"} was not created" >&2
   fi
+
+  if [[ -f "${ARTIFACTS_DIR}/editmode-core-results.xml" ]]; then
+    echo "done: artifacts/editmode-core-results.xml"
+  fi
+
+  if [[ -f "${ARTIFACTS_DIR}/editmode-integration-results.xml" ]]; then
+    echo "done: artifacts/editmode-integration-results.xml"
+  fi
+
+  if [[ -f "${ARTIFACTS_DIR}/asmlite-generation-wiring-summary.json" ]]; then
+    echo "done: artifacts/asmlite-generation-wiring-summary.json"
+  fi
 }
 
 load_dotenv_defaults "${DOTENV_FILE}"
 parse_args "$@"
+configure_batch_defaults
 LOCAL_UNITY_MANAGE_LICENSE="$(normalize_bool "${LOCAL_UNITY_MANAGE_LICENSE}")"
 
 case "${EDITMODE_LOCAL_EXECUTION_STYLE}" in
