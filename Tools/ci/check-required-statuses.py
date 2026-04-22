@@ -194,28 +194,33 @@ def classify(
     blocking: list[str] = []
 
     for key, aliases in required_checks.items():
-        matched_name: str | None = None
-        matched_value: str | None = None
+        matched_aliases: list[tuple[str, str]] = []
 
         for alias in aliases:
             value = observed.get(alias)
             if isinstance(value, str):
-                matched_name = alias
-                matched_value = value
-                break
+                matched_aliases.append((alias, value))
 
-        if matched_name is None:
+        if not matched_aliases:
             pending.append(f"waiting for required check for {key}: expected one of {aliases}")
             continue
 
-        value = matched_value.strip().lower()
-        if value == "success":
+        normalized = [(alias, raw, raw.strip().lower()) for alias, raw in matched_aliases]
+
+        if any(state == "success" for _, _, state in normalized):
             continue
 
-        if value in PENDING_STATES:
-            pending.append(f"required check {matched_name} is {matched_value}")
-        else:
-            blocking.append(f"required check {matched_name} is {matched_value}, expected success")
+        terminal_non_success = next(
+            ((alias, raw) for alias, raw, state in normalized if state not in PENDING_STATES),
+            None,
+        )
+        if terminal_non_success is not None:
+            alias, raw = terminal_non_success
+            blocking.append(f"required check {alias} is {raw}, expected success")
+            continue
+
+        alias, raw = matched_aliases[0]
+        pending.append(f"required check {alias} is {raw}")
 
     return pending, blocking
 
