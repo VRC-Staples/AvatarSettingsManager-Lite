@@ -1,0 +1,19 @@
+{
+  "sessionId": "session-20260423T044500Z-1c2d3e4f",
+  "protocolVersion": "2.0.0",
+  "catalogVersion": 1,
+  "catalogPath": "Tools/ci/smoke/suite-catalog.json",
+  "catalogSnapshotPath": "suite-catalog.snapshot.json",
+  "projectPath": "Tools/ci/unity-project",
+  "overlayVersion": "rust-overlay-dev",
+  "hostVersion": "unity-host-dev",
+  "packageVersion": "1.0.9",
+  "unityVersion": "2022.3.22f1",
+  "capabilities": [
+    "visible-smoke",
+    "session-protocol"
+  ],
+  "globalResetDefault": "SceneReload",
+  "createdAtUtc": "2026-04-23T04:45:00Z",
+  "updatedAtUtc": "2026-04-23T04:45:00Z"
+}
