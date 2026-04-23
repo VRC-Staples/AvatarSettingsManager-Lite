@@ -227,6 +227,24 @@ namespace ASMLite.Tests.Editor
             return JsonUtility.ToJson(hostState, prettyPrint);
         }
 
+        internal static void WriteCommandDocumentAtomically(string commandPath, ASMLiteSmokeProtocolCommand command, bool prettyPrint)
+        {
+            string json = ToJson(command ?? throw new InvalidOperationException("Smoke protocol command is required."), prettyPrint);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(commandPath, json);
+        }
+
+        internal static void WriteSessionDocumentAtomically(string sessionPath, ASMLiteSmokeSessionDocument session, bool prettyPrint)
+        {
+            string json = ToJson(session ?? throw new InvalidOperationException("Smoke session document is required."), prettyPrint);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(sessionPath, json);
+        }
+
+        internal static void WriteHostStateDocumentAtomically(string hostStatePath, ASMLiteSmokeHostStateDocument hostState, bool prettyPrint)
+        {
+            string json = ToJson(hostState ?? throw new InvalidOperationException("Smoke host-state document is required."), prettyPrint);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(hostStatePath, json);
+        }
+
         internal static ASMLiteSmokeProtocolCompatibilityResult EvaluateCompatibility(
             string hostSupportedProtocolVersion,
             ASMLiteSmokeSessionDocument session,
@@ -397,6 +415,123 @@ namespace ASMLite.Tests.Editor
             }
 
             return builder.ToString();
+        }
+
+        internal static void AppendEventLine(string eventsLogPath, ASMLiteSmokeProtocolEvent protocolEvent)
+        {
+            if (string.IsNullOrWhiteSpace(eventsLogPath))
+                throw new InvalidOperationException("eventsLogPath must not be blank.");
+
+            var eventIds = new HashSet<string>(StringComparer.Ordinal);
+            int previousEventSeq = 0;
+            NormalizeAndValidateEvent(protocolEvent ?? throw new InvalidOperationException("protocolEvent is required."), 1, eventIds, ref previousEventSeq);
+
+            string fullPath = Path.GetFullPath(eventsLogPath.Trim());
+            string directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new InvalidOperationException("eventsLogPath must include a parent directory.");
+
+            Directory.CreateDirectory(directory);
+            string line = JsonUtility.ToJson(protocolEvent, false) + "\n";
+            byte[] payload = Encoding.UTF8.GetBytes(line);
+            using (var stream = new FileStream(fullPath, FileMode.Append, FileAccess.Write, FileShare.Read))
+            {
+                stream.Write(payload, 0, payload.Length);
+                stream.Flush(flushToDisk: true);
+            }
+        }
+
+        internal static ASMLiteSmokeProtocolEvent[] LoadEventsFromNdjsonFileTolerant(string eventsLogPath)
+        {
+            if (string.IsNullOrWhiteSpace(eventsLogPath))
+                throw new InvalidOperationException("eventsLogPath must not be blank.");
+
+            string fullPath = Path.GetFullPath(eventsLogPath.Trim());
+            if (!File.Exists(fullPath))
+                return Array.Empty<ASMLiteSmokeProtocolEvent>();
+
+            string rawNdjson = File.ReadAllText(fullPath, Encoding.UTF8);
+            if (string.IsNullOrWhiteSpace(rawNdjson))
+                return Array.Empty<ASMLiteSmokeProtocolEvent>();
+
+            return LoadEventsFromNdjsonTolerant(rawNdjson);
+        }
+
+        internal static ASMLiteSmokeProtocolEvent[] LoadEventsFromNdjsonTolerant(string rawNdjson)
+        {
+            if (string.IsNullOrWhiteSpace(rawNdjson))
+                throw new InvalidOperationException("Smoke protocol event NDJSON is required.");
+
+            bool hasTerminalNewLine = rawNdjson.EndsWith("\n", StringComparison.Ordinal)
+                || rawNdjson.EndsWith("\r", StringComparison.Ordinal);
+            string[] lines = rawNdjson.Split('\n');
+            var events = new List<ASMLiteSmokeProtocolEvent>(lines.Length);
+            var eventIds = new HashSet<string>(StringComparer.Ordinal);
+            int previousEventSeq = 0;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string line = lines[i].TrimEnd('\r');
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                ASMLiteSmokeProtocolEvent protocolEvent;
+                try
+                {
+                    protocolEvent = JsonUtility.FromJson<ASMLiteSmokeProtocolEvent>(line);
+                }
+                catch (Exception ex) when (i == lines.Length - 1 && !hasTerminalNewLine)
+                {
+                    _ = ex;
+                    break;
+                }
+
+                if (protocolEvent == null)
+                {
+                    if (i == lines.Length - 1 && !hasTerminalNewLine)
+                        break;
+
+                    throw new InvalidOperationException($"Smoke protocol event line {i + 1} did not deserialize.");
+                }
+
+                NormalizeAndValidateEvent(protocolEvent, i + 1, eventIds, ref previousEventSeq);
+                events.Add(protocolEvent);
+            }
+
+            if (events.Count == 0)
+                throw new InvalidOperationException("Smoke protocol event NDJSON requires at least one complete event line.");
+
+            return events.ToArray();
+        }
+
+        internal static HashSet<string> RecoverProcessedCommandIdsFromEventLog(string eventsLogPath)
+        {
+            var events = LoadEventsFromNdjsonFileTolerant(eventsLogPath);
+            return RecoverProcessedCommandIds(events);
+        }
+
+        internal static HashSet<string> RecoverProcessedCommandIds(IEnumerable<ASMLiteSmokeProtocolEvent> events)
+        {
+            var items = (events ?? throw new InvalidOperationException("events are required.")).ToArray();
+            if (items.Length == 0)
+                return new HashSet<string>(StringComparer.Ordinal);
+
+            var eventIds = new HashSet<string>(StringComparer.Ordinal);
+            var processed = new HashSet<string>(StringComparer.Ordinal);
+            int previousEventSeq = 0;
+            for (int i = 0; i < items.Length; i++)
+            {
+                var protocolEvent = items[i] ?? throw new InvalidOperationException($"Smoke protocol event index {i} is required.");
+                NormalizeAndValidateEvent(protocolEvent, i + 1, eventIds, ref previousEventSeq);
+
+                if (string.Equals(protocolEvent.eventType, "command-rejected", StringComparison.Ordinal))
+                    continue;
+
+                if (!string.IsNullOrWhiteSpace(protocolEvent.commandId))
+                    processed.Add(protocolEvent.commandId);
+            }
+
+            return processed;
         }
 
         private static string LoadFixtureText(string fileName)

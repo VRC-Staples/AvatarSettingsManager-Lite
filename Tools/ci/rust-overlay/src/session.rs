@@ -1,7 +1,13 @@
-use crate::protocol::{protocol_fixture_directory, SmokeProtocolEvent};
+use crate::protocol::{
+    append_event_line, load_events_from_file_tolerant, protocol_fixture_directory,
+    recover_processed_command_ids, to_json as serialize_command_json, SmokeProtocolCommand,
+    SmokeProtocolEvent,
+};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fmt;
 use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub const SUPPORTED_PROTOCOL_VERSION: &str = "1.0.0";
@@ -498,6 +504,161 @@ pub fn load_failure_from_str(raw: &str) -> Result<SmokeFailureDocument, SessionC
     Ok(failure)
 }
 
+pub fn write_json_atomically(target_path: &Path, json_content: &str) -> Result<(), SessionContractError> {
+    write_json_atomically_internal(target_path, json_content, None)
+}
+
+pub fn write_catalog_snapshot_atomically(
+    catalog_snapshot_path: &Path,
+    catalog_snapshot_json: &str,
+) -> Result<(), SessionContractError> {
+    if catalog_snapshot_json.trim().is_empty() {
+        return Err(SessionContractError(
+            "catalogSnapshotJson must not be blank.".to_string(),
+        ));
+    }
+
+    write_json_atomically(catalog_snapshot_path, catalog_snapshot_json)
+}
+
+pub fn write_command_document_atomically(
+    command_path: &Path,
+    command: &SmokeProtocolCommand,
+    pretty: bool,
+) -> Result<(), SessionContractError> {
+    let json =
+        serialize_command_json(command, pretty).map_err(|error| SessionContractError(error.to_string()))?;
+    write_json_atomically(command_path, &json)
+}
+
+pub fn write_session_document_atomically(
+    session_path: &Path,
+    session: &SmokeSessionDocument,
+    pretty: bool,
+) -> Result<(), SessionContractError> {
+    let mut normalized = session.clone();
+    normalize_and_validate_session(&mut normalized)?;
+    let json = if pretty {
+        serde_json::to_string_pretty(&normalized)?
+    } else {
+        serde_json::to_string(&normalized)?
+    };
+    write_json_atomically(session_path, &json)
+}
+
+pub fn write_host_state_document_atomically(
+    host_state_path: &Path,
+    host_state: &SmokeHostStateDocument,
+    pretty: bool,
+) -> Result<(), SessionContractError> {
+    let mut normalized = host_state.clone();
+    normalize_and_validate_host_state(&mut normalized)?;
+    let json = if pretty {
+        serde_json::to_string_pretty(&normalized)?
+    } else {
+        serde_json::to_string(&normalized)?
+    };
+    write_json_atomically(host_state_path, &json)
+}
+
+pub fn write_result_document_atomically(
+    result_path: &Path,
+    result_document: &SmokeRunResultDocument,
+    pretty: bool,
+) -> Result<(), SessionContractError> {
+    let mut normalized = result_document.clone();
+    normalize_and_validate_result_document(&mut normalized)?;
+    let json = if pretty {
+        serde_json::to_string_pretty(&normalized)?
+    } else {
+        serde_json::to_string(&normalized)?
+    };
+    write_json_atomically(result_path, &json)
+}
+
+pub fn write_failure_document_atomically(
+    failure_path: &Path,
+    failure_document: &SmokeFailureDocument,
+    pretty: bool,
+) -> Result<(), SessionContractError> {
+    let mut normalized = failure_document.clone();
+    normalize_and_validate_failure_document(&mut normalized)?;
+    let json = if pretty {
+        serde_json::to_string_pretty(&normalized)?
+    } else {
+        serde_json::to_string(&normalized)?
+    };
+    write_json_atomically(failure_path, &json)
+}
+
+pub fn recover_processed_command_ids_from_event_log(
+    events_log_path: &Path,
+) -> Result<HashSet<String>, SessionContractError> {
+    let events =
+        load_events_from_file_tolerant(events_log_path).map_err(|error| SessionContractError(error.to_string()))?;
+    recover_processed_command_ids(&events).map_err(|error| SessionContractError(error.to_string()))
+}
+
+fn write_json_atomically_internal(
+    target_path: &Path,
+    json_content: &str,
+    before_promote: Option<fn(&Path) -> Result<(), SessionContractError>>,
+) -> Result<(), SessionContractError> {
+    if json_content.trim().is_empty() {
+        return Err(SessionContractError("jsonContent must not be blank.".to_string()));
+    }
+
+    let parent = target_path.parent().ok_or_else(|| {
+        SessionContractError("targetPath must include a parent directory.".to_string())
+    })?;
+    fs::create_dir_all(parent)?;
+
+    let file_name = target_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| SessionContractError("targetPath must include a file name.".to_string()))?;
+    let suffix = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|error| SessionContractError(error.to_string()))?
+        .as_nanos();
+    let temp_path = parent.join(format!("{file_name}.tmp-{suffix}"));
+
+    let result = (|| -> Result<(), SessionContractError> {
+        let mut stream = fs::File::options()
+            .create_new(true)
+            .write(true)
+            .open(&temp_path)?;
+        stream.write_all(json_content.as_bytes())?;
+        stream.flush()?;
+        stream.sync_all()?;
+
+        if let Some(callback) = before_promote {
+            callback(&temp_path)?;
+        }
+
+        if target_path.exists() {
+            match fs::rename(&temp_path, target_path) {
+                Ok(_) => {}
+                Err(rename_error) => {
+                    let _ = rename_error;
+                    fs::remove_file(target_path)?;
+                    fs::rename(&temp_path, target_path)?;
+                }
+            }
+        } else {
+            fs::rename(&temp_path, target_path)?;
+        }
+
+        Ok(())
+    })();
+
+    if result.is_err() {
+        let _ = fs::remove_file(&temp_path);
+    }
+
+    result
+}
+
 fn normalize_and_validate_session(session: &mut SmokeSessionDocument) -> Result<(), SessionContractError> {
     session.session_id = require_non_blank(&session.session_id, "sessionId")?;
     session.protocol_version = require_non_blank(&session.protocol_version, "protocolVersion")?;
@@ -951,6 +1112,106 @@ mod tests {
         let root_prefix = format!("{}{}", session_root.display(), std::path::MAIN_SEPARATOR);
         assert!(result_slice_path.display().to_string().starts_with(&root_prefix));
         assert!(failure_slice_path.display().to_string().starts_with(&root_prefix));
+    }
+
+    #[test]
+    fn io_atomic_write_replaces_existing_json_documents() {
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        session_paths.ensure_layout().expect("layout should initialize");
+
+        let ready_state =
+            load_host_state_fixture("host-state.ready.json").expect("ready host-state fixture should parse");
+        write_host_state_document_atomically(&session_paths.host_state_path(), &ready_state, false)
+            .expect("first atomic write should succeed");
+
+        let protocol_error_state = load_host_state_fixture("host-state.protocol-error.json")
+            .expect("protocol-error host-state fixture should parse");
+        write_host_state_document_atomically(&session_paths.host_state_path(), &protocol_error_state, false)
+            .expect("replacement atomic write should succeed");
+
+        let persisted = fs::read_to_string(session_paths.host_state_path())
+            .expect("host-state document should be readable");
+        let parsed = load_host_state_from_str(&persisted)
+            .expect("persisted host-state should remain valid JSON");
+        assert_eq!(parsed.state, HOST_STATE_PROTOCOL_ERROR);
+    }
+
+    #[test]
+    fn io_interrupted_atomic_write_preserves_previous_json_document() {
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        session_paths.ensure_layout().expect("layout should initialize");
+
+        let host_state_path = session_paths.host_state_path();
+        let baseline_json = "{\"state\":\"ready\"}";
+        write_json_atomically(&host_state_path, baseline_json).expect("baseline write should succeed");
+
+        fn interrupt_before_promote(_: &Path) -> Result<(), SessionContractError> {
+            Err(SessionContractError(
+                "simulated interruption before atomic promote".to_string(),
+            ))
+        }
+
+        let interrupted_json = "{\"state\":\"running\"}";
+        let error = write_json_atomically_internal(
+            &host_state_path,
+            interrupted_json,
+            Some(interrupt_before_promote),
+        )
+        .expect_err("interrupted write should fail");
+        assert!(
+            error
+                .to_string()
+                .contains("simulated interruption before atomic promote")
+        );
+
+        let persisted = fs::read_to_string(host_state_path)
+            .expect("baseline document should remain readable after interruption");
+        assert_eq!(persisted, baseline_json);
+
+        let temp_prefix = format!("{HOST_STATE_FILE_NAME}.tmp-");
+        let directory_entries = fs::read_dir(session_paths.session_root())
+            .expect("session root directory should remain accessible");
+        for entry in directory_entries {
+            let entry = entry.expect("directory entry should be readable");
+            let file_name = entry.file_name();
+            let file_name = file_name.to_string_lossy();
+            assert!(
+                !file_name.starts_with(&temp_prefix),
+                "temporary atomic file should be cleaned up after interruption"
+            );
+        }
+    }
+
+    #[test]
+    fn io_replay_processed_command_recovery_uses_canonical_event_log() {
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        session_paths.ensure_layout().expect("layout should initialize");
+
+        let mut events =
+            load_event_fixture("events.sample.ndjson").expect("events fixture should parse");
+        let mut rejected = events
+            .last()
+            .cloned()
+            .expect("events fixture should contain at least one event");
+        rejected.event_id = "evt_000012_command-rejected".to_string();
+        rejected.event_seq = 12;
+        rejected.event_type = "command-rejected".to_string();
+        rejected.command_id = "cmd_000004_run-suite".to_string();
+        rejected.message = "run-suite rejected while host remains in protocol-error state.".to_string();
+        events.push(rejected);
+
+        for event in &events {
+            append_event_line(&session_paths.events_log_path(), event)
+                .expect("event append should succeed");
+        }
+
+        let processed = recover_processed_command_ids_from_event_log(&session_paths.events_log_path())
+            .expect("processed command recovery should succeed");
+        assert_eq!(processed.len(), 3);
+        assert!(processed.contains("cmd_000001_launch-session"));
+        assert!(processed.contains("cmd_000002_run-suite"));
+        assert!(processed.contains("cmd_000003_review-decision"));
+        assert!(!processed.contains("cmd_000004_run-suite"));
     }
 
     fn make_temp_session_root() -> PathBuf {

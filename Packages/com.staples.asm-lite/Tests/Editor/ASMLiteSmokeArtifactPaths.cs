@@ -297,6 +297,57 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    internal static class ASMLiteSmokeAtomicFileIo
+    {
+        private static readonly UTF8Encoding s_utf8WithoutBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+        internal static void WriteJsonAtomically(string targetPath, string jsonContent)
+        {
+            WriteJsonAtomically(targetPath, jsonContent, beforePromote: null);
+        }
+
+        internal static void WriteJsonAtomically(string targetPath, string jsonContent, Action<string> beforePromote)
+        {
+            if (string.IsNullOrWhiteSpace(targetPath))
+                throw new InvalidOperationException("targetPath must not be blank.");
+            if (string.IsNullOrWhiteSpace(jsonContent))
+                throw new InvalidOperationException("jsonContent must not be blank.");
+
+            string fullTargetPath = Path.GetFullPath(targetPath.Trim());
+            string directory = Path.GetDirectoryName(fullTargetPath);
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new InvalidOperationException("targetPath must include a parent directory.");
+
+            Directory.CreateDirectory(directory);
+
+            string tempPath = Path.Combine(
+                directory,
+                Path.GetFileName(fullTargetPath) + ".tmp-" + Guid.NewGuid().ToString("N"));
+
+            try
+            {
+                byte[] payload = s_utf8WithoutBom.GetBytes(jsonContent);
+                using (var stream = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    stream.Write(payload, 0, payload.Length);
+                    stream.Flush(flushToDisk: true);
+                }
+
+                beforePromote?.Invoke(tempPath);
+
+                if (File.Exists(fullTargetPath))
+                    File.Replace(tempPath, fullTargetPath, null);
+                else
+                    File.Move(tempPath, fullTargetPath);
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+            }
+        }
+    }
+
     internal static class ASMLiteSmokeArtifactPaths
     {
         private const string OverlayRootRelativePath = "artifacts/smoke-overlay";
@@ -316,6 +367,14 @@ namespace ASMLite.Tests.Editor
         internal static ASMLiteSmokeSessionPaths FromSessionRoot(string sessionRootPath)
         {
             return new ASMLiteSmokeSessionPaths(sessionRootPath);
+        }
+
+        internal static void WriteCatalogSnapshotAtomically(string catalogSnapshotPath, string catalogSnapshotJson)
+        {
+            if (string.IsNullOrWhiteSpace(catalogSnapshotJson))
+                throw new InvalidOperationException("catalogSnapshotJson must not be blank.");
+
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(catalogSnapshotPath, catalogSnapshotJson);
         }
 
         internal static ASMLiteSmokeRunResultDocument LoadResultFixture(string fileName)
@@ -384,6 +443,13 @@ namespace ASMLite.Tests.Editor
             NormalizeAndValidateArtifactPaths(document.artifactPaths);
         }
 
+        internal static void WriteResultDocumentAtomically(string resultPath, ASMLiteSmokeRunResultDocument document, bool prettyPrint)
+        {
+            NormalizeAndValidateResultDocument(document ?? throw new InvalidOperationException("Smoke run result document is required."));
+            string json = JsonUtility.ToJson(document, prettyPrint);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(resultPath, json);
+        }
+
         internal static void NormalizeAndValidateFailureDocument(ASMLiteSmokeFailureDocument document)
         {
             if (document == null)
@@ -416,6 +482,13 @@ namespace ASMLite.Tests.Editor
                 .Select(item => item.Trim())
                 .ToArray();
             NormalizeAndValidateArtifactPaths(document.artifactPaths);
+        }
+
+        internal static void WriteFailureDocumentAtomically(string failurePath, ASMLiteSmokeFailureDocument document, bool prettyPrint)
+        {
+            NormalizeAndValidateFailureDocument(document ?? throw new InvalidOperationException("Smoke failure document is required."));
+            string json = JsonUtility.ToJson(document, prettyPrint);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(failurePath, json);
         }
 
         private static void NormalizeAndValidateArtifactPaths(ASMLiteSmokeArtifactReferences artifactPaths)

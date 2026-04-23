@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt;
 use std::fs;
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProtocolError(pub String);
@@ -188,6 +189,105 @@ pub fn to_ndjson(events: &[SmokeProtocolEvent]) -> Result<String, ProtocolError>
     Ok(builder)
 }
 
+pub fn append_event_line(events_log_path: &Path, event: &SmokeProtocolEvent) -> Result<(), ProtocolError> {
+    let mut cloned = event.clone();
+    let mut event_ids = HashSet::new();
+    let mut previous_seq = 0;
+    normalize_and_validate_event(&mut cloned, 1, &mut event_ids, &mut previous_seq)?;
+
+    let parent = events_log_path.parent().ok_or_else(|| {
+        ProtocolError("eventsLogPath must include a parent directory.".to_string())
+    })?;
+    fs::create_dir_all(parent)?;
+
+    let line = format!("{}\n", serde_json::to_string(&cloned)?);
+    let mut stream = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(events_log_path)?;
+    stream.write_all(line.as_bytes())?;
+    stream.flush()?;
+    stream.sync_data()?;
+    Ok(())
+}
+
+pub fn load_events_from_file_tolerant(events_log_path: &Path) -> Result<Vec<SmokeProtocolEvent>, ProtocolError> {
+    if !events_log_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let raw = fs::read_to_string(events_log_path)?;
+    if raw.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+
+    load_events_from_ndjson_tolerant(&raw)
+}
+
+pub fn load_events_from_ndjson_tolerant(raw: &str) -> Result<Vec<SmokeProtocolEvent>, ProtocolError> {
+    if raw.trim().is_empty() {
+        return Err(ProtocolError("Smoke protocol event NDJSON is required.".to_string()));
+    }
+
+    let has_terminal_newline = raw.ends_with('\n') || raw.ends_with('\r');
+    let lines: Vec<&str> = raw.split('\n').collect();
+
+    let mut events = Vec::new();
+    let mut event_ids = HashSet::new();
+    let mut previous_seq = 0;
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed_line = line.trim_end_matches('\r');
+        if trimmed_line.trim().is_empty() {
+            continue;
+        }
+
+        let mut event: SmokeProtocolEvent = match serde_json::from_str(trimmed_line) {
+            Ok(parsed) => parsed,
+            Err(error) => {
+                if index == lines.len() - 1 && !has_terminal_newline {
+                    break;
+                }
+
+                return Err(ProtocolError(format!(
+                    "Smoke protocol event line {} did not deserialize: {error}",
+                    index + 1
+                )));
+            }
+        };
+
+        normalize_and_validate_event(&mut event, index + 1, &mut event_ids, &mut previous_seq)?;
+        events.push(event);
+    }
+
+    if events.is_empty() {
+        return Err(ProtocolError(
+            "Smoke protocol event NDJSON requires at least one complete event line.".to_string(),
+        ));
+    }
+
+    Ok(events)
+}
+
+pub fn recover_processed_command_ids(events: &[SmokeProtocolEvent]) -> Result<HashSet<String>, ProtocolError> {
+    if events.is_empty() {
+        return Ok(HashSet::new());
+    }
+
+    let mut event_ids = HashSet::new();
+    let mut previous_seq = 0;
+    let mut processed = HashSet::new();
+    for (index, event) in events.iter().cloned().enumerate() {
+        let mut cloned = event;
+        normalize_and_validate_event(&mut cloned, index + 1, &mut event_ids, &mut previous_seq)?;
+
+        if cloned.event_type != "command-rejected" {
+            processed.insert(cloned.command_id);
+        }
+    }
+
+    Ok(processed)
+}
+
 fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<(), ProtocolError> {
     command.protocol_version = require_non_blank(&command.protocol_version, "protocolVersion")?;
     command.session_id = require_non_blank(&command.session_id, "sessionId")?;
@@ -351,6 +451,7 @@ fn repository_root() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn protocol_command_fixtures_round_trip_preserve_required_fields() {
@@ -403,6 +504,65 @@ mod tests {
 
         let error = load_command_from_str(&raw).expect_err("wrong typed payload should fail");
         assert!(error.to_string().contains("runSuite"));
+    }
+
+    #[test]
+    fn io_tolerant_loader_ignores_truncated_final_ndjson_line() {
+        let mut raw = fs::read_to_string(protocol_fixture_directory().join("events.sample.ndjson"))
+            .expect("events fixture should exist");
+        raw.push_str("{\"protocolVersion\":\"1.0.0\",\"sessionId\":\"session-20260423T043708Z-8f02f9b1\"");
+
+        let events = load_events_from_ndjson_tolerant(&raw)
+            .expect("tolerant parser should ignore truncated tail line");
+
+        assert_eq!(events.len(), 11);
+        assert_eq!(events.last().map(|event| event.event_seq), Some(11));
+    }
+
+    #[test]
+    fn io_append_and_replay_recovery_dedupe_processed_command_ids() {
+        let mut events = load_event_fixture("events.sample.ndjson")
+            .expect("events fixture should parse");
+
+        let mut rejected = events
+            .last()
+            .cloned()
+            .expect("events fixture should contain data");
+        rejected.event_id = "evt_000012_command-rejected".to_string();
+        rejected.event_seq = 12;
+        rejected.event_type = "command-rejected".to_string();
+        rejected.command_id = "cmd_000004_run-suite".to_string();
+        rejected.message = "run-suite rejected while host remains in protocol-error state.".to_string();
+        events.push(rejected.clone());
+
+        let temp_path = std::env::temp_dir().join(format!(
+            "asmlite-protocol-io-{}.ndjson",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should be monotonic")
+                .as_nanos()
+        ));
+
+        for event in &events {
+            append_event_line(&temp_path, event).expect("event append should succeed");
+        }
+
+        let persisted = fs::read_to_string(&temp_path).expect("event log should be persisted");
+        assert!(persisted.ends_with('\n'));
+
+        let parsed = load_events_from_file_tolerant(&temp_path)
+            .expect("persisted log should parse");
+        assert_eq!(parsed.len(), events.len());
+
+        let processed = recover_processed_command_ids(&parsed)
+            .expect("processed command replay recovery should succeed");
+        assert_eq!(processed.len(), 3);
+        assert!(processed.contains("cmd_000001_launch-session"));
+        assert!(processed.contains("cmd_000002_run-suite"));
+        assert!(processed.contains("cmd_000003_review-decision"));
+        assert!(!processed.contains("cmd_000004_run-suite"));
+
+        let _ = fs::remove_file(&temp_path);
     }
 
     fn round_trip(command: SmokeProtocolCommand) -> SmokeProtocolCommand {
