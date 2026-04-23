@@ -1,0 +1,206 @@
+{
+  "catalogVersion": 1,
+  "protocolVersion": "1.0.0",
+  "fixture": {
+    "scenePath": "Assets/Click ME.unity",
+    "avatarName": "Oct25_Dress"
+  },
+  "groups": [
+    {
+      "groupId": "editor-window",
+      "label": "Editor Window",
+      "description": "Open the ASM-Lite window, target the canonical avatar, and validate the primary editor workflow surface.",
+      "suites": [
+        {
+          "suiteId": "open-select-add",
+          "label": "Open / Select / Add Prefab",
+          "description": "Open ASM-Lite, select Oct25_Dress, add the default prefab scaffold, and confirm the rebuild action is available.",
+          "resetOverride": "Inherit",
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The editor window is open, Oct25_Dress is selected, the ASM-Lite prefab scaffold is present, and the rebuild action is visible without modal dialogs.",
+          "debugHint": "If the suite stalls, verify the canonical scene is loaded and the ASM-Lite window is not hidden behind another dock tab.",
+          "cases": [
+            {
+              "caseId": "window-scaffold",
+              "label": "Window scaffold",
+              "description": "Establish the canonical editor context before lifecycle or runtime suites run.",
+              "expectedOutcome": "ASM-Lite is attached to Oct25_Dress and the primary editor workflow is ready for follow-up actions.",
+              "debugHint": "Re-open the window and confirm avatar selection before assuming later lifecycle hooks failed.",
+              "steps": [
+                {
+                  "stepId": "open-window",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the product window through the automation entrypoint.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window instance is available and focused for automation.",
+                  "debugHint": "If no window appears, inspect editor layout state and window initialization logs."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Oct25_Dress",
+                  "description": "Bind the canonical avatar fixture to the automation window.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is the active automation target in the ASM-Lite window.",
+                  "debugHint": "If selection fails, confirm the avatar exists in Assets/Click ME.unity and is not hidden or renamed."
+                },
+                {
+                  "stepId": "add-prefab",
+                  "label": "Add ASM-Lite prefab",
+                  "description": "Add the ASM-Lite prefab scaffold to the selected avatar without confirmation dialogs.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "The ASM-Lite prefab scaffold is attached to Oct25_Dress and generation-ready.",
+                  "debugHint": "If add-prefab fails, inspect avatar prerequisites and generated asset path state before retrying."
+                },
+                {
+                  "stepId": "assert-primary-action",
+                  "label": "Verify rebuild action is visible",
+                  "description": "Assert that the primary rebuild action is now available in the window.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "The primary rebuild action is visible, signaling that the scaffold install succeeded.",
+                  "debugHint": "If the primary action does not change, inspect whether the prefab install completed and whether the window refreshed."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "groupId": "lifecycle",
+      "label": "Lifecycle",
+      "description": "Exercise the package-managed lifecycle actions that rewire or detach ASM-Lite content.",
+      "suites": [
+        {
+          "suiteId": "lifecycle-roundtrip",
+          "label": "Rebuild / Vendorize / Detach / Return",
+          "description": "Run the deterministic lifecycle roundtrip from rebuild through package-managed return.",
+          "resetOverride": "FullPackageRebuild",
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Lifecycle actions complete in order and the avatar returns to a clean package-managed ASM-Lite state.",
+          "debugHint": "If the roundtrip drifts, inspect generated asset ownership and whether the avatar still points at vendorized content.",
+          "cases": [
+            {
+              "caseId": "package-managed-roundtrip",
+              "label": "Package-managed roundtrip",
+              "description": "Confirm lifecycle actions can mutate state and return to the package-managed baseline.",
+              "expectedOutcome": "The lifecycle roundtrip completes without leaving the avatar in a detached or stale vendorized state.",
+              "debugHint": "Use generated asset paths and install-path diagnostics to isolate which lifecycle transition drifted.",
+              "steps": [
+                {
+                  "stepId": "rebuild",
+                  "label": "Rebuild ASM-Lite assets",
+                  "description": "Rebuild generated ASM-Lite assets for the canonical avatar.",
+                  "actionType": "rebuild",
+                  "expectedOutcome": "Generated assets rebuild successfully and reflect the latest package-managed source.",
+                  "debugHint": "If rebuild fails, inspect generated asset write locations and the selected avatar binding."
+                },
+                {
+                  "stepId": "vendorize",
+                  "label": "Vendorize generated assets",
+                  "description": "Copy generated assets under Assets/ASM-Lite for vendorized workflow coverage.",
+                  "actionType": "vendorize",
+                  "expectedOutcome": "Vendorized generated assets exist and the avatar now points at the vendorized copy.",
+                  "debugHint": "If vendorize fails, inspect whether the generated asset target path is writable and deterministic."
+                },
+                {
+                  "stepId": "detach",
+                  "label": "Detach ASM-Lite component",
+                  "description": "Detach the editable ASM-Lite component while preserving the baked content.",
+                  "actionType": "detach",
+                  "expectedOutcome": "The avatar is detached from the editable component without breaking the generated state.",
+                  "debugHint": "If detach leaves a broken avatar, inspect component cleanup and generated controller references."
+                },
+                {
+                  "stepId": "return-to-package-managed",
+                  "label": "Return to package-managed state",
+                  "description": "Reattach the avatar to package-managed ASM-Lite assets and clear vendorized drift.",
+                  "actionType": "return-to-package-managed",
+                  "expectedOutcome": "The avatar returns to a package-managed ASM-Lite state with no lingering vendorized dependency.",
+                  "debugHint": "If return-to-package-managed fails, inspect whether detach or vendorize left stale asset references behind."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "groupId": "playmode-runtime",
+      "label": "Playmode / Runtime",
+      "description": "Validate the runtime-facing ASM-Lite path inside a playmode transition without restarting the host session.",
+      "suites": [
+        {
+          "suiteId": "playmode-runtime-validation",
+          "label": "Enter / Validate / Exit Playmode",
+          "description": "Prepare the canonical avatar, enter playmode, validate runtime state, and return to edit mode.",
+          "resetOverride": "SceneReload",
+          "requiresPlayMode": true,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The canonical avatar enters playmode with valid runtime ASM-Lite state and exits back to edit mode cleanly.",
+          "debugHint": "If runtime validation fails, inspect whether the prefab scaffold was present before entering playmode and whether playmode exited cleanly.",
+          "cases": [
+            {
+              "caseId": "runtime-validation",
+              "label": "Runtime validation",
+              "description": "Prepare the avatar for runtime checks and verify the runtime component stays valid across the playmode boundary.",
+              "expectedOutcome": "ASM-Lite remains runtime-valid during playmode and returns to edit mode without requiring a new Unity session.",
+              "debugHint": "If playmode hangs or exits dirty, inspect runtime component setup and playmode state transitions before rerunning.",
+              "steps": [
+                {
+                  "stepId": "open-window",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the product window before runtime setup begins.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window is available for runtime preparation.",
+                  "debugHint": "If the window is missing, inspect editor window lifecycle before entering playmode."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Oct25_Dress",
+                  "description": "Target the canonical avatar fixture before runtime preparation.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is the active runtime-preparation target.",
+                  "debugHint": "If selection fails, confirm the canonical avatar still exists in the loaded scene."
+                },
+                {
+                  "stepId": "add-prefab",
+                  "label": "Ensure ASM-Lite scaffold exists",
+                  "description": "Add the ASM-Lite prefab scaffold if the avatar is not already prepared for runtime checks.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "The avatar has the ASM-Lite scaffold required for runtime validation.",
+                  "debugHint": "If scaffold setup fails, inspect editor-side generation prerequisites before entering playmode."
+                },
+                {
+                  "stepId": "enter-playmode",
+                  "label": "Enter playmode",
+                  "description": "Transition the Unity host into playmode for runtime coverage.",
+                  "actionType": "enter-playmode",
+                  "expectedOutcome": "The host enters playmode and begins runtime validation on the canonical avatar.",
+                  "debugHint": "If enter-playmode hangs, inspect unsaved scene prompts or compilation state before retrying."
+                },
+                {
+                  "stepId": "assert-runtime-component-valid",
+                  "label": "Validate runtime component",
+                  "description": "Assert that the runtime ASM-Lite component remains valid during playmode.",
+                  "actionType": "assert-runtime-component-valid",
+                  "expectedOutcome": "The runtime ASM-Lite component stays valid for Oct25_Dress during playmode.",
+                  "debugHint": "If runtime validation fails, inspect generated parameter/controller state and runtime component wiring."
+                },
+                {
+                  "stepId": "exit-playmode",
+                  "label": "Exit playmode",
+                  "description": "Return the host to edit mode after runtime validation completes.",
+                  "actionType": "exit-playmode",
+                  "expectedOutcome": "The host exits playmode cleanly and returns to edit mode without restarting Unity.",
+                  "debugHint": "If exit-playmode fails, inspect playmode teardown logs and pending scene state."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "commandId": "cmd_000003_review-decision",
+  "commandSeq": 3,
+  "commandType": "review-decision",
+  "createdAtUtc": "2026-04-23T04:43:00Z",
+  "reviewDecision": {
+    "runId": "run-0001-lifecycle-roundtrip",
+    "suiteId": "lifecycle-roundtrip",
+    "decision": "return-to-suite-list",
+    "requestedBy": "operator",
+    "notes": "Lifecycle suite passed; continue to the next suite."
+  }
+}
