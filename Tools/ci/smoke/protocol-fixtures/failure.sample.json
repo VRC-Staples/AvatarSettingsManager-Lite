@@ -1,0 +1,35 @@
+{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "runId": "run-0002-playmode-runtime-validation",
+  "suiteId": "playmode-runtime-validation",
+  "suiteLabel": "Enter / Validate / Exit Playmode",
+  "caseId": "runtime-validation",
+  "caseLabel": "Runtime validation",
+  "stepId": "assert-runtime-component-valid",
+  "stepLabel": "Validate runtime component",
+  "failureMessage": "Runtime ASM-Lite component missing expected parameter state.",
+  "stackTrace": "System.InvalidOperationException: Runtime component validation failed at ASMLite.Tests.Editor.RuntimeValidator.AssertComponentState()",
+  "effectiveResetPolicy": "SceneReload",
+  "scenePath": "Assets/Click ME.unity",
+  "avatarName": "Oct25_Dress",
+  "commandId": "cmd_000004_run-suite",
+  "eventSeqRange": {
+    "first": 12,
+    "last": 18
+  },
+  "lastEvents": [
+    "suite-started run-0002-playmode-runtime-validation",
+    "step-failed assert-runtime-component-valid",
+    "suite-failed playmode-runtime-validation"
+  ],
+  "debugHint": "If runtime validation fails, inspect generated parameter/controller state and runtime component wiring.",
+  "artifactPaths": {
+    "resultPath": "runs/run-0002-playmode-runtime-validation/result.json",
+    "failurePath": "runs/run-0002-playmode-runtime-validation/failure.json",
+    "eventsSlicePath": "runs/run-0002-playmode-runtime-validation/events.slice.ndjson",
+    "nunitPath": "runs/run-0002-playmode-runtime-validation/nunit.xml",
+    "debugSummaryPath": "runs/run-0002-playmode-runtime-validation/debug-summary.txt"
+  },
+  "timestampUtc": "2026-04-23T04:50:12Z"
+}
