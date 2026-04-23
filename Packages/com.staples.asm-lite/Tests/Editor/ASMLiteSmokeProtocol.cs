@@ -134,12 +134,15 @@ namespace ASMLite.Tests.Editor
         internal const string HostStateIdle = "idle";
         internal const string HostStateProtocolError = "protocol-error";
         internal const string HostStateExiting = "exiting";
+        internal const string HostStateStalled = "stalled";
+        internal const string HostStateCrashed = "crashed";
 
         private static readonly HashSet<string> s_supportedCommandTypes = new HashSet<string>(StringComparer.Ordinal)
         {
             "launch-session",
             "run-suite",
             "review-decision",
+            "shutdown-session",
         };
 
         private static readonly HashSet<string> s_supportedHostStates = new HashSet<string>(StringComparer.Ordinal)
@@ -150,6 +153,8 @@ namespace ASMLite.Tests.Editor
             HostStateIdle,
             HostStateProtocolError,
             HostStateExiting,
+            HostStateStalled,
+            HostStateCrashed,
         };
 
         internal static ASMLiteSmokeProtocolCommand LoadCommandFixture(string fileName)
@@ -580,6 +585,13 @@ namespace ASMLite.Tests.Editor
                     NormalizeAndValidateReviewDecision(command.reviewDecision);
                     command.launchSession = null;
                     command.runSuite = null;
+                    break;
+                case "shutdown-session":
+                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision))
+                        throw new InvalidOperationException("shutdown-session command must not include typed payloads.");
+                    command.launchSession = null;
+                    command.runSuite = null;
+                    command.reviewDecision = null;
                     break;
             }
         }

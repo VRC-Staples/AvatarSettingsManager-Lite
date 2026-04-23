@@ -115,6 +115,8 @@ const HOST_STATE_REVIEW_REQUIRED: &str = "review-required";
 const HOST_STATE_IDLE: &str = "idle";
 const HOST_STATE_PROTOCOL_ERROR: &str = "protocol-error";
 const HOST_STATE_EXITING: &str = "exiting";
+const HOST_STATE_STALLED: &str = "stalled";
+const HOST_STATE_CRASHED: &str = "crashed";
 
 pub fn protocol_fixture_directory() -> PathBuf {
     repository_root().join("Tools/ci/smoke/protocol-fixtures")
@@ -326,6 +328,11 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
             }
             normalize_and_validate_review_decision(payload)?;
         }
+        "shutdown-session" => {
+            if command.launch_session.is_some() || command.run_suite.is_some() || command.review_decision.is_some() {
+                return Err(ProtocolError("shutdown-session command must not include typed payloads.".to_string()));
+            }
+        }
         other => {
             return Err(ProtocolError(format!("commandType '{other}' is not supported.")));
         }
@@ -431,6 +438,8 @@ fn is_supported_host_state(value: &str) -> bool {
             | HOST_STATE_IDLE
             | HOST_STATE_PROTOCOL_ERROR
             | HOST_STATE_EXITING
+            | HOST_STATE_STALLED
+            | HOST_STATE_CRASHED
     )
 }
 
@@ -504,6 +513,47 @@ mod tests {
 
         let error = load_command_from_str(&raw).expect_err("wrong typed payload should fail");
         assert!(error.to_string().contains("runSuite"));
+    }
+
+    #[test]
+    fn protocol_accepts_shutdown_session_without_typed_payloads() {
+        let raw = r#"{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "commandId": "cmd_000004_shutdown-session",
+  "commandSeq": 4,
+  "commandType": "shutdown-session",
+  "createdAtUtc": "2026-04-23T04:37:20Z"
+}"#;
+
+        let command = load_command_from_str(raw).expect("shutdown-session without typed payloads should parse");
+        assert_eq!(command.command_type, "shutdown-session");
+        assert!(command.launch_session.is_none());
+        assert!(command.run_suite.is_none());
+        assert!(command.review_decision.is_none());
+    }
+
+    #[test]
+    fn protocol_rejects_shutdown_session_when_typed_payloads_are_present() {
+        let raw = r#"{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "commandId": "cmd_000004_shutdown-session",
+  "commandSeq": 4,
+  "commandType": "shutdown-session",
+  "createdAtUtc": "2026-04-23T04:37:20Z",
+  "runSuite": {
+    "suiteId": "lifecycle-roundtrip",
+    "requestedBy": "operator",
+    "requestedResetDefault": "FullPackageRebuild",
+    "reason": "should-not-be-present"
+  }
+}"#;
+
+        let error = load_command_from_str(raw).expect_err("shutdown-session with typed payloads should fail");
+        assert!(error
+            .to_string()
+            .contains("shutdown-session command must not include typed payloads."));
     }
 
     #[test]

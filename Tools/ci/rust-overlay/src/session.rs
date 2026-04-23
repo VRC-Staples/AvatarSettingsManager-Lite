@@ -1,5 +1,5 @@
 use crate::protocol::{
-    append_event_line, load_events_from_file_tolerant, protocol_fixture_directory,
+    load_events_from_file_tolerant, protocol_fixture_directory,
     recover_processed_command_ids, to_json as serialize_command_json, SmokeProtocolCommand,
     SmokeProtocolEvent,
 };
@@ -18,6 +18,8 @@ pub const HOST_STATE_REVIEW_REQUIRED: &str = "review-required";
 pub const HOST_STATE_IDLE: &str = "idle";
 pub const HOST_STATE_PROTOCOL_ERROR: &str = "protocol-error";
 pub const HOST_STATE_EXITING: &str = "exiting";
+pub const HOST_STATE_STALLED: &str = "stalled";
+pub const HOST_STATE_CRASHED: &str = "crashed";
 
 const SESSION_FILE_NAME: &str = "session.json";
 const CATALOG_SNAPSHOT_FILE_NAME: &str = "suite-catalog.snapshot.json";
@@ -934,6 +936,8 @@ fn is_supported_host_state(value: &str) -> bool {
             | HOST_STATE_IDLE
             | HOST_STATE_PROTOCOL_ERROR
             | HOST_STATE_EXITING
+            | HOST_STATE_STALLED
+            | HOST_STATE_CRASHED
     )
 }
 
@@ -974,6 +978,7 @@ fn normalize_absolute(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::protocol::append_event_line;
     use crate::catalog::load_canonical_catalog;
     use crate::protocol::load_event_fixture;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -1034,6 +1039,48 @@ mod tests {
         let (accepted, reason) = can_accept_run_suite(&host_state);
         assert!(!accepted);
         assert!(reason.to_lowercase().contains("protocol"));
+    }
+
+    #[test]
+    fn host_state_stalled_is_valid() {
+        let parsed = load_host_state_from_str(
+            r#"{
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "protocolVersion": "1.0.0",
+  "state": "stalled",
+  "hostVersion": "host-2026.04.23",
+  "unityVersion": "2022.3.22f1",
+  "heartbeatUtc": "2026-04-23T04:37:09Z",
+  "lastEventSeq": 5,
+  "lastCommandSeq": 2,
+  "activeRunId": "",
+  "message": "Host heartbeat stalled."
+}"#,
+        )
+        .expect("stalled host-state should parse");
+
+        assert_eq!(parsed.state, HOST_STATE_STALLED);
+    }
+
+    #[test]
+    fn host_state_crashed_is_valid() {
+        let parsed = load_host_state_from_str(
+            r#"{
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "protocolVersion": "1.0.0",
+  "state": "crashed",
+  "hostVersion": "host-2026.04.23",
+  "unityVersion": "2022.3.22f1",
+  "heartbeatUtc": "2026-04-23T04:37:10Z",
+  "lastEventSeq": 6,
+  "lastCommandSeq": 2,
+  "activeRunId": "",
+  "message": "InvalidOperationException: boom"
+}"#,
+        )
+        .expect("crashed host-state should parse");
+
+        assert_eq!(parsed.state, HOST_STATE_CRASHED);
     }
 
     #[test]
