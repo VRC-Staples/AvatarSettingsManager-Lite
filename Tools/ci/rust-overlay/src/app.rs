@@ -13,8 +13,6 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupSnapshot, String> {
-    let mut app_state = AppState::Boot;
-
     let catalog_raw = fs::read_to_string(&config.catalog_path)
         .map_err(|error| format!("failed to read catalog '{}': {error}", config.catalog_path.display()))?;
     let catalog = load_catalog_from_str(&catalog_raw)
@@ -50,8 +48,6 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
     )
     .map_err(|error| format!("failed to persist session reset default: {error}"))?;
 
-    app_state = AppState::LaunchingUnity;
-
     let unity_executable = config
         .unity_executable
         .clone()
@@ -70,7 +66,6 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
     let mut child = spawn_unity_host(&launch_config)
         .map_err(|error| format!("unity host launch failed: {error}"))?;
 
-    app_state = AppState::WaitingForReady;
     let reader = EventReader::new(
         session_paths,
         config.tuning.startup_timeout_seconds,
@@ -89,16 +84,14 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
 
         match poll_result.status {
             UnityHostSupervisorStatus::Ready => {
-                app_state = AppState::SuiteSelect;
-                if let Some(surface) = render_suite_surface_for_state(&app_state, &suite_model) {
+                if let Some(surface) = render_suite_surface_for_state(&AppState::SuiteSelect, &suite_model) {
                     println!("{surface}");
                 }
                 let _ = terminate_child_if_running(&mut child, process_exit_code);
                 return Ok(snapshot_from_poll(&poll_result));
             }
             UnityHostSupervisorStatus::ExitedCleanly if config.exit_on_ready => {
-                app_state = AppState::SuiteSelect;
-                if let Some(surface) = render_suite_surface_for_state(&app_state, &suite_model) {
+                if let Some(surface) = render_suite_surface_for_state(&AppState::SuiteSelect, &suite_model) {
                     println!("{surface}");
                 }
                 return Ok(snapshot_from_poll(&poll_result));
@@ -111,11 +104,12 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
             | UnityHostSupervisorStatus::ExitedCleanly
             | UnityHostSupervisorStatus::ExitedWithError
             | UnityHostSupervisorStatus::TimedOut => {
-                app_state = AppState::HostError;
                 let _ = terminate_child_if_running(&mut child, process_exit_code);
                 return Err(format!(
-                    "overlay bootstrap failed in state {:?}: status={:?}, warnings={:?}",
-                    app_state, poll_result.status, poll_result.warnings
+                    "overlay bootstrap failed in state {}: status={:?}, warnings={:?}",
+                    AppState::HostError.as_str(),
+                    poll_result.status,
+                    poll_result.warnings
                 ));
             }
         }

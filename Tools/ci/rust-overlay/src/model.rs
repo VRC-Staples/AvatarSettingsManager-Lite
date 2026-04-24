@@ -44,7 +44,19 @@ pub enum AppState {
     HostError,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl AppState {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Boot => "boot",
+            Self::LaunchingUnity => "launching-unity",
+            Self::WaitingForReady => "waiting-for-ready",
+            Self::SuiteSelect => "suite-select",
+            Self::HostError => "host-error",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GlobalResetDefault {
     SceneReload,
     FullPackageRebuild,
