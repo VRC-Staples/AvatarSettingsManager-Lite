@@ -1087,31 +1087,31 @@ namespace ASMLite.Tests.Editor
                 {
                     if (snapshot.HostKind != ASMLiteWindow.VisibleAutomationOverlayHostKind.ExternalPythonProcess)
                     {
-                        FailAndExit("Visible automation should publish overlay state through the external Python overlay host when external overlay paths are configured.");
+                        FailAndExit("Visible automation should publish overlay state through the external overlay host when external overlay paths are configured.");
                         return;
                     }
 
                     if (!string.Equals(snapshot.ExternalOverlayStatePath, _configuration.externalOverlayStatePath, StringComparison.Ordinal))
                     {
-                        FailAndExit("Visible automation should preserve the configured external overlay state path while the Python overlay host is active.");
+                        FailAndExit("Visible automation should preserve the configured external overlay state path while the external overlay host is active.");
                         return;
                     }
 
                     if (!string.Equals(snapshot.ExternalOverlayAckPath, _configuration.externalOverlayAckPath ?? string.Empty, StringComparison.Ordinal))
                     {
-                        FailAndExit("Visible automation should preserve the configured external overlay acknowledgement path while the Python overlay host is active.");
+                        FailAndExit("Visible automation should preserve the configured external overlay acknowledgement path while the external overlay host is active.");
                         return;
                     }
 
                     if (!snapshot.ExternalOverlayStateFileExists)
                     {
-                        FailAndExit("Visible automation should publish the external overlay state file while the Python overlay host is active.");
+                        FailAndExit("Visible automation should publish the external overlay state file while the external overlay host is active.");
                         return;
                     }
 
                     if (snapshot.HasStatusWindow || snapshot.HasChecklistWindow || snapshot.HasCompletionReviewWindow)
                     {
-                        FailAndExit("Visible automation should disable detached auxiliary overlay windows while the external Python overlay host is active.");
+                        FailAndExit("Visible automation should disable detached auxiliary overlay windows while the external overlay host is active.");
                         return;
                     }
 
@@ -3290,7 +3290,7 @@ namespace ASMLite.Tests.Editor
                 string planPath = Path.Combine(tempDirectory, "plan.json");
                 string resultsDirectory = Path.Combine(tempDirectory, "results");
                 string canonicalResultsPath = Path.Combine(tempDirectory, "canonical.xml");
-                string overlayStatePath = Path.Combine(tempDirectory, "overlay", "state.json");
+                string overlayStatePath = Path.Combine(tempDirectory, "overlay", "state.payload");
                 File.WriteAllText(planPath, @"{
   ""runs"": [
     {
