@@ -1,9 +1,11 @@
 use crate::catalog::load_catalog_from_str;
 use crate::event_reader::{EventReader, StartupPollResult};
-use crate::model::{AppState, OverlayBootstrapConfig, StartupSnapshot};
+use crate::model::{AppState, OverlayBootstrapConfig, StartupSnapshot, SuiteSelectionModel};
 use crate::session::{
-    generate_session_id, write_initial_session_documents, InitialSessionMetadata, SmokeSessionPaths,
+    generate_session_id, update_session_global_reset_default_atomically,
+    write_initial_session_documents, InitialSessionMetadata, SmokeSessionPaths,
 };
+use crate::ui_suite_list::render_pre_run_surface;
 use crate::unity_launcher::{spawn_unity_host, UnityHostLaunchConfig, UnityHostSupervisorStatus};
 use std::fs;
 use std::path::PathBuf;
@@ -17,6 +19,9 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
         .map_err(|error| format!("failed to read catalog '{}': {error}", config.catalog_path.display()))?;
     let catalog = load_catalog_from_str(&catalog_raw)
         .map_err(|error| format!("catalog validation failed: {error}"))?;
+
+    let suite_model = SuiteSelectionModel::new_from_catalog(&catalog)
+        .map_err(|error| format!("suite model initialization failed: {error}"))?;
 
     let session_paths = SmokeSessionPaths::new(config.session_root.clone())
         .map_err(|error| format!("session root initialization failed: {error}"))?;
@@ -32,12 +37,18 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
         host_version: "asmlite-smoke-host".to_string(),
         package_version: "com.staples.asm-lite".to_string(),
         unity_version: "unknown".to_string(),
-        global_reset_default: "SceneReload".to_string(),
+        global_reset_default: suite_model.global_reset_default.as_str().to_string(),
         capabilities: vec!["launch-session".to_string()],
     };
 
     write_initial_session_documents(&session_paths, &session_id, &catalog, &metadata)
         .map_err(|error| format!("failed to write initial session documents: {error}"))?;
+
+    update_session_global_reset_default_atomically(
+        &session_paths,
+        suite_model.global_reset_default.as_str(),
+    )
+    .map_err(|error| format!("failed to persist session reset default: {error}"))?;
 
     app_state = AppState::LaunchingUnity;
 
@@ -79,11 +90,17 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
         match poll_result.status {
             UnityHostSupervisorStatus::Ready => {
                 app_state = AppState::SuiteSelect;
+                if let Some(surface) = render_suite_surface_for_state(&app_state, &suite_model) {
+                    println!("{surface}");
+                }
                 let _ = terminate_child_if_running(&mut child, process_exit_code);
                 return Ok(snapshot_from_poll(&poll_result));
             }
             UnityHostSupervisorStatus::ExitedCleanly if config.exit_on_ready => {
                 app_state = AppState::SuiteSelect;
+                if let Some(surface) = render_suite_surface_for_state(&app_state, &suite_model) {
+                    println!("{surface}");
+                }
                 return Ok(snapshot_from_poll(&poll_result));
             }
             UnityHostSupervisorStatus::Starting => {
@@ -102,6 +119,17 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
                 ));
             }
         }
+    }
+}
+
+pub fn render_suite_surface_for_state(
+    app_state: &AppState,
+    suite_model: &SuiteSelectionModel,
+) -> Option<String> {
+    if matches!(app_state, AppState::SuiteSelect) {
+        Some(render_pre_run_surface(suite_model))
+    } else {
+        None
     }
 }
 
@@ -134,4 +162,24 @@ fn unix_epoch_seconds_utc() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_else(|_| Duration::from_secs(0));
     format!("{}Z", now.as_secs())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::catalog::load_canonical_catalog;
+
+    #[test]
+    fn suite_list_only_renders_in_suite_select_state() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let suite_model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        assert!(render_suite_surface_for_state(&AppState::Boot, &suite_model).is_none());
+        assert!(render_suite_surface_for_state(&AppState::HostError, &suite_model).is_none());
+
+        let rendered = render_suite_surface_for_state(&AppState::SuiteSelect, &suite_model)
+            .expect("suite select should render");
+        assert!(rendered.contains("Selected suite:"));
+        assert!(rendered.contains(crate::model::PHASE07_RUN_GATE_MESSAGE));
+    }
 }

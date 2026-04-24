@@ -4,4 +4,6 @@ pub mod event_reader;
 pub mod model;
 pub mod protocol;
 pub mod session;
+pub mod theme;
+pub mod ui_suite_list;
 pub mod unity_launcher;

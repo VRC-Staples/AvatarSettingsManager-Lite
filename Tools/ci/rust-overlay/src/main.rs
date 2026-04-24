@@ -1,13 +1,34 @@
 use asmlite_smoke_contract::app::run_overlay_bootstrap;
 use asmlite_smoke_contract::model::{OverlayBootstrapConfig, OverlayMode, RuntimeTuning};
+use asmlite_smoke_contract::theme::RIGHT_PANEL_WIDTH_PX;
 use std::env;
 use std::path::PathBuf;
+
+#[derive(Debug, Clone)]
+struct OverlayWindowIntent {
+    anchor: &'static str,
+    always_on_top: bool,
+    panel_width_px: f32,
+}
+
+fn default_window_intent() -> OverlayWindowIntent {
+    OverlayWindowIntent {
+        anchor: "right",
+        always_on_top: true,
+        panel_width_px: RIGHT_PANEL_WIDTH_PX,
+    }
+}
 
 fn main() {
     match parse_cli_args() {
         Ok(config) => match run_overlay_bootstrap(&config) {
             Ok(snapshot) => {
+                let window_intent = default_window_intent();
                 println!("mode: {}", config.mode.as_str());
+                println!(
+                    "window-intent: anchor={}, always-on-top={}, panel-width={}px",
+                    window_intent.anchor, window_intent.always_on_top, window_intent.panel_width_px
+                );
                 println!("status: {:?}", snapshot.status);
                 if let Some(host_state) = snapshot.host_state {
                     println!("host-state: {host_state}");
