@@ -167,7 +167,7 @@ Optional local-only helpers (canonical Rust-overlay visual smoke path):
 - `Tools/ci/run-visible-smoke-local.sh` (interactive/local visible smoke entrypoint)
 - `Tools/ci/run-UAT-smoke.sh` (UAT-flavored visible smoke entrypoint)
 
-Both helpers use the Rust overlay transport contract. Legacy Python `state.json`/`ack.json` overlay transport is no longer part of canonical contributor workflow.
+Both helpers use the Rust overlay transport contract. Legacy Python state/ack overlay transport is no longer part of canonical contributor workflow.
 
 ---
 

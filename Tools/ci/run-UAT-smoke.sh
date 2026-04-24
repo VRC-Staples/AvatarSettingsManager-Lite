@@ -64,6 +64,19 @@ resolve_rust_overlay_runner() {
     exit 1
   fi
 
+  if cargo +stable-x86_64-unknown-linux-gnu --version >/dev/null 2>&1; then
+    RUST_OVERLAY_RUNNER_CMD=(
+      cargo
+      +stable-x86_64-unknown-linux-gnu
+      run
+      --manifest-path "${REPO_ROOT}/Tools/ci/rust-overlay/Cargo.toml"
+      --bin asmlite_smoke_overlay
+      --
+    )
+    RUST_OVERLAY_RUNNER_LABEL="cargo +stable-x86_64-unknown-linux-gnu run --manifest-path Tools/ci/rust-overlay/Cargo.toml --bin asmlite_smoke_overlay --"
+    return 0
+  fi
+
   RUST_OVERLAY_RUNNER_CMD=(
     cargo
     run
@@ -115,6 +128,7 @@ start_rust_overlay_session() {
     --catalog-path "${catalog_path_arg}"
     --session-root "${session_root_arg}"
     --mode "${mode}"
+    --exit-on-ready
   )
 
   echo "Running canonical visible UAT smoke flow against:"
