@@ -4,6 +4,7 @@ use crate::session::{
 };
 use std::fmt;
 use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnityLauncherError(pub String);
@@ -101,6 +102,27 @@ pub fn build_unity_host_args(config: &UnityHostLaunchConfig) -> Result<Vec<Strin
             "false".to_string()
         },
     ])
+}
+
+pub fn spawn_unity_host(config: &UnityHostLaunchConfig) -> Result<Child, UnityLauncherError> {
+    if config.unity_executable.as_os_str().is_empty() {
+        return Err(UnityLauncherError("unity_executable must not be empty.".to_string()));
+    }
+
+    let args = build_unity_host_args(config)?;
+
+    Command::new(&config.unity_executable)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .spawn()
+        .map_err(|error| {
+            UnityLauncherError(format!(
+                "failed to spawn Unity host '{}': {error}",
+                config.unity_executable.display()
+            ))
+        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

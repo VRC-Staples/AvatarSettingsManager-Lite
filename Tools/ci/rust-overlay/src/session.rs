@@ -1,3 +1,4 @@
+use crate::catalog::SmokeSuiteCatalog;
 use crate::protocol::{
     load_events_from_file_tolerant, protocol_fixture_directory,
     recover_processed_command_ids, to_json as serialize_command_json, SmokeProtocolCommand,
@@ -9,6 +10,7 @@ use std::fmt;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub const SUPPORTED_PROTOCOL_VERSION: &str = "1.0.0";
 
@@ -322,6 +324,66 @@ impl SmokeSessionPaths {
 
         Ok(full)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct InitialSessionMetadata {
+    pub catalog_path: String,
+    pub project_path: String,
+    pub overlay_version: String,
+    pub host_version: String,
+    pub package_version: String,
+    pub unity_version: String,
+    pub global_reset_default: String,
+    pub capabilities: Vec<String>,
+}
+
+pub fn generate_session_id() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| std::time::Duration::from_secs(0));
+    format!("session-{}-{}", now.as_secs(), now.subsec_nanos())
+}
+
+pub fn write_initial_session_documents(
+    session_paths: &SmokeSessionPaths,
+    session_id: &str,
+    catalog: &SmokeSuiteCatalog,
+    metadata: &InitialSessionMetadata,
+) -> Result<SmokeSessionDocument, SessionContractError> {
+    session_paths.ensure_layout()?;
+
+    let created_at_utc = unix_epoch_seconds_utc();
+    let session_document = SmokeSessionDocument {
+        session_id: require_non_blank(session_id, "sessionId")?,
+        protocol_version: catalog.protocol_version.trim().to_string(),
+        catalog_version: catalog.catalog_version,
+        catalog_path: require_non_blank(&metadata.catalog_path, "catalogPath")?,
+        catalog_snapshot_path: CATALOG_SNAPSHOT_FILE_NAME.to_string(),
+        project_path: require_non_blank(&metadata.project_path, "projectPath")?,
+        overlay_version: require_non_blank(&metadata.overlay_version, "overlayVersion")?,
+        host_version: require_non_blank(&metadata.host_version, "hostVersion")?,
+        package_version: require_non_blank(&metadata.package_version, "packageVersion")?,
+        unity_version: require_non_blank(&metadata.unity_version, "unityVersion")?,
+        capabilities: metadata.capabilities.clone(),
+        global_reset_default: require_non_blank(&metadata.global_reset_default, "globalResetDefault")?,
+        created_at_utc: created_at_utc.clone(),
+        updated_at_utc: created_at_utc,
+    };
+
+    write_session_document_atomically(&session_paths.session_metadata_path(), &session_document, true)?;
+
+    let snapshot_json = serde_json::to_string_pretty(catalog)?;
+    write_catalog_snapshot_atomically(&session_paths.catalog_snapshot_path(), &snapshot_json)?;
+
+    Ok(session_document)
+}
+
+fn unix_epoch_seconds_utc() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_else(|_| std::time::Duration::from_secs(0));
+    format!("{}Z", now.as_secs())
 }
 
 pub fn load_session_fixture(file_name: &str) -> Result<SmokeSessionDocument, SessionContractError> {
@@ -1259,6 +1321,41 @@ mod tests {
         assert!(processed.contains("cmd_000002_run-suite"));
         assert!(processed.contains("cmd_000003_review-decision"));
         assert!(!processed.contains("cmd_000004_run-suite"));
+    }
+
+    #[test]
+    fn generate_session_id_emits_prefixed_non_blank_value() {
+        let session_id = generate_session_id();
+        assert!(session_id.starts_with("session-"));
+        assert!(session_id.len() > "session-".len());
+    }
+
+    #[test]
+    fn write_initial_session_documents_writes_session_and_snapshot() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        let metadata = InitialSessionMetadata {
+            catalog_path: "Tools/ci/smoke/suite-catalog.json".to_string(),
+            project_path: "Tools/ci/unity-project".to_string(),
+            overlay_version: "overlay-dev".to_string(),
+            host_version: "host-dev".to_string(),
+            package_version: "package-dev".to_string(),
+            unity_version: "2022.3.22f1".to_string(),
+            global_reset_default: "SceneReload".to_string(),
+            capabilities: vec!["launch-session".to_string()],
+        };
+
+        let session = write_initial_session_documents(
+            &session_paths,
+            "session-bootstrap-test",
+            &catalog,
+            &metadata,
+        )
+        .expect("initial session documents should write");
+
+        assert_eq!(session.session_id, "session-bootstrap-test");
+        assert!(session_paths.session_metadata_path().exists());
+        assert!(session_paths.catalog_snapshot_path().exists());
     }
 
     fn make_temp_session_root() -> PathBuf {
