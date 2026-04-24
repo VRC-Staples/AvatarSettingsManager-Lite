@@ -121,6 +121,7 @@ namespace ASMLite.Tests.Editor
         void UnregisterUpdate(EditorApplication.CallbackFunction tick);
         string[] EnumerateCommandFiles(string commandsDirectoryPath);
         string ReadAllText(string path);
+        bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace);
         void ExitEditor(int exitCode);
     }
 
@@ -203,6 +204,124 @@ namespace ASMLite.Tests.Editor
             return File.ReadAllText(path);
         }
 
+        public bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace)
+        {
+            detail = string.Empty;
+            stackTrace = string.Empty;
+
+            try
+            {
+                string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
+                var window = ASMLiteWindow.OpenForAutomation();
+
+                switch (normalizedAction)
+                {
+                    case "open-window":
+                        detail = "ASM-Lite window opened for automation.";
+                        return true;
+
+                    case "select-avatar":
+                    {
+                        VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+                        if (avatar == null)
+                        {
+                            detail = $"Avatar '{avatarName}' was not found.";
+                            return false;
+                        }
+
+                        window.SelectAvatarForAutomation(avatar);
+                        detail = $"Selected avatar '{avatarName}'.";
+                        return true;
+                    }
+
+                    case "add-prefab":
+                        SelectAvatarIfFound(window, avatarName);
+                        window.AddPrefabForAutomation();
+                        detail = "ASM-Lite prefab added.";
+                        return true;
+
+                    case "rebuild":
+                        SelectAvatarIfFound(window, avatarName);
+                        window.RebuildForAutomation();
+                        detail = "Rebuild completed.";
+                        return true;
+
+                    case "vendorize":
+                        SelectAvatarIfFound(window, avatarName);
+                        window.VendorizeForAutomation();
+                        detail = "Vendorize completed.";
+                        return true;
+
+                    case "detach":
+                        SelectAvatarIfFound(window, avatarName);
+                        window.DetachForAutomation();
+                        detail = "Detach completed.";
+                        return true;
+
+                    case "return-to-package-managed":
+                        SelectAvatarIfFound(window, avatarName);
+                        window.ReturnToPackageManagedForAutomation();
+                        detail = "Return-to-package-managed completed.";
+                        return true;
+
+                    case "assert-primary-action":
+                    {
+                        SelectAvatarIfFound(window, avatarName);
+                        var hierarchy = window.GetActionHierarchyContract();
+                        bool hasPrimaryRebuild = hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.Rebuild);
+                        detail = hasPrimaryRebuild
+                            ? "Primary rebuild action is available."
+                            : "Primary rebuild action is not available.";
+                        return hasPrimaryRebuild;
+                    }
+
+                    case "enter-playmode":
+                        EditorApplication.isPlaying = true;
+                        detail = "Entered playmode.";
+                        return true;
+
+                    case "assert-runtime-component-valid":
+                    {
+                        VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+                        bool valid = avatar != null && avatar.GetComponentInChildren<ASMLiteComponent>(true) != null;
+                        detail = valid
+                            ? "Runtime component check passed."
+                            : "Runtime component check failed: ASM-Lite component was not found on the selected avatar.";
+                        return valid;
+                    }
+
+                    case "exit-playmode":
+                        EditorApplication.isPlaying = false;
+                        detail = "Exited playmode.";
+                        return true;
+
+                    case "assert-host-ready":
+                        detail = "Host readiness check passed.";
+                        return true;
+
+                    default:
+                        detail = $"Unsupported smoke actionType '{normalizedAction}'.";
+                        return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                detail = string.IsNullOrWhiteSpace(ex.Message) ? "Step execution failed." : ex.Message.Trim();
+                stackTrace = string.IsNullOrWhiteSpace(ex.StackTrace) ? string.Empty : ex.StackTrace.Trim();
+                return false;
+            }
+        }
+
+        private void SelectAvatarIfFound(ASMLiteWindow window, string avatarName)
+        {
+            if (window == null)
+                return;
+
+            VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+            if (avatar != null)
+                window.SelectAvatarForAutomation(avatar);
+        }
+
         public void ExitEditor(int exitCode)
         {
             EditorApplication.Exit(exitCode);
@@ -259,6 +378,7 @@ namespace ASMLite.Tests.Editor
         private string _sessionId = "smoke-session";
         private int _lastEventSeq;
         private int _lastCommandSeq;
+        private int _runOrdinal;
         private string _currentState = ASMLiteSmokeProtocol.HostStateIdle;
         private string _currentMessage = "Unity host booting.";
         private bool _isRunning;
@@ -284,6 +404,7 @@ namespace ASMLite.Tests.Editor
             _processedCommandIds = ASMLiteSmokeProtocol.RecoverProcessedCommandIdsFromEventLog(_paths.EventsLogPath);
             _lastEventSeq = RecoverLastEventSequence(_paths.EventsLogPath);
             _lastCommandSeq = 0;
+            _runOrdinal = 0;
 
             try
             {
@@ -474,7 +595,7 @@ namespace ASMLite.Tests.Editor
                     break;
 
                 case "run-suite":
-                    RejectCommand(command, "run-suite received before Phase 08 suite executor is available.");
+                    HandleRunSuite(command);
                     break;
 
                 case "review-decision":
@@ -487,8 +608,116 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        private void HandleRunSuite(ASMLiteSmokeProtocolCommand command)
+        {
+            if (command == null || command.runSuite == null)
+            {
+                RejectCommand(command, "run-suite payload is required.");
+                return;
+            }
+
+            try
+            {
+                ASMLiteSmokeCatalogDocument catalog = ASMLiteSmokeCatalog.LoadFromPath(_configuration.CatalogPath);
+                if (!catalog.TryGetSuite(command.runSuite.suiteId, out ASMLiteSmokeSuiteDefinition suite) || suite == null)
+                {
+                    RejectCommand(command, $"Unknown suiteId '{command.runSuite.suiteId}'.");
+                    return;
+                }
+
+                string effectiveResetPolicy = ASMLiteSmokeResetService.ResolveEffectivePolicy(
+                    command.runSuite.requestedResetDefault,
+                    suite.resetOverride);
+
+                string runningMessage = $"Running suite '{suite.suiteId}' with effective reset policy '{effectiveResetPolicy}'.";
+                PublishHostState(
+                    ASMLiteSmokeProtocol.HostStateRunning,
+                    runningMessage,
+                    _lastEventSeq,
+                    _lastCommandSeq);
+                _currentState = ASMLiteSmokeProtocol.HostStateRunning;
+                _currentMessage = runningMessage;
+
+                ASMLiteSmokeSuiteExecutionResult result = ASMLiteSmokeRunExecutor.Execute(
+                    catalog,
+                    command,
+                    effectiveResetPolicy,
+                    ExecuteCatalogStep);
+
+                for (int i = 0; i < result.Events.Count; i++)
+                {
+                    ASMLiteSmokeExecutionEventPayload payload = result.Events[i];
+                    int eventSeq = _lastEventSeq + 1;
+                    string eventHostState = string.Equals(payload.EventType, "suite-passed", StringComparison.Ordinal)
+                        ? ASMLiteSmokeProtocol.HostStateReady
+                        : ASMLiteSmokeProtocol.HostStateRunning;
+
+                    AppendEventWithSequence(
+                        eventSeq,
+                        payload.EventType,
+                        eventHostState,
+                        payload.Message,
+                        command.commandId,
+                        runId: result.RunId,
+                        groupId: payload.GroupId,
+                        suiteId: payload.SuiteId,
+                        caseId: payload.CaseId,
+                        stepId: payload.StepId,
+                        effectiveResetPolicy: payload.EffectiveResetPolicy);
+                    _lastEventSeq = eventSeq;
+                }
+
+                string completionMessage;
+                if (result.Succeeded)
+                {
+                    completionMessage = $"Suite '{result.SuiteId}' passed. Session remains ready.";
+                }
+                else
+                {
+                    string failedStep = result.Failure == null ? string.Empty : result.Failure.StepId;
+                    completionMessage = string.IsNullOrWhiteSpace(failedStep)
+                        ? $"Suite '{result.SuiteId}' failed."
+                        : $"Suite '{result.SuiteId}' failed at step '{failedStep}'.";
+                }
+
+                PublishHostState(
+                    ASMLiteSmokeProtocol.HostStateReady,
+                    completionMessage,
+                    _lastEventSeq,
+                    _lastCommandSeq);
+
+                _currentState = ASMLiteSmokeProtocol.HostStateReady;
+                _currentMessage = completionMessage;
+                _processedCommandIds.Add(command.commandId);
+                _runOrdinal++;
+            }
+            catch (Exception ex)
+            {
+                string message = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "run-suite execution failed."
+                    : $"run-suite execution failed: {ex.Message}";
+                RejectCommand(command, message);
+            }
+        }
+
+        private bool ExecuteCatalogStep(ASMLiteSmokeStepDefinition step, out string detail, out string stackTrace)
+        {
+            if (step == null)
+            {
+                detail = "Step definition is required.";
+                stackTrace = string.Empty;
+                return false;
+            }
+
+            return _runtime.ExecuteCatalogStep(step.actionType, _configuration.AvatarName, out detail, out stackTrace);
+        }
+
         private void RejectCommand(ASMLiteSmokeProtocolCommand command, string reason)
         {
+            string commandId = command == null || string.IsNullOrWhiteSpace(command.commandId)
+                ? "cmd_000000_host-bootstrap"
+                : command.commandId.Trim();
+
             int rejectSeq = _lastEventSeq + 1;
             PublishHostState(_currentState, reason, rejectSeq, _lastCommandSeq);
             AppendEventWithSequence(
@@ -496,11 +725,12 @@ namespace ASMLite.Tests.Editor
                 "command-rejected",
                 _currentState,
                 reason,
-                command.commandId);
+                commandId);
 
             _lastEventSeq = rejectSeq;
             _currentMessage = reason;
-            _processedCommandIds.Add(command.commandId);
+            if (!string.IsNullOrWhiteSpace(commandId))
+                _processedCommandIds.Add(commandId);
         }
 
         private void HandleShutdownSession(ASMLiteSmokeProtocolCommand command)
@@ -612,7 +842,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = _sessionId,
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
                 state = normalizedState,
-                hostVersion = "asmlite-unity-host-phase06",
+                hostVersion = "asmlite-unity-host-phase08",
                 unityVersion = unityVersion,
                 heartbeatUtc = _runtime.GetUtcNowIso(),
                 lastEventSeq = Math.Max(0, lastEventSeq),
@@ -629,7 +859,13 @@ namespace ASMLite.Tests.Editor
             string eventType,
             string hostState,
             string message,
-            string commandId)
+            string commandId,
+            string runId = "",
+            string groupId = "",
+            string suiteId = "",
+            string caseId = "",
+            string stepId = "",
+            string effectiveResetPolicy = "")
         {
             string normalizedCommandId = string.IsNullOrWhiteSpace(commandId)
                 ? "cmd_000000_host-bootstrap"
@@ -644,12 +880,12 @@ namespace ASMLite.Tests.Editor
                 eventType = eventType,
                 timestampUtc = _runtime.GetUtcNowIso(),
                 commandId = normalizedCommandId,
-                runId = string.Empty,
-                groupId = string.Empty,
-                suiteId = string.Empty,
-                caseId = string.Empty,
-                stepId = string.Empty,
-                effectiveResetPolicy = string.Empty,
+                runId = string.IsNullOrWhiteSpace(runId) ? string.Empty : runId.Trim(),
+                groupId = string.IsNullOrWhiteSpace(groupId) ? string.Empty : groupId.Trim(),
+                suiteId = string.IsNullOrWhiteSpace(suiteId) ? string.Empty : suiteId.Trim(),
+                caseId = string.IsNullOrWhiteSpace(caseId) ? string.Empty : caseId.Trim(),
+                stepId = string.IsNullOrWhiteSpace(stepId) ? string.Empty : stepId.Trim(),
+                effectiveResetPolicy = string.IsNullOrWhiteSpace(effectiveResetPolicy) ? string.Empty : effectiveResetPolicy.Trim(),
                 hostState = hostState,
                 message = message,
                 reviewDecisionOptions = Array.Empty<string>(),

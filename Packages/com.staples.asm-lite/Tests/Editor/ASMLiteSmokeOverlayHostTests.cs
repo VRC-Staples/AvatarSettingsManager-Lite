@@ -145,9 +145,8 @@ namespace ASMLite.Tests.Editor
                     .Where(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal))
                     .ToArray();
 
-                Assert.That(events.Length, Is.EqualTo(2));
+                Assert.That(events.Length, Is.EqualTo(1));
                 Assert.AreEqual("cmd_000001_review-decision", events[0].commandId);
-                Assert.AreEqual("cmd_000002_run-suite", events[1].commandId);
             }
         }
 
@@ -190,22 +189,111 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CommandPolling_RunSuiteBeforeExecutor_IsRejectedWithoutExiting()
+        public void CommandPolling_RunSuite_ExecutesLifecycleRoundtripInOrderWithoutRejecting()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
-                WriteCommand(context.Paths, BuildRunSuiteCommand(3, "cmd_000003_run-suite"));
+                const string commandId = "cmd_000003_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(3, commandId));
                 context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Select(item => item.eventType), Is.EqualTo(new[]
+                {
+                    "suite-started",
+                    "case-started",
+                    "step-started",
+                    "step-passed",
+                    "step-started",
+                    "step-passed",
+                    "step-started",
+                    "step-passed",
+                    "step-started",
+                    "step-passed",
+                    "suite-passed",
+                }));
+
+                Assert.That(events.Select(item => item.eventSeq), Is.Ordered.Ascending);
+                Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
+                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize", "detach", "return-to-package-managed" }));
+                Assert.That(events.All(item => string.Equals(item.effectiveResetPolicy, "FullPackageRebuild", StringComparison.Ordinal)), Is.True);
+
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
+                {
+                    "rebuild",
+                    "vendorize",
+                    "detach",
+                    "return-to-package-managed",
+                }));
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_ExecutesPlaymodeSuiteInSingleSession()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000008_run-suite";
+                var command = BuildRunSuiteCommand(8, commandId);
+                command.runSuite.suiteId = "playmode-runtime-validation";
+                command.runSuite.requestedResetDefault = "SceneReload";
+                command.runSuite.reason = "playmode-suite-test";
+
+                WriteCommand(context.Paths, command);
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Last().eventType, Is.EqualTo("suite-passed"));
+                Assert.That(context.Runtime.ExecutedActions, Does.Contain("enter-playmode"));
+                Assert.That(context.Runtime.ExecutedActions, Does.Contain("assert-runtime-component-valid"));
+                Assert.That(context.Runtime.ExecutedActions, Does.Contain("exit-playmode"));
+                Assert.That(context.Runtime.ExitCodes, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_FailsFastAfterFirstFailedStep()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
+
+                const string commandId = "cmd_000011_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(11, commandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
+                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize" }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "vendorize" }));
 
                 var hostState = ReadHostState(context.Paths.HostStatePath);
                 Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReady, hostState.state);
-                StringAssert.Contains("Phase 08 suite executor", hostState.message);
-                Assert.That(context.Runtime.ExitCodes, Is.Empty);
-
-                var rejected = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
-                    .Single(item => string.Equals(item.commandId, "cmd_000003_run-suite", StringComparison.Ordinal));
-                Assert.AreEqual("command-rejected", rejected.eventType);
+                StringAssert.Contains("failed", hostState.message);
             }
+        }
+
+        [TestCase("SceneReload", "Inherit", "SceneReload")]
+        [TestCase("SceneReload", "FullPackageRebuild", "FullPackageRebuild")]
+        [TestCase("FullPackageRebuild", "Inherit", "FullPackageRebuild")]
+        [TestCase("FullPackageRebuild", "SceneReload", "SceneReload")]
+        public void ResetService_ResolvesEffectiveResetPolicyDeterministically(string globalDefault, string suiteOverride, string expected)
+        {
+            string resolved = ASMLiteSmokeResetService.ResolveEffectivePolicy(globalDefault, suiteOverride);
+            Assert.AreEqual(expected, resolved);
         }
 
         [Test]
@@ -317,6 +405,91 @@ namespace ASMLite.Tests.Editor
             };
         }
 
+        private static string BuildTestCatalogJson()
+        {
+            var catalog = new ASMLiteSmokeCatalogDocument
+            {
+                catalogVersion = 1,
+                protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
+                fixture = new ASMLiteSmokeFixtureDefinition
+                {
+                    scenePath = "Assets/Click ME.unity",
+                    avatarName = "Oct25_Dress",
+                },
+                groups = new[]
+                {
+                    new ASMLiteSmokeGroupDefinition
+                    {
+                        groupId = "phase08-host-tests",
+                        label = "Phase 08 Host Tests",
+                        description = "Local catalog used by ASMLiteSmokeOverlayHostTests.",
+                        suites = new[]
+                        {
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "lifecycle-roundtrip",
+                                label = "Lifecycle Roundtrip",
+                                description = "Validates rebuild/vendorize/detach/return lifecycle.",
+                                resetOverride = "FullPackageRebuild",
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "All lifecycle steps pass in order.",
+                                debugHint = "Check lifecycle step ordering and action mapping.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "lifecycle-case-01",
+                                        label = "Lifecycle Case",
+                                        description = "Run lifecycle sequence from package-managed state.",
+                                        expectedOutcome = "Rebuild/vendorize/detach/return all pass.",
+                                        debugHint = "Inspect host event stream for lifecycle step boundaries.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition { stepId = "rebuild", label = "Rebuild", description = "Rebuild package state.", actionType = "rebuild", expectedOutcome = "Rebuild succeeds.", debugHint = "Inspect rebuild logs." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "vendorize", label = "Vendorize", description = "Vendorize generated assets.", actionType = "vendorize", expectedOutcome = "Vendorize succeeds.", debugHint = "Inspect vendorized assets." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "detach", label = "Detach", description = "Detach from package-managed state.", actionType = "detach", expectedOutcome = "Detach succeeds.", debugHint = "Confirm detached workspace state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "return-to-package-managed", label = "Return", description = "Return to package-managed baseline.", actionType = "return-to-package-managed", expectedOutcome = "Return succeeds.", debugHint = "Confirm package-managed state restored." },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "playmode-runtime-validation",
+                                label = "Playmode Runtime Validation",
+                                description = "Validates playmode enter/assert/exit flow.",
+                                resetOverride = "Inherit",
+                                requiresPlayMode = true,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Playmode runtime checks complete successfully.",
+                                debugHint = "Inspect playmode transitions and runtime assertion output.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "playmode-case-01",
+                                        label = "Playmode Case",
+                                        description = "Enter playmode, assert runtime component validity, exit playmode.",
+                                        expectedOutcome = "All playmode steps pass.",
+                                        debugHint = "Check runtime assertion details and playmode transitions.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition { stepId = "enter-playmode", label = "Enter Playmode", description = "Enter playmode session.", actionType = "enter-playmode", expectedOutcome = "Entered playmode.", debugHint = "Inspect playmode enter diagnostics." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "assert-runtime-component-valid", label = "Assert Runtime", description = "Assert runtime component validity.", actionType = "assert-runtime-component-valid", expectedOutcome = "Runtime component is valid.", debugHint = "Check runtime assertion metadata." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "exit-playmode", label = "Exit Playmode", description = "Exit playmode session.", actionType = "exit-playmode", expectedOutcome = "Exited playmode.", debugHint = "Inspect playmode exit diagnostics." },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            return JsonUtility.ToJson(catalog, prettyPrint: true);
+        }
+
         private static ASMLiteSmokeProtocolCommand BuildShutdownCommand(int commandSeq, string commandId)
         {
             return new ASMLiteSmokeProtocolCommand
@@ -376,7 +549,7 @@ namespace ASMLite.Tests.Editor
                 Directory.CreateDirectory(sessionRoot);
 
                 string catalogPath = Path.Combine(sessionRoot, "catalog.json");
-                File.WriteAllText(catalogPath, "{}");
+                File.WriteAllText(catalogPath, BuildTestCatalogJson());
 
                 var paths = ASMLiteSmokeArtifactPaths.FromSessionRoot(sessionRoot);
                 paths.EnsureSessionLayout();
@@ -438,6 +611,9 @@ namespace ASMLite.Tests.Editor
             internal int RegisterUpdateCount { get; private set; }
             internal int UnregisterUpdateCount { get; private set; }
             internal List<int> ExitCodes { get; } = new List<int>();
+            internal List<string> ExecutedActions { get; } = new List<string>();
+
+            private readonly Dictionary<string, string> _forcedFailuresByAction = new Dictionary<string, string>(StringComparer.Ordinal);
 
             internal double CurrentTimeSeconds { get; private set; }
 
@@ -503,6 +679,23 @@ namespace ASMLite.Tests.Editor
                 return File.ReadAllText(path);
             }
 
+            public bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace)
+            {
+                string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
+                ExecutedActions.Add(normalizedAction);
+
+                if (_forcedFailuresByAction.TryGetValue(normalizedAction, out string failureMessage))
+                {
+                    detail = failureMessage;
+                    stackTrace = string.Empty;
+                    return false;
+                }
+
+                detail = $"{normalizedAction} completed.";
+                stackTrace = string.Empty;
+                return true;
+            }
+
             public void ExitEditor(int exitCode)
             {
                 ExitCodes.Add(exitCode);
@@ -514,6 +707,16 @@ namespace ASMLite.Tests.Editor
                     throw new InvalidOperationException("A live avatar descriptor is required.");
 
                 _avatars[avatar.gameObject.name] = avatar;
+            }
+
+            internal void FailAction(string actionType, string failureMessage)
+            {
+                if (string.IsNullOrWhiteSpace(actionType))
+                    throw new InvalidOperationException("actionType is required.");
+
+                _forcedFailuresByAction[actionType.Trim()] = string.IsNullOrWhiteSpace(failureMessage)
+                    ? "Injected action failure."
+                    : failureMessage.Trim();
             }
 
             internal void AdvanceSeconds(double seconds)
