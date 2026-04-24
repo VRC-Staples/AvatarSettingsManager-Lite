@@ -164,8 +164,10 @@ Expected canonical artifacts from the default run:
 For contributor validation, `Tools/ci/run-editmode-local.sh` remains the only required full test path before pushing changes.
 
 Optional local-only helpers:
-- `Tools/ci/run-visible-smoke-local.sh`
-- `Tools/ci/run-UAT-smoke.sh`
+- `Tools/ci/run-visible-smoke-local.sh` (Phase 07: boots Rust overlay + suite-selection surface)
+- `Tools/ci/run-UAT-smoke.sh` (Phase 07: same bootstrap path for UAT mode)
+
+Both helpers intentionally stop at pre-run UX/state supervision. `run-suite` dispatch and review workflows stay Phase 08-gated.
 
 ---
 

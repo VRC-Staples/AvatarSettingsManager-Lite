@@ -31,6 +31,7 @@ Visible smoke options only:
 
 Notes:
   - Visible step delay is fixed at 1.5 seconds.
+  - Overlay mode currently boots the Phase 07 suite-selection surface only (run-suite dispatch remains Phase 08 gated).
   - There are no menu, headless, or delay-tuning options in this script.
 EOF
 }
@@ -116,7 +117,7 @@ start_rust_overlay_session() {
     --mode "${mode}"
   )
 
-  echo "Running visible Rust overlay bootstrap against:"
+  echo "Running visible Rust overlay Phase 07 bootstrap against:"
   echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    ${mode}"

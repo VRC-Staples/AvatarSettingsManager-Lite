@@ -379,6 +379,21 @@ pub fn write_initial_session_documents(
     Ok(session_document)
 }
 
+pub fn update_session_global_reset_default_atomically(
+    session_paths: &SmokeSessionPaths,
+    global_reset_default: &str,
+) -> Result<SmokeSessionDocument, SessionContractError> {
+    let session_path = session_paths.session_metadata_path();
+    let raw = fs::read_to_string(&session_path)?;
+    let mut session_document = load_session_from_str(&raw)?;
+    session_document.global_reset_default =
+        require_non_blank(global_reset_default, "globalResetDefault")?;
+    session_document.updated_at_utc = unix_epoch_seconds_utc();
+
+    write_session_document_atomically(&session_path, &session_document, true)?;
+    Ok(session_document)
+}
+
 fn unix_epoch_seconds_utc() -> String {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -1356,6 +1371,41 @@ mod tests {
         assert_eq!(session.session_id, "session-bootstrap-test");
         assert!(session_paths.session_metadata_path().exists());
         assert!(session_paths.catalog_snapshot_path().exists());
+    }
+
+    #[test]
+    fn update_session_global_reset_default_rewrites_session_metadata_atomically() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        let metadata = InitialSessionMetadata {
+            catalog_path: "Tools/ci/smoke/suite-catalog.json".to_string(),
+            project_path: "Tools/ci/unity-project".to_string(),
+            overlay_version: "overlay-dev".to_string(),
+            host_version: "host-dev".to_string(),
+            package_version: "package-dev".to_string(),
+            unity_version: "2022.3.22f1".to_string(),
+            global_reset_default: "SceneReload".to_string(),
+            capabilities: vec!["launch-session".to_string()],
+        };
+
+        write_initial_session_documents(
+            &session_paths,
+            "session-bootstrap-test",
+            &catalog,
+            &metadata,
+        )
+        .expect("initial session should write");
+
+        let updated = update_session_global_reset_default_atomically(
+            &session_paths,
+            "FullPackageRebuild",
+        )
+        .expect("reset default update should succeed");
+
+        assert_eq!(updated.global_reset_default, "FullPackageRebuild");
+        let persisted = fs::read_to_string(session_paths.session_metadata_path())
+            .expect("session metadata should remain readable");
+        assert!(persisted.contains("FullPackageRebuild"));
     }
 
     fn make_temp_session_root() -> PathBuf {

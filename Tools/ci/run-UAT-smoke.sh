@@ -32,7 +32,7 @@ Options:
 
 Notes:
   - Visible step delay is fixed at 1.5 seconds.
-  - Wave-1 keeps suite execution/review behavior disabled.
+  - Phase 07 provides suite-selection UX bootstrap only; suite execution/review stays disabled until Phase 08.
 EOF
 }
 
@@ -117,7 +117,7 @@ start_rust_overlay_session() {
     --mode "${mode}"
   )
 
-  echo "Running full visible UAT smoke bootstrap against:"
+  echo "Running full visible UAT smoke Phase 07 bootstrap against:"
   echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    ${mode}"
