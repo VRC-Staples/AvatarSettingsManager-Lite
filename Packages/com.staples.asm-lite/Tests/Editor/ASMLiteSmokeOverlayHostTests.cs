@@ -229,6 +229,26 @@ namespace ASMLite.Tests.Editor
                     "detach",
                     "return-to-package-managed",
                 }));
+
+                string resultPath = context.Paths.GetResultPath(1, "lifecycle-roundtrip");
+                string eventsSlicePath = context.Paths.GetEventsSlicePath(1, "lifecycle-roundtrip");
+                string nunitPath = context.Paths.GetNUnitPath(1, "lifecycle-roundtrip");
+                string failurePath = context.Paths.GetFailurePath(1, "lifecycle-roundtrip");
+
+                Assert.That(File.Exists(resultPath), Is.True);
+                Assert.That(File.Exists(eventsSlicePath), Is.True);
+                Assert.That(File.Exists(nunitPath), Is.True);
+                Assert.That(File.Exists(failurePath), Is.False);
+
+                var resultDocument = ASMLiteSmokeArtifactPaths.LoadResultFromJson(File.ReadAllText(resultPath));
+                Assert.AreEqual("passed", resultDocument.result);
+                Assert.AreEqual("FullPackageRebuild", resultDocument.effectiveResetPolicy);
+                Assert.That(resultDocument.firstEventSeq, Is.GreaterThan(0));
+                Assert.That(resultDocument.lastEventSeq, Is.GreaterThanOrEqualTo(resultDocument.firstEventSeq));
+                Assert.That(resultDocument.artifactPaths.resultPath, Does.StartWith("runs/"));
+                Assert.That(resultDocument.artifactPaths.eventsSlicePath, Does.StartWith("runs/"));
+                Assert.That(resultDocument.artifactPaths.nunitPath, Does.StartWith("runs/"));
+                Assert.That(resultDocument.artifactPaths.failurePath, Is.EqualTo(string.Empty));
             }
         }
 
@@ -279,6 +299,25 @@ namespace ASMLite.Tests.Editor
                 Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
                     .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize" }));
                 Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "vendorize" }));
+
+                string resultPath = context.Paths.GetResultPath(1, "lifecycle-roundtrip");
+                string failurePath = context.Paths.GetFailurePath(1, "lifecycle-roundtrip");
+                string eventsSlicePath = context.Paths.GetEventsSlicePath(1, "lifecycle-roundtrip");
+                Assert.That(File.Exists(resultPath), Is.True);
+                Assert.That(File.Exists(failurePath), Is.True);
+                Assert.That(File.Exists(eventsSlicePath), Is.True);
+
+                var resultDocument = ASMLiteSmokeArtifactPaths.LoadResultFromJson(File.ReadAllText(resultPath));
+                Assert.AreEqual("failed", resultDocument.result);
+                Assert.AreEqual("FullPackageRebuild", resultDocument.effectiveResetPolicy);
+
+                var failureDocument = ASMLiteSmokeArtifactPaths.LoadFailureFromJson(File.ReadAllText(failurePath));
+                Assert.AreEqual("vendorize", failureDocument.stepId);
+                Assert.That(failureDocument.failureMessage, Does.Contain("Injected vendorize failure"));
+                Assert.AreEqual("FullPackageRebuild", failureDocument.effectiveResetPolicy);
+                Assert.That(failureDocument.artifactPaths.failurePath, Does.StartWith("runs/"));
+                Assert.That(failureDocument.eventSeqRange.first, Is.GreaterThan(0));
+                Assert.That(failureDocument.eventSeqRange.last, Is.GreaterThanOrEqualTo(failureDocument.eventSeqRange.first));
 
                 var hostState = ReadHostState(context.Paths.HostStatePath);
                 Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReady, hostState.state);

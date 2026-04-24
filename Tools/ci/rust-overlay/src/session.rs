@@ -1,8 +1,7 @@
 use crate::catalog::SmokeSuiteCatalog;
 use crate::protocol::{
-    load_events_from_file_tolerant, protocol_fixture_directory,
-    recover_processed_command_ids, to_json as serialize_command_json, SmokeProtocolCommand,
-    SmokeProtocolEvent,
+    load_events_from_file_tolerant, protocol_fixture_directory, recover_processed_command_ids,
+    to_json as serialize_command_json, SmokeProtocolCommand, SmokeProtocolEvent,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -177,7 +176,9 @@ impl SmokeSessionPaths {
     pub fn new(session_root: impl Into<PathBuf>) -> Result<Self, SessionContractError> {
         let raw = session_root.into();
         if raw.as_os_str().is_empty() {
-            return Err(SessionContractError("session_root must not be empty.".to_string()));
+            return Err(SessionContractError(
+                "session_root must not be empty.".to_string(),
+            ));
         }
 
         let absolute = if raw.is_absolute() {
@@ -186,7 +187,9 @@ impl SmokeSessionPaths {
             std::env::current_dir()?.join(raw)
         };
 
-        Ok(Self { session_root: absolute })
+        Ok(Self {
+            session_root: absolute,
+        })
     }
 
     pub fn session_root(&self) -> &Path {
@@ -235,7 +238,9 @@ impl SmokeSessionPaths {
         command_id: &str,
     ) -> Result<String, SessionContractError> {
         if command_seq <= 0 {
-            return Err(SessionContractError("command_seq must be greater than zero.".to_string()));
+            return Err(SessionContractError(
+                "command_seq must be greater than zero.".to_string(),
+            ));
         }
 
         let normalized_type = sanitize_identifier(command_type, "command_type")?;
@@ -251,14 +256,22 @@ impl SmokeSessionPaths {
         command_type: &str,
         command_id: &str,
     ) -> Result<PathBuf, SessionContractError> {
-        Ok(self
-            .commands_directory_path()
-            .join(self.command_file_name(command_seq, command_type, command_id)?))
+        Ok(self.commands_directory_path().join(self.command_file_name(
+            command_seq,
+            command_type,
+            command_id,
+        )?))
     }
 
-    pub fn run_directory_name(&self, run_ordinal: i32, suite_id: &str) -> Result<String, SessionContractError> {
+    pub fn run_directory_name(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<String, SessionContractError> {
         if run_ordinal <= 0 {
-            return Err(SessionContractError("run_ordinal must be greater than zero.".to_string()));
+            return Err(SessionContractError(
+                "run_ordinal must be greater than zero.".to_string(),
+            ));
         }
 
         let normalized_suite = sanitize_identifier(suite_id, "suite_id")?;
@@ -267,29 +280,61 @@ impl SmokeSessionPaths {
         Ok(name)
     }
 
-    pub fn run_directory_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
+    pub fn run_directory_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
         Ok(self
             .runs_directory_path()
             .join(self.run_directory_name(run_ordinal, suite_id)?))
     }
 
-    pub fn result_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
-        Ok(self.run_directory_path(run_ordinal, suite_id)?.join(RESULT_FILE_NAME))
+    pub fn result_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
+        Ok(self
+            .run_directory_path(run_ordinal, suite_id)?
+            .join(RESULT_FILE_NAME))
     }
 
-    pub fn failure_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
-        Ok(self.run_directory_path(run_ordinal, suite_id)?.join(FAILURE_FILE_NAME))
+    pub fn failure_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
+        Ok(self
+            .run_directory_path(run_ordinal, suite_id)?
+            .join(FAILURE_FILE_NAME))
     }
 
-    pub fn events_slice_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
-        Ok(self.run_directory_path(run_ordinal, suite_id)?.join(EVENTS_SLICE_FILE_NAME))
+    pub fn events_slice_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
+        Ok(self
+            .run_directory_path(run_ordinal, suite_id)?
+            .join(EVENTS_SLICE_FILE_NAME))
     }
 
-    pub fn nunit_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
-        Ok(self.run_directory_path(run_ordinal, suite_id)?.join(NUNIT_FILE_NAME))
+    pub fn nunit_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
+        Ok(self
+            .run_directory_path(run_ordinal, suite_id)?
+            .join(NUNIT_FILE_NAME))
     }
 
-    pub fn debug_summary_path(&self, run_ordinal: i32, suite_id: &str) -> Result<PathBuf, SessionContractError> {
+    pub fn debug_summary_path(
+        &self,
+        run_ordinal: i32,
+        suite_id: &str,
+    ) -> Result<PathBuf, SessionContractError> {
         Ok(self
             .run_directory_path(run_ordinal, suite_id)?
             .join(DEBUG_SUMMARY_FILE_NAME))
@@ -313,7 +358,11 @@ impl SmokeSessionPaths {
             .canonicalize()
             .unwrap_or_else(|_| normalize_absolute(&self.session_root));
 
-        let root_prefix = format!("{}{}", session_root_full.display(), std::path::MAIN_SEPARATOR);
+        let root_prefix = format!(
+            "{}{}",
+            session_root_full.display(),
+            std::path::MAIN_SEPARATOR
+        );
         let full_display = full.display().to_string();
         let root_display = session_root_full.display().to_string();
         if full_display != root_display && !full_display.starts_with(&root_prefix) {
@@ -345,6 +394,22 @@ pub fn generate_session_id() -> String {
     format!("session-{}-{}", now.as_secs(), now.subsec_nanos())
 }
 
+pub fn allocate_next_command_identity(
+    last_command_seq: i32,
+    command_type: &str,
+) -> Result<(i32, String), SessionContractError> {
+    if last_command_seq < 0 {
+        return Err(SessionContractError(
+            "lastCommandSeq must be zero or greater.".to_string(),
+        ));
+    }
+
+    let normalized_type = sanitize_identifier(command_type, "commandType")?;
+    let next_seq = last_command_seq + 1;
+    let command_id = format!("cmd_{next_seq:06}_{normalized_type}");
+    Ok((next_seq, command_id))
+}
+
 pub fn write_initial_session_documents(
     session_paths: &SmokeSessionPaths,
     session_id: &str,
@@ -366,12 +431,19 @@ pub fn write_initial_session_documents(
         package_version: require_non_blank(&metadata.package_version, "packageVersion")?,
         unity_version: require_non_blank(&metadata.unity_version, "unityVersion")?,
         capabilities: metadata.capabilities.clone(),
-        global_reset_default: require_non_blank(&metadata.global_reset_default, "globalResetDefault")?,
+        global_reset_default: require_non_blank(
+            &metadata.global_reset_default,
+            "globalResetDefault",
+        )?,
         created_at_utc: created_at_utc.clone(),
         updated_at_utc: created_at_utc,
     };
 
-    write_session_document_atomically(&session_paths.session_metadata_path(), &session_document, true)?;
+    write_session_document_atomically(
+        &session_paths.session_metadata_path(),
+        &session_document,
+        true,
+    )?;
 
     let snapshot_json = serde_json::to_string_pretty(catalog)?;
     write_catalog_snapshot_atomically(&session_paths.catalog_snapshot_path(), &snapshot_json)?;
@@ -408,7 +480,9 @@ pub fn load_session_fixture(file_name: &str) -> Result<SmokeSessionDocument, Ses
 
 pub fn load_session_from_str(raw: &str) -> Result<SmokeSessionDocument, SessionContractError> {
     if raw.trim().is_empty() {
-        return Err(SessionContractError("Smoke session JSON is required.".to_string()));
+        return Err(SessionContractError(
+            "Smoke session JSON is required.".to_string(),
+        ));
     }
 
     let mut session: SmokeSessionDocument = serde_json::from_str(raw)?;
@@ -416,14 +490,18 @@ pub fn load_session_from_str(raw: &str) -> Result<SmokeSessionDocument, SessionC
     Ok(session)
 }
 
-pub fn load_host_state_fixture(file_name: &str) -> Result<SmokeHostStateDocument, SessionContractError> {
+pub fn load_host_state_fixture(
+    file_name: &str,
+) -> Result<SmokeHostStateDocument, SessionContractError> {
     let raw = fs::read_to_string(protocol_fixture_directory().join(file_name))?;
     load_host_state_from_str(&raw)
 }
 
 pub fn load_host_state_from_str(raw: &str) -> Result<SmokeHostStateDocument, SessionContractError> {
     if raw.trim().is_empty() {
-        return Err(SessionContractError("Smoke host-state JSON is required.".to_string()));
+        return Err(SessionContractError(
+            "Smoke host-state JSON is required.".to_string(),
+        ));
     }
 
     let mut host_state: SmokeHostStateDocument = serde_json::from_str(raw)?;
@@ -436,7 +514,10 @@ pub fn evaluate_protocol_compatibility(
     session: &SmokeSessionDocument,
     catalog_protocol_version: &str,
 ) -> Result<ProtocolCompatibilityResult, SessionContractError> {
-    let host = require_non_blank(host_supported_protocol_version, "hostSupportedProtocolVersion")?;
+    let host = require_non_blank(
+        host_supported_protocol_version,
+        "hostSupportedProtocolVersion",
+    )?;
     let mut normalized_session = session.clone();
     normalize_and_validate_session(&mut normalized_session)?;
     let catalog = require_non_blank(catalog_protocol_version, "catalogProtocolVersion")?;
@@ -505,7 +586,9 @@ pub fn build_protocol_error_event(
     let mut normalized_session = session.clone();
     normalize_and_validate_session(&mut normalized_session)?;
     if event_seq <= 0 {
-        return Err(SessionContractError("eventSeq must be greater than zero.".to_string()));
+        return Err(SessionContractError(
+            "eventSeq must be greater than zero.".to_string(),
+        ));
     }
 
     Ok(SmokeProtocolEvent {
@@ -525,7 +608,9 @@ pub fn build_protocol_error_event(
         host_state: HOST_STATE_PROTOCOL_ERROR.to_string(),
         message: require_non_blank(message, "message")?,
         review_decision_options: Vec::new(),
-        supported_capabilities: normalize_capabilities(std::mem::take(&mut normalized_session.capabilities)),
+        supported_capabilities: normalize_capabilities(std::mem::take(
+            &mut normalized_session.capabilities,
+        )),
     })
 }
 
@@ -547,20 +632,27 @@ pub fn can_accept_run_suite(host_state: &SmokeHostStateDocument) -> (bool, Strin
     }
 
     if normalized.state == HOST_STATE_EXITING {
-        return (false, "run-suite rejected while host is exiting.".to_string());
+        return (
+            false,
+            "run-suite rejected while host is exiting.".to_string(),
+        );
     }
 
     (true, String::new())
 }
 
-pub fn load_result_fixture(file_name: &str) -> Result<SmokeRunResultDocument, SessionContractError> {
+pub fn load_result_fixture(
+    file_name: &str,
+) -> Result<SmokeRunResultDocument, SessionContractError> {
     let raw = fs::read_to_string(protocol_fixture_directory().join(file_name))?;
     load_result_from_str(&raw)
 }
 
 pub fn load_result_from_str(raw: &str) -> Result<SmokeRunResultDocument, SessionContractError> {
     if raw.trim().is_empty() {
-        return Err(SessionContractError("Smoke result JSON is required.".to_string()));
+        return Err(SessionContractError(
+            "Smoke result JSON is required.".to_string(),
+        ));
     }
 
     let mut result: SmokeRunResultDocument = serde_json::from_str(raw)?;
@@ -575,7 +667,9 @@ pub fn load_failure_fixture(file_name: &str) -> Result<SmokeFailureDocument, Ses
 
 pub fn load_failure_from_str(raw: &str) -> Result<SmokeFailureDocument, SessionContractError> {
     if raw.trim().is_empty() {
-        return Err(SessionContractError("Smoke failure JSON is required.".to_string()));
+        return Err(SessionContractError(
+            "Smoke failure JSON is required.".to_string(),
+        ));
     }
 
     let mut failure: SmokeFailureDocument = serde_json::from_str(raw)?;
@@ -583,7 +677,10 @@ pub fn load_failure_from_str(raw: &str) -> Result<SmokeFailureDocument, SessionC
     Ok(failure)
 }
 
-pub fn write_json_atomically(target_path: &Path, json_content: &str) -> Result<(), SessionContractError> {
+pub fn write_json_atomically(
+    target_path: &Path,
+    json_content: &str,
+) -> Result<(), SessionContractError> {
     write_json_atomically_internal(target_path, json_content, None)
 }
 
@@ -605,8 +702,8 @@ pub fn write_command_document_atomically(
     command: &SmokeProtocolCommand,
     pretty: bool,
 ) -> Result<(), SessionContractError> {
-    let json =
-        serialize_command_json(command, pretty).map_err(|error| SessionContractError(error.to_string()))?;
+    let json = serialize_command_json(command, pretty)
+        .map_err(|error| SessionContractError(error.to_string()))?;
     write_json_atomically(command_path, &json)
 }
 
@@ -673,8 +770,8 @@ pub fn write_failure_document_atomically(
 pub fn recover_processed_command_ids_from_event_log(
     events_log_path: &Path,
 ) -> Result<HashSet<String>, SessionContractError> {
-    let events =
-        load_events_from_file_tolerant(events_log_path).map_err(|error| SessionContractError(error.to_string()))?;
+    let events = load_events_from_file_tolerant(events_log_path)
+        .map_err(|error| SessionContractError(error.to_string()))?;
     recover_processed_command_ids(&events).map_err(|error| SessionContractError(error.to_string()))
 }
 
@@ -684,7 +781,9 @@ fn write_json_atomically_internal(
     before_promote: Option<fn(&Path) -> Result<(), SessionContractError>>,
 ) -> Result<(), SessionContractError> {
     if json_content.trim().is_empty() {
-        return Err(SessionContractError("jsonContent must not be blank.".to_string()));
+        return Err(SessionContractError(
+            "jsonContent must not be blank.".to_string(),
+        ));
     }
 
     let parent = target_path.parent().ok_or_else(|| {
@@ -738,29 +837,38 @@ fn write_json_atomically_internal(
     result
 }
 
-fn normalize_and_validate_session(session: &mut SmokeSessionDocument) -> Result<(), SessionContractError> {
+fn normalize_and_validate_session(
+    session: &mut SmokeSessionDocument,
+) -> Result<(), SessionContractError> {
     session.session_id = require_non_blank(&session.session_id, "sessionId")?;
     session.protocol_version = require_non_blank(&session.protocol_version, "protocolVersion")?;
     if session.catalog_version <= 0 {
-        return Err(SessionContractError("catalogVersion must be greater than zero.".to_string()));
+        return Err(SessionContractError(
+            "catalogVersion must be greater than zero.".to_string(),
+        ));
     }
     session.catalog_path = require_non_blank(&session.catalog_path, "catalogPath")?;
-    session.catalog_snapshot_path = require_non_blank(&session.catalog_snapshot_path, "catalogSnapshotPath")?;
+    session.catalog_snapshot_path =
+        require_non_blank(&session.catalog_snapshot_path, "catalogSnapshotPath")?;
     session.project_path = require_non_blank(&session.project_path, "projectPath")?;
     session.overlay_version = require_non_blank(&session.overlay_version, "overlayVersion")?;
     session.host_version = require_non_blank(&session.host_version, "hostVersion")?;
     session.package_version = require_non_blank(&session.package_version, "packageVersion")?;
     session.unity_version = require_non_blank(&session.unity_version, "unityVersion")?;
-    session.global_reset_default = require_non_blank(&session.global_reset_default, "globalResetDefault")?;
+    session.global_reset_default =
+        require_non_blank(&session.global_reset_default, "globalResetDefault")?;
     session.created_at_utc = require_non_blank(&session.created_at_utc, "createdAtUtc")?;
     session.updated_at_utc = normalize_optional(&session.updated_at_utc);
     session.capabilities = normalize_capabilities(std::mem::take(&mut session.capabilities));
     Ok(())
 }
 
-fn normalize_and_validate_host_state(host_state: &mut SmokeHostStateDocument) -> Result<(), SessionContractError> {
+fn normalize_and_validate_host_state(
+    host_state: &mut SmokeHostStateDocument,
+) -> Result<(), SessionContractError> {
     host_state.session_id = require_non_blank(&host_state.session_id, "sessionId")?;
-    host_state.protocol_version = require_non_blank(&host_state.protocol_version, "protocolVersion")?;
+    host_state.protocol_version =
+        require_non_blank(&host_state.protocol_version, "protocolVersion")?;
     host_state.state = require_non_blank(&host_state.state, "state")?;
     if !is_supported_host_state(&host_state.state) {
         return Err(SessionContractError(format!(
@@ -866,14 +974,18 @@ fn normalize_and_validate_failure_document(
 fn normalize_and_validate_artifact_paths(
     artifact_paths: &mut SmokeArtifactPaths,
 ) -> Result<(), SessionContractError> {
-    artifact_paths.result_path = ensure_relative_artifact_path(&artifact_paths.result_path, "artifactPaths.resultPath")?;
+    artifact_paths.result_path =
+        ensure_relative_artifact_path(&artifact_paths.result_path, "artifactPaths.resultPath")?;
     artifact_paths.failure_path = normalize_optional_relative_artifact_path(
         &artifact_paths.failure_path,
         "artifactPaths.failurePath",
     )?;
-    artifact_paths.events_slice_path =
-        ensure_relative_artifact_path(&artifact_paths.events_slice_path, "artifactPaths.eventsSlicePath")?;
-    artifact_paths.nunit_path = ensure_relative_artifact_path(&artifact_paths.nunit_path, "artifactPaths.nunitPath")?;
+    artifact_paths.events_slice_path = ensure_relative_artifact_path(
+        &artifact_paths.events_slice_path,
+        "artifactPaths.eventsSlicePath",
+    )?;
+    artifact_paths.nunit_path =
+        ensure_relative_artifact_path(&artifact_paths.nunit_path, "artifactPaths.nunitPath")?;
     artifact_paths.debug_summary_path = normalize_optional_relative_artifact_path(
         &artifact_paths.debug_summary_path,
         "artifactPaths.debugSummaryPath",
@@ -920,7 +1032,9 @@ fn normalize_relative_artifact_path(
 
     let segments: Vec<&str> = value.split('/').collect();
     if segments.is_empty() {
-        return Err(SessionContractError(format!("{field_name} must not be blank.")));
+        return Err(SessionContractError(format!(
+            "{field_name} must not be blank."
+        )));
     }
 
     let mut normalized_segments = Vec::with_capacity(segments.len());
@@ -969,7 +1083,9 @@ fn sanitize_identifier(value: &str, field_name: &str) -> Result<String, SessionC
 
 fn validate_portable_file_name(value: &str, field_name: &str) -> Result<(), SessionContractError> {
     if value.is_empty() {
-        return Err(SessionContractError(format!("{field_name} must not be blank.")));
+        return Err(SessionContractError(format!(
+            "{field_name} must not be blank."
+        )));
     }
 
     if !value.is_ascii() {
@@ -984,7 +1100,10 @@ fn validate_portable_file_name(value: &str, field_name: &str) -> Result<(), Sess
         )));
     }
 
-    if value.chars().any(|ch| matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*')) {
+    if value
+        .chars()
+        .any(|ch| matches!(ch, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'))
+    {
         return Err(SessionContractError(format!(
             "{field_name} contains a Windows-reserved character."
         )));
@@ -992,8 +1111,8 @@ fn validate_portable_file_name(value: &str, field_name: &str) -> Result<(), Sess
 
     let upper = value.to_ascii_uppercase();
     let reserved = [
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
-        "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
     if reserved.iter().any(|item| *item == upper) {
         return Err(SessionContractError(format!(
@@ -1036,7 +1155,9 @@ fn normalize_optional(value: &str) -> String {
 fn require_non_blank(value: &str, field_name: &str) -> Result<String, SessionContractError> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err(SessionContractError(format!("{field_name} must not be blank.")));
+        return Err(SessionContractError(format!(
+            "{field_name} must not be blank."
+        )));
     }
 
     Ok(trimmed.to_string())
@@ -1055,15 +1176,16 @@ fn normalize_absolute(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::append_event_line;
     use crate::catalog::load_canonical_catalog;
+    use crate::protocol::append_event_line;
     use crate::protocol::load_event_fixture;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn compatibility_valid_startup_exact_protocol_match_allows_run_suite_acceptance() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let session = load_session_fixture("session.valid.json").expect("session fixture should parse");
+        let session =
+            load_session_fixture("session.valid.json").expect("session fixture should parse");
 
         let compatibility = evaluate_protocol_compatibility(
             SUPPORTED_PROTOCOL_VERSION,
@@ -1074,8 +1196,8 @@ mod tests {
 
         assert!(compatibility.is_compatible, "{}", compatibility.message);
 
-        let host_state =
-            load_host_state_fixture("host-state.ready.json").expect("host-state fixture should parse");
+        let host_state = load_host_state_fixture("host-state.ready.json")
+            .expect("host-state fixture should parse");
         let (accepted, reason) = can_accept_run_suite(&host_state);
         assert!(accepted, "{reason}");
     }
@@ -1083,8 +1205,8 @@ mod tests {
     #[test]
     fn compatibility_mismatch_startup_emits_protocol_error_contract_and_blocks_startup() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let mismatch_session =
-            load_session_fixture("session.protocol-mismatch.json").expect("mismatch fixture should parse");
+        let mismatch_session = load_session_fixture("session.protocol-mismatch.json")
+            .expect("mismatch fixture should parse");
 
         let compatibility = evaluate_protocol_compatibility(
             SUPPORTED_PROTOCOL_VERSION,
@@ -1097,22 +1219,24 @@ mod tests {
         assert!(compatibility.message.contains("Protocol version mismatch"));
         assert!(compatibility.message.contains("Update overlay and host"));
 
-        let host_state =
-            load_host_state_fixture("host-state.protocol-error.json").expect("protocol-error state should parse");
+        let host_state = load_host_state_fixture("host-state.protocol-error.json")
+            .expect("protocol-error state should parse");
         assert_eq!(host_state.state, HOST_STATE_PROTOCOL_ERROR);
 
-        let events =
-            load_event_fixture("events.protocol-error.ndjson").expect("protocol-error events should parse");
+        let events = load_event_fixture("events.protocol-error.ndjson")
+            .expect("protocol-error events should parse");
         assert!(events
             .iter()
             .any(|item| item.event_type == HOST_STATE_PROTOCOL_ERROR));
-        assert!(events.iter().any(|item| item.event_type == "command-rejected"));
+        assert!(events
+            .iter()
+            .any(|item| item.event_type == "command-rejected"));
     }
 
     #[test]
     fn compatibility_post_mismatch_run_suite_is_rejected_while_host_state_is_protocol_error() {
-        let host_state =
-            load_host_state_fixture("host-state.protocol-error.json").expect("protocol-error state should parse");
+        let host_state = load_host_state_fixture("host-state.protocol-error.json")
+            .expect("protocol-error state should parse");
         let (accepted, reason) = can_accept_run_suite(&host_state);
         assert!(!accepted);
         assert!(reason.to_lowercase().contains("protocol"));
@@ -1162,8 +1286,11 @@ mod tests {
 
     #[test]
     fn artifacts_session_layout_and_paths_follow_canonical_contract() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
 
         assert!(session_paths.commands_directory_path().is_dir());
         assert!(session_paths.events_directory_path().is_dir());
@@ -1189,7 +1316,8 @@ mod tests {
 
     #[test]
     fn artifacts_naming_is_sortable_ascii_and_windows_safe() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
         let command_a = session_paths
             .command_file_name(2, "run-suite", "cmd_000002_run-suite")
             .expect("command file should build");
@@ -1214,44 +1342,68 @@ mod tests {
 
     #[test]
     fn artifacts_fixtures_use_relative_paths_and_slice_stays_under_session_root() {
-        let result = load_result_fixture("result.sample.json").expect("result fixture should parse");
-        let failure = load_failure_fixture("failure.sample.json").expect("failure fixture should parse");
-        let slice_events =
-            load_event_fixture("events.slice.sample.ndjson").expect("events slice fixture should parse");
+        let result =
+            load_result_fixture("result.sample.json").expect("result fixture should parse");
+        let failure =
+            load_failure_fixture("failure.sample.json").expect("failure fixture should parse");
+        let slice_events = load_event_fixture("events.slice.sample.ndjson")
+            .expect("events slice fixture should parse");
 
         assert!(!slice_events.is_empty());
         assert_eq!(slice_events[0].event_seq, 12);
 
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
 
         let result_slice_path = session_paths
-            .resolve_session_relative_path(&result.artifact_paths.events_slice_path, "artifactPaths.eventsSlicePath")
+            .resolve_session_relative_path(
+                &result.artifact_paths.events_slice_path,
+                "artifactPaths.eventsSlicePath",
+            )
             .expect("result slice path should resolve");
         let failure_slice_path = session_paths
-            .resolve_session_relative_path(&failure.artifact_paths.events_slice_path, "artifactPaths.eventsSlicePath")
+            .resolve_session_relative_path(
+                &failure.artifact_paths.events_slice_path,
+                "artifactPaths.eventsSlicePath",
+            )
             .expect("failure slice path should resolve");
 
         let session_root = normalize_absolute(session_paths.session_root());
         let root_prefix = format!("{}{}", session_root.display(), std::path::MAIN_SEPARATOR);
-        assert!(result_slice_path.display().to_string().starts_with(&root_prefix));
-        assert!(failure_slice_path.display().to_string().starts_with(&root_prefix));
+        assert!(result_slice_path
+            .display()
+            .to_string()
+            .starts_with(&root_prefix));
+        assert!(failure_slice_path
+            .display()
+            .to_string()
+            .starts_with(&root_prefix));
     }
 
     #[test]
     fn io_atomic_write_replaces_existing_json_documents() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
 
-        let ready_state =
-            load_host_state_fixture("host-state.ready.json").expect("ready host-state fixture should parse");
+        let ready_state = load_host_state_fixture("host-state.ready.json")
+            .expect("ready host-state fixture should parse");
         write_host_state_document_atomically(&session_paths.host_state_path(), &ready_state, false)
             .expect("first atomic write should succeed");
 
         let protocol_error_state = load_host_state_fixture("host-state.protocol-error.json")
             .expect("protocol-error host-state fixture should parse");
-        write_host_state_document_atomically(&session_paths.host_state_path(), &protocol_error_state, false)
-            .expect("replacement atomic write should succeed");
+        write_host_state_document_atomically(
+            &session_paths.host_state_path(),
+            &protocol_error_state,
+            false,
+        )
+        .expect("replacement atomic write should succeed");
 
         let persisted = fs::read_to_string(session_paths.host_state_path())
             .expect("host-state document should be readable");
@@ -1262,12 +1414,16 @@ mod tests {
 
     #[test]
     fn io_interrupted_atomic_write_preserves_previous_json_document() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
 
         let host_state_path = session_paths.host_state_path();
         let baseline_json = "{\"state\":\"ready\"}";
-        write_json_atomically(&host_state_path, baseline_json).expect("baseline write should succeed");
+        write_json_atomically(&host_state_path, baseline_json)
+            .expect("baseline write should succeed");
 
         fn interrupt_before_promote(_: &Path) -> Result<(), SessionContractError> {
             Err(SessionContractError(
@@ -1282,11 +1438,9 @@ mod tests {
             Some(interrupt_before_promote),
         )
         .expect_err("interrupted write should fail");
-        assert!(
-            error
-                .to_string()
-                .contains("simulated interruption before atomic promote")
-        );
+        assert!(error
+            .to_string()
+            .contains("simulated interruption before atomic promote"));
 
         let persisted = fs::read_to_string(host_state_path)
             .expect("baseline document should remain readable after interruption");
@@ -1308,8 +1462,11 @@ mod tests {
 
     #[test]
     fn io_replay_processed_command_recovery_uses_canonical_event_log() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
 
         let mut events =
             load_event_fixture("events.sample.ndjson").expect("events fixture should parse");
@@ -1321,7 +1478,8 @@ mod tests {
         rejected.event_seq = 12;
         rejected.event_type = "command-rejected".to_string();
         rejected.command_id = "cmd_000004_run-suite".to_string();
-        rejected.message = "run-suite rejected while host remains in protocol-error state.".to_string();
+        rejected.message =
+            "run-suite rejected while host remains in protocol-error state.".to_string();
         events.push(rejected);
 
         for event in &events {
@@ -1329,8 +1487,9 @@ mod tests {
                 .expect("event append should succeed");
         }
 
-        let processed = recover_processed_command_ids_from_event_log(&session_paths.events_log_path())
-            .expect("processed command recovery should succeed");
+        let processed =
+            recover_processed_command_ids_from_event_log(&session_paths.events_log_path())
+                .expect("processed command recovery should succeed");
         assert_eq!(processed.len(), 3);
         assert!(processed.contains("cmd_000001_launch-session"));
         assert!(processed.contains("cmd_000002_run-suite"));
@@ -1346,9 +1505,25 @@ mod tests {
     }
 
     #[test]
+    fn allocate_next_command_identity_increments_sequence_and_formats_command_id() {
+        let (next_seq, command_id) = allocate_next_command_identity(3, "run-suite")
+            .expect("command identity should allocate");
+        assert_eq!(next_seq, 4);
+        assert_eq!(command_id, "cmd_000004_run-suite");
+    }
+
+    #[test]
+    fn allocate_next_command_identity_rejects_negative_last_seq() {
+        let error = allocate_next_command_identity(-1, "run-suite")
+            .expect_err("negative last seq should be rejected");
+        assert!(error.to_string().contains("lastCommandSeq"));
+    }
+
+    #[test]
     fn write_initial_session_documents_writes_session_and_snapshot() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
         let metadata = InitialSessionMetadata {
             catalog_path: "Tools/ci/smoke/suite-catalog.json".to_string(),
             project_path: "Tools/ci/unity-project".to_string(),
@@ -1376,7 +1551,8 @@ mod tests {
     #[test]
     fn update_session_global_reset_default_rewrites_session_metadata_atomically() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
         let metadata = InitialSessionMetadata {
             catalog_path: "Tools/ci/smoke/suite-catalog.json".to_string(),
             project_path: "Tools/ci/unity-project".to_string(),
@@ -1396,11 +1572,9 @@ mod tests {
         )
         .expect("initial session should write");
 
-        let updated = update_session_global_reset_default_atomically(
-            &session_paths,
-            "FullPackageRebuild",
-        )
-        .expect("reset default update should succeed");
+        let updated =
+            update_session_global_reset_default_atomically(&session_paths, "FullPackageRebuild")
+                .expect("reset default update should succeed");
 
         assert_eq!(updated.global_reset_default, "FullPackageRebuild");
         let persisted = fs::read_to_string(session_paths.session_metadata_path())

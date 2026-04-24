@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Text;
 using ASMLite.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -629,6 +631,10 @@ namespace ASMLite.Tests.Editor
                     command.runSuite.requestedResetDefault,
                     suite.resetOverride);
 
+                string runStartedAtUtc = _runtime.GetUtcNowIso();
+                double runStartedAtSeconds = _runtime.GetTimeSinceStartup();
+                int runOrdinal = _runOrdinal + 1;
+
                 string runningMessage = $"Running suite '{suite.suiteId}' with effective reset policy '{effectiveResetPolicy}'.";
                 PublishHostState(
                     ASMLiteSmokeProtocol.HostStateRunning,
@@ -644,6 +650,7 @@ namespace ASMLite.Tests.Editor
                     effectiveResetPolicy,
                     ExecuteCatalogStep);
 
+                int firstRunEventSeq = _lastEventSeq + 1;
                 for (int i = 0; i < result.Events.Count; i++)
                 {
                     ASMLiteSmokeExecutionEventPayload payload = result.Events[i];
@@ -667,6 +674,22 @@ namespace ASMLite.Tests.Editor
                     _lastEventSeq = eventSeq;
                 }
 
+                int lastRunEventSeq = _lastEventSeq;
+                string runEndedAtUtc = _runtime.GetUtcNowIso();
+                double runEndedAtSeconds = _runtime.GetTimeSinceStartup();
+                EmitRunArtifacts(
+                    catalog,
+                    suite,
+                    command,
+                    result,
+                    runOrdinal,
+                    runStartedAtUtc,
+                    runEndedAtUtc,
+                    runStartedAtSeconds,
+                    runEndedAtSeconds,
+                    firstRunEventSeq,
+                    lastRunEventSeq);
+
                 string completionMessage;
                 if (result.Succeeded)
                 {
@@ -689,7 +712,7 @@ namespace ASMLite.Tests.Editor
                 _currentState = ASMLiteSmokeProtocol.HostStateReady;
                 _currentMessage = completionMessage;
                 _processedCommandIds.Add(command.commandId);
-                _runOrdinal++;
+                _runOrdinal = runOrdinal;
             }
             catch (Exception ex)
             {
@@ -698,6 +721,153 @@ namespace ASMLite.Tests.Editor
                     : $"run-suite execution failed: {ex.Message}";
                 RejectCommand(command, message);
             }
+        }
+
+        private void EmitRunArtifacts(
+            ASMLiteSmokeCatalogDocument catalog,
+            ASMLiteSmokeSuiteDefinition suite,
+            ASMLiteSmokeProtocolCommand command,
+            ASMLiteSmokeSuiteExecutionResult result,
+            int runOrdinal,
+            string startedAtUtc,
+            string endedAtUtc,
+            double startedAtSeconds,
+            double endedAtSeconds,
+            int firstRunEventSeq,
+            int lastRunEventSeq)
+        {
+            string runDirectoryPath = _paths.GetRunDirectoryPath(runOrdinal, result.SuiteId);
+            Directory.CreateDirectory(runDirectoryPath);
+
+            string resultPath = _paths.GetResultPath(runOrdinal, result.SuiteId);
+            string failurePath = _paths.GetFailurePath(runOrdinal, result.SuiteId);
+            string eventsSlicePath = _paths.GetEventsSlicePath(runOrdinal, result.SuiteId);
+            string nunitPath = _paths.GetNUnitPath(runOrdinal, result.SuiteId);
+
+            ASMLiteSmokeProtocolEvent[] allEvents =
+                ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(_paths.EventsLogPath);
+            ASMLiteSmokeProtocolEvent[] runEvents = allEvents
+                .Where(evt => evt.eventSeq >= firstRunEventSeq && evt.eventSeq <= lastRunEventSeq)
+                .ToArray();
+
+            string sliceNdjson = ASMLiteSmokeProtocol.ToNdjson(runEvents);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(eventsSlicePath, sliceNdjson);
+            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(nunitPath, BuildNUnitXml(result, command.commandId, startedAtUtc, endedAtUtc));
+
+            string groupLabel = result.GroupId;
+            if (catalog != null && catalog.TryGetGroup(result.GroupId, out ASMLiteSmokeGroupDefinition group) && group != null)
+            {
+                if (!string.IsNullOrWhiteSpace(group.label))
+                    groupLabel = group.label;
+            }
+
+            if (string.IsNullOrWhiteSpace(groupLabel))
+                groupLabel = "unknown-group";
+
+            ASMLiteSmokeArtifactReferences artifactRefs = new ASMLiteSmokeArtifactReferences
+            {
+                resultPath = GetSessionRelativePath(resultPath),
+                failurePath = result.Succeeded ? string.Empty : GetSessionRelativePath(failurePath),
+                eventsSlicePath = GetSessionRelativePath(eventsSlicePath),
+                nunitPath = GetSessionRelativePath(nunitPath),
+                debugSummaryPath = string.Empty
+            };
+
+            double durationSeconds = Math.Max(0d, endedAtSeconds - startedAtSeconds);
+            ASMLiteSmokeRunResultDocument resultDocument = new ASMLiteSmokeRunResultDocument
+            {
+                protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
+                sessionId = _sessionId,
+                runId = result.RunId,
+                result = result.Succeeded ? "passed" : "failed",
+                groupId = result.GroupId,
+                groupLabel = groupLabel,
+                suiteId = result.SuiteId,
+                suiteLabel = string.IsNullOrWhiteSpace(suite.label) ? result.SuiteId : suite.label,
+                effectiveResetPolicy = result.EffectiveResetPolicy,
+                startedAtUtc = startedAtUtc,
+                endedAtUtc = endedAtUtc,
+                durationSeconds = durationSeconds,
+                firstEventSeq = firstRunEventSeq,
+                lastEventSeq = lastRunEventSeq,
+                artifactPaths = artifactRefs,
+                catalogSnapshotPath = GetSessionRelativePath(_paths.CatalogSnapshotPath)
+            };
+            ASMLiteSmokeArtifactPaths.WriteResultDocumentAtomically(resultPath, resultDocument, true);
+
+            if (!result.Succeeded)
+            {
+                string[] lastEvents = runEvents.Select(evt => evt.message)
+                    .Where(message => !string.IsNullOrWhiteSpace(message))
+                    .ToArray();
+                if (lastEvents.Length > 5)
+                    lastEvents = lastEvents.Skip(lastEvents.Length - 5).ToArray();
+
+                ASMLiteSmokeFailureDocument failureDocument = ASMLiteSmokeFailureReport.Build(
+                    _sessionId,
+                    command.commandId,
+                    result,
+                    _configuration.ScenePath,
+                    _configuration.AvatarName,
+                    artifactRefs,
+                    firstRunEventSeq,
+                    lastRunEventSeq,
+                    endedAtUtc,
+                    lastEvents);
+                ASMLiteSmokeArtifactPaths.WriteFailureDocumentAtomically(failurePath, failureDocument, true);
+            }
+        }
+
+        private static string BuildNUnitXml(
+            ASMLiteSmokeSuiteExecutionResult result,
+            string commandId,
+            string startedAtUtc,
+            string endedAtUtc)
+        {
+            string normalizedCommandId = string.IsNullOrWhiteSpace(commandId)
+                ? "cmd_000000_unknown"
+                : commandId.Trim();
+            string status = result.Succeeded ? "Passed" : "Failed";
+            int passed = result.Succeeded ? 1 : 0;
+            int failed = result.Succeeded ? 0 : 1;
+            string failureMessage = result.Failure == null ? string.Empty : result.Failure.FailureMessage;
+
+            var builder = new StringBuilder();
+            builder.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            builder.AppendLine($"<test-run id=\"{EscapeXml(result.RunId)}\" testcasecount=\"1\" result=\"{status}\" total=\"1\" passed=\"{passed}\" failed=\"{failed}\">");
+            builder.AppendLine($"  <test-suite type=\"TestSuite\" id=\"{EscapeXml(result.SuiteId)}\" name=\"{EscapeXml(result.SuiteId)}\" result=\"{status}\">");
+            builder.AppendLine($"    <properties><property name=\"commandId\" value=\"{EscapeXml(normalizedCommandId)}\" /></properties>");
+            builder.AppendLine("    <results>");
+            builder.AppendLine($"      <test-case id=\"{EscapeXml(result.SuiteId)}::run\" name=\"{EscapeXml(result.SuiteId)}\" result=\"{status}\">");
+            builder.AppendLine($"        <properties><property name=\"startedAtUtc\" value=\"{EscapeXml(startedAtUtc)}\" /><property name=\"endedAtUtc\" value=\"{EscapeXml(endedAtUtc)}\" /></properties>");
+            if (!result.Succeeded)
+            {
+                builder.AppendLine("        <failure>");
+                builder.AppendLine($"          <message>{EscapeXml(failureMessage)}</message>");
+                builder.AppendLine("        </failure>");
+            }
+            builder.AppendLine("      </test-case>");
+            builder.AppendLine("    </results>");
+            builder.AppendLine("  </test-suite>");
+            builder.AppendLine("</test-run>");
+            return builder.ToString();
+        }
+
+        private string GetSessionRelativePath(string absolutePath)
+        {
+            string rootPath = Path.GetFullPath(_paths.SessionRootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string fullPath = Path.GetFullPath(absolutePath);
+            if (!fullPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Artifact path '{fullPath}' is outside session root '{rootPath}'.");
+
+            string relative = fullPath.Substring(rootPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            return relative.Replace('\\', '/');
+        }
+
+        private static string EscapeXml(string value)
+        {
+            string escaped = SecurityElement.Escape(value ?? string.Empty);
+            return escaped ?? string.Empty;
         }
 
         private bool ExecuteCatalogStep(ASMLiteSmokeStepDefinition step, out string detail, out string stackTrace)

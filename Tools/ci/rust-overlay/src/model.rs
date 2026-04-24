@@ -6,8 +6,8 @@ pub const DEFAULT_STARTUP_TIMEOUT_SECONDS: u64 = 120;
 pub const DEFAULT_HEARTBEAT_SECONDS: u64 = 5;
 pub const DEFAULT_STALE_AFTER_SECONDS: u64 = 15;
 pub const DEFAULT_POLL_INTERVAL_MILLIS: u64 = 250;
-pub const PHASE07_RUN_GATE_MESSAGE: &str =
-    "Suite execution is enabled in Phase 08; run-suite dispatch is disabled in Phase 07.";
+pub const RUN_DISPATCH_READY_MESSAGE: &str =
+    "Selecting a suite queues a run-suite command in session/commands for Unity host execution.";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OverlayMode {
@@ -124,10 +124,9 @@ impl SuiteSelectionModel {
             .groups
             .first()
             .ok_or_else(|| "suite catalog requires at least one group".to_string())?;
-        let first_suite = first_group
-            .suites
-            .first()
-            .ok_or_else(|| "suite catalog requires at least one suite in the first group".to_string())?;
+        let first_suite = first_group.suites.first().ok_or_else(|| {
+            "suite catalog requires at least one suite in the first group".to_string()
+        })?;
 
         Ok(Self {
             catalog: catalog.clone(),
@@ -156,7 +155,11 @@ impl SuiteSelectionModel {
             .suite_index_by_id
             .get(&self.selected_suite_id)
             .copied()?;
-        self.catalog.groups.get(group_index)?.suites.get(suite_index)
+        self.catalog
+            .groups
+            .get(group_index)?
+            .suites
+            .get(suite_index)
     }
 
     pub fn selected_group(&self) -> Option<&SmokeGroupDefinition> {
@@ -181,20 +184,28 @@ mod tests {
     #[test]
     fn single_selection_invariant_is_maintained() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let mut model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         assert_eq!(model.selected_suite_id, "open-select-add");
         model
             .select_suite_by_id("lifecycle-roundtrip")
             .expect("suite id should be selectable");
         assert_eq!(model.selected_suite_id, "lifecycle-roundtrip");
-        assert_eq!(model.selected_suite().expect("suite should resolve").suite_id, "lifecycle-roundtrip");
+        assert_eq!(
+            model
+                .selected_suite()
+                .expect("suite should resolve")
+                .suite_id,
+            "lifecycle-roundtrip"
+        );
     }
 
     #[test]
     fn list_detail_sync_holds_across_selection_changes() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let mut model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         model
             .select_suite_by_id("playmode-runtime-validation")
@@ -209,7 +220,8 @@ mod tests {
     #[test]
     fn global_reset_default_persists_while_switching_suites() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let mut model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         model.set_global_reset_default(GlobalResetDefault::FullPackageRebuild);
         model
@@ -219,6 +231,9 @@ mod tests {
             .select_suite_by_id("open-select-add")
             .expect("suite id should select");
 
-        assert_eq!(model.global_reset_default, GlobalResetDefault::FullPackageRebuild);
+        assert_eq!(
+            model.global_reset_default,
+            GlobalResetDefault::FullPackageRebuild
+        );
     }
 }

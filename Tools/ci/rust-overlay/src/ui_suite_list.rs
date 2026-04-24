@@ -1,4 +1,4 @@
-use crate::model::{SuiteSelectionModel, PHASE07_RUN_GATE_MESSAGE};
+use crate::model::{SuiteSelectionModel, RUN_DISPATCH_READY_MESSAGE};
 use crate::theme::{GROUP_HEADER_PREFIX, ROW_SELECTED_PREFIX, ROW_UNSELECTED_PREFIX};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,7 +62,7 @@ pub fn render_pre_run_surface(model: &SuiteSelectionModel) -> String {
         "Global reset default: {}",
         model.global_reset_default.as_str()
     ));
-    lines.push(PHASE07_RUN_GATE_MESSAGE.to_string());
+    lines.push(RUN_DISPATCH_READY_MESSAGE.to_string());
 
     lines.join("\n")
 }
@@ -76,23 +76,29 @@ mod tests {
     #[test]
     fn grouped_rows_follow_catalog_order() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         let rows = build_grouped_suite_rows(&model);
         let ids: Vec<&str> = rows.iter().map(|row| row.suite_id.as_str()).collect();
         assert_eq!(
             ids,
-            vec!["open-select-add", "lifecycle-roundtrip", "playmode-runtime-validation"]
+            vec![
+                "open-select-add",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
         );
     }
 
     #[test]
-    fn render_surface_includes_phase_gate_message() {
+    fn render_surface_includes_run_dispatch_message() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let model = SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         let rendered = render_pre_run_surface(&model);
-        assert!(rendered.contains(PHASE07_RUN_GATE_MESSAGE));
+        assert!(rendered.contains(RUN_DISPATCH_READY_MESSAGE));
         assert!(rendered.contains("Selected suite:"));
     }
 }
