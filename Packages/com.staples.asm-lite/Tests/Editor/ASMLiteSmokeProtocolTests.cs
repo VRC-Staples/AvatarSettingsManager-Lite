@@ -33,6 +33,7 @@ namespace ASMLite.Tests.Editor
             Assert.That(events.All(item => item.protocolVersion == "1.0.0"), Is.True);
             Assert.AreEqual("session-started", events[0].eventType);
             Assert.AreEqual("review-required", events[9].eventType);
+            Assert.That(events[9].reviewDecisionOptions, Is.EqualTo(new[] { "return-to-suite-list", "rerun-suite", "exit" }));
             Assert.AreEqual("session-idle", events[10].eventType);
 
             var roundTripped = ASMLiteSmokeProtocol.LoadEventsFromNdjson(ASMLiteSmokeProtocol.ToNdjson(events));

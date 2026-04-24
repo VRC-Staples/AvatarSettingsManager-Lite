@@ -215,12 +215,24 @@ namespace ASMLite.Tests.Editor
                     "step-started",
                     "step-passed",
                     "suite-passed",
+                    "review-required",
                 }));
+
+                ASMLiteSmokeProtocolEvent reviewRequiredEvent = events.Single(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+                Assert.That(reviewRequiredEvent.reviewDecisionOptions, Is.EqualTo(new[] { "return-to-suite-list", "rerun-suite", "exit" }));
 
                 Assert.That(events.Select(item => item.eventSeq), Is.Ordered.Ascending);
                 Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
                     .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize", "detach", "return-to-package-managed" }));
-                Assert.That(events.All(item => string.Equals(item.effectiveResetPolicy, "FullPackageRebuild", StringComparison.Ordinal)), Is.True);
+                Assert.That(
+                    events.Any(item => !string.IsNullOrWhiteSpace(item.effectiveResetPolicy)),
+                    Is.True,
+                    "expected at least one lifecycle event to include effectiveResetPolicy");
+                Assert.That(
+                    events
+                        .Where(item => !string.IsNullOrWhiteSpace(item.effectiveResetPolicy))
+                        .All(item => string.Equals(item.effectiveResetPolicy, "FullPackageRebuild", StringComparison.Ordinal)),
+                    Is.True);
 
                 Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
                 {
@@ -271,7 +283,7 @@ namespace ASMLite.Tests.Editor
                     .ToArray();
 
                 Assert.That(events.Any(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
-                Assert.That(events.Last().eventType, Is.EqualTo("suite-passed"));
+                Assert.That(events.Last().eventType, Is.EqualTo("review-required"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("enter-playmode"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("assert-runtime-component-valid"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("exit-playmode"));
@@ -320,8 +332,181 @@ namespace ASMLite.Tests.Editor
                 Assert.That(failureDocument.eventSeqRange.last, Is.GreaterThanOrEqualTo(failureDocument.eventSeqRange.first));
 
                 var hostState = ReadHostState(context.Paths.HostStatePath);
-                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReady, hostState.state);
-                StringAssert.Contains("failed", hostState.message);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
+                StringAssert.Contains("waiting for operator review", hostState.message);
+
+                ASMLiteSmokeProtocolEvent reviewRequiredEvent = events.Single(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+                Assert.That(reviewRequiredEvent.reviewDecisionOptions, Is.EqualTo(new[] { "return-to-suite-list", "rerun-suite", "exit" }));
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuiteIsRejectedWhileReviewDecisionIsPending()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                WriteCommand(context.Paths, BuildRunSuiteCommand(20, "cmd_000020_run-suite"));
+                context.Runtime.AdvanceSeconds(1);
+
+                int executedActionCount = context.Runtime.ExecutedActions.Count;
+                WriteCommand(context.Paths, BuildRunSuiteCommand(21, "cmd_000021_run-suite"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                Assert.That(events.Any(item => string.Equals(item.commandId, "cmd_000021_run-suite", StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.True);
+                Assert.That(context.Runtime.ExecutedActions.Count, Is.EqualTo(executedActionCount));
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_ReviewDecision_ReturnToSuiteList_TransitionsToIdleWithoutRejecting()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string runCommandId = "cmd_000030_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(30, runCommandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
+                        && string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+
+                const string reviewCommandId = "cmd_000031_review-decision";
+                WriteCommand(
+                    context.Paths,
+                    BuildReviewDecisionCommand(
+                        31,
+                        reviewCommandId,
+                        reviewRequired.runId,
+                        reviewRequired.suiteId,
+                        "return-to-suite-list"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "session-idle", StringComparison.Ordinal)), Is.True);
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateIdle, hostState.state);
+                Assert.That(context.Runtime.ExitCodes, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_ReviewDecision_RerunSuite_ReexecutesWithoutRestart()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string runCommandId = "cmd_000040_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(40, runCommandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                int initialActionCount = context.Runtime.ExecutedActions.Count;
+                ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
+                        && string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+
+                const string reviewCommandId = "cmd_000041_review-decision";
+                WriteCommand(
+                    context.Paths,
+                    BuildReviewDecisionCommand(
+                        41,
+                        reviewCommandId,
+                        reviewRequired.runId,
+                        reviewRequired.suiteId,
+                        "rerun-suite"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
+
+                ASMLiteSmokeProtocolEvent[] rerunEvents = events
+                    .Where(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(rerunEvents.Any(item => string.Equals(item.eventType, "suite-started", StringComparison.Ordinal)), Is.True);
+                Assert.That(rerunEvents.Any(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal)), Is.True);
+                Assert.That(context.Runtime.ExecutedActions.Count, Is.GreaterThan(initialActionCount));
+                Assert.That(context.Runtime.ExitCodes, Is.Empty);
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_ReviewDecision_Exit_ShutsDownSession()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string runCommandId = "cmd_000050_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(50, runCommandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
+                        && string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+
+                const string reviewCommandId = "cmd_000051_review-decision";
+                WriteCommand(
+                    context.Paths,
+                    BuildReviewDecisionCommand(
+                        51,
+                        reviewCommandId,
+                        reviewRequired.runId,
+                        reviewRequired.suiteId,
+                        "exit"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "session-exiting", StringComparison.Ordinal)), Is.True);
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateExiting, hostState.state);
+                Assert.That(context.Runtime.ExitCodes, Is.EquivalentTo(new[] { 0 }));
+            }
+        }
+
+        [Test]
+        public void CommandPolling_ReviewDecision_InvalidDecision_IsRejectedAndKeepsReviewRequiredState()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string runCommandId = "cmd_000060_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(60, runCommandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
+                        && string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
+
+                const string reviewCommandId = "cmd_000061_review-decision";
+                WriteCommand(
+                    context.Paths,
+                    BuildReviewDecisionCommand(
+                        61,
+                        reviewCommandId,
+                        reviewRequired.runId,
+                        reviewRequired.suiteId,
+                        "continue"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
+                    && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.True);
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
+                Assert.That(context.Runtime.ExitCodes, Is.Empty);
             }
         }
 
@@ -421,7 +606,13 @@ namespace ASMLite.Tests.Editor
             };
         }
 
-        private static ASMLiteSmokeProtocolCommand BuildReviewDecisionCommand(int commandSeq, string commandId)
+        private static ASMLiteSmokeProtocolCommand BuildReviewDecisionCommand(
+            int commandSeq,
+            string commandId,
+            string runId = "run-0001-lifecycle-roundtrip",
+            string suiteId = "lifecycle-roundtrip",
+            string decision = "continue",
+            string notes = "sequence-order-test")
         {
             return new ASMLiteSmokeProtocolCommand
             {
@@ -435,11 +626,11 @@ namespace ASMLite.Tests.Editor
                 runSuite = null,
                 reviewDecision = new ASMLiteSmokeReviewDecisionPayload
                 {
-                    runId = "run-0001",
-                    suiteId = "lifecycle-roundtrip",
-                    decision = "continue",
+                    runId = runId,
+                    suiteId = suiteId,
+                    decision = decision,
                     requestedBy = "operator",
-                    notes = "sequence-order-test",
+                    notes = notes,
                 },
             };
         }

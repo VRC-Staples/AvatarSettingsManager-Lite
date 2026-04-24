@@ -387,6 +387,21 @@ namespace ASMLite.Tests.Editor
         private bool _isUpdateRegistered;
         private double _lastHeartbeatWriteAt;
 
+        private static readonly string[] s_reviewDecisionOptions =
+        {
+            "return-to-suite-list",
+            "rerun-suite",
+            "exit",
+        };
+
+        private string _activeReviewRunId = string.Empty;
+        private string _activeReviewGroupId = string.Empty;
+        private string _activeReviewSuiteId = string.Empty;
+        private string _activeReviewCommandId = string.Empty;
+        private string _activeReviewRequestedResetDefault = "SceneReload";
+        private string _activeReviewRequestedBy = "operator";
+        private string _activeReviewReason = "review-rerun";
+
         internal ASMLiteSmokeOverlayHostRunner(
             ASMLiteSmokeOverlayHostConfiguration configuration,
             IASMLiteSmokeOverlayHostRuntime runtime)
@@ -407,6 +422,7 @@ namespace ASMLite.Tests.Editor
             _lastEventSeq = RecoverLastEventSequence(_paths.EventsLogPath);
             _lastCommandSeq = 0;
             _runOrdinal = 0;
+            ClearActiveReviewContext();
 
             try
             {
@@ -601,7 +617,7 @@ namespace ASMLite.Tests.Editor
                     break;
 
                 case "review-decision":
-                    RejectCommand(command, "review-decision received before Phase 09 review gate is available.");
+                    HandleReviewDecision(command);
                     break;
 
                 default:
@@ -610,11 +626,18 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private void HandleRunSuite(ASMLiteSmokeProtocolCommand command)
+        private void HandleRunSuite(ASMLiteSmokeProtocolCommand command, bool allowDuringReviewRequired = false)
         {
             if (command == null || command.runSuite == null)
             {
                 RejectCommand(command, "run-suite payload is required.");
+                return;
+            }
+
+            if (!allowDuringReviewRequired
+                && string.Equals(_currentState, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal))
+            {
+                RejectCommand(command, "run-suite rejected while review decision is pending.");
                 return;
             }
 
@@ -693,24 +716,40 @@ namespace ASMLite.Tests.Editor
                 string completionMessage;
                 if (result.Succeeded)
                 {
-                    completionMessage = $"Suite '{result.SuiteId}' passed. Session remains ready.";
+                    completionMessage = $"Suite '{result.SuiteId}' passed and is waiting for operator review.";
                 }
                 else
                 {
                     string failedStep = result.Failure == null ? string.Empty : result.Failure.StepId;
                     completionMessage = string.IsNullOrWhiteSpace(failedStep)
-                        ? $"Suite '{result.SuiteId}' failed."
-                        : $"Suite '{result.SuiteId}' failed at step '{failedStep}'.";
+                        ? $"Suite '{result.SuiteId}' failed and is waiting for operator review."
+                        : $"Suite '{result.SuiteId}' failed at step '{failedStep}' and is waiting for operator review.";
                 }
 
+                CaptureActiveReviewContext(command, result);
+
+                _currentState = ASMLiteSmokeProtocol.HostStateReviewRequired;
+                _currentMessage = completionMessage;
+
+                int reviewRequiredSeq = _lastEventSeq + 1;
+                AppendEventWithSequence(
+                    reviewRequiredSeq,
+                    "review-required",
+                    ASMLiteSmokeProtocol.HostStateReviewRequired,
+                    "Choose Return to Suite List, Rerun Suite, or Exit.",
+                    command.commandId,
+                    runId: result.RunId,
+                    groupId: result.GroupId,
+                    suiteId: result.SuiteId,
+                    reviewDecisionOptions: s_reviewDecisionOptions);
+                _lastEventSeq = reviewRequiredSeq;
+
                 PublishHostState(
-                    ASMLiteSmokeProtocol.HostStateReady,
+                    ASMLiteSmokeProtocol.HostStateReviewRequired,
                     completionMessage,
                     _lastEventSeq,
                     _lastCommandSeq);
 
-                _currentState = ASMLiteSmokeProtocol.HostStateReady;
-                _currentMessage = completionMessage;
                 _processedCommandIds.Add(command.commandId);
                 _runOrdinal = runOrdinal;
             }
@@ -721,6 +760,149 @@ namespace ASMLite.Tests.Editor
                     : $"run-suite execution failed: {ex.Message}";
                 RejectCommand(command, message);
             }
+        }
+
+        private void HandleReviewDecision(ASMLiteSmokeProtocolCommand command)
+        {
+            if (command == null || command.reviewDecision == null)
+            {
+                RejectCommand(command, "review-decision payload is required.");
+                return;
+            }
+
+            if (!string.Equals(_currentState, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal)
+                || !HasActiveReviewContext())
+            {
+                RejectCommand(command, "review-decision rejected because no active review is pending.");
+                return;
+            }
+
+            ASMLiteSmokeReviewDecisionPayload payload = command.reviewDecision;
+            if (!string.Equals(payload.runId, _activeReviewRunId, StringComparison.Ordinal)
+                || !string.Equals(payload.suiteId, _activeReviewSuiteId, StringComparison.Ordinal))
+            {
+                RejectCommand(command, "review-decision runId/suiteId does not match the active review context.");
+                return;
+            }
+
+            string decision = string.IsNullOrWhiteSpace(payload.decision)
+                ? string.Empty
+                : payload.decision.Trim();
+            if (!s_reviewDecisionOptions.Contains(decision, StringComparer.Ordinal))
+            {
+                RejectCommand(command, $"Unsupported review decision '{payload.decision}'.");
+                return;
+            }
+
+            switch (decision)
+            {
+                case "return-to-suite-list":
+                {
+                    const string idleMessage = "Review decision applied; waiting for the next suite selection.";
+                    int idleSeq = _lastEventSeq + 1;
+                    PublishHostState(
+                        ASMLiteSmokeProtocol.HostStateIdle,
+                        idleMessage,
+                        idleSeq,
+                        _lastCommandSeq);
+                    AppendEventWithSequence(
+                        idleSeq,
+                        "session-idle",
+                        ASMLiteSmokeProtocol.HostStateIdle,
+                        idleMessage,
+                        command.commandId,
+                        runId: _activeReviewRunId,
+                        groupId: _activeReviewGroupId,
+                        suiteId: _activeReviewSuiteId);
+
+                    _lastEventSeq = idleSeq;
+                    _currentState = ASMLiteSmokeProtocol.HostStateIdle;
+                    _currentMessage = idleMessage;
+                    ClearActiveReviewContext();
+                    _processedCommandIds.Add(command.commandId);
+                    return;
+                }
+
+                case "rerun-suite":
+                {
+                    string rerunReason = string.IsNullOrWhiteSpace(payload.notes)
+                        ? _activeReviewReason
+                        : payload.notes.Trim();
+                    string rerunRequestedBy = string.IsNullOrWhiteSpace(payload.requestedBy)
+                        ? _activeReviewRequestedBy
+                        : payload.requestedBy.Trim();
+
+                    var rerunCommand = new ASMLiteSmokeProtocolCommand
+                    {
+                        protocolVersion = command.protocolVersion,
+                        sessionId = command.sessionId,
+                        commandId = command.commandId,
+                        commandSeq = command.commandSeq,
+                        commandType = "run-suite",
+                        createdAtUtc = _runtime.GetUtcNowIso(),
+                        launchSession = null,
+                        runSuite = new ASMLiteSmokeRunSuitePayload
+                        {
+                            suiteId = _activeReviewSuiteId,
+                            requestedBy = rerunRequestedBy,
+                            requestedResetDefault = _activeReviewRequestedResetDefault,
+                            reason = rerunReason,
+                        },
+                        reviewDecision = null,
+                    };
+
+                    HandleRunSuite(rerunCommand, allowDuringReviewRequired: true);
+                    return;
+                }
+
+                case "exit":
+                    ClearActiveReviewContext();
+                    HandleShutdownSession(command);
+                    return;
+            }
+        }
+
+        private bool HasActiveReviewContext()
+        {
+            return !string.IsNullOrWhiteSpace(_activeReviewRunId)
+                && !string.IsNullOrWhiteSpace(_activeReviewSuiteId)
+                && !string.IsNullOrWhiteSpace(_activeReviewCommandId);
+        }
+
+        private void CaptureActiveReviewContext(ASMLiteSmokeProtocolCommand command, ASMLiteSmokeSuiteExecutionResult result)
+        {
+            _activeReviewRunId = result == null || string.IsNullOrWhiteSpace(result.RunId)
+                ? string.Empty
+                : result.RunId.Trim();
+            _activeReviewGroupId = result == null || string.IsNullOrWhiteSpace(result.GroupId)
+                ? string.Empty
+                : result.GroupId.Trim();
+            _activeReviewSuiteId = result == null || string.IsNullOrWhiteSpace(result.SuiteId)
+                ? string.Empty
+                : result.SuiteId.Trim();
+            _activeReviewCommandId = command == null || string.IsNullOrWhiteSpace(command.commandId)
+                ? string.Empty
+                : command.commandId.Trim();
+            _activeReviewRequestedResetDefault = command?.runSuite == null || string.IsNullOrWhiteSpace(command.runSuite.requestedResetDefault)
+                ? "SceneReload"
+                : command.runSuite.requestedResetDefault.Trim();
+            _activeReviewRequestedBy = command?.runSuite == null || string.IsNullOrWhiteSpace(command.runSuite.requestedBy)
+                ? "operator"
+                : command.runSuite.requestedBy.Trim();
+            _activeReviewReason = command?.runSuite == null || string.IsNullOrWhiteSpace(command.runSuite.reason)
+                ? "review-rerun"
+                : command.runSuite.reason.Trim();
+        }
+
+        private void ClearActiveReviewContext()
+        {
+            _activeReviewRunId = string.Empty;
+            _activeReviewGroupId = string.Empty;
+            _activeReviewSuiteId = string.Empty;
+            _activeReviewCommandId = string.Empty;
+            _activeReviewRequestedResetDefault = "SceneReload";
+            _activeReviewRequestedBy = "operator";
+            _activeReviewReason = "review-rerun";
         }
 
         private void EmitRunArtifacts(
@@ -1012,12 +1194,14 @@ namespace ASMLite.Tests.Editor
                 sessionId = _sessionId,
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
                 state = normalizedState,
-                hostVersion = "asmlite-unity-host-phase08",
+                hostVersion = "asmlite-unity-host-phase09",
                 unityVersion = unityVersion,
                 heartbeatUtc = _runtime.GetUtcNowIso(),
                 lastEventSeq = Math.Max(0, lastEventSeq),
                 lastCommandSeq = Math.Max(0, lastCommandSeq),
-                activeRunId = string.Empty,
+                activeRunId = string.Equals(normalizedState, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal)
+                    ? _activeReviewRunId
+                    : string.Empty,
                 message = normalizedMessage,
             };
 
@@ -1035,7 +1219,8 @@ namespace ASMLite.Tests.Editor
             string suiteId = "",
             string caseId = "",
             string stepId = "",
-            string effectiveResetPolicy = "")
+            string effectiveResetPolicy = "",
+            string[] reviewDecisionOptions = null)
         {
             string normalizedCommandId = string.IsNullOrWhiteSpace(commandId)
                 ? "cmd_000000_host-bootstrap"
@@ -1058,7 +1243,12 @@ namespace ASMLite.Tests.Editor
                 effectiveResetPolicy = string.IsNullOrWhiteSpace(effectiveResetPolicy) ? string.Empty : effectiveResetPolicy.Trim(),
                 hostState = hostState,
                 message = message,
-                reviewDecisionOptions = Array.Empty<string>(),
+                reviewDecisionOptions = reviewDecisionOptions == null
+                    ? Array.Empty<string>()
+                    : reviewDecisionOptions
+                        .Where(option => !string.IsNullOrWhiteSpace(option))
+                        .Select(option => option.Trim())
+                        .ToArray(),
                 supportedCapabilities = new[]
                 {
                     "suiteCatalogV1",
