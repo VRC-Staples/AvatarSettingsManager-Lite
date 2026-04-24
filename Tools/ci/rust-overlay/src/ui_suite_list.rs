@@ -1,4 +1,6 @@
-use crate::model::{SuiteSelectionModel, RUN_DISPATCH_READY_MESSAGE};
+use crate::model::{
+    review_actions, ReviewSummaryModel, SuiteSelectionModel, RUN_DISPATCH_READY_MESSAGE,
+};
 use crate::theme::{GROUP_HEADER_PREFIX, ROW_SELECTED_PREFIX, ROW_UNSELECTED_PREFIX};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,11 +69,46 @@ pub fn render_pre_run_surface(model: &SuiteSelectionModel) -> String {
     lines.join("\n")
 }
 
+pub fn render_review_surface(review: &ReviewSummaryModel) -> String {
+    let mut lines = Vec::new();
+    lines.push("Review Required".to_string());
+    lines.push(format!("Run: {}", review.run_id));
+    lines.push(format!(
+        "Suite: {} ({})",
+        review.suite_label, review.suite_id
+    ));
+    lines.push(format!("Result: {}", review.run_result));
+
+    if let Some(excerpt) = &review.failure_excerpt {
+        lines.push(String::new());
+        lines.push("Failure excerpt:".to_string());
+        lines.push(format!("- Step: {}", excerpt.step_label));
+        lines.push(format!("- Message: {}", excerpt.failure_message));
+        if let Some(context_line) = &excerpt.context_line {
+            if !context_line.trim().is_empty() {
+                lines.push(format!("- Context: {}", context_line.trim()));
+            }
+        }
+    }
+
+    lines.push(String::new());
+    lines.push("Actions:".to_string());
+    for action in review_actions() {
+        lines.push(format!(
+            "- {} ({})",
+            action.label(),
+            action.decision_token()
+        ));
+    }
+
+    lines.join("\n")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::catalog::load_canonical_catalog;
-    use crate::model::SuiteSelectionModel;
+    use crate::model::{ReviewFailureExcerpt, ReviewSummaryModel, SuiteSelectionModel};
 
     #[test]
     fn grouped_rows_follow_catalog_order() {
@@ -100,5 +137,28 @@ mod tests {
         let rendered = render_pre_run_surface(&model);
         assert!(rendered.contains(RUN_DISPATCH_READY_MESSAGE));
         assert!(rendered.contains("Selected suite:"));
+    }
+
+    #[test]
+    fn render_review_surface_includes_failure_excerpt_and_actions() {
+        let review = ReviewSummaryModel {
+            run_id: "run-0002-playmode-runtime-validation".to_string(),
+            suite_id: "playmode-runtime-validation".to_string(),
+            suite_label: "Enter / Validate / Exit Playmode".to_string(),
+            run_result: "failed".to_string(),
+            failure_excerpt: Some(ReviewFailureExcerpt {
+                step_label: "Validate runtime component".to_string(),
+                failure_message: "Runtime ASM-Lite component missing expected parameter state."
+                    .to_string(),
+                context_line: Some("step-failed assert-runtime-component-valid".to_string()),
+            }),
+        };
+
+        let rendered = render_review_surface(&review);
+        assert!(rendered.contains("Review Required"));
+        assert!(rendered.contains("Failure excerpt:"));
+        assert!(rendered.contains("Return to Suite List (return-to-suite-list)"));
+        assert!(rendered.contains("Rerun Suite (rerun-suite)"));
+        assert!(rendered.contains("Exit (exit)"));
     }
 }

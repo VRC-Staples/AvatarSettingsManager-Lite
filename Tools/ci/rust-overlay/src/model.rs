@@ -1,4 +1,7 @@
 use crate::catalog::{SmokeGroupDefinition, SmokeSuiteCatalog, SmokeSuiteDefinition};
+use crate::protocol::{
+    REVIEW_DECISION_EXIT, REVIEW_DECISION_RERUN_SUITE, REVIEW_DECISION_RETURN_TO_SUITE_LIST,
+};
 use crate::unity_launcher::UnityHostSupervisorStatus;
 use std::path::PathBuf;
 
@@ -41,6 +44,7 @@ pub enum AppState {
     LaunchingUnity,
     WaitingForReady,
     SuiteSelect,
+    ReviewRequired,
     HostError,
 }
 
@@ -51,6 +55,7 @@ impl AppState {
             Self::LaunchingUnity => "launching-unity",
             Self::WaitingForReady => "waiting-for-ready",
             Self::SuiteSelect => "suite-select",
+            Self::ReviewRequired => "review-required",
             Self::HostError => "host-error",
         }
     }
@@ -176,6 +181,55 @@ impl SuiteSelectionModel {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewFailureExcerpt {
+    pub step_label: String,
+    pub failure_message: String,
+    pub context_line: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewSummaryModel {
+    pub run_id: String,
+    pub suite_id: String,
+    pub suite_label: String,
+    pub run_result: String,
+    pub failure_excerpt: Option<ReviewFailureExcerpt>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReviewAction {
+    ReturnToSuiteList,
+    RerunSuite,
+    Exit,
+}
+
+impl ReviewAction {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::ReturnToSuiteList => "Return to Suite List",
+            Self::RerunSuite => "Rerun Suite",
+            Self::Exit => "Exit",
+        }
+    }
+
+    pub fn decision_token(&self) -> &'static str {
+        match self {
+            Self::ReturnToSuiteList => REVIEW_DECISION_RETURN_TO_SUITE_LIST,
+            Self::RerunSuite => REVIEW_DECISION_RERUN_SUITE,
+            Self::Exit => REVIEW_DECISION_EXIT,
+        }
+    }
+}
+
+pub fn review_actions() -> [ReviewAction; 3] {
+    [
+        ReviewAction::ReturnToSuiteList,
+        ReviewAction::RerunSuite,
+        ReviewAction::Exit,
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -235,5 +289,20 @@ mod tests {
             model.global_reset_default,
             GlobalResetDefault::FullPackageRebuild
         );
+    }
+
+    #[test]
+    fn review_actions_are_exact_and_token_stable() {
+        let actions = review_actions();
+        assert_eq!(actions.len(), 3);
+        assert_eq!(actions[0].label(), "Return to Suite List");
+        assert_eq!(
+            actions[0].decision_token(),
+            REVIEW_DECISION_RETURN_TO_SUITE_LIST
+        );
+        assert_eq!(actions[1].label(), "Rerun Suite");
+        assert_eq!(actions[1].decision_token(), REVIEW_DECISION_RERUN_SUITE);
+        assert_eq!(actions[2].label(), "Exit");
+        assert_eq!(actions[2].decision_token(), REVIEW_DECISION_EXIT);
     }
 }
