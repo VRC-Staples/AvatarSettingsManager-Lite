@@ -4,8 +4,8 @@ set -euo pipefail
 # -----------------------------------------------------------------------------
 # run-UAT-smoke.sh
 #
-# Boots the Rust overlay authority path for ASM-Lite UAT smoke sessions.
-# Wave-1 behavior is launch/supervision foundation only (no suite dispatch).
+# Boots the canonical Rust overlay authority path for ASM-Lite UAT smoke sessions.
+# Uses the same Rust-overlay-first transport contract as local visible smoke runs.
 # -----------------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,14 +25,14 @@ usage() {
   cat <<'EOF'
 Usage: Tools/ci/run-UAT-smoke.sh
 
-Boots the Rust overlay authority path for ASM-Lite UAT smoke sessions.
+Boots the canonical Rust overlay authority path for ASM-Lite UAT smoke sessions.
 
 Options:
   -h, --help                Show this help text
 
 Notes:
   - Visible step delay is fixed at 1.5 seconds.
-  - Phase 07 provides suite-selection UX bootstrap only; suite execution/review stays disabled until Phase 08.
+  - This command is a canonical Rust-overlay UAT smoke entrypoint.
 EOF
 }
 
@@ -117,7 +117,7 @@ start_rust_overlay_session() {
     --mode "${mode}"
   )
 
-  echo "Running full visible UAT smoke Phase 07 bootstrap against:"
+  echo "Running canonical visible UAT smoke flow against:"
   echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    ${mode}"

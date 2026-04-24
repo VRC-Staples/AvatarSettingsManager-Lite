@@ -23,7 +23,7 @@ usage() {
 Usage: Tools/ci/run-visible-smoke-local.sh [options]
 
 Visible smoke options only:
-  --overlay-smoke           Run the visible Rust overlay bootstrap path (default)
+  --overlay-smoke           Run canonical visible Rust overlay smoke flow (default)
   --editor-smoke            Run the visible editor smoke selector
   --playmode-smoke          Run the visible playmode smoke selector
   --test-filter <filter>    Override the visible selector for editor/playmode smoke
@@ -31,7 +31,7 @@ Visible smoke options only:
 
 Notes:
   - Visible step delay is fixed at 1.5 seconds.
-  - Overlay mode currently boots the Phase 07 suite-selection surface only (run-suite dispatch remains Phase 08 gated).
+  - Overlay mode is the canonical local Rust-overlay smoke entrypoint.
   - There are no menu, headless, or delay-tuning options in this script.
 EOF
 }
@@ -117,7 +117,7 @@ start_rust_overlay_session() {
     --mode "${mode}"
   )
 
-  echo "Running visible Rust overlay Phase 07 bootstrap against:"
+  echo "Running canonical visible Rust overlay smoke flow against:"
   echo "  Project: ${CANONICAL_PROJECT_PATH}"
   echo "  Package: ${REPO_ROOT}/Packages/com.staples.asm-lite"
   echo "  Mode:    ${mode}"

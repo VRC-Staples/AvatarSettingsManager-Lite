@@ -24,8 +24,6 @@ VISIBLE_OVERLAY_DIR=""
 VISIBLE_OVERLAY_STATE_PATH=""
 VISIBLE_OVERLAY_ACK_PATH=""
 VISIBLE_OVERLAY_LOG_PATH=""
-VISIBLE_OVERLAY_PID=""
-VISIBLE_OVERLAY_PYTHON_BIN=""
 
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-2700}"
 RUN_LOCK_DIR="${RUN_LOCK_DIR:-/tmp/asmlite-editmode-local.lock}"
@@ -365,88 +363,15 @@ ensure_python_bin() {
   exit 1
 }
 
-ensure_visible_overlay_python_bin() {
-  local candidate=""
-
-  if is_windows_executable "${UNITY_EXECUTABLE}"; then
-    for candidate in pythonw.exe python.exe py.exe; do
-      if command -v "${candidate}" >/dev/null 2>&1; then
-        command -v "${candidate}"
-        return 0
-      fi
-    done
-  fi
-
-  ensure_python_bin
-}
-
 initialize_visible_overlay_paths() {
   if [[ -n "${VISIBLE_OVERLAY_DIR}" && -d "${VISIBLE_OVERLAY_DIR}" ]]; then
     rm -rf "${VISIBLE_OVERLAY_DIR}"
   fi
 
   VISIBLE_OVERLAY_DIR="$(mktemp -d "${ARTIFACTS_DIR}/visible-overlay-${RUN_ARTIFACT_BASENAME}.XXXXXX")"
-  VISIBLE_OVERLAY_STATE_PATH="${VISIBLE_OVERLAY_DIR}/state.json"
-  VISIBLE_OVERLAY_ACK_PATH="${VISIBLE_OVERLAY_DIR}/ack.json"
+  VISIBLE_OVERLAY_STATE_PATH="${VISIBLE_OVERLAY_DIR}/overlay-state.payload"
+  VISIBLE_OVERLAY_ACK_PATH="${VISIBLE_OVERLAY_DIR}/overlay-ack.payload"
   VISIBLE_OVERLAY_LOG_PATH="${VISIBLE_OVERLAY_DIR}/overlay.log"
-}
-
-start_visible_overlay() {
-  local overlay_script overlay_script_arg overlay_state_arg overlay_ack_arg overlay_log_arg
-  local -a overlay_cmd
-
-  overlay_script="${REPO_ROOT}/Tools/ci/asmlite-visible-overlay.py"
-  if [[ ! -f "${overlay_script}" ]]; then
-    echo "error: missing visible overlay script: ${overlay_script}" >&2
-    exit 1
-  fi
-
-  initialize_visible_overlay_paths
-  VISIBLE_OVERLAY_PYTHON_BIN="$(ensure_visible_overlay_python_bin)"
-
-  if [[ "${VISIBLE_OVERLAY_PYTHON_BIN}" == *.exe ]]; then
-    if ! command -v wslpath >/dev/null 2>&1; then
-      echo "error: wslpath is required to launch the visible overlay with a Windows Python executable." >&2
-      exit 1
-    fi
-
-    overlay_script_arg="$(wslpath -w "${overlay_script}")"
-    overlay_state_arg="$(wslpath -w "${VISIBLE_OVERLAY_STATE_PATH}")"
-    overlay_ack_arg="$(wslpath -w "${VISIBLE_OVERLAY_ACK_PATH}")"
-    overlay_log_arg="$(wslpath -w "${VISIBLE_OVERLAY_LOG_PATH}")"
-  else
-    overlay_script_arg="${overlay_script}"
-    overlay_state_arg="${VISIBLE_OVERLAY_STATE_PATH}"
-    overlay_ack_arg="${VISIBLE_OVERLAY_ACK_PATH}"
-    overlay_log_arg="${VISIBLE_OVERLAY_LOG_PATH}"
-  fi
-
-  if [[ "${VISIBLE_OVERLAY_PYTHON_BIN##*/}" == "py.exe" ]]; then
-    overlay_cmd=(
-      "${VISIBLE_OVERLAY_PYTHON_BIN}"
-      -3
-      "${overlay_script_arg}"
-      --state-path "${overlay_state_arg}"
-      --ack-path "${overlay_ack_arg}"
-      --log-path "${overlay_log_arg}"
-    )
-  else
-    overlay_cmd=(
-      "${VISIBLE_OVERLAY_PYTHON_BIN}"
-      "${overlay_script_arg}"
-      --state-path "${overlay_state_arg}"
-      --ack-path "${overlay_ack_arg}"
-      --log-path "${overlay_log_arg}"
-    )
-  fi
-
-  set +e
-  "${overlay_cmd[@]}" >/dev/null 2>&1 &
-  VISIBLE_OVERLAY_PID=$!
-  set -e
-
-  echo "note: launched visible overlay using ${VISIBLE_OVERLAY_PYTHON_BIN}"
-  echo "note: visible overlay state path: ${VISIBLE_OVERLAY_STATE_PATH#"${REPO_ROOT}/"}"
 }
 
 load_license_secret_from_file_if_needed() {
@@ -734,11 +659,6 @@ return_local_license() {
 cleanup() {
   set +e
 
-  if [[ -n "${VISIBLE_OVERLAY_PID}" ]]; then
-    kill "${VISIBLE_OVERLAY_PID}" >/dev/null 2>&1 || true
-    wait "${VISIBLE_OVERLAY_PID}" >/dev/null 2>&1 || true
-  fi
-
   if [[ -n "${VISIBLE_OVERLAY_DIR}" ]]; then
     rm -rf "${VISIBLE_OVERLAY_DIR}"
   fi
@@ -1001,7 +921,8 @@ run_local_visible_smoke_mode() {
 
   echo "note: visible smoke step delay: ${VISIBLE_SMOKE_STEP_DELAY_SECONDS}s"
 
-  start_visible_overlay
+  initialize_visible_overlay_paths
+  echo "note: run-editmode-local visible smoke no longer launches legacy Python overlay transport."
 
   log_path="$(unity_path_arg "${visible_log_alias}")"
   results_path="$(unity_path_arg "${visible_results_alias}")"
@@ -1414,10 +1335,6 @@ RUNNER
 print_artifact_summary() {
   if [[ -f "${EDITMODE_LOG_PATH}" ]]; then
     echo "done: ${EDITMODE_LOG_PATH#"${REPO_ROOT}/"}"
-  fi
-
-  if [[ -f "${VISIBLE_OVERLAY_LOG_PATH}" ]]; then
-    echo "done: ${VISIBLE_OVERLAY_LOG_PATH#"${REPO_ROOT}/"}"
   fi
 
   if [[ "${EDITMODE_RUNNER_MODE}" == "local" && "${EDITMODE_LOCAL_EXECUTION_STYLE}" == "visible_smoke" ]]; then
