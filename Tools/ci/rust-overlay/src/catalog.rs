@@ -109,7 +109,9 @@ pub fn load_canonical_catalog() -> Result<SmokeSuiteCatalog, ContractError> {
 
 pub fn load_catalog_from_str(raw: &str) -> Result<SmokeSuiteCatalog, ContractError> {
     if raw.trim().is_empty() {
-        return Err(ContractError("Smoke suite catalog JSON is required.".to_string()));
+        return Err(ContractError(
+            "Smoke suite catalog JSON is required.".to_string(),
+        ));
     }
 
     let mut catalog: SmokeSuiteCatalog = serde_json::from_str(raw)?;
@@ -119,14 +121,20 @@ pub fn load_catalog_from_str(raw: &str) -> Result<SmokeSuiteCatalog, ContractErr
 
 fn normalize_and_validate_catalog(catalog: &mut SmokeSuiteCatalog) -> Result<(), ContractError> {
     if catalog.catalog_version <= 0 {
-        return Err(ContractError("Smoke suite catalog requires a positive catalogVersion.".to_string()));
+        return Err(ContractError(
+            "Smoke suite catalog requires a positive catalogVersion.".to_string(),
+        ));
     }
 
     catalog.protocol_version = require_non_blank(&catalog.protocol_version, "protocolVersion")?;
-    catalog.fixture.scene_path = require_non_blank(&catalog.fixture.scene_path, "fixture.scenePath")?;
-    catalog.fixture.avatar_name = require_non_blank(&catalog.fixture.avatar_name, "fixture.avatarName")?;
+    catalog.fixture.scene_path =
+        require_non_blank(&catalog.fixture.scene_path, "fixture.scenePath")?;
+    catalog.fixture.avatar_name =
+        require_non_blank(&catalog.fixture.avatar_name, "fixture.avatarName")?;
     if catalog.groups.is_empty() {
-        return Err(ContractError("Smoke suite catalog requires at least one group.".to_string()));
+        return Err(ContractError(
+            "Smoke suite catalog requires at least one group.".to_string(),
+        ));
     }
 
     let mut group_ids = HashSet::new();
@@ -135,23 +143,36 @@ fn normalize_and_validate_catalog(catalog: &mut SmokeSuiteCatalog) -> Result<(),
     catalog.suite_index_by_id.clear();
 
     for (group_index, group) in catalog.groups.iter_mut().enumerate() {
-        group.group_id = normalize_unique_id(&group.group_id, &format!("groups[{group_index}].groupId"), &mut group_ids)?;
+        group.group_id = normalize_unique_id(
+            &group.group_id,
+            &format!("groups[{group_index}].groupId"),
+            &mut group_ids,
+        )?;
         group.label = require_non_blank(&group.label, &format!("groups[{group_index}].label"))?;
-        group.description = require_non_blank(&group.description, &format!("groups[{group_index}].description"))?;
+        group.description = require_non_blank(
+            &group.description,
+            &format!("groups[{group_index}].description"),
+        )?;
         if group.suites.is_empty() {
-            return Err(ContractError(format!("groups[{group_index}].suites must not be empty.")));
+            return Err(ContractError(format!(
+                "groups[{group_index}].suites must not be empty."
+            )));
         }
 
         group.suite_index_by_id.clear();
         for (suite_index, suite) in group.suites.iter_mut().enumerate() {
             normalize_and_validate_suite(suite, group_index, suite_index, &mut suite_ids)?;
-            group.suite_index_by_id.insert(suite.suite_id.clone(), suite_index);
+            group
+                .suite_index_by_id
+                .insert(suite.suite_id.clone(), suite_index);
             catalog
                 .suite_index_by_id
                 .insert(suite.suite_id.clone(), (group_index, suite_index));
         }
 
-        catalog.group_index_by_id.insert(group.group_id.clone(), group_index);
+        catalog
+            .group_index_by_id
+            .insert(group.group_id.clone(), group_index);
     }
 
     Ok(())
@@ -172,7 +193,10 @@ fn normalize_and_validate_suite(
     } else {
         suite.reset_override.trim().to_string()
     };
-    suite.expected_outcome = require_non_blank(&suite.expected_outcome, &(path.clone() + ".expectedOutcome"))?;
+    suite.expected_outcome = require_non_blank(
+        &suite.expected_outcome,
+        &(path.clone() + ".expectedOutcome"),
+    )?;
     suite.debug_hint = require_non_blank(&suite.debug_hint, &(path.clone() + ".debugHint"))?;
     if suite.cases.is_empty() {
         return Err(ContractError(format!("{path}.cases must not be empty.")));
@@ -182,7 +206,9 @@ fn normalize_and_validate_suite(
     suite.case_index_by_id.clear();
     for (case_index, case_item) in suite.cases.iter_mut().enumerate() {
         normalize_and_validate_case(case_item, &path, case_index, &mut case_ids)?;
-        suite.case_index_by_id.insert(case_item.case_id.clone(), case_index);
+        suite
+            .case_index_by_id
+            .insert(case_item.case_id.clone(), case_index);
     }
 
     Ok(())
@@ -195,11 +221,17 @@ fn normalize_and_validate_case(
     case_ids: &mut HashSet<String>,
 ) -> Result<(), ContractError> {
     let path = format!("{suite_path}.cases[{case_index}]");
-    case_item.case_id = normalize_unique_id(&case_item.case_id, &(path.clone() + ".caseId"), case_ids)?;
+    case_item.case_id =
+        normalize_unique_id(&case_item.case_id, &(path.clone() + ".caseId"), case_ids)?;
     case_item.label = require_non_blank(&case_item.label, &(path.clone() + ".label"))?;
-    case_item.description = require_non_blank(&case_item.description, &(path.clone() + ".description"))?;
-    case_item.expected_outcome = require_non_blank(&case_item.expected_outcome, &(path.clone() + ".expectedOutcome"))?;
-    case_item.debug_hint = require_non_blank(&case_item.debug_hint, &(path.clone() + ".debugHint"))?;
+    case_item.description =
+        require_non_blank(&case_item.description, &(path.clone() + ".description"))?;
+    case_item.expected_outcome = require_non_blank(
+        &case_item.expected_outcome,
+        &(path.clone() + ".expectedOutcome"),
+    )?;
+    case_item.debug_hint =
+        require_non_blank(&case_item.debug_hint, &(path.clone() + ".debugHint"))?;
     if case_item.steps.is_empty() {
         return Err(ContractError(format!("{path}.steps must not be empty.")));
     }
@@ -208,7 +240,9 @@ fn normalize_and_validate_case(
     case_item.step_index_by_id.clear();
     for (step_index, step) in case_item.steps.iter_mut().enumerate() {
         normalize_and_validate_step(step, &path, step_index, &mut step_ids)?;
-        case_item.step_index_by_id.insert(step.step_id.clone(), step_index);
+        case_item
+            .step_index_by_id
+            .insert(step.step_id.clone(), step_index);
     }
 
     Ok(())
@@ -226,17 +260,27 @@ fn normalize_and_validate_step(
     step.description = require_non_blank(&step.description, &(path.clone() + ".description"))?;
     step.action_type = require_non_blank(&step.action_type, &(path.clone() + ".actionType"))?;
     if !is_supported_action_type(&step.action_type) {
-        return Err(ContractError(format!("{path}.actionType '{}' is not supported.", step.action_type)));
+        return Err(ContractError(format!(
+            "{path}.actionType '{}' is not supported.",
+            step.action_type
+        )));
     }
-    step.expected_outcome = require_non_blank(&step.expected_outcome, &(path.clone() + ".expectedOutcome"))?;
+    step.expected_outcome =
+        require_non_blank(&step.expected_outcome, &(path.clone() + ".expectedOutcome"))?;
     step.debug_hint = require_non_blank(&step.debug_hint, &(path.clone() + ".debugHint"))?;
     Ok(())
 }
 
-fn normalize_unique_id(value: &str, path: &str, seen_ids: &mut HashSet<String>) -> Result<String, ContractError> {
+fn normalize_unique_id(
+    value: &str,
+    path: &str,
+    seen_ids: &mut HashSet<String>,
+) -> Result<String, ContractError> {
     let normalized = require_non_blank(value, path)?;
     if !seen_ids.insert(normalized.clone()) {
-        return Err(ContractError(format!("{path} '{normalized}' must be unique within its scope.")));
+        return Err(ContractError(format!(
+            "{path} '{normalized}' must be unique within its scope."
+        )));
     }
     Ok(normalized)
 }
@@ -268,9 +312,10 @@ fn is_supported_action_type(action_type: &str) -> bool {
 }
 
 fn repository_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..").canonicalize().unwrap_or_else(|_| {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..")
-    })
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."))
 }
 
 #[cfg(test)]
@@ -280,13 +325,23 @@ mod tests {
     #[test]
     fn catalog_parses_canonical_order_and_fixture_metadata() {
         let catalog = load_canonical_catalog().expect("canonical catalog should parse");
-        let group_ids: Vec<&str> = catalog.groups.iter().map(|group| group.group_id.as_str()).collect();
-        assert_eq!(group_ids, vec!["editor-window", "lifecycle", "playmode-runtime"]);
+        let group_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .map(|group| group.group_id.as_str())
+            .collect();
+        assert_eq!(
+            group_ids,
+            vec!["editor-window", "lifecycle", "playmode-runtime"]
+        );
         assert_eq!(catalog.fixture.scene_path, "Assets/Click ME.unity");
         assert_eq!(catalog.fixture.avatar_name, "Oct25_Dress");
         assert_eq!(catalog.groups[0].suites[0].suite_id, "open-select-add");
         assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
-        assert_eq!(catalog.groups[2].suites[0].suite_id, "playmode-runtime-validation");
+        assert_eq!(
+            catalog.groups[2].suites[0].suite_id,
+            "playmode-runtime-validation"
+        );
     }
 
     #[test]
@@ -303,7 +358,10 @@ mod tests {
     fn catalog_rejects_duplicate_suite_ids() {
         let raw = fs::read_to_string(canonical_catalog_path())
             .expect("catalog fixture should exist")
-            .replace("\"suiteId\": \"lifecycle-roundtrip\"", "\"suiteId\": \"open-select-add\"");
+            .replace(
+                "\"suiteId\": \"lifecycle-roundtrip\"",
+                "\"suiteId\": \"open-select-add\"",
+            );
 
         let error = load_catalog_from_str(&raw).expect_err("duplicate suite id should fail");
         assert!(error.to_string().contains("suiteId"));
@@ -313,7 +371,10 @@ mod tests {
     fn catalog_rejects_unknown_action_types() {
         let raw = fs::read_to_string(canonical_catalog_path())
             .expect("catalog fixture should exist")
-            .replace("\"actionType\": \"open-window\"", "\"actionType\": \"mystery-action\"");
+            .replace(
+                "\"actionType\": \"open-window\"",
+                "\"actionType\": \"mystery-action\"",
+            );
 
         let error = load_catalog_from_str(&raw).expect_err("unknown action type should fail");
         assert!(error.to_string().contains("actionType"));

@@ -68,7 +68,15 @@ namespace ASMLite.Editor
                 log += $" Remediation: {Remediation}";
 
             if (InnerDiagnostic != null && !InnerDiagnostic.Success)
-                log += $" Inner: {InnerDiagnostic.Code} ({InnerDiagnostic.ContextPath})";
+            {
+                log += $" Inner: {InnerDiagnostic.Code}";
+                if (!string.IsNullOrWhiteSpace(InnerDiagnostic.ContextPath))
+                    log += $" ({InnerDiagnostic.ContextPath})";
+                log += ".";
+
+                if (!string.IsNullOrWhiteSpace(InnerDiagnostic.Remediation))
+                    log += $" Inner Remediation: {InnerDiagnostic.Remediation}";
+            }
 
             return log;
         }

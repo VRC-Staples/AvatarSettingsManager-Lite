@@ -131,7 +131,7 @@ namespace ASMLite.Tests.Editor
 
                 var stateDocument = window.GetVisibleAutomationExternalOverlayStateForTesting();
                 Assert.IsNotNull(stateDocument,
-                    "Configured visible automation overlays should serialize a readable external state document for the Python overlay process.");
+                    "Configured visible automation overlays should serialize a readable external state document for the external overlay host process.");
                 Assert.IsTrue(stateDocument.sessionActive,
                     "Configured visible automation overlays should mark the external session active while a visible smoke step is running.");
                 Assert.AreEqual(OverlayTitle, stateDocument.title,
@@ -151,7 +151,7 @@ namespace ASMLite.Tests.Editor
                 WriteCompletionReviewAcknowledgement(window);
 
                 Assert.IsTrue(window.TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting(),
-                    "Configured visible automation overlays should consume acknowledgement payloads written by the external Python overlay process.");
+                    "Configured visible automation overlays should consume acknowledgement payloads written by the external overlay host process.");
                 Assert.IsFalse(window.IsVisibleAutomationCompletionReviewVisibleForAutomation(),
                     "Configured visible automation overlays should close the completion review after a valid external acknowledgement is received.");
                 Assert.IsTrue(window.WasVisibleAutomationCompletionReviewAcknowledgedForAutomation(),
@@ -511,21 +511,21 @@ namespace ASMLite.Tests.Editor
             if (snapshot.HostKind == ASMLite.Editor.ASMLiteWindow.VisibleAutomationOverlayHostKind.ExternalPythonProcess)
             {
                 Assert.IsFalse(snapshot.HasStatusWindow,
-                    "Visible smoke automation should disable the legacy detached status overlay window when the external Python overlay host is configured.");
+                    "Visible smoke automation should disable the legacy detached status overlay window when the external overlay host is configured.");
                 Assert.IsFalse(snapshot.HasChecklistWindow,
-                    "Visible smoke automation should disable the legacy detached checklist overlay window when the external Python overlay host is configured.");
+                    "Visible smoke automation should disable the legacy detached checklist overlay window when the external overlay host is configured.");
                 Assert.IsFalse(snapshot.HasCompletionReviewWindow,
-                    "Visible smoke automation should disable the legacy detached completion review overlay window when the external Python overlay host is configured.");
+                    "Visible smoke automation should disable the legacy detached completion review overlay window when the external overlay host is configured.");
                 Assert.IsTrue(snapshot.ExternalOverlayStateFileExists,
-                    "Visible smoke automation should publish the external overlay state file while the Python overlay host is active.");
+                    "Visible smoke automation should publish the external overlay state file while the external overlay host is active.");
                 Assert.IsFalse(string.IsNullOrWhiteSpace(snapshot.ExternalOverlayStatePath),
-                    "Visible smoke automation should surface the external overlay state path when the Python overlay host is active.");
+                    "Visible smoke automation should surface the external overlay state path when the external overlay host is active.");
                 Assert.IsFalse(string.IsNullOrWhiteSpace(snapshot.ExternalOverlayAckPath),
-                    "Visible smoke automation should surface the external overlay acknowledgement path when the Python overlay host is active.");
+                    "Visible smoke automation should surface the external overlay acknowledgement path when the external overlay host is active.");
 
                 var stateDocument = window.GetVisibleAutomationExternalOverlayStateForTesting();
                 Assert.IsNotNull(stateDocument,
-                    "Visible smoke automation should serialize a readable external overlay state document while the Python overlay host is active.");
+                    "Visible smoke automation should serialize a readable external overlay state document while the external overlay host is active.");
                 Assert.AreEqual(expectCompletionReviewWindow, stateDocument.completionReviewVisible,
                     expectCompletionReviewWindow
                         ? "Visible smoke automation should publish the completion review state once the review phase starts."
@@ -574,8 +574,8 @@ namespace ASMLite.Tests.Editor
             }
 
             _externalOverlayTempDir = Path.Combine(Path.GetTempPath(), "asmlite-visible-overlay-tests", Guid.NewGuid().ToString("N"));
-            _externalOverlayStatePath = Path.Combine(_externalOverlayTempDir, "overlay-state.json");
-            _externalOverlayAckPath = Path.Combine(_externalOverlayTempDir, "overlay-ack.json");
+            _externalOverlayStatePath = Path.Combine(_externalOverlayTempDir, "overlay-state.payload");
+            _externalOverlayAckPath = Path.Combine(_externalOverlayTempDir, "overlay-ack.payload");
             _ownsExternalOverlayPaths = true;
         }
 

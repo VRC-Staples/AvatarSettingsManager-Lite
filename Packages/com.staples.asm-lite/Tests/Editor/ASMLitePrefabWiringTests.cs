@@ -35,6 +35,8 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     public class ASMLitePrefabWiringTests
     {
+        private const string SuiteName = nameof(ASMLitePrefabWiringTests);
+
         [Test, Category("Integration")]
         public void W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController()
         {
@@ -129,6 +131,11 @@ namespace ASMLite.Tests.Editor
                     menu,
                     parameters);
 
+                ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
+                    SuiteName,
+                    nameof(W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202),
+                    diagnostic);
+
                 Assert.IsFalse(diagnostic.Success,
                     "W03: missing all parameter object-reference fallback fields must fail closed before FullController writes.");
                 Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingParameterFallbackGroup, diagnostic.Code,
@@ -139,6 +146,70 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            try
+            {
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 First Refresh"),
+                    "W04: first live FullController refresh should succeed for a healthy ASM-Lite object.");
+                AssertSingleCriticalWiringState(ctx.Comp, "W04 first refresh");
+
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 Second Refresh"),
+                    "W04: second live FullController refresh should succeed as a no-op on unchanged input.");
+                AssertSingleCriticalWiringState(ctx.Comp, "W04 second refresh");
+            }
+            finally
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
+        [Test, Category("Integration")]
+        public void W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            try
+            {
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 First Refresh"),
+                    "W05: first live FullController refresh should succeed for repeated-refresh characterization.");
+
+                var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
+                var firstVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
+                Assert.IsNotNull(firstVf,
+                    "W05: first refresh should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
+                var firstGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(firstVf, "content.globalParams");
+
+                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 Second Refresh"),
+                    "W05: second live FullController refresh should succeed for repeated-refresh characterization.");
+
+                var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
+                var secondVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
+                Assert.IsNotNull(secondVf,
+                    "W05: second refresh should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
+                var secondGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(secondVf, "content.globalParams");
+
+                AssertSingleCriticalWiringState(ctx.Comp, "W05 second refresh");
+                Assert.AreEqual(firstSnapshot.ControllerReferencePath, secondSnapshot.ControllerReferencePath,
+                    "W05: repeated refresh should keep the generated FX controller reference stable.");
+                Assert.AreEqual(firstSnapshot.MenuReferencePath, secondSnapshot.MenuReferencePath,
+                    "W05: repeated refresh should keep the generated menu reference stable.");
+                Assert.AreEqual(firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
+                    "W05: repeated refresh should keep the selected parameter fallback path stable.");
+                Assert.AreEqual(firstSnapshot.ParameterReferenceAssetPath, secondSnapshot.ParameterReferenceAssetPath,
+                    "W05: repeated refresh should keep the generated expression-parameters reference stable.");
+                CollectionAssert.AreEqual(firstGlobalParams, secondGlobalParams,
+                    "W05: repeated refresh should keep wildcard global parameter enrollment stable.");
+                CollectionAssert.AreEqual(new[] { "*" }, secondGlobalParams,
+                    "W05: repeated refresh should keep exactly one wildcard global parameter enrollment entry.");
+            }
+            finally
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
             }
         }
 
@@ -171,6 +242,49 @@ namespace ASMLite.Tests.Editor
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        private static void AssertSingleCriticalWiringState(ASMLiteComponent component, string aid)
+        {
+            var liveVrcFuryComponents = ASMLiteTestFixtures.FindLiveVrcFuryComponents(component != null ? component.gameObject : null);
+            Assert.AreEqual(1, liveVrcFuryComponents.Length,
+                $"{aid}: repeated refresh should leave exactly one live VF.Model.VRCFury component on the ASM-Lite object.");
+
+            var vf = liveVrcFuryComponents.Single();
+            var serializedVf = new SerializedObject(vf);
+            serializedVf.Update();
+
+            var controllerArray = serializedVf.FindProperty(ASMLiteDriftProbe.ControllersArrayPath);
+            var menuArray = serializedVf.FindProperty(ASMLiteDriftProbe.MenuArrayPath);
+            var parameterArray = serializedVf.FindProperty(ASMLiteDriftProbe.ParametersArrayPath);
+            Assert.IsNotNull(controllerArray,
+                $"{aid}: repeated refresh should expose the FullController controllers array.");
+            Assert.IsNotNull(menuArray,
+                $"{aid}: repeated refresh should expose the FullController menus array.");
+            Assert.IsNotNull(parameterArray,
+                $"{aid}: repeated refresh should expose the FullController prms array.");
+            Assert.AreEqual(1, controllerArray.arraySize,
+                $"{aid}: repeated refresh should keep exactly one FullController controller entry.");
+            Assert.AreEqual(1, menuArray.arraySize,
+                $"{aid}: repeated refresh should keep exactly one FullController menu entry.");
+            Assert.AreEqual(1, parameterArray.arraySize,
+                $"{aid}: repeated refresh should keep exactly one FullController parameter entry.");
+
+            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
+            Assert.IsTrue(controllerReference.HasReference,
+                $"{aid}: repeated refresh should keep the FullController controller reference populated.");
+            Assert.IsTrue(menuReference.HasReference,
+                $"{aid}: repeated refresh should keep the FullController menu reference populated.");
+
+            int populatedParameterFallbackMembers = new[]
+            {
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath,
+            }.Count(path => ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path).HasReference);
+            Assert.AreEqual(1, populatedParameterFallbackMembers,
+                $"{aid}: repeated refresh should keep exactly one populated parameter fallback-group member.");
         }
     }
 }

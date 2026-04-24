@@ -1,6 +1,6 @@
 use crate::session::{
-    SmokeHostStateDocument, HOST_STATE_CRASHED, HOST_STATE_EXITING, HOST_STATE_IDLE, HOST_STATE_READY,
-    HOST_STATE_STALLED,
+    SmokeHostStateDocument, HOST_STATE_CRASHED, HOST_STATE_EXITING, HOST_STATE_IDLE,
+    HOST_STATE_READY, HOST_STATE_STALLED,
 };
 use std::fmt;
 use std::path::PathBuf;
@@ -51,21 +51,33 @@ impl UnityHostLaunchConfig {
     }
 }
 
-pub fn build_unity_host_args(config: &UnityHostLaunchConfig) -> Result<Vec<String>, UnityLauncherError> {
+pub fn build_unity_host_args(
+    config: &UnityHostLaunchConfig,
+) -> Result<Vec<String>, UnityLauncherError> {
     if config.project_path.as_os_str().is_empty() {
-        return Err(UnityLauncherError("project_path must not be empty.".to_string()));
+        return Err(UnityLauncherError(
+            "project_path must not be empty.".to_string(),
+        ));
     }
     if config.session_root.as_os_str().is_empty() {
-        return Err(UnityLauncherError("session_root must not be empty.".to_string()));
+        return Err(UnityLauncherError(
+            "session_root must not be empty.".to_string(),
+        ));
     }
     if config.catalog_path.as_os_str().is_empty() {
-        return Err(UnityLauncherError("catalog_path must not be empty.".to_string()));
+        return Err(UnityLauncherError(
+            "catalog_path must not be empty.".to_string(),
+        ));
     }
     if config.scene_path.trim().is_empty() {
-        return Err(UnityLauncherError("scene_path must not be blank.".to_string()));
+        return Err(UnityLauncherError(
+            "scene_path must not be blank.".to_string(),
+        ));
     }
     if config.avatar_name.trim().is_empty() {
-        return Err(UnityLauncherError("avatar_name must not be blank.".to_string()));
+        return Err(UnityLauncherError(
+            "avatar_name must not be blank.".to_string(),
+        ));
     }
     if config.startup_timeout_seconds == 0 {
         return Err(UnityLauncherError(
@@ -106,7 +118,9 @@ pub fn build_unity_host_args(config: &UnityHostLaunchConfig) -> Result<Vec<Strin
 
 pub fn spawn_unity_host(config: &UnityHostLaunchConfig) -> Result<Child, UnityLauncherError> {
     if config.unity_executable.as_os_str().is_empty() {
-        return Err(UnityLauncherError("unity_executable must not be empty.".to_string()));
+        return Err(UnityLauncherError(
+            "unity_executable must not be empty.".to_string(),
+        ));
     }
 
     let args = build_unity_host_args(config)?;
@@ -287,7 +301,9 @@ mod tests {
 
         let args = build_unity_host_args(&config).expect("args should build");
         assert!(args.contains(&"-executeMethod".to_string()));
-        assert!(args.contains(&"ASMLite.Tests.Editor.ASMLiteSmokeOverlayHost.RunFromCommandLine".to_string()));
+        assert!(args.contains(
+            &"ASMLite.Tests.Editor.ASMLiteSmokeOverlayHost.RunFromCommandLine".to_string()
+        ));
         assert!(args.contains(&"-asmliteSmokeSessionRoot".to_string()));
         assert!(args.contains(&"-asmliteSmokeCatalogPath".to_string()));
     }
@@ -328,7 +344,8 @@ mod tests {
             "C:/tmp/catalog.json",
         );
         blank_avatar.avatar_name = "   ".to_string();
-        let avatar_error = build_unity_host_args(&blank_avatar).expect_err("blank avatar should fail");
+        let avatar_error =
+            build_unity_host_args(&blank_avatar).expect_err("blank avatar should fail");
         assert!(avatar_error.to_string().contains("avatar_name"));
     }
 
@@ -369,9 +386,18 @@ mod tests {
 
     #[test]
     fn process_exit_mapping_distinguishes_success_and_failure() {
-        assert_eq!(map_process_exit_to_status(Some(0)), UnityHostSupervisorStatus::ExitedCleanly);
-        assert_eq!(map_process_exit_to_status(Some(13)), UnityHostSupervisorStatus::ExitedWithError);
-        assert_eq!(map_process_exit_to_status(None), UnityHostSupervisorStatus::Starting);
+        assert_eq!(
+            map_process_exit_to_status(Some(0)),
+            UnityHostSupervisorStatus::ExitedCleanly
+        );
+        assert_eq!(
+            map_process_exit_to_status(Some(13)),
+            UnityHostSupervisorStatus::ExitedWithError
+        );
+        assert_eq!(
+            map_process_exit_to_status(None),
+            UnityHostSupervisorStatus::Starting
+        );
     }
 
     #[test]

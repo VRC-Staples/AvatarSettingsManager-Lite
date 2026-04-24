@@ -20,13 +20,37 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
+    internal readonly struct SerializedObjectReferenceReadResult
+    {
+        internal SerializedObjectReferenceReadResult(string propertyPath, UnityEngine.Object reference, bool propertyExists)
+        {
+            PropertyPath = propertyPath ?? string.Empty;
+            Reference = reference;
+            PropertyExists = propertyExists;
+            AssetPath = reference != null ? AssetDatabase.GetAssetPath(reference) ?? string.Empty : string.Empty;
+        }
+
+        internal string PropertyPath { get; }
+        internal UnityEngine.Object Reference { get; }
+        internal bool PropertyExists { get; }
+        internal string AssetPath { get; }
+        internal bool HasReference => Reference != null;
+
+        internal static SerializedObjectReferenceReadResult Missing(string propertyPath)
+        {
+            return new SerializedObjectReferenceReadResult(propertyPath, null, propertyExists: false);
+        }
+    }
+
     /// <summary>
-    /// Shared test fixtures for ASMLite integration tests.
-    /// Call CreateTestAvatar() to get a fully-wired avatar, TearDownTestAvatar() to clean up.
-    /// </summary>
+     /// Shared test fixtures for ASMLite integration tests.
+     /// Call CreateTestAvatar() to get a fully-wired avatar, TearDownTestAvatar() to clean up.
+     /// </summary>
     public static class ASMLiteTestFixtures
     {
         private const string TempDir = "Assets/ASMLiteTests_Temp";
+        private static readonly List<ASMLiteGenerationWiringFailure> s_recordedGenerationWiringFailures = new List<ASMLiteGenerationWiringFailure>();
+        private static readonly object s_recordedGenerationWiringFailuresLock = new object();
 
         public static AsmLiteTestContext CreateTestAvatar()
         {
@@ -160,27 +184,79 @@ namespace ASMLite.Tests.Editor
             return child;
         }
 
-        internal static MonoBehaviour FindLiveVrcFuryComponent(GameObject root)
+        internal static MonoBehaviour[] FindLiveVrcFuryComponents(GameObject root)
         {
             if (root == null)
-                return null;
+                return Array.Empty<MonoBehaviour>();
 
             var behaviors = root.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviors.Length; i++)
+            return behaviors
+                .Where(behavior =>
+                {
+                    var type = behavior != null ? behavior.GetType() : null;
+                    return type != null && string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal);
+                })
+                .ToArray();
+        }
+
+        internal static MonoBehaviour FindLiveVrcFuryComponent(GameObject root)
+        {
+            return FindLiveVrcFuryComponents(root).FirstOrDefault();
+        }
+
+        internal static SerializedObjectReferenceReadResult ReadSerializedObjectReference(MonoBehaviour vfComponent, string propertyPath)
+        {
+            if (vfComponent == null || string.IsNullOrWhiteSpace(propertyPath))
+                return SerializedObjectReferenceReadResult.Missing(propertyPath);
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            var property = serializedVf.FindProperty(propertyPath);
+            if (property == null || property.propertyType != SerializedPropertyType.ObjectReference)
+                return SerializedObjectReferenceReadResult.Missing(propertyPath);
+
+            return new SerializedObjectReferenceReadResult(propertyPath, property.objectReferenceValue, propertyExists: true);
+        }
+
+        internal static SerializedObjectReferenceReadResult ReadSerializedObjectReferenceFromAnyPath(MonoBehaviour vfComponent, params string[] propertyPaths)
+        {
+            if (propertyPaths == null || propertyPaths.Length == 0)
+                return SerializedObjectReferenceReadResult.Missing(string.Empty);
+
+            var firstExistingProperty = SerializedObjectReferenceReadResult.Missing(string.Empty);
+            for (int i = 0; i < propertyPaths.Length; i++)
             {
-                var behavior = behaviors[i];
-                if (behavior == null)
-                    continue;
+                var referenceRead = ReadSerializedObjectReference(vfComponent, propertyPaths[i]);
+                if (referenceRead.PropertyExists && !firstExistingProperty.PropertyExists)
+                    firstExistingProperty = referenceRead;
 
-                var type = behavior.GetType();
-                if (type == null)
-                    continue;
-
-                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    return behavior;
+                if (referenceRead.HasReference)
+                    return referenceRead;
             }
 
-            return null;
+            return firstExistingProperty;
+        }
+
+        internal static string[] ReadSerializedStringArray(MonoBehaviour vfComponent, string arrayPath)
+        {
+            if (vfComponent == null || string.IsNullOrWhiteSpace(arrayPath))
+                return Array.Empty<string>();
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            var property = serializedVf.FindProperty(arrayPath);
+            if (property == null || !property.isArray)
+                return Array.Empty<string>();
+
+            var values = new string[property.arraySize];
+            for (int i = 0; i < property.arraySize; i++)
+            {
+                values[i] = property.GetArrayElementAtIndex(i)?.stringValue ?? string.Empty;
+            }
+
+            return values;
         }
 
         internal static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)
@@ -239,6 +315,66 @@ namespace ASMLite.Tests.Editor
             generatedExpr.parameters = new VRCExpressionParameters.Parameter[0];
             EditorUtility.SetDirty(generatedExpr);
             AssetDatabase.SaveAssets();
+        }
+
+        internal static void ClearRecordedGenerationWiringFailures()
+        {
+            lock (s_recordedGenerationWiringFailuresLock)
+            {
+                s_recordedGenerationWiringFailures.Clear();
+            }
+        }
+
+        internal static ASMLiteGenerationWiringFailure[] GetRecordedGenerationWiringFailures()
+        {
+            lock (s_recordedGenerationWiringFailuresLock)
+            {
+                return s_recordedGenerationWiringFailures.ToArray();
+            }
+        }
+
+        internal static void RecordBuildDiagnosticFailure(
+            string suiteName,
+            string testName,
+            ASMLiteBuildDiagnosticResult diagnostic,
+            string resultsFile = null)
+        {
+            if (diagnostic == null || diagnostic.Success)
+                return;
+
+            RecordGenerationWiringFailure(
+                ASMLiteGenerationWiringSummaryWriter.CreateDiagnosticFailure(
+                    suiteName,
+                    testName,
+                    diagnostic,
+                    resultsFile));
+        }
+
+        internal static void RecordDeterminismFailure(
+            string suiteName,
+            string testName,
+            string contextPath,
+            string message,
+            string resultsFile = null)
+        {
+            RecordGenerationWiringFailure(
+                ASMLiteGenerationWiringSummaryWriter.CreateDeterminismFailure(
+                    suiteName,
+                    testName,
+                    contextPath,
+                    message,
+                    resultsFile));
+        }
+
+        private static void RecordGenerationWiringFailure(ASMLiteGenerationWiringFailure failure)
+        {
+            if (failure == null)
+                return;
+
+            lock (s_recordedGenerationWiringFailuresLock)
+            {
+                s_recordedGenerationWiringFailures.Add(failure);
+            }
         }
     }
 
@@ -1607,6 +1743,7 @@ namespace ASMLite.Tests.Editor
         {
             s_pendingRuns.Clear();
             s_allRuns.Clear();
+            ASMLiteTestFixtures.ClearRecordedGenerationWiringFailures();
             s_completedRunCount = 0;
             s_expectedRunCount = 0;
             s_exitCode = 0;
@@ -2833,12 +2970,20 @@ namespace ASMLite.Tests.Editor
             WriteXmlDocument(canonicalDocument, s_canonicalResultsPath);
         }
 
+        internal static void WriteGenerationWiringSummaryArtifact(string resultsDirectory)
+        {
+            ASMLiteGenerationWiringSummaryWriter.Write(
+                resultsDirectory,
+                ASMLiteTestFixtures.GetRecordedGenerationWiringFailures());
+        }
+
         private static void CompleteAndExit()
         {
             try
             {
                 EditorApplication.update -= WaitForNextRunDelay;
                 WriteCanonicalResultsIfComplete();
+                WriteGenerationWiringSummaryArtifact(s_resultsDirectory);
 
                 if (s_testRunnerApi != null && s_callbackForwarder != null)
                     s_testRunnerApi.UnregisterCallbacks(s_callbackForwarder);

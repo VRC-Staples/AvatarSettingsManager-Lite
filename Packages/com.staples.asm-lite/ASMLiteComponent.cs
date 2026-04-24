@@ -2,6 +2,7 @@ using UnityEngine;
 using VRC.SDKBase;
 #if UNITY_EDITOR
 using System.Reflection;
+using System.Text;
 #endif
 
 namespace ASMLite
@@ -284,6 +285,64 @@ namespace ASMLite
             return property.GetValue(instance) as string ?? string.Empty;
         }
 
+        private static object ReadObjectProperty(object instance, string name)
+        {
+            if (instance == null)
+                return null;
+
+            var property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            return property?.GetValue(instance);
+        }
+
+        private static void AppendDiagnosticLog(StringBuilder builder, object diagnosticObject, bool includeBuildDiagnosticPrefix)
+        {
+            if (builder == null || diagnosticObject == null)
+                return;
+
+            if (ReadBoolProperty(diagnosticObject, "Success", fallback: true))
+                return;
+
+            string code = ReadStringProperty(diagnosticObject, "Code");
+            string message = ReadStringProperty(diagnosticObject, "Message");
+            string contextPath = ReadStringProperty(diagnosticObject, "ContextPath");
+            string remediation = ReadStringProperty(diagnosticObject, "Remediation");
+
+            if (includeBuildDiagnosticPrefix)
+            {
+                builder.Append("[ASM-Lite] Build diagnostic ");
+                builder.Append(code);
+                builder.Append(": ");
+                builder.Append(message);
+            }
+            else
+            {
+                builder.Append(code);
+                builder.Append(": ");
+                builder.Append(message);
+            }
+
+            if (!string.IsNullOrWhiteSpace(contextPath))
+                builder.Append($" Context: '{contextPath}'.");
+            if (!string.IsNullOrWhiteSpace(remediation))
+                builder.Append($" Remediation: {remediation}");
+
+            var innerDiagnostic = ReadObjectProperty(diagnosticObject, "InnerDiagnostic");
+            if (innerDiagnostic != null && !ReadBoolProperty(innerDiagnostic, "Success", fallback: true))
+            {
+                string innerCode = ReadStringProperty(innerDiagnostic, "Code");
+                string innerContextPath = ReadStringProperty(innerDiagnostic, "ContextPath");
+                string innerRemediation = ReadStringProperty(innerDiagnostic, "Remediation");
+
+                builder.Append(" Inner: ");
+                builder.Append(innerCode);
+                if (!string.IsNullOrWhiteSpace(innerContextPath))
+                    builder.Append($" ({innerContextPath})");
+                builder.Append('.');
+                if (!string.IsNullOrWhiteSpace(innerRemediation))
+                    builder.Append($" Inner Remediation: {innerRemediation}");
+            }
+        }
+
         private static void LogBuildFailureDiagnosticFromBuilder()
         {
             var diagnosticMethod = GetLatestBuildDiagnosticMethod();
@@ -306,18 +365,9 @@ namespace ASMLite
             if (ReadBoolProperty(diagnosticObject, "Success", fallback: true))
                 return;
 
-            string code = ReadStringProperty(diagnosticObject, "Code");
-            string message = ReadStringProperty(diagnosticObject, "Message");
-            string contextPath = ReadStringProperty(diagnosticObject, "ContextPath");
-            string remediation = ReadStringProperty(diagnosticObject, "Remediation");
-
-            var diagnosticLog = $"[ASM-Lite] Build diagnostic {code}: {message}";
-            if (!string.IsNullOrWhiteSpace(contextPath))
-                diagnosticLog += $" Context: '{contextPath}'.";
-            if (!string.IsNullOrWhiteSpace(remediation))
-                diagnosticLog += $" Remediation: {remediation}";
-
-            Debug.LogError(diagnosticLog);
+            var diagnosticLog = new StringBuilder();
+            AppendDiagnosticLog(diagnosticLog, diagnosticObject, includeBuildDiagnosticPrefix: true);
+            Debug.LogError(diagnosticLog.ToString());
         }
 #endif
 

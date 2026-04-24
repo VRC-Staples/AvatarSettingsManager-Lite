@@ -22,7 +22,11 @@ pub struct EventReader {
 }
 
 impl EventReader {
-    pub fn new(session_paths: SmokeSessionPaths, startup_timeout_seconds: u64, stale_after_seconds: u64) -> Self {
+    pub fn new(
+        session_paths: SmokeSessionPaths,
+        startup_timeout_seconds: u64,
+        stale_after_seconds: u64,
+    ) -> Self {
         Self {
             session_paths,
             startup_timeout_seconds,
@@ -60,7 +64,10 @@ impl EventReader {
         }
     }
 
-    fn read_host_state_tolerant(&self, warnings: &mut Vec<String>) -> Option<SmokeHostStateDocument> {
+    fn read_host_state_tolerant(
+        &self,
+        warnings: &mut Vec<String>,
+    ) -> Option<SmokeHostStateDocument> {
         let path = self.session_paths.host_state_path();
         if !path.exists() {
             return None;
@@ -107,8 +114,11 @@ mod tests {
 
     #[test]
     fn poll_missing_host_state_before_timeout_maps_to_starting() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
         let reader = EventReader::new(session_paths, 120, 15);
 
         let snapshot = reader.poll("2026-04-23T04:37:12Z", 30, None);
@@ -118,8 +128,11 @@ mod tests {
 
     #[test]
     fn poll_missing_host_state_after_timeout_maps_to_timed_out() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
         let reader = EventReader::new(session_paths, 120, 15);
 
         let snapshot = reader.poll("2026-04-23T04:37:12Z", 121, None);
@@ -128,8 +141,11 @@ mod tests {
 
     #[test]
     fn poll_host_state_ready_maps_to_ready() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
         let reader = EventReader::new(session_paths.clone(), 120, 15);
 
         fs::write(
@@ -156,8 +172,11 @@ mod tests {
 
     #[test]
     fn poll_process_exit_without_host_state_maps_to_exited_with_error() {
-        let session_paths = SmokeSessionPaths::new(make_temp_session_root()).expect("session root should initialize");
-        session_paths.ensure_layout().expect("layout should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
         let reader = EventReader::new(session_paths, 120, 15);
 
         let snapshot = reader.poll("2026-04-23T04:37:12Z", 5, Some(1));
