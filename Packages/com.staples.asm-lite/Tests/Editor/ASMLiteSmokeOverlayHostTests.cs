@@ -87,6 +87,92 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_NormalizesPlayModeCloneAvatarNames()
+        {
+            Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("Oct25_Dress (Clone)"));
+            Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" Oct25_Dress (Clone) (Clone) "));
+        }
+
+        [Test]
+        public void UnityRuntime_FindsSceneAvatarWithRuntimeComponent_WhenDuplicateNameExists()
+        {
+            GameObject avatarWithoutComponentObject = null;
+            GameObject avatarWithComponentObject = null;
+            try
+            {
+                avatarWithoutComponentObject = new GameObject("Oct25_Dress");
+                avatarWithoutComponentObject.AddComponent<VRCAvatarDescriptor>();
+
+                avatarWithComponentObject = new GameObject("Oct25_Dress (Clone)");
+                VRCAvatarDescriptor avatarWithComponent = avatarWithComponentObject.AddComponent<VRCAvatarDescriptor>();
+                var componentChild = new GameObject("ASM-Lite Component");
+                componentChild.transform.SetParent(avatarWithComponentObject.transform);
+                componentChild.AddComponent<ASMLite.ASMLiteComponent>();
+
+                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("Oct25_Dress");
+
+                Assert.That(resolved, Is.SameAs(avatarWithComponent));
+            }
+            finally
+            {
+                if (avatarWithoutComponentObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarWithoutComponentObject);
+                if (avatarWithComponentObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarWithComponentObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringPlaymode()
+        {
+            GameObject avatarObject = null;
+            try
+            {
+                avatarObject = new GameObject("Oct25_Dress");
+                VRCAvatarDescriptor avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
+
+                bool valid = ASMLiteSmokeOverlayHostUnityRuntime.ValidateRuntimeComponentState(
+                    "Oct25_Dress",
+                    avatar,
+                    isPlaying: true,
+                    out string detail);
+
+                Assert.That(valid, Is.True);
+                StringAssert.Contains("stripped for playmode", detail);
+            }
+            finally
+            {
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_RejectsMissingComponentOutsidePlaymode()
+        {
+            GameObject avatarObject = null;
+            try
+            {
+                avatarObject = new GameObject("Oct25_Dress");
+                VRCAvatarDescriptor avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
+
+                bool valid = ASMLiteSmokeOverlayHostUnityRuntime.ValidateRuntimeComponentState(
+                    "Oct25_Dress",
+                    avatar,
+                    isPlaying: false,
+                    out string detail);
+
+                Assert.That(valid, Is.False);
+                StringAssert.Contains("component was not found", detail);
+            }
+            finally
+            {
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
         public void Runner_RemainsRegisteredAfterReady_WhenExitOnReadyIsFalse()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
@@ -94,13 +180,36 @@ namespace ASMLite.Tests.Editor
                 Assert.That(context.Runner.IsRunningForTesting, Is.True);
                 Assert.That(context.Runtime.RegisterUpdateCount, Is.EqualTo(1));
                 Assert.That(context.Runtime.UnregisterUpdateCount, Is.EqualTo(0));
+                Assert.That(context.Runtime.OpenedScenes, Is.Empty);
+                Assert.That(context.Runtime.SelectedAvatars, Is.Empty);
+                Assert.That(context.Runtime.CloseAutomationWindowIfOpenCount, Is.EqualTo(1));
 
                 var hostState = ReadHostState(context.Paths.HostStatePath);
                 Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReady, hostState.state);
 
-                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .ToArray();
                 Assert.That(events.Select(item => item.eventType), Is.EquivalentTo(new[] { "session-started", "unity-ready" }));
                 Assert.That(events.Select(item => item.eventSeq).ToArray(), Is.EqualTo(new[] { 1, 2 }));
+                StringAssert.DoesNotContain("loaded Assets/Click ME.unity", events[1].message);
+                StringAssert.Contains("ready for suite commands", events[1].message);
+            }
+        }
+
+        [Test]
+        public void SetupSuite_OpensSceneSelectsAvatarAndAddsPrefabOnlyWhenRunAsSuiteStep()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                Assert.That(context.Runtime.OpenedScenes, Is.Empty);
+                Assert.That(context.Runtime.SelectedAvatars, Is.Empty);
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(1, "cmd_000001_run-suite", "setup-scene-avatar"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.OpenedScenes, Is.EqualTo(new[] { "Assets/Click ME.unity" }));
+                Assert.That(context.Runtime.SelectedAvatars, Is.EqualTo(new[] { "Oct25_Dress" }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "open-scene", "open-window", "select-avatar", "add-prefab", "assert-primary-action" }));
             }
         }
 
@@ -139,7 +248,7 @@ namespace ASMLite.Tests.Editor
                 WriteCommand(context.Paths, BuildRunSuiteCommand(2, "cmd_000002_run-suite"));
                 WriteCommand(context.Paths, BuildReviewDecisionCommand(1, "cmd_000001_review-decision"));
 
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilIdleAfterRun(context);
 
                 var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Where(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal))
@@ -178,7 +287,7 @@ namespace ASMLite.Tests.Editor
 
                 context.StartRunner();
                 WriteCommand(context.Paths, BuildRunSuiteCommand(10, "cmd_000010_run-suite"));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilIdleAfterRun(context);
 
                 var rejectedEvents = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Where(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal))
@@ -195,7 +304,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000003_run-suite";
                 WriteCommand(context.Paths, BuildRunSuiteCommand(3, commandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilIdleAfterRun(context);
 
                 var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
@@ -214,16 +323,35 @@ namespace ASMLite.Tests.Editor
                     "step-passed",
                     "step-started",
                     "step-passed",
+                    "step-started",
+                    "step-passed",
+                    "step-started",
+                    "step-passed",
+                    "step-started",
+                    "step-passed",
                     "suite-passed",
-                    "review-required",
+                    "session-idle",
                 }));
 
-                ASMLiteSmokeProtocolEvent reviewRequiredEvent = events.Single(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal));
-                Assert.That(reviewRequiredEvent.reviewDecisionOptions, Is.EqualTo(new[] { "return-to-suite-list", "rerun-suite", "exit" }));
+                ASMLiteSmokeProtocolEvent sessionIdleEvent = events.Single(item => string.Equals(item.eventType, "session-idle", StringComparison.Ordinal));
+                Assert.That(sessionIdleEvent.hostState, Is.EqualTo(ASMLiteSmokeProtocol.HostStateIdle));
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateIdle, hostState.state);
+                StringAssert.Contains("returned to suite selection", hostState.message);
 
                 Assert.That(events.Select(item => item.eventSeq), Is.Ordered.Ascending);
                 Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
-                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize", "detach", "return-to-package-managed" }));
+                    .Select(item => item.stepId), Is.EqualTo(new[]
+                    {
+                        "rebuild",
+                        "hygiene-cleanup-after-rebuild",
+                        "vendorize",
+                        "hygiene-cleanup-after-vendorize",
+                        "detach",
+                        "hygiene-cleanup-after-detach",
+                        "return-to-package-managed",
+                    }));
                 Assert.That(
                     events.Any(item => !string.IsNullOrWhiteSpace(item.effectiveResetPolicy)),
                     Is.True,
@@ -237,8 +365,11 @@ namespace ASMLite.Tests.Editor
                 Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
                 {
                     "rebuild",
+                    "lifecycle-hygiene-cleanup",
                     "vendorize",
+                    "lifecycle-hygiene-cleanup",
                     "detach",
+                    "lifecycle-hygiene-cleanup",
                     "return-to-package-managed",
                 }));
 
@@ -276,18 +407,166 @@ namespace ASMLite.Tests.Editor
                 command.runSuite.reason = "playmode-suite-test";
 
                 WriteCommand(context.Paths, command);
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilIdleAfterRun(context);
 
                 var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
                     .ToArray();
 
                 Assert.That(events.Any(item => string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal)), Is.False);
-                Assert.That(events.Last().eventType, Is.EqualTo("review-required"));
+                Assert.That(events.Last().eventType, Is.EqualTo("session-idle"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("enter-playmode"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("assert-runtime-component-valid"));
                 Assert.That(context.Runtime.ExecutedActions, Does.Contain("exit-playmode"));
                 Assert.That(context.Runtime.ExitCodes, Is.Empty);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_StreamsEventsAcrossTicksBeforeArtifactsExist()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000070_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(70, commandId));
+
+                context.Runtime.AdvanceSeconds(1);
+                var afterDispatchState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateRunning, afterDispatchState.state);
+                Assert.AreEqual("run-0070-lifecycle-roundtrip", afterDispatchState.activeRunId);
+                var afterDispatchEvents = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(afterDispatchEvents, Is.Empty);
+
+                context.Runtime.AdvanceSeconds(1);
+                var streamedEvents = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(streamedEvents.Select(item => item.eventType), Is.EqualTo(new[] { "suite-started" }));
+                Assert.That(File.Exists(context.Paths.GetResultPath(1, "lifecycle-roundtrip")), Is.False);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_StepSleepSecondsDelaysStepExecution()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000071_run-suite";
+                var command = BuildRunSuiteCommand(71, commandId);
+                command.runSuite.stepSleepSeconds = 1.5d;
+                WriteCommand(context.Paths, command);
+
+                context.Runtime.AdvanceSeconds(1);
+                context.Runtime.AdvanceSeconds(1);
+                context.Runtime.AdvanceSeconds(1);
+                context.Runtime.AdvanceSeconds(1);
+                Assert.That(context.Runtime.ExecutedActions, Is.Empty);
+
+                context.Runtime.AdvanceSeconds(1);
+                Assert.That(context.Runtime.ExecutedActions, Is.Empty);
+
+                context.Runtime.AdvanceSeconds(0.5d);
+                Assert.That(context.Runtime.ExecutedActions, Is.Not.Empty);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_WaitsBrieflyAfterLifecycleMutationBeforeNextStep()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000072_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(72, commandId));
+
+                context.Runtime.AdvanceSeconds(1); // command accepted
+                context.Runtime.AdvanceSeconds(1); // suite-started
+                context.Runtime.AdvanceSeconds(1); // case-started
+                context.Runtime.AdvanceSeconds(1); // rebuild step-started
+                context.Runtime.AdvanceSeconds(1); // rebuild executes and passes
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild" }));
+
+                context.Runtime.AdvanceSeconds(0.1d);
+                var eventsBeforeSettle = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(eventsBeforeSettle.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
+                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild" }));
+
+                context.Runtime.AdvanceSeconds(0.15d);
+                context.Runtime.AdvanceSeconds(0d);
+                var eventsAfterSettle = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(eventsAfterSettle.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
+                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "hygiene-cleanup-after-rebuild" }));
+            }
+        }
+
+        [Test]
+        public void CommandPolling_AbortRun_WritesAbortedArtifactsAndReviewRequiredState()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string runCommandId = "cmd_000080_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(80, runCommandId));
+                context.Runtime.AdvanceSeconds(1);
+
+                var runningState = ReadHostState(context.Paths.HostStatePath);
+                const string abortCommandId = "cmd_000081_abort-run";
+                WriteCommand(context.Paths, BuildAbortRunCommand(81, abortCommandId, runningState.activeRunId, "lifecycle-roundtrip"));
+                context.Runtime.AdvanceSeconds(1);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, abortCommandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(events.Select(item => item.eventType), Is.EqualTo(new[]
+                {
+                    "abort-requested",
+                    "run-aborted",
+                    "review-required",
+                }));
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
+                Assert.AreEqual(runningState.activeRunId, hostState.activeRunId);
+
+                string resultPath = context.Paths.GetResultPath(1, "lifecycle-roundtrip");
+                Assert.That(File.Exists(resultPath), Is.True);
+                var resultDocument = ASMLiteSmokeArtifactPaths.LoadResultFromJson(File.ReadAllText(resultPath));
+                Assert.AreEqual("aborted", resultDocument.result);
+            }
+        }
+
+        [Test]
+        public void CommandPolling_RunSuite_TreatsConsoleErrorsAsStepFailures()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                context.Runtime.EmitConsoleErrorDuringAction("vendorize", "Injected Unity console error.");
+
+                const string commandId = "cmd_000012_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId));
+                AdvanceUntilReviewRequired(context);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "vendorize" }));
+
+                string failurePath = context.Paths.GetFailurePath(1, "lifecycle-roundtrip");
+                Assert.That(File.Exists(failurePath), Is.True);
+                var failureDocument = ASMLiteSmokeArtifactPaths.LoadFailureFromJson(File.ReadAllText(failurePath));
+                Assert.AreEqual("vendorize", failureDocument.stepId);
+                Assert.That(failureDocument.failureMessage, Does.Contain("Unity console error"));
+                Assert.That(failureDocument.failureMessage, Does.Contain("Injected Unity console error"));
+
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(ASMLiteSmokeProtocol.HostStateReviewRequired, hostState.state);
             }
         }
 
@@ -300,7 +579,7 @@ namespace ASMLite.Tests.Editor
 
                 const string commandId = "cmd_000011_run-suite";
                 WriteCommand(context.Paths, BuildRunSuiteCommand(11, commandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
@@ -345,8 +624,9 @@ namespace ASMLite.Tests.Editor
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
                 WriteCommand(context.Paths, BuildRunSuiteCommand(20, "cmd_000020_run-suite"));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 int executedActionCount = context.Runtime.ExecutedActions.Count;
                 WriteCommand(context.Paths, BuildRunSuiteCommand(21, "cmd_000021_run-suite"));
@@ -368,8 +648,9 @@ namespace ASMLite.Tests.Editor
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
                 const string runCommandId = "cmd_000030_run-suite";
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
                 WriteCommand(context.Paths, BuildRunSuiteCommand(30, runCommandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
@@ -404,8 +685,9 @@ namespace ASMLite.Tests.Editor
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
                 const string runCommandId = "cmd_000040_run-suite";
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
                 WriteCommand(context.Paths, BuildRunSuiteCommand(40, runCommandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 int initialActionCount = context.Runtime.ExecutedActions.Count;
                 ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
@@ -421,7 +703,7 @@ namespace ASMLite.Tests.Editor
                         reviewRequired.runId,
                         reviewRequired.suiteId,
                         "rerun-suite"));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath);
                 Assert.That(events.Any(item => string.Equals(item.commandId, reviewCommandId, StringComparison.Ordinal)
@@ -446,8 +728,9 @@ namespace ASMLite.Tests.Editor
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
                 const string runCommandId = "cmd_000050_run-suite";
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
                 WriteCommand(context.Paths, BuildRunSuiteCommand(50, runCommandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
@@ -472,7 +755,7 @@ namespace ASMLite.Tests.Editor
 
                 var hostState = ReadHostState(context.Paths.HostStatePath);
                 Assert.AreEqual(ASMLiteSmokeProtocol.HostStateExiting, hostState.state);
-                Assert.That(context.Runtime.ExitCodes, Is.EquivalentTo(new[] { 0 }));
+                Assert.That(context.Runtime.ExitWithoutSavingCodes, Is.EquivalentTo(new[] { 0 }));
             }
         }
 
@@ -482,8 +765,9 @@ namespace ASMLite.Tests.Editor
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
                 const string runCommandId = "cmd_000060_run-suite";
+                context.Runtime.FailAction("vendorize", "Injected vendorize failure.");
                 WriteCommand(context.Paths, BuildRunSuiteCommand(60, runCommandId));
-                context.Runtime.AdvanceSeconds(1);
+                AdvanceUntilReviewRequired(context);
 
                 ASMLiteSmokeProtocolEvent reviewRequired = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
                     .Single(item => string.Equals(item.commandId, runCommandId, StringComparison.Ordinal)
@@ -584,7 +868,34 @@ namespace ASMLite.Tests.Editor
             File.WriteAllText(filePath, json);
         }
 
-        private static ASMLiteSmokeProtocolCommand BuildRunSuiteCommand(int commandSeq, string commandId)
+        private static void AdvanceUntilReviewRequired(RunnerTestContext context, int maxTicks = 64)
+        {
+            for (int i = 0; i < maxTicks; i++)
+            {
+                context.Runtime.AdvanceSeconds(1);
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                if (string.Equals(hostState.state, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal))
+                    return;
+            }
+
+            Assert.Fail("Runner did not reach review-required within the expected tick budget.");
+        }
+
+        private static void AdvanceUntilIdleAfterRun(RunnerTestContext context, int maxTicks = 64)
+        {
+            for (int i = 0; i < maxTicks; i++)
+            {
+                context.Runtime.AdvanceSeconds(1);
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                if (string.Equals(hostState.state, ASMLiteSmokeProtocol.HostStateIdle, StringComparison.Ordinal)
+                    && hostState.lastEventSeq > 2)
+                    return;
+            }
+
+            Assert.Fail("Runner did not return to idle within the expected tick budget.");
+        }
+
+        private static ASMLiteSmokeProtocolCommand BuildRunSuiteCommand(int commandSeq, string commandId, string suiteId = "lifecycle-roundtrip")
         {
             return new ASMLiteSmokeProtocolCommand
             {
@@ -597,12 +908,14 @@ namespace ASMLite.Tests.Editor
                 launchSession = null,
                 runSuite = new ASMLiteSmokeRunSuitePayload
                 {
-                    suiteId = "lifecycle-roundtrip",
+                    suiteId = suiteId,
                     requestedBy = "operator",
                     requestedResetDefault = "SceneReload",
                     reason = "sequence-order-test",
+                    stepSleepSeconds = 0d,
                 },
                 reviewDecision = null,
+                abortRun = null,
             };
         }
 
@@ -632,6 +945,35 @@ namespace ASMLite.Tests.Editor
                     requestedBy = "operator",
                     notes = notes,
                 },
+                abortRun = null,
+            };
+        }
+
+        private static ASMLiteSmokeProtocolCommand BuildAbortRunCommand(
+            int commandSeq,
+            string commandId,
+            string runId,
+            string suiteId,
+            string reason = "operator-abort")
+        {
+            return new ASMLiteSmokeProtocolCommand
+            {
+                protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
+                sessionId = "phase06",
+                commandId = commandId,
+                commandSeq = commandSeq,
+                commandType = "abort-run",
+                createdAtUtc = "2026-04-23T00:00:00Z",
+                launchSession = null,
+                runSuite = null,
+                reviewDecision = null,
+                abortRun = new ASMLiteSmokeAbortRunPayload
+                {
+                    runId = runId,
+                    suiteId = suiteId,
+                    requestedBy = "operator",
+                    reason = reason,
+                },
             };
         }
 
@@ -655,6 +997,36 @@ namespace ASMLite.Tests.Editor
                         description = "Local catalog used by ASMLiteSmokeOverlayHostTests.",
                         suites = new[]
                         {
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "setup-scene-avatar",
+                                label = "Setup Scene / Avatar / Prefab",
+                                description = "Loads the canonical scene, selects the target avatar, and adds the prefab scaffold on request.",
+                                resetOverride = "Inherit",
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "The scene is open, Oct25_Dress is selected, and the prefab scaffold is ready.",
+                                debugHint = "Check scene/avatar fixture names, prefab prerequisites, and window focus if setup stalls.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "setup-scene-avatar",
+                                        label = "Scene, avatar, and prefab setup",
+                                        description = "Run setup and prefab scaffold steps only when explicitly requested.",
+                                        expectedOutcome = "Scene/avatar/window/prefab setup completes.",
+                                        debugHint = "Inspect host event stream for setup step boundaries.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition { stepId = "open-scene", label = "Open Scene", description = "Open canonical smoke scene.", actionType = "open-scene", expectedOutcome = "Scene opens.", debugHint = "Inspect scene path." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "open-window", label = "Open Window", description = "Open ASM-Lite window.", actionType = "open-window", expectedOutcome = "Window opens.", debugHint = "Inspect window state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "select-avatar", label = "Select Avatar", description = "Select Oct25_Dress.", actionType = "select-avatar", expectedOutcome = "Avatar selected.", debugHint = "Inspect avatar lookup." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "add-prefab", label = "Add Prefab", description = "Add the ASM-Lite prefab scaffold.", actionType = "add-prefab", expectedOutcome = "Prefab scaffold is attached.", debugHint = "Inspect avatar prerequisites." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "assert-primary-action", label = "Assert Primary Action", description = "Confirm rebuild action is visible.", actionType = "assert-primary-action", expectedOutcome = "Primary action is visible.", debugHint = "Inspect window refresh state." },
+                                        },
+                                    },
+                                },
+                            },
                             new ASMLiteSmokeSuiteDefinition
                             {
                                 suiteId = "lifecycle-roundtrip",
@@ -733,6 +1105,7 @@ namespace ASMLite.Tests.Editor
                 launchSession = null,
                 runSuite = null,
                 reviewDecision = null,
+                abortRun = null,
             };
         }
 
@@ -837,24 +1210,33 @@ namespace ASMLite.Tests.Editor
             private readonly Dictionary<string, VRCAvatarDescriptor> _avatars = new Dictionary<string, VRCAvatarDescriptor>(StringComparer.Ordinal);
             private UnityEditor.EditorApplication.CallbackFunction _tick;
             private readonly DateTime _baseUtc = new DateTime(2026, 4, 23, 0, 0, 0, DateTimeKind.Utc);
+            private string _activeScenePath = "Assets/Untitled.unity";
 
             internal int RegisterUpdateCount { get; private set; }
             internal int UnregisterUpdateCount { get; private set; }
-            internal List<int> ExitCodes { get; } = new List<int>();
+            internal int CloseAutomationWindowIfOpenCount { get; private set; }
+            internal List<int> ExitWithoutSavingCodes { get; } = new List<int>();
+            internal List<int> ExitCodes => ExitWithoutSavingCodes;
             internal List<string> ExecutedActions { get; } = new List<string>();
+            internal List<string> OpenedScenes { get; } = new List<string>();
+            internal List<string> SelectedAvatars { get; } = new List<string>();
 
             private readonly Dictionary<string, string> _forcedFailuresByAction = new Dictionary<string, string>(StringComparer.Ordinal);
+            private readonly List<Tuple<string, string>> _consoleErrors = new List<Tuple<string, string>>();
+            private readonly Dictionary<string, string> _consoleErrorsByAction = new Dictionary<string, string>(StringComparer.Ordinal);
+            private bool _consoleErrorCaptureActive;
 
             internal double CurrentTimeSeconds { get; private set; }
 
             public string GetActiveScenePath()
             {
-                return "Assets/Click ME.unity";
+                return _activeScenePath;
             }
 
             public void OpenScene(string scenePath)
             {
-                // No-op in tests.
+                OpenedScenes.Add(scenePath);
+                _activeScenePath = scenePath;
             }
 
             public VRCAvatarDescriptor FindAvatarByName(string avatarName)
@@ -865,7 +1247,12 @@ namespace ASMLite.Tests.Editor
 
             public void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
             {
-                // No-op in tests.
+                SelectedAvatars.Add(avatar == null || avatar.gameObject == null ? string.Empty : avatar.gameObject.name);
+            }
+
+            public void CloseAutomationWindowIfOpen()
+            {
+                CloseAutomationWindowIfOpenCount++;
             }
 
             public double GetTimeSinceStartup()
@@ -909,7 +1296,7 @@ namespace ASMLite.Tests.Editor
                 return File.ReadAllText(path);
             }
 
-            public bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace)
+            public bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace)
             {
                 string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
                 ExecutedActions.Add(normalizedAction);
@@ -921,14 +1308,54 @@ namespace ASMLite.Tests.Editor
                     return false;
                 }
 
+                if (string.Equals(normalizedAction, "open-scene", StringComparison.Ordinal))
+                    OpenScene(scenePath);
+                else if (string.Equals(normalizedAction, "select-avatar", StringComparison.Ordinal))
+                    SelectAvatarForAutomation(FindAvatarByName(avatarName));
+
+                if (_consoleErrorCaptureActive && _consoleErrorsByAction.TryGetValue(normalizedAction, out string consoleErrorMessage))
+                    _consoleErrors.Add(Tuple.Create(consoleErrorMessage, "Injected Unity console stack trace."));
+
                 detail = $"{normalizedAction} completed.";
                 stackTrace = string.Empty;
                 return true;
             }
 
-            public void ExitEditor(int exitCode)
+            public void StartConsoleErrorCapture()
             {
-                ExitCodes.Add(exitCode);
+                _consoleErrors.Clear();
+                _consoleErrorCaptureActive = true;
+            }
+
+            public void StopConsoleErrorCapture()
+            {
+                _consoleErrorCaptureActive = false;
+            }
+
+            public int GetConsoleErrorCheckpoint()
+            {
+                return _consoleErrors.Count;
+            }
+
+            public bool TryGetConsoleErrorsSince(int checkpoint, out string detail, out string stackTrace)
+            {
+                int startIndex = Math.Max(0, Math.Min(checkpoint, _consoleErrors.Count));
+                var errors = _consoleErrors.Skip(startIndex).ToArray();
+                if (errors.Length == 0)
+                {
+                    detail = string.Empty;
+                    stackTrace = string.Empty;
+                    return false;
+                }
+
+                detail = string.Join("\n", errors.Select(item => $"Unity console error: {item.Item1}"));
+                stackTrace = string.Join("\n\n", errors.Select(item => item.Item2));
+                return true;
+            }
+
+            public void ExitEditorWithoutSaving(int exitCode)
+            {
+                ExitWithoutSavingCodes.Add(exitCode);
             }
 
             internal void RegisterAvatar(VRCAvatarDescriptor avatar)
@@ -947,6 +1374,16 @@ namespace ASMLite.Tests.Editor
                 _forcedFailuresByAction[actionType.Trim()] = string.IsNullOrWhiteSpace(failureMessage)
                     ? "Injected action failure."
                     : failureMessage.Trim();
+            }
+
+            internal void EmitConsoleErrorDuringAction(string actionType, string message)
+            {
+                if (string.IsNullOrWhiteSpace(actionType))
+                    throw new InvalidOperationException("actionType is required.");
+
+                _consoleErrorsByAction[actionType.Trim()] = string.IsNullOrWhiteSpace(message)
+                    ? "Injected Unity console error."
+                    : message.Trim();
             }
 
             internal void AdvanceSeconds(double seconds)

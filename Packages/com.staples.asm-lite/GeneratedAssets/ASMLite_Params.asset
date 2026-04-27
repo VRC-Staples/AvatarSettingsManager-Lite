@@ -13,4 +13,2119 @@ MonoBehaviour:
   m_Name: ASMLite_Params
   m_EditorClassIdentifier: 
   isEmpty: 0
-  parameters: []
+  parameters:
+  - name: ASMLite_Ctrl
+    valueType: 0
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_VRCEmote
+    valueType: 0
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_VRCFaceBlendH
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_VRCFaceBlendV
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Black lip lower
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Black lip upper
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Blinking
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Bikinni color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Bodysuit 1
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Bodysuit 1 color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Body piercings 2
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Body piercings 3
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Body piercings 4
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Body piercings 5
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Bra
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Choker
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Choker color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Crop top
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Crop top color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Crop top opacity
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Ear wiggle
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Elf toggle
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Eye hue
+    valueType: 1
+    saved: 0
+    defaultValue: 0.38
+    networkSynced: 0
+  - name: ASMLite_Def_Eye swap
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Fishnets
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Glasses
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Hair
+    valueType: 1
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Hair color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Hair emission
+    valueType: 1
+    saved: 0
+    defaultValue: 0.7
+    networkSynced: 0
+  - name: ASMLite_Def_Heels
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Heel color 1
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Heel color 2
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Heel warmers
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Hoodie
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Hoodie color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Hoodie opacity
+    valueType: 1
+    saved: 0
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Def_Latex pants
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Lip ring 1
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Lip ring 2
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Lip ring 3
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_LM minimum brightness
+    valueType: 1
+    saved: 0
+    defaultValue: 0.15
+    networkSynced: 0
+  - name: ASMLite_Def_LM lighting multi
+    valueType: 1
+    saved: 0
+    defaultValue: 0.27
+    networkSynced: 0
+  - name: ASMLite_Def_LM emission multi
+    valueType: 1
+    saved: 0
+    defaultValue: 0.24
+    networkSynced: 0
+  - name: ASMLite_Def_LM final color
+    valueType: 1
+    saved: 0
+    defaultValue: 0.34
+    networkSynced: 0
+  - name: ASMLite_Def_LM greyscale
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Metal color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Nipple piercings
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Outline
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Panties
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Pants color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Pants ribbon color
+    valueType: 1
+    saved: 0
+    defaultValue: 0.44
+    networkSynced: 0
+  - name: ASMLite_Def_Pasties
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Pasties color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Rings
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Shirt
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Shirt color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Shorts
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Shorts color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Short Slip
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Skin tone
+    valueType: 1
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Sleeves
+    valueType: 2
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Sleeves color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Sock color
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Tattoo
+    valueType: 2
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Def_Wet skin
+    valueType: 1
+    saved: 0
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Def_Wet skin intensity
+    valueType: 1
+    saved: 0
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VRCFaceBlendH
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VRCFaceBlendV
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Black lip lower
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Black lip upper
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Blinking
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Bikinni color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Bodysuit 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Bodysuit 1 color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Body piercings 2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Body piercings 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Body piercings 4
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Body piercings 5
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Bra
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Choker
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Choker color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Crop top
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Crop top color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Crop top opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Ear wiggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Elf toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Eye hue
+    valueType: 1
+    saved: 1
+    defaultValue: 0.38
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Eye swap
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Fishnets
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Glasses
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hair
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hair color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hair emission
+    valueType: 1
+    saved: 1
+    defaultValue: 0.7
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Heels
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Heel color 1
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Heel color 2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Heel warmers
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hoodie
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hoodie color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Hoodie opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Latex pants
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Lip ring 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Lip ring 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Lip ring 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_LM minimum brightness
+    valueType: 1
+    saved: 1
+    defaultValue: 0.15
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_LM lighting multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.27
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_LM emission multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.24
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_LM final color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.34
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_LM greyscale
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Metal color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Nipple piercings
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Outline
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Panties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Pants color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Pants ribbon color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.44
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Pasties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Pasties color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Rings
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Shirt
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Shirt color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Shorts
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Shorts color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Short Slip
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Skin tone
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Sleeves
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Sleeves color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Sock color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Tattoo
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Wet skin
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Wet skin intensity
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VRCFaceBlendH
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VRCFaceBlendV
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Black lip lower
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Black lip upper
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Blinking
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Bikinni color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Bodysuit 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Bodysuit 1 color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Body piercings 2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Body piercings 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Body piercings 4
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Body piercings 5
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Bra
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Choker
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Choker color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Crop top
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Crop top color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Crop top opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Ear wiggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Elf toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Eye hue
+    valueType: 1
+    saved: 1
+    defaultValue: 0.38
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Eye swap
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Fishnets
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Glasses
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hair
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hair color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hair emission
+    valueType: 1
+    saved: 1
+    defaultValue: 0.7
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Heels
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Heel color 1
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Heel color 2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Heel warmers
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hoodie
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hoodie color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Hoodie opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Latex pants
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Lip ring 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Lip ring 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Lip ring 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_LM minimum brightness
+    valueType: 1
+    saved: 1
+    defaultValue: 0.15
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_LM lighting multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.27
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_LM emission multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.24
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_LM final color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.34
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_LM greyscale
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Metal color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Nipple piercings
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Outline
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Panties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Pants color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Pants ribbon color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.44
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Pasties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Pasties color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Rings
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Shirt
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Shirt color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Shorts
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Shorts color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Short Slip
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Skin tone
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Sleeves
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Sleeves color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Sock color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Tattoo
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Wet skin
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Wet skin intensity
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VRCFaceBlendH
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VRCFaceBlendV
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Black lip lower
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Black lip upper
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Blinking
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Bikinni color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Bodysuit 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Bodysuit 1 color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Body piercings 2
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Body piercings 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Body piercings 4
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Body piercings 5
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Bra
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Choker
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Choker color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Crop top
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Crop top color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Crop top opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Ear wiggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Elf toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Eye hue
+    valueType: 1
+    saved: 1
+    defaultValue: 0.38
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Eye swap
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Fishnets
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Glasses
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hair
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hair color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hair emission
+    valueType: 1
+    saved: 1
+    defaultValue: 0.7
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Heels
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Heel color 1
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Heel color 2
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Heel warmers
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hoodie
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hoodie color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Hoodie opacity
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Latex pants
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Lip ring 1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Lip ring 2
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Lip ring 3
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_LM minimum brightness
+    valueType: 1
+    saved: 1
+    defaultValue: 0.15
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_LM lighting multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.27
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_LM emission multi
+    valueType: 1
+    saved: 1
+    defaultValue: 0.24
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_LM final color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.34
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_LM greyscale
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Metal color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Nipple piercings
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Outline
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Panties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Pants color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Pants ribbon color
+    valueType: 1
+    saved: 1
+    defaultValue: 0.44
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Pasties
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Pasties color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Rings
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Shirt
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Shirt color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Shorts
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Shorts color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Short Slip
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Skin tone
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Sleeves
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Sleeves color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Sock color
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Tattoo
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Wet skin
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Wet skin intensity
+    valueType: 1
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 3.10.3
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF 1.1298.0
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Float
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/PoseRadial
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Stationary
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Locomotion
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Jump&Fall
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/StandIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/CrouchIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/ProneIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Swimming
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/PuppetX
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/PuppetY
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_Go/Height
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_WH_SFX_On
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S1_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S1_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 3.10.3
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF 1.1298.0
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Float
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/PoseRadial
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Stationary
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Locomotion
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Jump&Fall
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/StandIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/CrouchIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/ProneIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Swimming
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/PuppetX
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/PuppetY
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_Go/Height
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_WH_SFX_On
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S2_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S2_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF N
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 2022.3.22f1
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 3.10.3
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF 1.1298.0
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Erection
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Erection Menu
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Throbbing
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/TPS
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/PhysBones
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Shaft Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Balls Size
+    valueType: 1
+    saved: 1
+    defaultValue: 0.5
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Foreskin Position
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Frot
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Wetness Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Only SPS Hole
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF107_WH Lollipop/Reset Wetness
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/VRCEmote
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Float
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/PoseRadial
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Stationary
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Locomotion
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Jump&Fall
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/StandIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/CrouchIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/ProneIdle
+    valueType: 0
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Swimming
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/PuppetX
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/PuppetY
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_Go/Height
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_autoMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_stealth
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_multi
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Blowjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Pussy
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Anal
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Right
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Double Handjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Handjob/Handjob Left
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Titjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Assjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF11_Special/Thighjob
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VFH/Version/10
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_WH_SFX_On
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: 'ASMLite_Bak_S3_VF126_Lighting menu/AudioLink/Disable AudioLink '
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF127_Lighting menu/AudioLink/Treble Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF128_Lighting menu/AudioLink/Bass Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF129_Lighting menu/AudioLink/HighMid Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF130_Lighting menu/AudioLink/Volume Toggle
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF131_Body/BunnyToggle
+    valueType: 2
+    saved: 1
+    defaultValue: 1
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF132_Lighting menu/AudioLink/Glasses
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF133_Clothing/PastieText
+    valueType: 1
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF134_Clothing/RGBMode
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0
+  - name: ASMLite_Bak_S3_VF135_Clothing/Rezz
+    valueType: 2
+    saved: 1
+    defaultValue: 0
+    networkSynced: 0

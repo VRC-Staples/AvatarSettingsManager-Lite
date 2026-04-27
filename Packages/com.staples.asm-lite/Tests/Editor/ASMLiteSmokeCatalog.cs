@@ -187,12 +187,14 @@ namespace ASMLite.Tests.Editor
     {
         private static readonly HashSet<string> s_allowedActionTypes = new HashSet<string>(StringComparer.Ordinal)
         {
+            "open-scene",
             "open-window",
             "select-avatar",
             "add-prefab",
             "rebuild",
             "vendorize",
             "detach",
+            "lifecycle-hygiene-cleanup",
             "return-to-package-managed",
             "enter-playmode",
             "exit-playmode",

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using NUnit.Framework;
 
 namespace ASMLite.Tests.Editor
@@ -49,6 +50,42 @@ namespace ASMLite.Tests.Editor
                 string fileName = Path.GetFileName(paths.HostStatePath);
                 string[] tempFiles = Directory.GetFiles(directory, $"{fileName}.tmp-*");
                 Assert.That(tempFiles, Is.Empty);
+            });
+        }
+
+        [Test]
+        public void AtomicWrite_retries_when_target_file_is_temporarily_locked()
+        {
+            WithSessionPaths(paths =>
+            {
+                const string baselineJson = "{\"state\":\"ready\"}";
+                const string updatedJson = "{\"state\":\"running\"}";
+                ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(paths.HostStatePath, baselineJson);
+
+                var lockStream = new FileStream(paths.HostStatePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                Exception writeFailure = null;
+
+                var writerThread = new Thread(() =>
+                {
+                    try
+                    {
+                        ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(paths.HostStatePath, updatedJson);
+                    }
+                    catch (Exception ex)
+                    {
+                        writeFailure = ex;
+                    }
+                });
+
+                writerThread.Start();
+                Thread.Sleep(150);
+                lockStream.Dispose();
+                writerThread.Join();
+
+                if (writeFailure != null)
+                    Assert.Fail($"Atomic write should recover from transient lock contention: {writeFailure.Message}");
+
+                Assert.AreEqual(updatedJson, File.ReadAllText(paths.HostStatePath, Encoding.UTF8));
             });
         }
 

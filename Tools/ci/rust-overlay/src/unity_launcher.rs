@@ -168,6 +168,10 @@ pub fn map_host_state_to_status(
     }
 
     if host_state.state == HOST_STATE_READY || host_state.state == HOST_STATE_IDLE {
+        if host_state.state == HOST_STATE_IDLE && is_bootstrap_idle_state(host_state) {
+            return UnityHostSupervisorStatus::Starting;
+        }
+
         if heartbeat_is_stale(&host_state.heartbeat_utc, now_utc, stale_after_seconds) {
             return UnityHostSupervisorStatus::Stalled;
         }
@@ -176,6 +180,18 @@ pub fn map_host_state_to_status(
     }
 
     UnityHostSupervisorStatus::Starting
+}
+
+fn is_bootstrap_idle_state(host_state: &SmokeHostStateDocument) -> bool {
+    if host_state.last_event_seq != 0 || host_state.last_command_seq != 0 {
+        return false;
+    }
+    if !host_state.active_run_id.trim().is_empty() {
+        return false;
+    }
+
+    let message = host_state.message.trim().to_ascii_lowercase();
+    message.contains("boot")
 }
 
 pub fn map_process_exit_to_status(exit_code: Option<i32>) -> UnityHostSupervisorStatus {
@@ -360,6 +376,26 @@ mod tests {
     fn stale_heartbeat_maps_to_stalled() {
         let host_state = sample_host_state(HOST_STATE_READY, "2026-04-23T04:37:00Z");
         let status = map_host_state_to_status(&host_state, "2026-04-23T04:37:10Z", 5);
+        assert_eq!(status, UnityHostSupervisorStatus::Stalled);
+    }
+
+    #[test]
+    fn idle_booting_state_with_startup_heartbeat_drift_stays_starting() {
+        let mut host_state = sample_host_state(HOST_STATE_IDLE, "2026-04-23T04:37:00Z");
+        host_state.last_event_seq = 0;
+        host_state.last_command_seq = 0;
+        host_state.message = "Unity host booting.".to_string();
+
+        let status = map_host_state_to_status(&host_state, "2026-04-23T04:37:20Z", 5);
+        assert_eq!(status, UnityHostSupervisorStatus::Starting);
+    }
+
+    #[test]
+    fn idle_non_booting_state_with_stale_heartbeat_maps_to_stalled() {
+        let mut host_state = sample_host_state(HOST_STATE_IDLE, "2026-04-23T04:37:00Z");
+        host_state.message = "Ready for suite commands.".to_string();
+
+        let status = map_host_state_to_status(&host_state, "2026-04-23T04:37:20Z", 5);
         assert_eq!(status, UnityHostSupervisorStatus::Stalled);
     }
 

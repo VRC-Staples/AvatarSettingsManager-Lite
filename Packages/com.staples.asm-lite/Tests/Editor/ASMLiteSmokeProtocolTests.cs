@@ -15,6 +15,7 @@ namespace ASMLite.Tests.Editor
             var launch = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("launch-session.json"));
             var runSuite = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("run-suite.json"));
             var review = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("review-decision.json"));
+            var abort = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("abort-run.json"));
 
             Assert.AreEqual("launch-session", launch.commandType);
             Assert.AreEqual("SceneReload", launch.launchSession.globalResetDefault);
@@ -22,6 +23,9 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("lifecycle-roundtrip", runSuite.runSuite.suiteId);
             Assert.AreEqual("review-decision", review.commandType);
             Assert.AreEqual("return-to-suite-list", review.reviewDecision.decision);
+            Assert.AreEqual("abort-run", abort.commandType);
+            Assert.AreEqual("run-0001-lifecycle-roundtrip", abort.abortRun.runId);
+            Assert.AreEqual("lifecycle-roundtrip", abort.abortRun.suiteId);
         }
 
         [Test]
@@ -62,6 +66,26 @@ namespace ASMLite.Tests.Editor
             StringAssert.Contains("runSuite", exception.Message);
         }
 
+        [Test]
+        public void RecoverProcessedCommandIds_ignores_session_lifecycle_and_host_health_events()
+        {
+            var events = new[]
+            {
+                CreateProtocolEvent(1, "session-started", "cmd_000001"),
+                CreateProtocolEvent(2, "host-heartbeat", "cmd_000002"),
+                CreateProtocolEvent(3, "host-stalled", "cmd_000003"),
+                CreateProtocolEvent(4, "host-crashed", "cmd_000004"),
+                CreateProtocolEvent(5, ASMLiteSmokeProtocol.HostStateProtocolError, "cmd_000005"),
+                CreateProtocolEvent(6, "command-rejected", "cmd_000006"),
+                CreateProtocolEvent(7, "suite-started", "cmd_000007"),
+                CreateProtocolEvent(8, "review-required", "cmd_000008"),
+            };
+
+            var processed = ASMLiteSmokeProtocol.RecoverProcessedCommandIds(events);
+
+            Assert.That(processed, Is.EquivalentTo(new[] { "cmd_000007", "cmd_000008" }));
+        }
+
         private static ASMLiteSmokeProtocolCommand RoundTrip(ASMLiteSmokeProtocolCommand command)
         {
             string json = ASMLiteSmokeProtocol.ToJson(command, prettyPrint: false);
@@ -72,6 +96,30 @@ namespace ASMLite.Tests.Editor
         {
             string fixturePath = Path.Combine(ASMLiteSmokeContractPaths.GetProtocolFixtureDirectory(), fileName);
             return File.ReadAllText(fixturePath, Encoding.UTF8);
+        }
+
+        private static ASMLiteSmokeProtocolEvent CreateProtocolEvent(int eventSeq, string eventType, string commandId)
+        {
+            return new ASMLiteSmokeProtocolEvent
+            {
+                protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
+                sessionId = "session-test",
+                eventId = $"evt_{eventSeq:000000}",
+                eventSeq = eventSeq,
+                eventType = eventType,
+                timestampUtc = "2026-04-25T00:00:00Z",
+                commandId = commandId,
+                runId = string.Empty,
+                groupId = string.Empty,
+                suiteId = string.Empty,
+                caseId = string.Empty,
+                stepId = string.Empty,
+                effectiveResetPolicy = string.Empty,
+                hostState = ASMLiteSmokeProtocol.HostStateIdle,
+                message = "test",
+                reviewDecisionOptions = Array.Empty<string>(),
+                supportedCapabilities = Array.Empty<string>(),
+            };
         }
     }
 }

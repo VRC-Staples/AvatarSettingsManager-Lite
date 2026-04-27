@@ -512,8 +512,28 @@ namespace ASMLite.Editor
                 string verifyFailureMessage = string.Empty;
                 string verifyFailureContext = string.Empty;
                 ASMLiteWindow.AsmLiteToolState expectedDetachedState = ResolveDetachSuccessState(beforeState, vendorizeToAssets: false);
+                string vendorizedDir = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
+                if (expectedDetachedState == ASMLiteWindow.AsmLiteToolState.Vendorized)
+                {
+                    var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, vendorizedDir);
+                    if (!descriptorRetargetResult.Success)
+                    {
+                        return FailDetachAndRollback(
+                            component,
+                            avatar,
+                            beforeState,
+                            snapshot,
+                            componentSnapshot,
+                            descriptorRetargetResult.Message,
+                            descriptorRetargetResult.ContextPath,
+                            descriptorRetargetResult.Remediation,
+                            ASMLiteLifecycleTransactionStage.Execute,
+                            diagnostic: null);
+                    }
+                }
+
                 if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify)
-                    || !VerifyDirectDeliveryState(avatar, expectedDetachedState, NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath), out verifyFailureMessage, out verifyFailureContext))
+                    || !VerifyDirectDeliveryState(avatar, expectedDetachedState, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
                 {
                     return FailDetachAndRollback(
                         component,
@@ -626,10 +646,26 @@ namespace ASMLite.Editor
                         diagnostic: null);
                 }
 
+                string vendorizedDir = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
+                var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, vendorizedDir);
+                if (!descriptorRetargetResult.Success)
+                {
+                    return FailVendorizeAndDetachAndRollback(
+                        component,
+                        avatar,
+                        beforeState,
+                        snapshot,
+                        componentSnapshot,
+                        descriptorRetargetResult.Message,
+                        descriptorRetargetResult.ContextPath,
+                        descriptorRetargetResult.Remediation,
+                        ASMLiteLifecycleTransactionStage.Execute,
+                        diagnostic: null);
+                }
+
                 string verifyFailureMessage = string.Empty;
                 string verifyFailureContext = string.Empty;
-                string vendorizedDir = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
-                ASMLiteWindow.AsmLiteToolState expectedDetachedState = ResolveDetachSuccessState(beforeState, vendorizeToAssets: false);
+                ASMLiteWindow.AsmLiteToolState expectedDetachedState = ResolveDetachSuccessState(beforeState, vendorizeToAssets: true);
                 if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify)
                     || !VerifyDirectDeliveryState(avatar, expectedDetachedState, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
                 {

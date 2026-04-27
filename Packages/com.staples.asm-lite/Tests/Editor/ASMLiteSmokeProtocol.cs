@@ -19,6 +19,7 @@ namespace ASMLite.Tests.Editor
         public ASMLiteSmokeLaunchSessionPayload launchSession;
         public ASMLiteSmokeRunSuitePayload runSuite;
         public ASMLiteSmokeReviewDecisionPayload reviewDecision;
+        public ASMLiteSmokeAbortRunPayload abortRun;
     }
 
     [Serializable]
@@ -44,6 +45,7 @@ namespace ASMLite.Tests.Editor
         public string requestedBy;
         public string requestedResetDefault;
         public string reason;
+        public double stepSleepSeconds;
     }
 
     [Serializable]
@@ -54,6 +56,15 @@ namespace ASMLite.Tests.Editor
         public string decision;
         public string requestedBy;
         public string notes;
+    }
+
+    [Serializable]
+    internal sealed class ASMLiteSmokeAbortRunPayload
+    {
+        public string runId;
+        public string suiteId;
+        public string requestedBy;
+        public string reason;
     }
 
     [Serializable]
@@ -142,6 +153,7 @@ namespace ASMLite.Tests.Editor
             "launch-session",
             "run-suite",
             "review-decision",
+            "abort-run",
             "shutdown-session",
         };
 
@@ -529,14 +541,33 @@ namespace ASMLite.Tests.Editor
                 var protocolEvent = items[i] ?? throw new InvalidOperationException($"Smoke protocol event index {i} is required.");
                 NormalizeAndValidateEvent(protocolEvent, i + 1, eventIds, ref previousEventSeq);
 
-                if (string.Equals(protocolEvent.eventType, "command-rejected", StringComparison.Ordinal))
+                if (!ShouldEventMarkCommandProcessed(protocolEvent))
                     continue;
 
-                if (!string.IsNullOrWhiteSpace(protocolEvent.commandId))
-                    processed.Add(protocolEvent.commandId);
+                processed.Add(protocolEvent.commandId.Trim());
             }
 
             return processed;
+        }
+
+        private static bool ShouldEventMarkCommandProcessed(ASMLiteSmokeProtocolEvent protocolEvent)
+        {
+            if (protocolEvent == null || string.IsNullOrWhiteSpace(protocolEvent.commandId))
+                return false;
+
+            if (string.Equals(protocolEvent.eventType, "command-rejected", StringComparison.Ordinal))
+                return false;
+
+            if (string.Equals(protocolEvent.eventType, "session-started", StringComparison.Ordinal)
+                || string.Equals(protocolEvent.eventType, "host-heartbeat", StringComparison.Ordinal)
+                || string.Equals(protocolEvent.eventType, "host-stalled", StringComparison.Ordinal)
+                || string.Equals(protocolEvent.eventType, "host-crashed", StringComparison.Ordinal)
+                || string.Equals(protocolEvent.eventType, HostStateProtocolError, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static string LoadFixtureText(string fileName)
@@ -562,36 +593,50 @@ namespace ASMLite.Tests.Editor
                 case "launch-session":
                     if (!HasLaunchSessionPayload(command.launchSession))
                         throw new InvalidOperationException("launchSession payload is required for commandType 'launch-session'.");
-                    if (HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision))
+                    if (HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("launch-session command must not include unrelated payloads.");
                     NormalizeAndValidateLaunchSession(command.launchSession);
                     command.runSuite = null;
                     command.reviewDecision = null;
+                    command.abortRun = null;
                     break;
                 case "run-suite":
                     if (!HasRunSuitePayload(command.runSuite))
                         throw new InvalidOperationException("runSuite payload is required for commandType 'run-suite'.");
-                    if (HasLaunchSessionPayload(command.launchSession) || HasReviewDecisionPayload(command.reviewDecision))
+                    if (HasLaunchSessionPayload(command.launchSession) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("run-suite command must not include unrelated payloads.");
                     NormalizeAndValidateRunSuite(command.runSuite);
                     command.launchSession = null;
                     command.reviewDecision = null;
+                    command.abortRun = null;
                     break;
                 case "review-decision":
                     if (!HasReviewDecisionPayload(command.reviewDecision))
                         throw new InvalidOperationException("reviewDecision payload is required for commandType 'review-decision'.");
-                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite))
+                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("review-decision command must not include unrelated payloads.");
                     NormalizeAndValidateReviewDecision(command.reviewDecision);
                     command.launchSession = null;
                     command.runSuite = null;
+                    command.abortRun = null;
+                    break;
+                case "abort-run":
+                    if (!HasAbortRunPayload(command.abortRun))
+                        throw new InvalidOperationException("abortRun payload is required for commandType 'abort-run'.");
+                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision))
+                        throw new InvalidOperationException("abort-run command must not include unrelated payloads.");
+                    NormalizeAndValidateAbortRun(command.abortRun);
+                    command.launchSession = null;
+                    command.runSuite = null;
+                    command.reviewDecision = null;
                     break;
                 case "shutdown-session":
-                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision))
+                    if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("shutdown-session command must not include typed payloads.");
                     command.launchSession = null;
                     command.runSuite = null;
                     command.reviewDecision = null;
+                    command.abortRun = null;
                     break;
             }
         }
@@ -622,7 +667,8 @@ namespace ASMLite.Tests.Editor
             return !string.IsNullOrWhiteSpace(payload.suiteId)
                 || !string.IsNullOrWhiteSpace(payload.requestedBy)
                 || !string.IsNullOrWhiteSpace(payload.requestedResetDefault)
-                || !string.IsNullOrWhiteSpace(payload.reason);
+                || !string.IsNullOrWhiteSpace(payload.reason)
+                || Math.Abs(payload.stepSleepSeconds) > double.Epsilon;
         }
 
         private static bool HasReviewDecisionPayload(ASMLiteSmokeReviewDecisionPayload payload)
@@ -635,6 +681,17 @@ namespace ASMLite.Tests.Editor
                 || !string.IsNullOrWhiteSpace(payload.decision)
                 || !string.IsNullOrWhiteSpace(payload.requestedBy)
                 || !string.IsNullOrWhiteSpace(payload.notes);
+        }
+
+        private static bool HasAbortRunPayload(ASMLiteSmokeAbortRunPayload payload)
+        {
+            if (payload == null)
+                return false;
+
+            return !string.IsNullOrWhiteSpace(payload.runId)
+                || !string.IsNullOrWhiteSpace(payload.suiteId)
+                || !string.IsNullOrWhiteSpace(payload.requestedBy)
+                || !string.IsNullOrWhiteSpace(payload.reason);
         }
 
         private static bool HasAnyNonBlank(IEnumerable<string> values)
@@ -674,6 +731,8 @@ namespace ASMLite.Tests.Editor
             payload.requestedBy = RequireNonBlank(payload.requestedBy, "runSuite.requestedBy");
             payload.requestedResetDefault = RequireNonBlank(payload.requestedResetDefault, "runSuite.requestedResetDefault");
             payload.reason = RequireNonBlank(payload.reason, "runSuite.reason");
+            if (double.IsNaN(payload.stepSleepSeconds) || double.IsInfinity(payload.stepSleepSeconds) || payload.stepSleepSeconds < 0d)
+                throw new InvalidOperationException("runSuite.stepSleepSeconds must be a finite non-negative number.");
         }
 
         private static void NormalizeAndValidateReviewDecision(ASMLiteSmokeReviewDecisionPayload payload)
@@ -683,6 +742,14 @@ namespace ASMLite.Tests.Editor
             payload.decision = RequireNonBlank(payload.decision, "reviewDecision.decision");
             payload.requestedBy = RequireNonBlank(payload.requestedBy, "reviewDecision.requestedBy");
             payload.notes = RequireNonBlank(payload.notes, "reviewDecision.notes");
+        }
+
+        private static void NormalizeAndValidateAbortRun(ASMLiteSmokeAbortRunPayload payload)
+        {
+            payload.runId = RequireNonBlank(payload.runId, "abortRun.runId");
+            payload.suiteId = RequireNonBlank(payload.suiteId, "abortRun.suiteId");
+            payload.requestedBy = RequireNonBlank(payload.requestedBy, "abortRun.requestedBy");
+            payload.reason = RequireNonBlank(payload.reason, "abortRun.reason");
         }
 
         private static void NormalizeAndValidateSession(ASMLiteSmokeSessionDocument session)

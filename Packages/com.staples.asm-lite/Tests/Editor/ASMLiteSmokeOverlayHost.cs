@@ -116,6 +116,7 @@ namespace ASMLite.Tests.Editor
         void OpenScene(string scenePath);
         VRCAvatarDescriptor FindAvatarByName(string avatarName);
         void SelectAvatarForAutomation(VRCAvatarDescriptor avatar);
+        void CloseAutomationWindowIfOpen();
         double GetTimeSinceStartup();
         string GetUtcNowIso();
         string GetUnityVersion();
@@ -123,16 +124,30 @@ namespace ASMLite.Tests.Editor
         void UnregisterUpdate(EditorApplication.CallbackFunction tick);
         string[] EnumerateCommandFiles(string commandsDirectoryPath);
         string ReadAllText(string path);
-        bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace);
-        void ExitEditor(int exitCode);
+        bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace);
+        void StartConsoleErrorCapture();
+        void StopConsoleErrorCapture();
+        int GetConsoleErrorCheckpoint();
+        bool TryGetConsoleErrorsSince(int checkpoint, out string detail, out string stackTrace);
+        void ExitEditorWithoutSaving(int exitCode);
     }
 
     internal sealed class ASMLiteSmokeOverlayHostUnityRuntime : IASMLiteSmokeOverlayHostRuntime
     {
         internal static readonly ASMLiteSmokeOverlayHostUnityRuntime Instance = new ASMLiteSmokeOverlayHostUnityRuntime();
 
+        private readonly List<ConsoleErrorRecord> _consoleErrors = new List<ConsoleErrorRecord>();
+        private bool _consoleErrorCaptureActive;
+
         private ASMLiteSmokeOverlayHostUnityRuntime()
         {
+        }
+
+        private sealed class ConsoleErrorRecord
+        {
+            internal string Message;
+            internal string StackTrace;
+            internal LogType Type;
         }
 
         public string GetActiveScenePath()
@@ -147,25 +162,84 @@ namespace ASMLite.Tests.Editor
 
         public VRCAvatarDescriptor FindAvatarByName(string avatarName)
         {
+            string normalizedName = NormalizeUnityRuntimeName(avatarName);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+                return null;
+
             var avatars = Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>();
+            VRCAvatarDescriptor fallback = null;
+            VRCAvatarDescriptor activeSceneFallback = null;
+            VRCAvatarDescriptor componentFallback = null;
+            Scene activeScene = SceneManager.GetActiveScene();
+
             for (int i = 0; i < avatars.Length; i++)
             {
                 VRCAvatarDescriptor avatar = avatars[i];
-                if (avatar != null
-                    && avatar.gameObject != null
-                    && string.Equals(avatar.gameObject.name, avatarName, StringComparison.Ordinal))
+                if (!IsRuntimeSceneAvatarMatch(avatar, normalizedName))
+                    continue;
+
+                fallback ??= avatar;
+
+                if (avatar.gameObject.scene == activeScene)
+                    activeSceneFallback ??= avatar;
+
+                if (avatar.GetComponentInChildren<ASMLiteComponent>(true) != null)
                 {
-                    return avatar;
+                    componentFallback ??= avatar;
+                    if (avatar.gameObject.scene == activeScene)
+                        return avatar;
                 }
             }
 
-            return null;
+            return componentFallback ?? activeSceneFallback ?? fallback;
+        }
+
+        private static bool IsRuntimeSceneAvatarMatch(VRCAvatarDescriptor avatar, string normalizedName)
+        {
+            if (avatar == null || avatar.gameObject == null)
+                return false;
+
+            GameObject avatarObject = avatar.gameObject;
+            if (EditorUtility.IsPersistent(avatarObject))
+                return false;
+
+            Scene scene = avatarObject.scene;
+            if (!scene.IsValid() || !scene.isLoaded)
+                return false;
+
+            return string.Equals(NormalizeUnityRuntimeName(avatarObject.name), normalizedName, StringComparison.Ordinal);
+        }
+
+        internal static string NormalizeUnityRuntimeName(string objectName)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+                return string.Empty;
+
+            string normalized = objectName.Trim();
+            const string cloneSuffix = "(Clone)";
+            while (normalized.EndsWith(cloneSuffix, StringComparison.Ordinal))
+                normalized = normalized.Substring(0, normalized.Length - cloneSuffix.Length).TrimEnd();
+            return normalized;
         }
 
         public void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
         {
             var window = ASMLiteWindow.OpenForAutomation();
             window.SelectAvatarForAutomation(avatar);
+        }
+
+        public void CloseAutomationWindowIfOpen()
+        {
+            var windows = Resources.FindObjectsOfTypeAll<ASMLiteWindow>();
+            if (windows == null)
+                return;
+
+            for (int i = 0; i < windows.Length; i++)
+            {
+                var window = windows[i];
+                if (window != null)
+                    window.Close();
+            }
         }
 
         public double GetTimeSinceStartup()
@@ -206,7 +280,7 @@ namespace ASMLite.Tests.Editor
             return File.ReadAllText(path);
         }
 
-        public bool ExecuteCatalogStep(string actionType, string avatarName, out string detail, out string stackTrace)
+        public bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace)
         {
             detail = string.Empty;
             stackTrace = string.Empty;
@@ -214,16 +288,24 @@ namespace ASMLite.Tests.Editor
             try
             {
                 string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
-                var window = ASMLiteWindow.OpenForAutomation();
+                ASMLiteWindow window;
 
                 switch (normalizedAction)
                 {
-                    case "open-window":
-                        detail = "ASM-Lite window opened for automation.";
+                    case "open-scene":
+                        if (!string.Equals(GetActiveScenePath(), scenePath, StringComparison.Ordinal))
+                            OpenScene(scenePath);
+                        detail = $"Opened scene '{scenePath}'.";
                         return true;
+
+                    case "open-window":
+                        window = ASMLiteWindow.OpenForAutomation();
+                        detail = "ASM-Lite window opened for automation.";
+                        return window != null;
 
                     case "select-avatar":
                     {
+                        window = ASMLiteWindow.OpenForAutomation();
                         VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
                         if (avatar == null)
                         {
@@ -237,30 +319,42 @@ namespace ASMLite.Tests.Editor
                     }
 
                     case "add-prefab":
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         window.AddPrefabForAutomation();
                         detail = "ASM-Lite prefab added.";
                         return true;
 
                     case "rebuild":
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         window.RebuildForAutomation();
                         detail = "Rebuild completed.";
                         return true;
 
                     case "vendorize":
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         window.VendorizeForAutomation();
                         detail = "Vendorize completed.";
                         return true;
 
                     case "detach":
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         window.DetachForAutomation();
                         detail = "Detach completed.";
                         return true;
 
+                    case "lifecycle-hygiene-cleanup":
+                        window = ASMLiteWindow.OpenForAutomation();
+                        SelectAvatarIfFound(window, avatarName);
+                        window.ReturnToPackageManagedForAutomation();
+                        detail = "Hygiene cleanup completed: known ASM-Lite lifecycle state returned to package-managed baseline.";
+                        return true;
+
                     case "return-to-package-managed":
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         window.ReturnToPackageManagedForAutomation();
                         detail = "Return-to-package-managed completed.";
@@ -268,6 +362,7 @@ namespace ASMLite.Tests.Editor
 
                     case "assert-primary-action":
                     {
+                        window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         var hierarchy = window.GetActionHierarchyContract();
                         bool hasPrimaryRebuild = hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.Rebuild);
@@ -285,11 +380,7 @@ namespace ASMLite.Tests.Editor
                     case "assert-runtime-component-valid":
                     {
                         VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
-                        bool valid = avatar != null && avatar.GetComponentInChildren<ASMLiteComponent>(true) != null;
-                        detail = valid
-                            ? "Runtime component check passed."
-                            : "Runtime component check failed: ASM-Lite component was not found on the selected avatar.";
-                        return valid;
+                        return ValidateRuntimeComponentState(avatarName, avatar, EditorApplication.isPlaying, out detail);
                     }
 
                     case "exit-playmode":
@@ -314,6 +405,43 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        internal static bool ValidateRuntimeComponentState(string avatarName, VRCAvatarDescriptor avatar, bool isPlaying, out string detail)
+        {
+            if (avatar == null)
+            {
+                detail = $"Runtime component check failed: avatar '{avatarName}' was not found in the loaded scene.";
+                return false;
+            }
+
+            ASMLiteComponent component = avatar.GetComponentInChildren<ASMLiteComponent>(true);
+            if (component != null)
+            {
+                detail = $"Runtime component check passed on avatar '{avatar.gameObject.name}' via component '{component.gameObject.name}'.";
+                return true;
+            }
+
+            if (isPlaying)
+            {
+                detail = $"Runtime component check passed on avatar '{avatar.gameObject.name}': ASM-Lite editor component was stripped for playmode as expected.";
+                return true;
+            }
+
+            detail = BuildRuntimeComponentFailureDetail(avatarName, avatar);
+            return false;
+        }
+
+        private static string BuildRuntimeComponentFailureDetail(string avatarName, VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return $"Runtime component check failed: avatar '{avatarName}' was not found in the loaded scene.";
+
+            string scenePath = avatar.gameObject.scene.IsValid()
+                ? avatar.gameObject.scene.path
+                : string.Empty;
+            string sceneLabel = string.IsNullOrWhiteSpace(scenePath) ? "unsaved scene" : scenePath;
+            return $"Runtime component check failed: ASM-Lite component was not found under avatar '{avatar.gameObject.name}' in {sceneLabel}.";
+        }
+
         private void SelectAvatarIfFound(ASMLiteWindow window, string avatarName)
         {
             if (window == null)
@@ -324,8 +452,74 @@ namespace ASMLite.Tests.Editor
                 window.SelectAvatarForAutomation(avatar);
         }
 
-        public void ExitEditor(int exitCode)
+        public void StartConsoleErrorCapture()
         {
+            if (_consoleErrorCaptureActive)
+                return;
+
+            _consoleErrors.Clear();
+            Application.logMessageReceived += CaptureConsoleLog;
+            _consoleErrorCaptureActive = true;
+        }
+
+        public void StopConsoleErrorCapture()
+        {
+            if (!_consoleErrorCaptureActive)
+                return;
+
+            Application.logMessageReceived -= CaptureConsoleLog;
+            _consoleErrorCaptureActive = false;
+        }
+
+        public int GetConsoleErrorCheckpoint()
+        {
+            return _consoleErrors.Count;
+        }
+
+        public bool TryGetConsoleErrorsSince(int checkpoint, out string detail, out string stackTrace)
+        {
+            detail = string.Empty;
+            stackTrace = string.Empty;
+
+            int startIndex = Math.Max(0, Math.Min(checkpoint, _consoleErrors.Count));
+            if (startIndex >= _consoleErrors.Count)
+                return false;
+
+            var errors = _consoleErrors.Skip(startIndex).ToArray();
+            if (errors.Length == 0)
+                return false;
+
+            detail = string.Join("\n", errors.Select(item => $"Unity console {item.Type}: {item.Message}"));
+            stackTrace = string.Join("\n\n", errors
+                .Select(item => item.StackTrace)
+                .Where(item => !string.IsNullOrWhiteSpace(item)));
+            return true;
+        }
+
+        private void CaptureConsoleLog(string condition, string stackTrace, LogType type)
+        {
+            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert)
+                return;
+
+            _consoleErrors.Add(new ConsoleErrorRecord
+            {
+                Message = string.IsNullOrWhiteSpace(condition) ? "Unity console error." : condition.Trim(),
+                StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
+                Type = type,
+            });
+        }
+
+        public void ExitEditorWithoutSaving(int exitCode)
+        {
+            try
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"ASM-Lite smoke host could not discard open scenes before exit: {exception.Message}");
+            }
+
             EditorApplication.Exit(exitCode);
         }
     }
@@ -371,6 +565,8 @@ namespace ASMLite.Tests.Editor
 
     internal sealed class ASMLiteSmokeOverlayHostRunner
     {
+        private const double PostLifecycleMutationSettleSeconds = 0.25d;
+
         private readonly ASMLiteSmokeOverlayHostConfiguration _configuration;
         private readonly IASMLiteSmokeOverlayHostRuntime _runtime;
 
@@ -386,6 +582,7 @@ namespace ASMLite.Tests.Editor
         private bool _isRunning;
         private bool _isUpdateRegistered;
         private double _lastHeartbeatWriteAt;
+        private ActiveRunState _activeRun;
 
         private static readonly string[] s_reviewDecisionOptions =
         {
@@ -393,6 +590,56 @@ namespace ASMLite.Tests.Editor
             "rerun-suite",
             "exit",
         };
+
+        private enum ActiveRunPhase
+        {
+            SuiteStart,
+            CaseStart,
+            StepStart,
+            StepExecute,
+            StepSettle,
+            SuitePassed,
+            SuiteFailed,
+            Complete,
+        }
+
+        private sealed class ActiveRunState
+        {
+            internal ASMLiteSmokeCatalogDocument Catalog;
+            internal ASMLiteSmokeSuiteDefinition Suite;
+            internal ASMLiteSmokeProtocolCommand Command;
+            internal ASMLiteSmokeSuiteExecutionResult Result;
+            internal string EffectiveResetPolicy;
+            internal int RunOrdinal;
+            internal string StartedAtUtc;
+            internal double StartedAtSeconds;
+            internal int FirstRunEventSeq;
+            internal int LastRunEventSeq;
+            internal int CaseIndex;
+            internal int StepIndex;
+            internal ActiveRunPhase Phase;
+            internal double StepSleepSeconds;
+            internal double NextStepExecuteAllowedAtSeconds;
+
+            internal ASMLiteSmokeCaseDefinition CurrentCase
+            {
+                get
+                {
+                    ASMLiteSmokeCaseDefinition[] cases = Suite == null ? Array.Empty<ASMLiteSmokeCaseDefinition>() : Suite.cases ?? Array.Empty<ASMLiteSmokeCaseDefinition>();
+                    return CaseIndex >= 0 && CaseIndex < cases.Length ? cases[CaseIndex] : null;
+                }
+            }
+
+            internal ASMLiteSmokeStepDefinition CurrentStep
+            {
+                get
+                {
+                    ASMLiteSmokeCaseDefinition currentCase = CurrentCase;
+                    ASMLiteSmokeStepDefinition[] steps = currentCase == null ? Array.Empty<ASMLiteSmokeStepDefinition>() : currentCase.steps ?? Array.Empty<ASMLiteSmokeStepDefinition>();
+                    return StepIndex >= 0 && StepIndex < steps.Length ? steps[StepIndex] : null;
+                }
+            }
+        }
 
         private string _activeReviewRunId = string.Empty;
         private string _activeReviewGroupId = string.Empty;
@@ -422,10 +669,14 @@ namespace ASMLite.Tests.Editor
             _lastEventSeq = RecoverLastEventSequence(_paths.EventsLogPath);
             _lastCommandSeq = 0;
             _runOrdinal = 0;
+            _activeRun = null;
             ClearActiveReviewContext();
 
             try
             {
+                _runtime.CloseAutomationWindowIfOpen();
+                _runtime.StartConsoleErrorCapture();
+
                 PublishHostState(
                     ASMLiteSmokeProtocol.HostStateIdle,
                     "Unity host booting.",
@@ -441,17 +692,7 @@ namespace ASMLite.Tests.Editor
                     commandId: string.Empty);
                 _lastEventSeq = sessionStartedSeq;
 
-                string activeScene = _runtime.GetActiveScenePath();
-                if (!string.Equals(activeScene, _configuration.ScenePath, StringComparison.Ordinal))
-                    _runtime.OpenScene(_configuration.ScenePath);
-
-                VRCAvatarDescriptor avatar = _runtime.FindAvatarByName(_configuration.AvatarName);
-                if (avatar == null)
-                    throw new InvalidOperationException($"Avatar '{_configuration.AvatarName}' was not found in the loaded scene.");
-
-                _runtime.SelectAvatarForAutomation(avatar);
-
-                string readyMessage = $"Unity host loaded {_configuration.ScenePath} and selected {_configuration.AvatarName}.";
+                string readyMessage = "Unity host ready for suite commands.";
                 int readyEventSeq = _lastEventSeq + 1;
                 PublishHostState(
                     ASMLiteSmokeProtocol.HostStateReady,
@@ -473,7 +714,8 @@ namespace ASMLite.Tests.Editor
                 if (_configuration.ExitOnReady)
                 {
                     _isRunning = false;
-                    _runtime.ExitEditor(0);
+                    _runtime.StopConsoleErrorCapture();
+                    _runtime.ExitEditorWithoutSaving(0);
                     return;
                 }
 
@@ -482,6 +724,7 @@ namespace ASMLite.Tests.Editor
             }
             catch (Exception ex)
             {
+                _runtime.StopConsoleErrorCapture();
                 PublishCrashed(ex);
                 if (_configuration.ExitOnReady)
                     throw;
@@ -492,6 +735,7 @@ namespace ASMLite.Tests.Editor
         {
             _isRunning = false;
             UnregisterUpdate();
+            _runtime.StopConsoleErrorCapture();
         }
 
         internal void TickForTesting()
@@ -521,7 +765,11 @@ namespace ASMLite.Tests.Editor
                 _lastHeartbeatWriteAt = now;
             }
 
+            bool hadActiveRunAtTickStart = _activeRun != null;
             ProcessCommandFiles();
+
+            if (hadActiveRunAtTickStart && _activeRun != null)
+                TickActiveRun();
         }
 
         private void ProcessCommandFiles()
@@ -620,6 +868,10 @@ namespace ASMLite.Tests.Editor
                     HandleReviewDecision(command);
                     break;
 
+                case "abort-run":
+                    HandleAbortRun(command);
+                    break;
+
                 default:
                     RejectCommand(command, $"{command.commandType} is not implemented in this host phase.");
                     break;
@@ -631,6 +883,12 @@ namespace ASMLite.Tests.Editor
             if (command == null || command.runSuite == null)
             {
                 RejectCommand(command, "run-suite payload is required.");
+                return;
+            }
+
+            if (_activeRun != null || string.Equals(_currentState, ASMLiteSmokeProtocol.HostStateRunning, StringComparison.Ordinal))
+            {
+                RejectCommand(command, "run-suite rejected while another suite is running.");
                 return;
             }
 
@@ -654,112 +912,505 @@ namespace ASMLite.Tests.Editor
                     command.runSuite.requestedResetDefault,
                     suite.resetOverride);
 
-                string runStartedAtUtc = _runtime.GetUtcNowIso();
-                double runStartedAtSeconds = _runtime.GetTimeSinceStartup();
                 int runOrdinal = _runOrdinal + 1;
+                string runId = $"run-{command.commandSeq:D4}-{ASMLiteSmokeSessionPaths.NormalizePortableIdentifier(suite.suiteId, nameof(suite.suiteId))}";
+                var result = new ASMLiteSmokeSuiteExecutionResult
+                {
+                    RunId = runId,
+                    GroupId = FindGroupId(catalog, suite.suiteId),
+                    SuiteId = suite.suiteId,
+                    SuiteLabel = suite.label,
+                    EffectiveResetPolicy = effectiveResetPolicy,
+                    Succeeded = false,
+                };
+
+                _activeRun = new ActiveRunState
+                {
+                    Catalog = catalog,
+                    Suite = suite,
+                    Command = command,
+                    Result = result,
+                    EffectiveResetPolicy = effectiveResetPolicy,
+                    RunOrdinal = runOrdinal,
+                    StartedAtUtc = _runtime.GetUtcNowIso(),
+                    StartedAtSeconds = _runtime.GetTimeSinceStartup(),
+                    FirstRunEventSeq = 0,
+                    LastRunEventSeq = 0,
+                    CaseIndex = 0,
+                    StepIndex = 0,
+                    Phase = ActiveRunPhase.SuiteStart,
+                    StepSleepSeconds = Math.Max(0d, command.runSuite.stepSleepSeconds),
+                    NextStepExecuteAllowedAtSeconds = 0d,
+                };
 
                 string runningMessage = $"Running suite '{suite.suiteId}' with effective reset policy '{effectiveResetPolicy}'.";
+                _currentState = ASMLiteSmokeProtocol.HostStateRunning;
+                _currentMessage = runningMessage;
+                ClearActiveReviewContext();
                 PublishHostState(
                     ASMLiteSmokeProtocol.HostStateRunning,
                     runningMessage,
                     _lastEventSeq,
                     _lastCommandSeq);
-                _currentState = ASMLiteSmokeProtocol.HostStateRunning;
-                _currentMessage = runningMessage;
-
-                ASMLiteSmokeSuiteExecutionResult result = ASMLiteSmokeRunExecutor.Execute(
-                    catalog,
-                    command,
-                    effectiveResetPolicy,
-                    ExecuteCatalogStep);
-
-                int firstRunEventSeq = _lastEventSeq + 1;
-                for (int i = 0; i < result.Events.Count; i++)
-                {
-                    ASMLiteSmokeExecutionEventPayload payload = result.Events[i];
-                    int eventSeq = _lastEventSeq + 1;
-                    string eventHostState = string.Equals(payload.EventType, "suite-passed", StringComparison.Ordinal)
-                        ? ASMLiteSmokeProtocol.HostStateReady
-                        : ASMLiteSmokeProtocol.HostStateRunning;
-
-                    AppendEventWithSequence(
-                        eventSeq,
-                        payload.EventType,
-                        eventHostState,
-                        payload.Message,
-                        command.commandId,
-                        runId: result.RunId,
-                        groupId: payload.GroupId,
-                        suiteId: payload.SuiteId,
-                        caseId: payload.CaseId,
-                        stepId: payload.StepId,
-                        effectiveResetPolicy: payload.EffectiveResetPolicy);
-                    _lastEventSeq = eventSeq;
-                }
-
-                int lastRunEventSeq = _lastEventSeq;
-                string runEndedAtUtc = _runtime.GetUtcNowIso();
-                double runEndedAtSeconds = _runtime.GetTimeSinceStartup();
-                EmitRunArtifacts(
-                    catalog,
-                    suite,
-                    command,
-                    result,
-                    runOrdinal,
-                    runStartedAtUtc,
-                    runEndedAtUtc,
-                    runStartedAtSeconds,
-                    runEndedAtSeconds,
-                    firstRunEventSeq,
-                    lastRunEventSeq);
-
-                string completionMessage;
-                if (result.Succeeded)
-                {
-                    completionMessage = $"Suite '{result.SuiteId}' passed and is waiting for operator review.";
-                }
-                else
-                {
-                    string failedStep = result.Failure == null ? string.Empty : result.Failure.StepId;
-                    completionMessage = string.IsNullOrWhiteSpace(failedStep)
-                        ? $"Suite '{result.SuiteId}' failed and is waiting for operator review."
-                        : $"Suite '{result.SuiteId}' failed at step '{failedStep}' and is waiting for operator review.";
-                }
-
-                CaptureActiveReviewContext(command, result);
-
-                _currentState = ASMLiteSmokeProtocol.HostStateReviewRequired;
-                _currentMessage = completionMessage;
-
-                int reviewRequiredSeq = _lastEventSeq + 1;
-                AppendEventWithSequence(
-                    reviewRequiredSeq,
-                    "review-required",
-                    ASMLiteSmokeProtocol.HostStateReviewRequired,
-                    "Choose Return to Suite List, Rerun Suite, or Exit.",
-                    command.commandId,
-                    runId: result.RunId,
-                    groupId: result.GroupId,
-                    suiteId: result.SuiteId,
-                    reviewDecisionOptions: s_reviewDecisionOptions);
-                _lastEventSeq = reviewRequiredSeq;
-
-                PublishHostState(
-                    ASMLiteSmokeProtocol.HostStateReviewRequired,
-                    completionMessage,
-                    _lastEventSeq,
-                    _lastCommandSeq);
 
                 _processedCommandIds.Add(command.commandId);
-                _runOrdinal = runOrdinal;
             }
             catch (Exception ex)
             {
+                _activeRun = null;
                 string message = string.IsNullOrWhiteSpace(ex.Message)
                     ? "run-suite execution failed."
                     : $"run-suite execution failed: {ex.Message}";
                 RejectCommand(command, message);
             }
+        }
+
+        private void TickActiveRun()
+        {
+            ActiveRunState activeRun = _activeRun;
+            if (activeRun == null)
+                return;
+
+            try
+            {
+                switch (activeRun.Phase)
+                {
+                    case ActiveRunPhase.SuiteStart:
+                        AppendActiveRunEvent(
+                            activeRun,
+                            "suite-started",
+                            activeRun.Suite.suiteId,
+                            string.Empty,
+                            string.Empty,
+                            $"Suite '{activeRun.Suite.suiteId}' started.");
+                        AdvanceActiveRunToNextCaseOrSuitePassed(activeRun);
+                        PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                        return;
+
+                    case ActiveRunPhase.CaseStart:
+                    {
+                        ASMLiteSmokeCaseDefinition suiteCase = activeRun.CurrentCase;
+                        if (suiteCase == null)
+                        {
+                            AdvanceActiveRunToNextCaseOrSuitePassed(activeRun);
+                            PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                            return;
+                        }
+
+                        AppendActiveRunEvent(
+                            activeRun,
+                            "case-started",
+                            activeRun.Suite.suiteId,
+                            suiteCase.caseId,
+                            string.Empty,
+                            $"Case '{suiteCase.caseId}' started.");
+                        AdvanceActiveRunToNextStepOrCase(activeRun);
+                        PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                        return;
+                    }
+
+                    case ActiveRunPhase.StepStart:
+                    {
+                        ASMLiteSmokeCaseDefinition suiteCase = activeRun.CurrentCase;
+                        ASMLiteSmokeStepDefinition step = activeRun.CurrentStep;
+                        if (suiteCase == null || step == null)
+                        {
+                            AdvanceActiveRunToNextStepOrCase(activeRun);
+                            PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                            return;
+                        }
+
+                        AppendActiveRunEvent(
+                            activeRun,
+                            "step-started",
+                            activeRun.Suite.suiteId,
+                            suiteCase.caseId,
+                            step.stepId,
+                            $"Step '{step.stepId}' started ({step.actionType}).");
+                        activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + activeRun.StepSleepSeconds;
+                        activeRun.Phase = ActiveRunPhase.StepExecute;
+                        PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                        return;
+                    }
+
+                    case ActiveRunPhase.StepExecute:
+                        if (_runtime.GetTimeSinceStartup() < activeRun.NextStepExecuteAllowedAtSeconds)
+                        {
+                            PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                            return;
+                        }
+
+                        ExecuteActiveRunStep(activeRun);
+                        PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                        return;
+
+                    case ActiveRunPhase.StepSettle:
+                        if (_runtime.GetTimeSinceStartup() < activeRun.NextStepExecuteAllowedAtSeconds)
+                        {
+                            PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                            return;
+                        }
+
+                        AdvanceActiveRunToNextStepOrCase(activeRun);
+                        PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
+                        return;
+
+                    case ActiveRunPhase.SuitePassed:
+                        activeRun.Result.Succeeded = true;
+                        AppendActiveRunEvent(
+                            activeRun,
+                            "suite-passed",
+                            activeRun.Suite.suiteId,
+                            string.Empty,
+                            string.Empty,
+                            $"Suite '{activeRun.Suite.suiteId}' passed.",
+                            ASMLiteSmokeProtocol.HostStateReady);
+                        CompleteActiveRun(activeRun, "passed", activeRun.Command.commandId);
+                        return;
+
+                    case ActiveRunPhase.SuiteFailed:
+                    {
+                        ASMLiteSmokeExecutionFailure failure = activeRun.Result.Failure;
+                        string caseId = failure == null ? string.Empty : failure.CaseId;
+                        string stepId = failure == null ? string.Empty : failure.StepId;
+                        AppendActiveRunEvent(
+                            activeRun,
+                            "suite-failed",
+                            activeRun.Suite.suiteId,
+                            caseId,
+                            stepId,
+                            string.IsNullOrWhiteSpace(stepId)
+                                ? $"Suite '{activeRun.Suite.suiteId}' failed."
+                                : $"Suite '{activeRun.Suite.suiteId}' failed at step '{stepId}'.");
+                        CompleteActiveRun(activeRun, "failed", activeRun.Command.commandId);
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                string message = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "run-suite tick failed."
+                    : $"run-suite tick failed: {ex.Message}";
+                RejectCommand(activeRun.Command, message);
+                _activeRun = null;
+            }
+        }
+
+        private void ExecuteActiveRunStep(ActiveRunState activeRun)
+        {
+            ASMLiteSmokeCaseDefinition suiteCase = activeRun.CurrentCase;
+            ASMLiteSmokeStepDefinition step = activeRun.CurrentStep;
+            if (suiteCase == null || step == null)
+            {
+                AdvanceActiveRunToNextStepOrCase(activeRun);
+                return;
+            }
+
+            bool stepPassed = ExecuteCatalogStep(step, out string detail, out string stackTrace);
+            if (stepPassed)
+            {
+                string stepPassedMessage = string.IsNullOrWhiteSpace(detail)
+                    ? $"Step '{step.stepId}' passed."
+                    : detail.Trim();
+                AppendActiveRunEvent(
+                    activeRun,
+                    "step-passed",
+                    activeRun.Suite.suiteId,
+                    suiteCase.caseId,
+                    step.stepId,
+                    stepPassedMessage);
+                activeRun.StepIndex++;
+                if (ShouldSettleAfterStep(step))
+                {
+                    activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
+                    activeRun.Phase = ActiveRunPhase.StepSettle;
+                    return;
+                }
+
+                AdvanceActiveRunToNextStepOrCase(activeRun);
+                return;
+            }
+
+            string failureMessage = string.IsNullOrWhiteSpace(detail)
+                ? $"Step '{step.stepId}' failed."
+                : detail.Trim();
+            AppendActiveRunEvent(
+                activeRun,
+                "step-failed",
+                activeRun.Suite.suiteId,
+                suiteCase.caseId,
+                step.stepId,
+                failureMessage);
+
+            activeRun.Result.Failure = new ASMLiteSmokeExecutionFailure
+            {
+                CaseId = suiteCase.caseId,
+                CaseLabel = suiteCase.label,
+                StepId = step.stepId,
+                StepLabel = step.label,
+                FailureMessage = failureMessage,
+                StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
+            };
+            activeRun.Result.Succeeded = false;
+            activeRun.Phase = ActiveRunPhase.SuiteFailed;
+        }
+
+        private static bool ShouldSettleAfterStep(ASMLiteSmokeStepDefinition step)
+        {
+            if (step == null || string.IsNullOrWhiteSpace(step.actionType))
+                return false;
+
+            switch (step.actionType.Trim())
+            {
+                case "add-prefab":
+                case "rebuild":
+                case "vendorize":
+                case "detach":
+                case "lifecycle-hygiene-cleanup":
+                case "return-to-package-managed":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void AdvanceActiveRunToNextCaseOrSuitePassed(ActiveRunState activeRun)
+        {
+            ASMLiteSmokeCaseDefinition[] cases = activeRun.Suite == null
+                ? Array.Empty<ASMLiteSmokeCaseDefinition>()
+                : activeRun.Suite.cases ?? Array.Empty<ASMLiteSmokeCaseDefinition>();
+
+            while (activeRun.CaseIndex < cases.Length && cases[activeRun.CaseIndex] == null)
+                activeRun.CaseIndex++;
+
+            activeRun.StepIndex = 0;
+            activeRun.Phase = activeRun.CaseIndex < cases.Length
+                ? ActiveRunPhase.CaseStart
+                : ActiveRunPhase.SuitePassed;
+        }
+
+        private void AdvanceActiveRunToNextStepOrCase(ActiveRunState activeRun)
+        {
+            ASMLiteSmokeCaseDefinition suiteCase = activeRun.CurrentCase;
+            ASMLiteSmokeStepDefinition[] steps = suiteCase == null
+                ? Array.Empty<ASMLiteSmokeStepDefinition>()
+                : suiteCase.steps ?? Array.Empty<ASMLiteSmokeStepDefinition>();
+
+            while (activeRun.StepIndex < steps.Length && steps[activeRun.StepIndex] == null)
+                activeRun.StepIndex++;
+
+            if (activeRun.StepIndex < steps.Length)
+            {
+                activeRun.Phase = ActiveRunPhase.StepStart;
+                return;
+            }
+
+            activeRun.CaseIndex++;
+            activeRun.StepIndex = 0;
+            AdvanceActiveRunToNextCaseOrSuitePassed(activeRun);
+        }
+
+        private void AppendActiveRunEvent(
+            ActiveRunState activeRun,
+            string eventType,
+            string suiteId,
+            string caseId,
+            string stepId,
+            string message,
+            string eventHostState = null,
+            string commandId = null)
+        {
+            var payload = new ASMLiteSmokeExecutionEventPayload
+            {
+                EventType = eventType,
+                Message = message,
+                GroupId = activeRun.Result.GroupId,
+                SuiteId = suiteId,
+                CaseId = caseId,
+                StepId = stepId,
+                EffectiveResetPolicy = activeRun.EffectiveResetPolicy,
+            };
+            activeRun.Result.Events.Add(payload);
+
+            int eventSeq = _lastEventSeq + 1;
+            if (activeRun.FirstRunEventSeq <= 0)
+                activeRun.FirstRunEventSeq = eventSeq;
+
+            AppendEventWithSequence(
+                eventSeq,
+                eventType,
+                string.IsNullOrWhiteSpace(eventHostState) ? ASMLiteSmokeProtocol.HostStateRunning : eventHostState,
+                message,
+                string.IsNullOrWhiteSpace(commandId) ? activeRun.Command.commandId : commandId,
+                runId: activeRun.Result.RunId,
+                groupId: activeRun.Result.GroupId,
+                suiteId: suiteId,
+                caseId: caseId,
+                stepId: stepId,
+                effectiveResetPolicy: activeRun.EffectiveResetPolicy);
+            _lastEventSeq = eventSeq;
+            activeRun.LastRunEventSeq = eventSeq;
+        }
+
+        private void CompleteActiveRun(ActiveRunState activeRun, string resultStatus, string reviewCommandId)
+        {
+            string runEndedAtUtc = _runtime.GetUtcNowIso();
+            double runEndedAtSeconds = _runtime.GetTimeSinceStartup();
+            int firstRunEventSeq = activeRun.FirstRunEventSeq <= 0 ? _lastEventSeq : activeRun.FirstRunEventSeq;
+            int lastRunEventSeq = activeRun.LastRunEventSeq <= 0 ? _lastEventSeq : activeRun.LastRunEventSeq;
+
+            EmitRunArtifacts(
+                activeRun.Catalog,
+                activeRun.Suite,
+                activeRun.Command,
+                activeRun.Result,
+                activeRun.RunOrdinal,
+                activeRun.StartedAtUtc,
+                runEndedAtUtc,
+                activeRun.StartedAtSeconds,
+                runEndedAtSeconds,
+                firstRunEventSeq,
+                lastRunEventSeq,
+                resultStatus);
+
+            string completionMessage = BuildRunCompletionMessage(activeRun.Result, resultStatus);
+            bool succeeded = string.Equals(resultStatus, "passed", StringComparison.Ordinal) || activeRun.Result.Succeeded;
+            _activeRun = null;
+
+            if (succeeded)
+            {
+                ClearActiveReviewContext();
+                int idleSeq = _lastEventSeq + 1;
+                AppendEventWithSequence(
+                    idleSeq,
+                    "session-idle",
+                    ASMLiteSmokeProtocol.HostStateIdle,
+                    "Suite passed; returning to suite selection.",
+                    reviewCommandId,
+                    runId: activeRun.Result.RunId,
+                    groupId: activeRun.Result.GroupId,
+                    suiteId: activeRun.Result.SuiteId);
+                _lastEventSeq = idleSeq;
+
+                _currentState = ASMLiteSmokeProtocol.HostStateIdle;
+                _currentMessage = completionMessage;
+                PublishHostState(
+                    ASMLiteSmokeProtocol.HostStateIdle,
+                    completionMessage,
+                    _lastEventSeq,
+                    _lastCommandSeq);
+
+                _runOrdinal = activeRun.RunOrdinal;
+                return;
+            }
+
+            CaptureActiveReviewContext(activeRun.Command, activeRun.Result);
+
+            _currentState = ASMLiteSmokeProtocol.HostStateReviewRequired;
+            _currentMessage = completionMessage;
+
+            int reviewRequiredSeq = _lastEventSeq + 1;
+            AppendEventWithSequence(
+                reviewRequiredSeq,
+                "review-required",
+                ASMLiteSmokeProtocol.HostStateReviewRequired,
+                "Choose Return to Suite List, Rerun Suite, or Exit.",
+                reviewCommandId,
+                runId: activeRun.Result.RunId,
+                groupId: activeRun.Result.GroupId,
+                suiteId: activeRun.Result.SuiteId,
+                reviewDecisionOptions: s_reviewDecisionOptions);
+            _lastEventSeq = reviewRequiredSeq;
+
+            PublishHostState(
+                ASMLiteSmokeProtocol.HostStateReviewRequired,
+                completionMessage,
+                _lastEventSeq,
+                _lastCommandSeq);
+
+            _runOrdinal = activeRun.RunOrdinal;
+        }
+
+        private string BuildRunCompletionMessage(ASMLiteSmokeSuiteExecutionResult result, string resultStatus)
+        {
+            if (string.Equals(resultStatus, "aborted", StringComparison.Ordinal))
+                return $"Suite '{result.SuiteId}' was aborted and is waiting for operator review.";
+
+            if (string.Equals(resultStatus, "passed", StringComparison.Ordinal) || result.Succeeded)
+                return $"Suite '{result.SuiteId}' passed; returned to suite selection.";
+
+            string failedStep = result.Failure == null ? string.Empty : result.Failure.StepId;
+            return string.IsNullOrWhiteSpace(failedStep)
+                ? $"Suite '{result.SuiteId}' failed and is waiting for operator review."
+                : $"Suite '{result.SuiteId}' failed at step '{failedStep}' and is waiting for operator review.";
+        }
+
+        private void HandleAbortRun(ASMLiteSmokeProtocolCommand command)
+        {
+            if (command == null || command.abortRun == null)
+            {
+                RejectCommand(command, "abort-run payload is required.");
+                return;
+            }
+
+            if (_activeRun == null || !string.Equals(_currentState, ASMLiteSmokeProtocol.HostStateRunning, StringComparison.Ordinal))
+            {
+                RejectCommand(command, "abort-run rejected because no active run is running.");
+                return;
+            }
+
+            ASMLiteSmokeAbortRunPayload payload = command.abortRun;
+            if (!string.Equals(payload.runId, _activeRun.Result.RunId, StringComparison.Ordinal)
+                || !string.Equals(payload.suiteId, _activeRun.Result.SuiteId, StringComparison.Ordinal))
+            {
+                RejectCommand(command, "abort-run runId/suiteId does not match the active run context.");
+                return;
+            }
+
+            ActiveRunState activeRun = _activeRun;
+            string requestedBy = string.IsNullOrWhiteSpace(payload.requestedBy) ? "operator" : payload.requestedBy.Trim();
+            string reason = string.IsNullOrWhiteSpace(payload.reason) ? "operator-abort" : payload.reason.Trim();
+            AppendActiveRunEvent(
+                activeRun,
+                "abort-requested",
+                activeRun.Result.SuiteId,
+                string.Empty,
+                string.Empty,
+                $"Abort requested by '{requestedBy}': {reason}",
+                commandId: command.commandId);
+            AppendActiveRunEvent(
+                activeRun,
+                "run-aborted",
+                activeRun.Result.SuiteId,
+                string.Empty,
+                string.Empty,
+                $"Run '{activeRun.Result.RunId}' aborted before the next smoke step.",
+                commandId: command.commandId);
+
+            activeRun.Result.Succeeded = false;
+            CompleteActiveRun(activeRun, "aborted", command.commandId);
+            _processedCommandIds.Add(command.commandId);
+        }
+
+        private static string FindGroupId(ASMLiteSmokeCatalogDocument catalog, string suiteId)
+        {
+            ASMLiteSmokeGroupDefinition[] groups = catalog == null ? Array.Empty<ASMLiteSmokeGroupDefinition>() : catalog.groups ?? Array.Empty<ASMLiteSmokeGroupDefinition>();
+            for (int i = 0; i < groups.Length; i++)
+            {
+                ASMLiteSmokeGroupDefinition group = groups[i];
+                if (group == null || group.suites == null)
+                    continue;
+
+                for (int j = 0; j < group.suites.Length; j++)
+                {
+                    ASMLiteSmokeSuiteDefinition suite = group.suites[j];
+                    if (suite != null && string.Equals(suite.suiteId, suiteId, StringComparison.Ordinal))
+                        return group.groupId;
+                }
+            }
+
+            return string.Empty;
         }
 
         private void HandleReviewDecision(ASMLiteSmokeProtocolCommand command)
@@ -849,6 +1500,7 @@ namespace ASMLite.Tests.Editor
                             reason = rerunReason,
                         },
                         reviewDecision = null,
+                        abortRun = null,
                     };
 
                     HandleRunSuite(rerunCommand, allowDuringReviewRequired: true);
@@ -916,7 +1568,8 @@ namespace ASMLite.Tests.Editor
             double startedAtSeconds,
             double endedAtSeconds,
             int firstRunEventSeq,
-            int lastRunEventSeq)
+            int lastRunEventSeq,
+            string resultStatus = null)
         {
             string runDirectoryPath = _paths.GetRunDirectoryPath(runOrdinal, result.SuiteId);
             Directory.CreateDirectory(runDirectoryPath);
@@ -946,10 +1599,15 @@ namespace ASMLite.Tests.Editor
             if (string.IsNullOrWhiteSpace(groupLabel))
                 groupLabel = "unknown-group";
 
+            string normalizedResultStatus = string.IsNullOrWhiteSpace(resultStatus)
+                ? (result.Succeeded ? "passed" : "failed")
+                : resultStatus.Trim();
+            bool shouldWriteFailureArtifact = string.Equals(normalizedResultStatus, "failed", StringComparison.Ordinal);
+
             ASMLiteSmokeArtifactReferences artifactRefs = new ASMLiteSmokeArtifactReferences
             {
                 resultPath = GetSessionRelativePath(resultPath),
-                failurePath = result.Succeeded ? string.Empty : GetSessionRelativePath(failurePath),
+                failurePath = shouldWriteFailureArtifact ? GetSessionRelativePath(failurePath) : string.Empty,
                 eventsSlicePath = GetSessionRelativePath(eventsSlicePath),
                 nunitPath = GetSessionRelativePath(nunitPath),
                 debugSummaryPath = string.Empty
@@ -961,7 +1619,7 @@ namespace ASMLite.Tests.Editor
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
                 sessionId = _sessionId,
                 runId = result.RunId,
-                result = result.Succeeded ? "passed" : "failed",
+                result = normalizedResultStatus,
                 groupId = result.GroupId,
                 groupLabel = groupLabel,
                 suiteId = result.SuiteId,
@@ -977,7 +1635,7 @@ namespace ASMLite.Tests.Editor
             };
             ASMLiteSmokeArtifactPaths.WriteResultDocumentAtomically(resultPath, resultDocument, true);
 
-            if (!result.Succeeded)
+            if (shouldWriteFailureArtifact)
             {
                 string[] lastEvents = runEvents.Select(evt => evt.message)
                     .Where(message => !string.IsNullOrWhiteSpace(message))
@@ -1061,7 +1719,16 @@ namespace ASMLite.Tests.Editor
                 return false;
             }
 
-            return _runtime.ExecuteCatalogStep(step.actionType, _configuration.AvatarName, out detail, out stackTrace);
+            int consoleErrorCheckpoint = _runtime.GetConsoleErrorCheckpoint();
+            bool stepPassed = _runtime.ExecuteCatalogStep(step.actionType, _configuration.ScenePath, _configuration.AvatarName, out detail, out stackTrace);
+            if (_runtime.TryGetConsoleErrorsSince(consoleErrorCheckpoint, out string consoleErrorDetail, out string consoleErrorStackTrace))
+            {
+                detail = consoleErrorDetail;
+                stackTrace = consoleErrorStackTrace;
+                return false;
+            }
+
+            return stepPassed;
         }
 
         private void RejectCommand(ASMLiteSmokeProtocolCommand command, string reason)
@@ -1108,7 +1775,8 @@ namespace ASMLite.Tests.Editor
 
             _isRunning = false;
             UnregisterUpdate();
-            _runtime.ExitEditor(0);
+            _runtime.StopConsoleErrorCapture();
+            _runtime.ExitEditorWithoutSaving(0);
         }
 
         private void PublishStalled(string message)
@@ -1199,13 +1867,25 @@ namespace ASMLite.Tests.Editor
                 heartbeatUtc = _runtime.GetUtcNowIso(),
                 lastEventSeq = Math.Max(0, lastEventSeq),
                 lastCommandSeq = Math.Max(0, lastCommandSeq),
-                activeRunId = string.Equals(normalizedState, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal)
-                    ? _activeReviewRunId
-                    : string.Empty,
+                activeRunId = ResolveActiveRunIdForHostState(normalizedState),
                 message = normalizedMessage,
             };
 
             ASMLiteSmokeProtocol.WriteHostStateDocumentAtomically(_paths.HostStatePath, hostState, prettyPrint: true);
+        }
+
+        private string ResolveActiveRunIdForHostState(string normalizedState)
+        {
+            if (string.Equals(normalizedState, ASMLiteSmokeProtocol.HostStateRunning, StringComparison.Ordinal)
+                && _activeRun != null
+                && _activeRun.Result != null
+                && !string.IsNullOrWhiteSpace(_activeRun.Result.RunId))
+                return _activeRun.Result.RunId;
+
+            if (string.Equals(normalizedState, ASMLiteSmokeProtocol.HostStateReviewRequired, StringComparison.Ordinal))
+                return _activeReviewRunId;
+
+            return string.Empty;
         }
 
         private void AppendEventWithSequence(

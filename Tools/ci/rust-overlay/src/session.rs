@@ -350,13 +350,8 @@ impl SmokeSessionPaths {
         let combined = self
             .session_root
             .join(normalized_relative.replace('/', &separator));
-        let full = combined
-            .canonicalize()
-            .unwrap_or_else(|_| normalize_absolute(&combined));
-        let session_root_full = self
-            .session_root
-            .canonicalize()
-            .unwrap_or_else(|_| normalize_absolute(&self.session_root));
+        let full = normalize_absolute(&combined);
+        let session_root_full = normalize_absolute(&self.session_root);
 
         let root_prefix = format!(
             "{}{}",

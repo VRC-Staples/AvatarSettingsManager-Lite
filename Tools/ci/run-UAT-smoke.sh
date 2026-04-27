@@ -11,7 +11,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
-CANONICAL_PROJECT_PATH="${REPO_ROOT}/Tools/ci/unity-project"
+CANONICAL_PROJECT_PATH="$(cd "${REPO_ROOT}/.." && pwd)/Test Project/TestUnityProject"
+if [[ ! -d "${CANONICAL_PROJECT_PATH}" ]]; then
+  echo "error: UAT smoke requires the external test project path: ${CANONICAL_PROJECT_PATH}" >&2
+  echo "error: do not use Tools/ci/unity-project for UAT smoke; that harness is CI-only." >&2
+  exit 1
+fi
 CANONICAL_CATALOG_PATH="${REPO_ROOT}/Tools/ci/smoke/suite-catalog.json"
 FIXED_DELAY_SECONDS="1.5"
 
@@ -87,6 +92,33 @@ resolve_rust_overlay_runner() {
   RUST_OVERLAY_RUNNER_LABEL="cargo run --manifest-path Tools/ci/rust-overlay/Cargo.toml --bin asmlite_smoke_overlay --"
 }
 
+
+resolve_unity_executable() {
+  if [[ -n "${UNITY_EXECUTABLE:-}" ]]; then
+    printf '%s\n' "${UNITY_EXECUTABLE}"
+    return 0
+  fi
+
+  local version_file="${CANONICAL_PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
+  local unity_version candidate
+  if [[ ! -f "${version_file}" ]]; then
+    return 1
+  fi
+
+  unity_version="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' "${version_file}" | tr -d '\r\n')"
+  if [[ -z "${unity_version}" ]]; then
+    return 1
+  fi
+
+  candidate="/mnt/c/Program Files/Unity/Hub/Editor/${unity_version}/Editor/Unity.exe"
+  if [[ -f "${candidate}" ]]; then
+    printf '%s\n' "${candidate}"
+    return 0
+  fi
+
+  return 1
+}
+
 path_arg_for_rust_overlay_runner() {
   local path="$1"
 
@@ -104,7 +136,7 @@ path_arg_for_rust_overlay_runner() {
 
 start_rust_overlay_session() {
   local mode="$1"
-  local timestamp repo_root_arg project_path_arg catalog_path_arg session_root_arg
+  local timestamp repo_root_arg project_path_arg catalog_path_arg session_root_arg unity_executable unity_executable_arg
   local -a overlay_cmd
   local overlay_exit_code
 
@@ -120,6 +152,7 @@ start_rust_overlay_session() {
   project_path_arg="$(path_arg_for_rust_overlay_runner "${CANONICAL_PROJECT_PATH}")"
   catalog_path_arg="$(path_arg_for_rust_overlay_runner "${CANONICAL_CATALOG_PATH}")"
   session_root_arg="$(path_arg_for_rust_overlay_runner "${OVERLAY_SESSION_ROOT}")"
+  unity_executable="$(resolve_unity_executable || true)"
 
   overlay_cmd=(
     "${RUST_OVERLAY_RUNNER_CMD[@]}"
@@ -128,8 +161,12 @@ start_rust_overlay_session() {
     --catalog-path "${catalog_path_arg}"
     --session-root "${session_root_arg}"
     --mode "${mode}"
-    --exit-on-ready
   )
+
+  if [[ -n "${unity_executable}" ]]; then
+    unity_executable_arg="$(path_arg_for_rust_overlay_runner "${unity_executable}")"
+    overlay_cmd+=(--unity-executable "${unity_executable_arg}")
+  fi
 
   echo "Running canonical visible UAT smoke flow against:"
   echo "  Project: ${CANONICAL_PROJECT_PATH}"
@@ -137,6 +174,9 @@ start_rust_overlay_session() {
   echo "  Mode:    ${mode}"
   echo "  Delay:   ${FIXED_DELAY_SECONDS}s"
   echo "  Runner:  ${RUST_OVERLAY_RUNNER_LABEL}"
+  if [[ -n "${unity_executable}" ]]; then
+    echo "  Unity:   ${unity_executable}"
+  fi
   echo "  Session: ${OVERLAY_SESSION_ROOT}"
 
   set +e
@@ -149,9 +189,9 @@ start_rust_overlay_session() {
 
   echo
   if [[ "${overlay_exit_code}" -eq 0 ]]; then
-    echo "visible-smoke: PASS"
+    echo "visible-smoke: BOOTSTRAP PASS (Rust overlay CLI exited 0)"
   else
-    echo "visible-smoke: FAIL (exit code ${overlay_exit_code})"
+    echo "visible-smoke: BOOTSTRAP FAIL (exit code ${overlay_exit_code})"
   fi
 
   echo

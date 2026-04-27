@@ -10,18 +10,148 @@ pub struct SuiteRowView {
     pub suite_id: String,
     pub suite_label: String,
     pub selected: bool,
+    pub checked: bool,
+    pub focused: bool,
+    pub selected_order: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SuiteChecklistViewModel {
+    pub rows: Vec<SuiteRowView>,
+    pub selected_count: usize,
+    pub can_run_selected_batch: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunPlanStepRowView {
+    pub ordinal: usize,
+    pub group_id: String,
+    pub group_label: String,
+    pub suite_id: String,
+    pub suite_label: String,
+    pub case_id: String,
+    pub case_label: String,
+    pub step_id: String,
+    pub step_label: String,
+    pub action_type: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunPlanSuiteSectionView {
+    pub title: String,
+    pub group_id: String,
+    pub group_label: String,
+    pub suite_id: String,
+    pub suite_label: String,
+    pub default_open: bool,
+    pub steps: Vec<RunPlanStepRowView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CurrentRunPlanViewModel {
+    pub rows: Vec<RunPlanStepRowView>,
+    pub suite_sections: Vec<RunPlanSuiteSectionView>,
+    pub available_suite_count: usize,
+    pub selected_suite_count: usize,
+    pub total_step_count: usize,
+    pub summary: String,
+    pub empty_message: Option<String>,
+    pub can_run_selected_batch: bool,
+}
+
+pub fn build_current_run_plan_view(model: &SuiteSelectionModel) -> CurrentRunPlanViewModel {
+    let available_suite_count = model.available_suite_ids().len();
+    let selected_suite_ids = model.selected_suite_ids();
+    let selected_suite_count = selected_suite_ids.len();
+    let mut rows = Vec::new();
+    let mut suite_sections = Vec::new();
+
+    for suite_id in selected_suite_ids {
+        let Some((group_index, suite_index)) =
+            model.catalog.suite_index_by_id.get(suite_id).copied()
+        else {
+            continue;
+        };
+        let Some(group) = model.catalog.groups.get(group_index) else {
+            continue;
+        };
+        let Some(suite) = group.suites.get(suite_index) else {
+            continue;
+        };
+        let mut section_steps = Vec::new();
+        for case_item in &suite.cases {
+            for step in &case_item.steps {
+                let row = RunPlanStepRowView {
+                    ordinal: rows.len() + 1,
+                    group_id: group.group_id.clone(),
+                    group_label: group.label.clone(),
+                    suite_id: suite.suite_id.clone(),
+                    suite_label: suite.label.clone(),
+                    case_id: case_item.case_id.clone(),
+                    case_label: case_item.label.clone(),
+                    step_id: step.step_id.clone(),
+                    step_label: step.label.clone(),
+                    action_type: step.action_type.clone(),
+                };
+                rows.push(row.clone());
+                section_steps.push(row);
+            }
+        }
+        suite_sections.push(RunPlanSuiteSectionView {
+            title: format!("{} · {}", group.label, suite.label),
+            group_id: group.group_id.clone(),
+            group_label: group.label.clone(),
+            suite_id: suite.suite_id.clone(),
+            suite_label: suite.label.clone(),
+            default_open: false,
+            steps: section_steps,
+        });
+    }
+
+    let total_step_count = rows.len();
+    CurrentRunPlanViewModel {
+        rows,
+        suite_sections,
+        available_suite_count,
+        selected_suite_count,
+        total_step_count,
+        summary: format!(
+            "{available_suite_count} suites available · {selected_suite_count} selected · {total_step_count} total steps"
+        ),
+        empty_message: if selected_suite_count == 0 {
+            Some("Select at least one suite".to_string())
+        } else {
+            None
+        },
+        can_run_selected_batch: selected_suite_count > 0,
+    }
+}
+
+pub fn build_suite_checklist_view(model: &SuiteSelectionModel) -> SuiteChecklistViewModel {
+    let rows = build_grouped_suite_rows(model);
+    let selected_count = rows.iter().filter(|row| row.checked).count();
+    SuiteChecklistViewModel {
+        rows,
+        selected_count,
+        can_run_selected_batch: model.can_run_selected_suite(),
+    }
 }
 
 pub fn build_grouped_suite_rows(model: &SuiteSelectionModel) -> Vec<SuiteRowView> {
     let mut rows = Vec::new();
     for group in &model.catalog.groups {
         for suite in &group.suites {
+            let selected_order = model.selected_order_for_suite_id(&suite.suite_id);
+            let checked = selected_order.is_some();
             rows.push(SuiteRowView {
                 group_id: group.group_id.clone(),
                 group_label: group.label.clone(),
                 suite_id: suite.suite_id.clone(),
                 suite_label: suite.label.clone(),
-                selected: suite.suite_id == model.selected_suite_id,
+                selected: checked,
+                checked,
+                focused: suite.suite_id == model.selected_suite_id,
+                selected_order,
             });
         }
     }
@@ -32,19 +162,34 @@ pub fn build_grouped_suite_rows(model: &SuiteSelectionModel) -> Vec<SuiteRowView
 pub fn render_pre_run_surface(model: &SuiteSelectionModel) -> String {
     let mut lines = Vec::new();
     let mut active_group_id = String::new();
+    let checklist = build_suite_checklist_view(model);
 
-    for row in build_grouped_suite_rows(model) {
+    lines.push(format!(
+        "Selected suites: {}/{}",
+        checklist.selected_count,
+        checklist.rows.len()
+    ));
+
+    for row in checklist.rows {
         if row.group_id != active_group_id {
             active_group_id = row.group_id.clone();
             lines.push(format!("{GROUP_HEADER_PREFIX} {}", row.group_label));
         }
 
-        let marker = if row.selected {
+        let marker = if row.checked {
             ROW_SELECTED_PREFIX
         } else {
             ROW_UNSELECTED_PREFIX
         };
-        lines.push(format!("{marker} [{}] {}", row.suite_id, row.suite_label));
+        let order = row
+            .selected_order
+            .map(|value| format!(" #{value}"))
+            .unwrap_or_default();
+        let focus = if row.focused { " ← current" } else { "" };
+        lines.push(format!(
+            "{marker} [{}]{} {}{}",
+            row.suite_id, order, row.suite_label, focus
+        ));
     }
 
     if let (Some(group), Some(suite)) = (model.selected_group(), model.selected_suite()) {
@@ -121,11 +266,198 @@ mod tests {
         assert_eq!(
             ids,
             vec![
-                "open-select-add",
+                "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
         );
+    }
+
+    #[test]
+    fn suite_checklist_view_tracks_checkbox_focus_and_selected_count() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model
+            .toggle_suite_selection_by_id("lifecycle-roundtrip")
+            .expect("lifecycle should toggle on");
+
+        let checklist = build_suite_checklist_view(&model);
+        assert_eq!(checklist.selected_count, 2);
+        assert!(checklist.can_run_selected_batch);
+
+        let setup = checklist
+            .rows
+            .iter()
+            .find(|row| row.suite_id == "setup-scene-avatar")
+            .expect("setup row should exist");
+        assert!(setup.checked);
+        assert!(setup.focused);
+        assert_eq!(setup.selected_order, Some(1));
+
+        let lifecycle = checklist
+            .rows
+            .iter()
+            .find(|row| row.suite_id == "lifecycle-roundtrip")
+            .expect("lifecycle row should exist");
+        assert!(lifecycle.checked);
+        assert!(!lifecycle.focused);
+        assert_eq!(lifecycle.selected_order, Some(2));
+
+        let playmode = checklist
+            .rows
+            .iter()
+            .find(|row| row.suite_id == "playmode-runtime-validation")
+            .expect("playmode row should exist");
+        assert!(!playmode.checked);
+        assert!(!playmode.focused);
+        assert_eq!(playmode.selected_order, None);
+    }
+
+    #[test]
+    fn run_plan_setup_suite_includes_expected_step_labels() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        let plan = build_current_run_plan_view(&model);
+        let labels: Vec<&str> = plan
+            .rows
+            .iter()
+            .map(|row| row.step_label.as_str())
+            .collect();
+
+        assert_eq!(plan.available_suite_count, 3);
+        assert_eq!(plan.selected_suite_count, 1);
+        assert_eq!(plan.total_step_count, 5);
+        assert_eq!(
+            plan.summary,
+            "3 suites available · 1 selected · 5 total steps"
+        );
+        assert_eq!(
+            labels,
+            vec![
+                "Open Click ME scene",
+                "Open ASM-Lite window",
+                "Select Oct25_Dress",
+                "Add ASM-Lite prefab",
+                "Verify rebuild action is visible"
+            ]
+        );
+        assert!(plan
+            .rows
+            .iter()
+            .all(|row| row.suite_id == "setup-scene-avatar"));
+    }
+
+    #[test]
+    fn run_plan_lifecycle_keeps_hygiene_cleanup_steps_visible() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("lifecycle-roundtrip")
+            .expect("lifecycle should toggle on");
+
+        let plan = build_current_run_plan_view(&model);
+        let hygiene_labels: Vec<&str> = plan
+            .rows
+            .iter()
+            .filter(|row| row.action_type == "lifecycle-hygiene-cleanup")
+            .map(|row| row.step_label.as_str())
+            .collect();
+
+        assert_eq!(plan.total_step_count, 7);
+        assert_eq!(
+            hygiene_labels,
+            vec![
+                "Hygiene cleanup after rebuild",
+                "Hygiene cleanup after vendorize",
+                "Hygiene cleanup after detach"
+            ]
+        );
+    }
+
+    #[test]
+    fn run_plan_suite_sections_start_collapsed_with_steps_behind_title() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        let plan = build_current_run_plan_view(&model);
+
+        assert_eq!(plan.suite_sections.len(), 1);
+        let section = &plan.suite_sections[0];
+        assert_eq!(section.title, "Setup · Setup Scene / Avatar / Prefab");
+        assert_eq!(section.suite_id, "setup-scene-avatar");
+        assert!(!section.default_open);
+        assert_eq!(section.steps.len(), 5);
+        assert_eq!(section.steps[0].step_label, "Open Click ME scene");
+    }
+
+    #[test]
+    fn run_plan_selected_batch_uses_operator_order_and_only_selected_suites() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("playmode-runtime-validation")
+            .expect("playmode should toggle on");
+        model
+            .toggle_suite_selection_by_id("setup-scene-avatar")
+            .expect("setup should toggle on");
+        model
+            .toggle_suite_selection_by_id("lifecycle-roundtrip")
+            .expect("lifecycle should toggle on");
+
+        let plan = build_current_run_plan_view(&model);
+        let mut suite_sequence = Vec::new();
+        for row in &plan.rows {
+            if suite_sequence
+                .last()
+                .map(|suite_id: &&str| *suite_id != row.suite_id)
+                .unwrap_or(true)
+            {
+                suite_sequence.push(row.suite_id.as_str());
+            }
+        }
+
+        assert_eq!(plan.selected_suite_count, 3);
+        assert_eq!(plan.total_step_count, 18);
+        assert_eq!(
+            suite_sequence,
+            vec![
+                "playmode-runtime-validation",
+                "setup-scene-avatar",
+                "lifecycle-roundtrip"
+            ]
+        );
+    }
+
+    #[test]
+    fn run_plan_empty_selection_explains_empty_state_and_disables_batch() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+
+        let plan = build_current_run_plan_view(&model);
+
+        assert!(plan.rows.is_empty());
+        assert_eq!(plan.available_suite_count, 3);
+        assert_eq!(plan.selected_suite_count, 0);
+        assert_eq!(plan.total_step_count, 0);
+        assert_eq!(
+            plan.summary,
+            "3 suites available · 0 selected · 0 total steps"
+        );
+        assert_eq!(
+            plan.empty_message.as_deref(),
+            Some("Select at least one suite")
+        );
+        assert!(!plan.can_run_selected_batch);
     }
 
     #[test]

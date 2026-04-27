@@ -40,6 +40,7 @@ pub struct SmokeProtocolCommand {
     pub launch_session: Option<LaunchSessionPayload>,
     pub run_suite: Option<RunSuitePayload>,
     pub review_decision: Option<ReviewDecisionPayload>,
+    pub abort_run: Option<AbortRunPayload>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,6 +67,8 @@ pub struct RunSuitePayload {
     pub requested_by: String,
     pub requested_reset_default: String,
     pub reason: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub step_sleep_seconds: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -76,6 +79,15 @@ pub struct ReviewDecisionPayload {
     pub decision: String,
     pub requested_by: String,
     pub notes: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AbortRunPayload {
+    pub run_id: String,
+    pub suite_id: String,
+    pub requested_by: String,
+    pub reason: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -337,7 +349,10 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
                         .to_string(),
                 )
             })?;
-            if command.run_suite.is_some() || command.review_decision.is_some() {
+            if command.run_suite.is_some()
+                || command.review_decision.is_some()
+                || command.abort_run.is_some()
+            {
                 return Err(ProtocolError(
                     "launch-session command must not include unrelated payloads.".to_string(),
                 ));
@@ -350,7 +365,10 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
                     "runSuite payload is required for commandType 'run-suite'.".to_string(),
                 )
             })?;
-            if command.launch_session.is_some() || command.review_decision.is_some() {
+            if command.launch_session.is_some()
+                || command.review_decision.is_some()
+                || command.abort_run.is_some()
+            {
                 return Err(ProtocolError(
                     "run-suite command must not include unrelated payloads.".to_string(),
                 ));
@@ -364,17 +382,37 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
                         .to_string(),
                 )
             })?;
-            if command.launch_session.is_some() || command.run_suite.is_some() {
+            if command.launch_session.is_some()
+                || command.run_suite.is_some()
+                || command.abort_run.is_some()
+            {
                 return Err(ProtocolError(
                     "review-decision command must not include unrelated payloads.".to_string(),
                 ));
             }
             normalize_and_validate_review_decision(payload)?;
         }
+        "abort-run" => {
+            let payload = command.abort_run.as_mut().ok_or_else(|| {
+                ProtocolError(
+                    "abortRun payload is required for commandType 'abort-run'.".to_string(),
+                )
+            })?;
+            if command.launch_session.is_some()
+                || command.run_suite.is_some()
+                || command.review_decision.is_some()
+            {
+                return Err(ProtocolError(
+                    "abort-run command must not include unrelated payloads.".to_string(),
+                ));
+            }
+            normalize_and_validate_abort_run(payload)?;
+        }
         "shutdown-session" => {
             if command.launch_session.is_some()
                 || command.run_suite.is_some()
                 || command.review_decision.is_some()
+                || command.abort_run.is_some()
             {
                 return Err(ProtocolError(
                     "shutdown-session command must not include typed payloads.".to_string(),
@@ -429,6 +467,13 @@ fn normalize_and_validate_run_suite(payload: &mut RunSuitePayload) -> Result<(),
         "runSuite.requestedResetDefault",
     )?;
     payload.reason = require_non_blank(&payload.reason, "runSuite.reason")?;
+    if let Some(seconds) = payload.step_sleep_seconds {
+        if !seconds.is_finite() || seconds < 0.0 {
+            return Err(ProtocolError(
+                "runSuite.stepSleepSeconds must be a finite non-negative number.".to_string(),
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -451,6 +496,14 @@ fn normalize_and_validate_review_decision(
         )));
     }
 
+    Ok(())
+}
+
+fn normalize_and_validate_abort_run(payload: &mut AbortRunPayload) -> Result<(), ProtocolError> {
+    payload.run_id = require_non_blank(&payload.run_id, "abortRun.runId")?;
+    payload.suite_id = require_non_blank(&payload.suite_id, "abortRun.suiteId")?;
+    payload.requested_by = require_non_blank(&payload.requested_by, "abortRun.requestedBy")?;
+    payload.reason = require_non_blank(&payload.reason, "abortRun.reason")?;
     Ok(())
 }
 
@@ -563,6 +616,8 @@ mod tests {
         let review = round_trip(
             load_command_fixture("review-decision.json").expect("review fixture should parse"),
         );
+        let abort =
+            round_trip(load_command_fixture("abort-run.json").expect("abort fixture should parse"));
 
         assert_eq!(launch.command_type, "launch-session");
         assert_eq!(
@@ -582,6 +637,10 @@ mod tests {
             review.review_decision.expect("review payload").decision,
             "return-to-suite-list"
         );
+        assert_eq!(abort.command_type, "abort-run");
+        let abort_payload = abort.abort_run.expect("abort payload");
+        assert_eq!(abort_payload.run_id, "run-0001-lifecycle-roundtrip");
+        assert_eq!(abort_payload.suite_id, "lifecycle-roundtrip");
     }
 
     #[test]

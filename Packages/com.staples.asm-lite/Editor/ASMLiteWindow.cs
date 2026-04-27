@@ -6913,7 +6913,22 @@ namespace ASMLite.Editor
 
         internal void AddPrefabForAutomation()
         {
-            AddPrefabToAvatar(showDialogs: false);
+            try
+            {
+                AddPrefabToAvatar(showDialogs: false);
+            }
+            finally
+            {
+                RestoreAvatarSelectionForAutomation();
+            }
+        }
+
+        private void RestoreAvatarSelectionForAutomation()
+        {
+            if (_selectedAvatar == null || _selectedAvatar.gameObject == null)
+                return;
+
+            Selection.activeGameObject = _selectedAvatar.gameObject;
         }
 
         internal void RebuildForAutomation()

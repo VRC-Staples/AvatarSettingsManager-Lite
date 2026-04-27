@@ -19,7 +19,11 @@ namespace ASMLite.Tests.Editor
                 catalog.groups.Select(group => group.groupId).ToArray());
             Assert.AreEqual("Assets/Click ME.unity", catalog.fixture.scenePath);
             Assert.AreEqual("Oct25_Dress", catalog.fixture.avatarName);
-            Assert.AreEqual("open-select-add", catalog.groups[0].suites[0].suiteId);
+            Assert.AreEqual("setup-scene-avatar", catalog.groups[0].suites[0].suiteId);
+            CollectionAssert.AreEqual(
+                new[] { "open-scene", "open-window", "select-avatar", "add-prefab", "assert-primary-action" },
+                catalog.groups[0].suites[0].cases[0].steps.Select(step => step.actionType).ToArray());
+            Assert.AreEqual(1, catalog.groups[0].suites.Length);
             Assert.AreEqual("lifecycle-roundtrip", catalog.groups[1].suites[0].suiteId);
             Assert.AreEqual("playmode-runtime-validation", catalog.groups[2].suites[0].suiteId);
         }
@@ -36,7 +40,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void LoadFromJson_rejects_duplicate_suite_ids()
         {
-            string rawJson = LoadCanonicalCatalogJson().Replace("\"suiteId\": \"lifecycle-roundtrip\"", "\"suiteId\": \"open-select-add\"", StringComparison.Ordinal);
+            string rawJson = LoadCanonicalCatalogJson().Replace("\"suiteId\": \"lifecycle-roundtrip\"", "\"suiteId\": \"setup-scene-avatar\"", StringComparison.Ordinal);
 
             var exception = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(rawJson));
             StringAssert.Contains("suiteId", exception.Message);

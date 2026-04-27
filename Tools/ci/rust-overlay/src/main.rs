@@ -1,70 +1,61 @@
 use asmlite_smoke_contract::app::run_overlay_bootstrap;
+use asmlite_smoke_contract::gui::run_overlay_window;
 use asmlite_smoke_contract::model::{OverlayBootstrapConfig, OverlayMode, RuntimeTuning};
-use asmlite_smoke_contract::theme::RIGHT_PANEL_WIDTH_PX;
 use std::env;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone)]
-struct OverlayWindowIntent {
-    anchor: &'static str,
-    always_on_top: bool,
-    panel_width_px: f32,
-}
-
-fn default_window_intent() -> OverlayWindowIntent {
-    OverlayWindowIntent {
-        anchor: "right",
-        always_on_top: true,
-        panel_width_px: RIGHT_PANEL_WIDTH_PX,
-    }
-}
-
 fn main() {
     match parse_cli_args() {
-        Ok(config) => match run_overlay_bootstrap(&config) {
-            Ok(snapshot) => {
-                let window_intent = default_window_intent();
-                println!("mode: {}", config.mode.as_str());
-                println!(
-                    "window-intent: anchor={}, always-on-top={}, panel-width={}px",
-                    window_intent.anchor, window_intent.always_on_top, window_intent.panel_width_px
-                );
-                println!("status: {:?}", snapshot.status);
-                if let Some(host_state) = snapshot.host_state {
-                    println!("host-state: {host_state}");
+        Ok(config) => {
+            if config.exit_on_ready {
+                match run_overlay_bootstrap(&config) {
+                    Ok(snapshot) => {
+                        println!("mode: {}", config.mode.as_str());
+                        println!("status: {:?}", snapshot.status);
+                        if let Some(host_state) = snapshot.host_state {
+                            println!("host-state: {host_state}");
+                        }
+                        if let Some(event_type) = snapshot.last_event_type {
+                            println!("last-event: {event_type}");
+                        }
+                        if let Some(event_seq) = snapshot.last_event_seq {
+                            println!("last-event-seq: {event_seq}");
+                        }
+                        println!("warnings: {}", snapshot.warning_count);
+                    }
+                    Err(error) => {
+                        eprintln!("error: {error}");
+                        std::process::exit(1);
+                    }
                 }
-                if let Some(event_type) = snapshot.last_event_type {
-                    println!("last-event: {event_type}");
-                }
-                if let Some(event_seq) = snapshot.last_event_seq {
-                    println!("last-event-seq: {event_seq}");
-                }
-                println!("warnings: {}", snapshot.warning_count);
-            }
-            Err(error) => {
+            } else if let Err(error) = run_overlay_window(config) {
                 eprintln!("error: {error}");
                 std::process::exit(1);
             }
-        },
+        }
         Err(error) => {
             eprintln!("error: {error}");
-            eprintln!("usage: asmlite_smoke_overlay --repo-root <path> --project-path <path> --catalog-path <path> --session-root <path> --mode <overlay|uat> [--unity-executable <path>] [--startup-timeout-seconds <N>] [--heartbeat-seconds <N>] [--stale-after-seconds <N>] [--poll-interval-millis <N>] [--exit-on-ready]");
+            eprintln!("usage: asmlite_smoke_overlay --repo-root <path> --project-path <path> --catalog-path <path> --session-root <path> --mode <overlay|uat> [--unity-executable <path>] [--suite-id <id>] [--startup-timeout-seconds <N>] [--heartbeat-seconds <N>] [--stale-after-seconds <N>] [--poll-interval-millis <N>] [--exit-on-ready]");
             std::process::exit(2);
         }
     }
 }
 
 fn parse_cli_args() -> Result<OverlayBootstrapConfig, String> {
+    parse_cli_args_from(env::args().skip(1).collect())
+}
+
+fn parse_cli_args_from(args: Vec<String>) -> Result<OverlayBootstrapConfig, String> {
     let mut repo_root: Option<PathBuf> = None;
     let mut project_path: Option<PathBuf> = None;
     let mut catalog_path: Option<PathBuf> = None;
     let mut session_root: Option<PathBuf> = None;
     let mut mode: Option<OverlayMode> = None;
     let mut unity_executable: Option<PathBuf> = None;
+    let mut selected_suite_ids: Vec<String> = Vec::new();
     let mut exit_on_ready = false;
     let mut tuning = RuntimeTuning::default();
 
-    let args: Vec<String> = env::args().skip(1).collect();
     let mut index = 0usize;
     while index < args.len() {
         let key = &args[index];
@@ -87,6 +78,10 @@ fn parse_cli_args() -> Result<OverlayBootstrapConfig, String> {
             }
             "--unity-executable" => {
                 unity_executable = Some(parse_path_value(&args, &mut index, key)?);
+            }
+            "--suite-id" => {
+                let raw = parse_string_value(&args, &mut index, key)?;
+                selected_suite_ids.extend(parse_suite_id_batch(&raw)?);
             }
             "--startup-timeout-seconds" => {
                 tuning.startup_timeout_seconds = parse_u64_value(&args, &mut index, key)?;
@@ -134,6 +129,7 @@ fn parse_cli_args() -> Result<OverlayBootstrapConfig, String> {
         session_root,
         mode,
         unity_executable,
+        selected_suite_ids,
         exit_on_ready,
         tuning,
     })
@@ -150,6 +146,14 @@ fn parse_u64_value(args: &[String], index: &mut usize, key: &str) -> Result<u64,
         .map_err(|_| format!("{key} expects an integer value, got '{raw}'"))
 }
 
+fn parse_suite_id_batch(raw: &str) -> Result<Vec<String>, String> {
+    let values: Vec<String> = raw.split(',').map(str::trim).map(str::to_string).collect();
+    if values.is_empty() || values.iter().any(|value| value.is_empty()) {
+        return Err("--suite-id must not contain empty values".to_string());
+    }
+    Ok(values)
+}
+
 fn parse_string_value(args: &[String], index: &mut usize, key: &str) -> Result<String, String> {
     *index += 1;
     if *index >= args.len() {
@@ -157,4 +161,65 @@ fn parse_string_value(args: &[String], index: &mut usize, key: &str) -> Result<S
     }
 
     Ok(args[*index].clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cli_single_suite_id_becomes_one_item_selected_batch() {
+        let config = parse_cli_args_from(base_args(["--suite-id", "setup-scene-avatar"]))
+            .expect("single suite id should parse");
+
+        assert_eq!(config.selected_suite_ids, vec!["setup-scene-avatar"]);
+    }
+
+    #[test]
+    fn cli_repeated_and_csv_suite_ids_preserve_operator_order() {
+        let config = parse_cli_args_from(base_args([
+            "--suite-id",
+            "setup-scene-avatar,lifecycle-roundtrip",
+            "--suite-id",
+            "playmode-runtime-validation",
+        ]))
+        .expect("batch suite ids should parse");
+
+        assert_eq!(
+            config.selected_suite_ids,
+            vec![
+                "setup-scene-avatar",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
+        );
+    }
+
+    #[test]
+    fn cli_rejects_empty_suite_id_values() {
+        let error = parse_cli_args_from(base_args(["--suite-id", "setup-scene-avatar,"]))
+            .expect_err("empty suite id entry should fail");
+
+        assert!(error.contains("--suite-id must not contain empty values"));
+    }
+
+    fn base_args<const N: usize>(extra: [&str; N]) -> Vec<String> {
+        let mut args = vec![
+            "--repo-root",
+            ".",
+            "--project-path",
+            "../Test Project/TestUnityProject",
+            "--catalog-path",
+            "Tools/ci/smoke/suite-catalog.json",
+            "--session-root",
+            "artifacts/smoke-overlay/test-session",
+            "--mode",
+            "uat",
+        ]
+        .into_iter()
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+        args.extend(extra.into_iter().map(str::to_string));
+        args
+    }
 }

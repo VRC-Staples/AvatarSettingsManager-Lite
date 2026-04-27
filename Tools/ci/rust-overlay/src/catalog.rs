@@ -294,21 +294,19 @@ fn require_non_blank(value: &str, path: &str) -> Result<String, ContractError> {
 }
 
 fn is_supported_action_type(action_type: &str) -> bool {
-    matches!(
-        action_type,
-        "open-window"
-            | "select-avatar"
-            | "add-prefab"
-            | "rebuild"
-            | "vendorize"
-            | "detach"
-            | "return-to-package-managed"
-            | "enter-playmode"
-            | "exit-playmode"
-            | "assert-primary-action"
-            | "assert-runtime-component-valid"
-            | "assert-host-ready"
-    )
+    matches!(action_type, |"open-scene"| "open-window"
+        | "select-avatar"
+        | "add-prefab"
+        | "rebuild"
+        | "vendorize"
+        | "detach"
+        | "lifecycle-hygiene-cleanup"
+        | "return-to-package-managed"
+        | "enter-playmode"
+        | "exit-playmode"
+        | "assert-primary-action"
+        | "assert-runtime-component-valid"
+        | "assert-host-ready")
 }
 
 fn repository_root() -> PathBuf {
@@ -336,8 +334,41 @@ mod tests {
         );
         assert_eq!(catalog.fixture.scene_path, "Assets/Click ME.unity");
         assert_eq!(catalog.fixture.avatar_name, "Oct25_Dress");
-        assert_eq!(catalog.groups[0].suites[0].suite_id, "open-select-add");
+        assert_eq!(catalog.groups[0].suites[0].suite_id, "setup-scene-avatar");
+        let setup_steps: Vec<&str> = catalog.groups[0].suites[0].cases[0]
+            .steps
+            .iter()
+            .map(|step| step.action_type.as_str())
+            .collect();
+        assert_eq!(
+            setup_steps,
+            vec![
+                "open-scene",
+                "open-window",
+                "select-avatar",
+                "add-prefab",
+                "assert-primary-action"
+            ]
+        );
+        assert_eq!(catalog.groups[0].suites.len(), 1);
         assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
+        let lifecycle_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
+            .steps
+            .iter()
+            .map(|step| step.step_id.as_str())
+            .collect();
+        assert_eq!(
+            lifecycle_steps,
+            vec![
+                "rebuild",
+                "hygiene-cleanup-after-rebuild",
+                "vendorize",
+                "hygiene-cleanup-after-vendorize",
+                "detach",
+                "hygiene-cleanup-after-detach",
+                "return-to-package-managed"
+            ]
+        );
         assert_eq!(
             catalog.groups[2].suites[0].suite_id,
             "playmode-runtime-validation"
@@ -360,7 +391,7 @@ mod tests {
             .expect("catalog fixture should exist")
             .replace(
                 "\"suiteId\": \"lifecycle-roundtrip\"",
-                "\"suiteId\": \"open-select-add\"",
+                "\"suiteId\": \"setup-scene-avatar\"",
             );
 
         let error = load_catalog_from_str(&raw).expect_err("duplicate suite id should fail");

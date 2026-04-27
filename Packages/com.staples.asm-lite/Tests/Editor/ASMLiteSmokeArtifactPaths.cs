@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 
 namespace ASMLite.Tests.Editor
@@ -335,16 +336,56 @@ namespace ASMLite.Tests.Editor
 
                 beforePromote?.Invoke(tempPath);
 
-                if (File.Exists(fullTargetPath))
-                    File.Replace(tempPath, fullTargetPath, null);
-                else
-                    File.Move(tempPath, fullTargetPath);
+                PromoteTempFileWithRetry(tempPath, fullTargetPath);
             }
             finally
             {
                 if (File.Exists(tempPath))
                     File.Delete(tempPath);
             }
+        }
+
+        private static void PromoteTempFileWithRetry(string tempPath, string fullTargetPath)
+        {
+            const int maxAttempts = 8;
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                try
+                {
+                    if (File.Exists(fullTargetPath))
+                        File.Replace(tempPath, fullTargetPath, null);
+                    else
+                        File.Move(tempPath, fullTargetPath);
+
+                    return;
+                }
+                catch (Exception ex) when (IsTransientPromoteException(ex) && attempt < maxAttempts - 1)
+                {
+                    Thread.Sleep(GetPromoteRetryDelayMilliseconds(attempt));
+                }
+            }
+        }
+
+        private static bool IsTransientPromoteException(Exception exception)
+        {
+            if (exception == null)
+                return false;
+
+            const int sharingViolation = unchecked((int)0x80070020);
+            const int lockViolation = unchecked((int)0x80070021);
+            int hResult = exception.HResult;
+            if (hResult == sharingViolation || hResult == lockViolation)
+                return true;
+
+            string message = exception.Message ?? string.Empty;
+            return message.IndexOf("Unable to remove the file to be replaced", StringComparison.OrdinalIgnoreCase) >= 0
+                || message.IndexOf("being used by another process", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static int GetPromoteRetryDelayMilliseconds(int attempt)
+        {
+            int boundedAttempt = Math.Max(0, Math.Min(6, attempt));
+            return 25 * (boundedAttempt + 1);
         }
     }
 

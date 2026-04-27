@@ -84,16 +84,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   version: 3
   unityVersion: 2022.3.22f1
-  vrcfuryVersion: 1.1309.0
+  vrcfuryVersion: 1.1298.0
   somethingIsBroken: 0
   config:
     features: []
   content:
-    rid: 4657481199817326592
+    rid: 4657481293427900416
   references:
     version: 2
     RefIds:
-    - rid: 4657481199817326592
+    - rid: 4657481293427900416
       type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}
       data:
         version: 4

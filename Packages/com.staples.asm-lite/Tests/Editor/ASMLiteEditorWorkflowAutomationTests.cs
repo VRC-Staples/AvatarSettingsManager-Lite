@@ -99,6 +99,27 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void Automation_AddPrefabForAutomation_RestoresAvatarSelectionForInspectorStability()
+        {
+            Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+
+                Assert.AreSame(_ctx.AvatarGo, Selection.activeGameObject,
+                    "Automation add should leave the avatar selected so volatile VRCFury inspector debug UI does not keep repainting a lifecycle-mutated ASM-Lite prefab instance.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void Automation_QueuedVisibleAction_UsesAvatarCapturedAtQueueTime()
         {
             Object.DestroyImmediate(_ctx.Comp.gameObject);
@@ -589,6 +610,72 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void Automation_VendorizeAndDetach_DefaultDescriptorReferences_RetargetsDirectDeliveryToVendorizedAssets()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ResetDescriptorToDefaultGeneratedAssetReferences(_ctx.AvDesc);
+
+                InvokeDetachForAutomation(window, _ctx.Comp, vendorizeToAssets: true);
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "Vendorize + detach should remove the editable ASM-Lite prefab after verified success.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "Vendorize + detach should leave default-reference avatars classified as Vendorized after direct-delivery verification succeeds.");
+                string vendorizedGeneratedAssetsPath = window.GetPendingCustomizationSnapshotForTesting().VendorizedGeneratedAssetsPath;
+                AssertCanonicalVendorizedGeneratedAssetsPath(vendorizedGeneratedAssetsPath,
+                    "Vendorize + detach should preserve the canonical vendorized generated-assets location for default-reference avatars.");
+                Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedGeneratedAssetsPath),
+                    "Vendorize + detach should leave the canonical vendorized generated-assets folder on disk after verified success.");
+                AssertDescriptorGeneratedReferencesUnderPrefix(_ctx.AvDesc, vendorizedGeneratedAssetsPath,
+                    "Vendorize + detach should retarget direct-delivery descriptor references from package-generated assets to the vendorized mirror.");
+                _vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedGeneratedAssetsPath)?.Replace('\\', '/');
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void Automation_AttachedVendorizedDetach_RetargetsDirectDeliveryDescriptorReferencesToVendorizedAssets()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ResetDescriptorToDefaultGeneratedAssetReferences(_ctx.AvDesc);
+                window.RebuildForAutomation();
+                window.VendorizeForAutomation();
+
+                var vendorizedComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(vendorizedComponent,
+                    "Attached vendorized detach setup should keep an editable ASM-Lite component before detach.");
+                string vendorizedGeneratedAssetsPath = vendorizedComponent.vendorizedGeneratedAssetsPath;
+                AssertCanonicalVendorizedGeneratedAssetsPath(vendorizedGeneratedAssetsPath,
+                    "Attached vendorized detach setup should preserve the canonical vendorized generated-assets location.");
+
+                window.DetachForAutomation();
+
+                Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
+                    "Attached vendorized detach should remove the editable ASM-Lite prefab after verified success.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                    "Attached vendorized detach should leave the avatar classified as Vendorized after direct-delivery verification succeeds.");
+                AssertDescriptorGeneratedReferencesUnderPrefix(_ctx.AvDesc, vendorizedGeneratedAssetsPath,
+                    "Attached vendorized detach should restore descriptor references to the vendorized mirror after direct delivery.");
+                _vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedGeneratedAssetsPath)?.Replace('\\', '/');
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void Automation_RepeatedLifecycleCycles_PreserveStateAcrossDetachAndVendorizeDetachRecovery()
         {
             ASMLiteGeneratedOutputSnapshot firstRecoveredSnapshot;
@@ -619,9 +706,9 @@ namespace ASMLite.Tests.Editor
                 InvokeDetachForAutomation(window, firstRecovered, vendorizeToAssets: true);
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "Vendorize + detach cycle should remove the editable ASM-Lite prefab after verified success.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "Vendorize + detach cycle should leave the avatar classified as Detached after direct-delivery verification succeeds.");
+                    "Vendorize + detach cycle should leave the avatar classified as Vendorized after direct-delivery verification succeeds.");
                 string vendorizedGeneratedAssetsPath = window.GetPendingCustomizationSnapshotForTesting().VendorizedGeneratedAssetsPath;
                 AssertCanonicalVendorizedGeneratedAssetsPath(vendorizedGeneratedAssetsPath,
                     "Vendorize + detach cycle should preserve the canonical vendorized generated-assets location in the shared customization snapshot.");
@@ -767,6 +854,57 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Expected the canonical vendorized generated-assets folder to stay under the TestAvatar vendorized root.");
             Assert.IsTrue(vendorizedGeneratedAssetsPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal),
                 assertionMessage + " Expected the canonical vendorized generated-assets folder to end with '/GeneratedAssets'.");
+        }
+
+        private static void ResetDescriptorToDefaultGeneratedAssetReferences(VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatar)
+        {
+            Assert.IsNotNull(avatar, "Default-reference regression setup requires a valid avatar descriptor.");
+            var layers = avatar.baseAnimationLayers;
+            if (layers == null || layers.Length < 5)
+                layers = new VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.CustomAnimLayer[5];
+
+            layers[4] = new VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.CustomAnimLayer
+            {
+                type = VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.AnimLayerType.FX,
+                isDefault = true,
+                isEnabled = true,
+                animatorController = null
+            };
+            avatar.baseAnimationLayers = layers;
+            avatar.expressionParameters = AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            avatar.expressionsMenu = AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            Assert.IsNotNull(avatar.expressionParameters,
+                "Default-reference regression setup expected package-generated expression parameters to exist.");
+            Assert.IsNotNull(avatar.expressionsMenu,
+                "Default-reference regression setup expected package-generated expressions menu to exist.");
+            EditorUtility.SetDirty(avatar);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
+        private static void AssertDescriptorGeneratedReferencesUnderPrefix(
+            VRC.SDK3.Avatars.Components.VRCAvatarDescriptor avatar,
+            string expectedPrefix,
+            string assertionMessage)
+        {
+            Assert.IsNotNull(avatar, assertionMessage + " Expected a valid avatar descriptor.");
+            AssertAssetPathUnderPrefix(AssetDatabase.GetAssetPath(avatar.expressionParameters), expectedPrefix,
+                assertionMessage + " Expression parameters were not retargeted.");
+            AssertAssetPathUnderPrefix(AssetDatabase.GetAssetPath(avatar.expressionsMenu), expectedPrefix,
+                assertionMessage + " Expressions menu was not retargeted.");
+
+            var fxLayer = avatar.baseAnimationLayers.FirstOrDefault(layer =>
+                layer.type == VRC.SDK3.Avatars.Components.VRCAvatarDescriptor.AnimLayerType.FX);
+            AssertAssetPathUnderPrefix(AssetDatabase.GetAssetPath(fxLayer.animatorController), expectedPrefix,
+                assertionMessage + " FX controller was not retargeted.");
+        }
+
+        private static void AssertAssetPathUnderPrefix(string assetPath, string expectedPrefix, string assertionMessage)
+        {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(assetPath),
+                assertionMessage + " Expected a populated asset path.");
+            Assert.IsTrue(assetPath.Replace('\\', '/').StartsWith(expectedPrefix.TrimEnd('/') + "/", StringComparison.Ordinal),
+                assertionMessage + $" Expected '{assetPath}' under '{expectedPrefix}'.");
         }
 
         private static void InvokeDetachForAutomation(ASMLite.Editor.ASMLiteWindow window, ASMLiteComponent component, bool vendorizeToAssets)
