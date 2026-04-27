@@ -18,7 +18,7 @@ use crate::theme::{
     META_TEXT_SIZE, OUTER_MARGIN_PX, PRIMARY_BUTTON_HEIGHT_PX, RELATED_GAP_PX,
     RIGHT_PANEL_WIDTH_PX, SECTION_GAP_PX,
 };
-use crate::ui_suite_list::{build_current_run_plan_view, build_suite_checklist_view};
+use crate::ui_suite_list::{build_current_run_plan_view, build_suite_checklist_view, SuiteRowView};
 use crate::unity_launcher::{spawn_unity_host, UnityHostLaunchConfig, UnityHostSupervisorStatus};
 use eframe::egui;
 use egui_phosphor::regular as icons;
@@ -39,11 +39,9 @@ const WARNING: egui::Color32 = egui::Color32::from_rgb(245, 158, 11);
 const SUCCESS: egui::Color32 = egui::Color32::from_rgb(76, 214, 122);
 const DANGER: egui::Color32 = egui::Color32::from_rgb(226, 59, 59);
 const DANGER_BUTTON_FILL: egui::Color32 = egui::Color32::from_rgb(185, 28, 28);
-const RECENT_EVENT_LOG_MAX_HEIGHT_PX: f32 = 156.0;
-const ACTION_TILE_WIDTH_PX: f32 = 108.0;
-const ACTION_TILE_HEIGHT_PX: f32 = 42.0;
-const COMPACT_DISABLED_ACTION_TILE_WIDTH_PX: f32 = 104.0;
-const COMPACT_DISABLED_ACTION_TILE_HEIGHT_PX: f32 = 30.0;
+const RECENT_EVENT_LOG_MAX_HEIGHT_PX: f32 = 240.0;
+const ACTION_TILE_WIDTH_PX: f32 = 184.0;
+const ACTION_TILE_HEIGHT_PX: f32 = 36.0;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct AmbientGlowLayer {
@@ -57,7 +55,9 @@ const HERO_STATUS_CARD_WIDTH_PX: f32 = 192.0;
 const HERO_STATUS_ICON_SIZE_PX: f32 = 28.0;
 const HERO_TITLE_TEXT_SIZE_PX: f32 = 22.0;
 const HERO_CARD_PADDING_PX: f32 = 10.0;
+#[cfg(test)]
 const PHASE_PRIMARY_ACTION_TILE_WIDTH_PX: f32 = 224.0;
+#[cfg(test)]
 const PHASE_PRIMARY_ACTION_TILE_HEIGHT_PX: f32 = 52.0;
 
 pub fn run_overlay_window(config: OverlayBootstrapConfig) -> Result<(), String> {
@@ -193,7 +193,6 @@ struct SmokeOverlayApp {
     startup_window_placement_applied: bool,
     icon_font_registered: bool,
     last_operator_phase: Option<OperatorPhase>,
-    advanced_open: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -292,22 +291,43 @@ pub struct ActionButtonStyle {
     pub text_color: egui::Color32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RunningSummaryModel {
-    pub run_id: Option<String>,
-    pub suite_id: String,
-    pub step_id: Option<String>,
-    pub latest_event_type: Option<String>,
-    pub latest_message: Option<String>,
-    pub event_count: usize,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SectionSubheaderVisualSpec {
+    pub bold_text: bool,
+    pub uses_bubble_frame: bool,
+    pub uses_background_fill: bool,
+    pub text_color: egui::Color32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TelemetrySummaryModel {
-    pub active_run_id: Option<String>,
-    pub last_event_seq: Option<i32>,
-    pub last_command_seq: Option<i32>,
-    pub heartbeat_utc: Option<String>,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SuitePickerTypographySpec {
+    pub summary_text_color: egui::Color32,
+    pub summary_text_size_px: f32,
+    pub group_header_text_color: egui::Color32,
+    pub group_header_text_size_px: f32,
+    pub group_header_bold: bool,
+    pub group_header_uses_collapsing_header: bool,
+    pub row_text_color: egui::Color32,
+    pub row_text_size_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SuiteCheckboxVisualSpec {
+    pub icon: &'static str,
+    pub icon_color: egui::Color32,
+    pub text_color: egui::Color32,
+    pub row_fill: egui::Color32,
+    pub row_stroke: egui::Stroke,
+    pub icon_size_px: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct InfoCalloutVisualSpec {
+    pub icon: &'static str,
+    pub icon_color: egui::Color32,
+    pub text_color: egui::Color32,
+    pub icon_size_px: f32,
+    pub text_size_px: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -516,9 +536,7 @@ pub fn build_current_suite_briefing_model_for_poll(
         description: suite.description.clone(),
         expected_outcomes,
         steps,
-        info_note:
-            "If a suite fails, Export Logs or Rerun Suite from review-required before returning."
-                .to_string(),
+        info_note: "Failure: Export Logs or Rerun Suite, then Return.".to_string(),
         debug_hint: suite.debug_hint.clone(),
     })
 }
@@ -589,12 +607,19 @@ pub fn hero_status_layout_spec() -> HeroStatusLayoutSpec {
 
 pub fn suite_group_header_text(group_label: &str, group_count: usize) -> String {
     format!(
-        "{} {} · {} suite{}",
-        icons::CARET_DOWN,
+        "{} · {} suite{}",
         group_label,
         group_count,
         if group_count == 1 { "" } else { "s" }
     )
+}
+
+pub fn suite_group_dropdown_icon(open: bool) -> &'static str {
+    if open {
+        icons::CARET_DOWN
+    } else {
+        icons::CARET_RIGHT
+    }
 }
 
 pub fn suite_row_indent_marker() -> &'static str {
@@ -697,7 +722,6 @@ pub enum OverlaySectionId {
     CurrentSuite,
     Controls,
     RunMonitor,
-    Advanced,
     FooterStatus,
 }
 
@@ -707,9 +731,8 @@ pub fn overlay_section_order() -> Vec<OverlaySectionId> {
         OverlaySectionId::CurrentRunPlan,
         OverlaySectionId::SuitePicker,
         OverlaySectionId::CurrentSuite,
-        OverlaySectionId::Controls,
         OverlaySectionId::RunMonitor,
-        OverlaySectionId::Advanced,
+        OverlaySectionId::Controls,
         OverlaySectionId::FooterStatus,
     ]
 }
@@ -719,11 +742,10 @@ pub fn overlay_section_order_for_phase(phase: OperatorPhase) -> Vec<OverlaySecti
         vec![
             OverlaySectionId::HeaderStatus,
             OverlaySectionId::CurrentSuite,
+            OverlaySectionId::RunMonitor,
             OverlaySectionId::CurrentRunPlan,
             OverlaySectionId::SuitePicker,
             OverlaySectionId::Controls,
-            OverlaySectionId::RunMonitor,
-            OverlaySectionId::Advanced,
             OverlaySectionId::FooterStatus,
         ]
     } else {
@@ -1027,28 +1049,6 @@ pub fn operator_phase_for_host_state(
     }
 }
 
-pub fn advanced_default_open_for_phase(phase: OperatorPhase) -> bool {
-    matches!(
-        phase,
-        OperatorPhase::NotLaunched
-            | OperatorPhase::Starting
-            | OperatorPhase::Ready
-            | OperatorPhase::HostError
-    )
-}
-
-pub fn advanced_open_after_phase_transition(
-    previous_phase: Option<OperatorPhase>,
-    current_phase: OperatorPhase,
-    current_open: bool,
-) -> bool {
-    if previous_phase == Some(current_phase) {
-        current_open
-    } else {
-        advanced_default_open_for_phase(current_phase)
-    }
-}
-
 impl SmokeOverlayApp {
     fn new(
         config: OverlayBootstrapConfig,
@@ -1080,7 +1080,6 @@ impl SmokeOverlayApp {
             startup_window_placement_applied: false,
             icon_font_registered: false,
             last_operator_phase: None,
-            advanced_open: advanced_default_open_for_phase(OperatorPhase::NotLaunched),
         }
     }
 
@@ -1448,11 +1447,6 @@ impl eframe::App for SmokeOverlayApp {
             supervisor_status,
             command_pending,
         );
-        self.advanced_open = advanced_open_after_phase_transition(
-            self.last_operator_phase,
-            operator_phase,
-            self.advanced_open,
-        );
         self.last_operator_phase = Some(operator_phase);
 
         let footer_model = footer_status_model(
@@ -1510,6 +1504,13 @@ impl eframe::App for SmokeOverlayApp {
                         if matches!(operator_phase, OperatorPhase::Running) {
                             selected_suite_card(ui, &self.model, self.latest_poll.as_ref());
                             ui.add_space(SECTION_GAP_PX);
+                            run_monitor_card(
+                                ui,
+                                self.latest_poll.as_ref(),
+                                &self.session_paths,
+                                &self.model.selected_suite_id,
+                            );
+                            ui.add_space(SECTION_GAP_PX);
                             current_run_plan_card(
                                 ui,
                                 &self.model,
@@ -1534,38 +1535,25 @@ impl eframe::App for SmokeOverlayApp {
                             suite_selector(ui, &mut self.model, !controls.can_select_suite, false);
                             ui.add_space(SECTION_GAP_PX);
                             selected_suite_card(ui, &self.model, self.latest_poll.as_ref());
+                            ui.add_space(SECTION_GAP_PX);
+                            run_monitor_card(
+                                ui,
+                                self.latest_poll.as_ref(),
+                                &self.session_paths,
+                                &self.model.selected_suite_id,
+                            );
                         }
                         ui.add_space(SECTION_GAP_PX);
                         utilities_card(ui, &mut self.model, !controls.can_edit_step_sleep_timer);
                         ui.add_space(SECTION_GAP_PX);
-                        match operator_phase {
-                            OperatorPhase::Running => {
-                                running_summary_card(
-                                    ui,
-                                    self.latest_poll.as_ref(),
-                                    &self.model.selected_suite_id,
-                                );
-                                ui.add_space(SECTION_GAP_PX);
-                            }
-                            OperatorPhase::ReviewRequired => {
-                                review_evidence_card(
-                                    ui,
-                                    self.latest_poll.as_ref(),
-                                    &self.session_paths,
-                                    &self.model.selected_suite_id,
-                                );
-                                ui.add_space(SECTION_GAP_PX);
-                            }
-                            _ => {}
+                        if matches!(operator_phase, OperatorPhase::ReviewRequired) {
+                            review_evidence_card(
+                                ui,
+                                self.latest_poll.as_ref(),
+                                &self.session_paths,
+                                &self.model.selected_suite_id,
+                            );
                         }
-                        run_monitor_card(
-                            ui,
-                            self.latest_poll.as_ref(),
-                            &self.session_paths,
-                            &self.model.selected_suite_id,
-                        );
-                        ui.add_space(SECTION_GAP_PX);
-                        advanced_card(ui, self, controls, operator_phase);
                     });
             });
 
@@ -1889,36 +1877,17 @@ fn action_button_style_for_action(action: &ControlActionModel) -> ActionButtonSt
     }
 }
 
-fn action_button_size(emphasis: ControlActionEmphasis) -> egui::Vec2 {
-    match emphasis {
-        ControlActionEmphasis::PhasePrimary => egui::vec2(
-            PHASE_PRIMARY_ACTION_TILE_WIDTH_PX,
-            PHASE_PRIMARY_ACTION_TILE_HEIGHT_PX,
-        ),
-        ControlActionEmphasis::DecisionPeer | ControlActionEmphasis::Standard => {
-            egui::vec2(ACTION_TILE_WIDTH_PX, ACTION_TILE_HEIGHT_PX)
-        }
-    }
+fn action_button_size(_emphasis: ControlActionEmphasis) -> egui::Vec2 {
+    egui::vec2(ACTION_TILE_WIDTH_PX, ACTION_TILE_HEIGHT_PX)
 }
 
 fn action_button_size_for_action(phase_action: &PhaseControlActionModel) -> egui::Vec2 {
-    if !phase_action.action.enabled && phase_action.emphasis == ControlActionEmphasis::Standard {
-        return egui::vec2(
-            COMPACT_DISABLED_ACTION_TILE_WIDTH_PX,
-            COMPACT_DISABLED_ACTION_TILE_HEIGHT_PX,
-        );
-    }
-
     action_button_size(phase_action.emphasis)
 }
 
 fn action_button_label_for_action(phase_action: &PhaseControlActionModel) -> String {
     let icon = control_action_icon(phase_action.action.id);
-    if !phase_action.action.enabled && phase_action.emphasis == ControlActionEmphasis::Standard {
-        return format!("{} {}", icon, phase_action.action.label);
-    }
-
-    format!("{}\n{}", icon, phase_action.action.label)
+    format!("{} {}", icon, phase_action.action.label)
 }
 
 fn render_action_button(
@@ -2066,19 +2035,91 @@ pub fn section_label_text(title: &str) -> String {
     title.to_uppercase()
 }
 
+pub fn section_subheader_visual_spec() -> SectionSubheaderVisualSpec {
+    SectionSubheaderVisualSpec {
+        bold_text: true,
+        uses_bubble_frame: false,
+        uses_background_fill: false,
+        text_color: MUTED,
+    }
+}
+
+pub fn suite_picker_typography_spec() -> SuitePickerTypographySpec {
+    SuitePickerTypographySpec {
+        summary_text_color: MUTED,
+        summary_text_size_px: META_TEXT_SIZE,
+        group_header_text_color: TEXT,
+        group_header_text_size_px: BODY_TEXT_SIZE,
+        group_header_bold: true,
+        group_header_uses_collapsing_header: true,
+        row_text_color: TEXT,
+        row_text_size_px: META_TEXT_SIZE,
+    }
+}
+
+pub fn suite_checkbox_visual_spec(
+    checked: bool,
+    focused: bool,
+    disabled: bool,
+) -> SuiteCheckboxVisualSpec {
+    let icon = if checked {
+        icons::CHECK_SQUARE
+    } else {
+        icons::SQUARE
+    };
+    if disabled {
+        return SuiteCheckboxVisualSpec {
+            icon,
+            icon_color: DISABLED_TEXT,
+            text_color: DISABLED_TEXT,
+            row_fill: PANEL_RAISED.linear_multiply(0.72),
+            row_stroke: egui::Stroke::new(1.0, CARD_BORDER.linear_multiply(0.72)),
+            icon_size_px: BODY_TEXT_SIZE + 3.0,
+        };
+    }
+
+    if checked {
+        SuiteCheckboxVisualSpec {
+            icon,
+            icon_color: ACTIVE_BLUE,
+            text_color: TEXT,
+            row_fill: ACTIVE_BLUE.linear_multiply(if focused { 0.28 } else { 0.18 }),
+            row_stroke: egui::Stroke::new(1.35, ACTIVE_BLUE),
+            icon_size_px: BODY_TEXT_SIZE + 3.0,
+        }
+    } else {
+        SuiteCheckboxVisualSpec {
+            icon,
+            icon_color: MUTED,
+            text_color: TEXT,
+            row_fill: PANEL_RAISED,
+            row_stroke: egui::Stroke::new(1.0, CARD_BORDER),
+            icon_size_px: BODY_TEXT_SIZE + 3.0,
+        }
+    }
+}
+
+pub fn current_suite_info_callout_visual_spec() -> InfoCalloutVisualSpec {
+    InfoCalloutVisualSpec {
+        icon: icons::INFO,
+        icon_color: ACTIVE_BLUE,
+        text_color: TEXT,
+        icon_size_px: BODY_TEXT_SIZE + 2.0,
+        text_size_px: META_TEXT_SIZE,
+    }
+}
+
 fn section_subheader(ui: &mut egui::Ui, title: &str, tone: DashboardSectionTone) {
-    egui::Frame::default()
-        .fill(dashboard_section_fill(tone).linear_multiply(0.82))
-        .rounding(6.0)
-        .inner_margin(egui::Margin::symmetric(8.0, 3.0))
-        .show(ui, |ui| {
-            ui.label(
-                egui::RichText::new(title)
-                    .strong()
-                    .color(dashboard_section_text(tone))
-                    .size(BODY_TEXT_SIZE),
-            );
-        });
+    let spec = section_subheader_visual_spec();
+    let text = egui::RichText::new(title)
+        .strong()
+        .color(if spec.text_color == MUTED {
+            dashboard_section_text(tone)
+        } else {
+            spec.text_color
+        })
+        .size(BODY_TEXT_SIZE);
+    ui.label(text);
 }
 
 pub fn dashboard_section_fill(_tone: DashboardSectionTone) -> egui::Color32 {
@@ -2087,10 +2128,6 @@ pub fn dashboard_section_fill(_tone: DashboardSectionTone) -> egui::Color32 {
 
 pub fn dashboard_section_text(_tone: DashboardSectionTone) -> egui::Color32 {
     MUTED
-}
-
-fn suite_group_tone(_index: usize) -> DashboardSectionTone {
-    DashboardSectionTone::Cream
 }
 
 fn badge_label(ui: &mut egui::Ui, text: &str, color: egui::Color32) {
@@ -2110,6 +2147,7 @@ fn badge_label(ui: &mut egui::Ui, text: &str, color: egui::Color32) {
 }
 
 fn info_callout(ui: &mut egui::Ui, text: &str) {
+    let spec = current_suite_info_callout_visual_spec();
     show_full_width_frame(
         ui,
         egui::Frame::default()
@@ -2119,11 +2157,19 @@ fn info_callout(ui: &mut egui::Ui, text: &str) {
             .inner_margin(egui::Margin::symmetric(10.0, 6.0)),
         10.0,
         |ui| {
-            ui.label(
-                egui::RichText::new(format!("i  {text}"))
-                    .color(MUTED)
-                    .size(META_TEXT_SIZE),
-            );
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    egui::RichText::new(spec.icon)
+                        .color(spec.icon_color)
+                        .strong()
+                        .size(spec.icon_size_px),
+                );
+                ui.label(
+                    egui::RichText::new(text)
+                        .color(spec.text_color)
+                        .size(spec.text_size_px),
+                );
+            });
         },
     );
 }
@@ -2306,6 +2352,67 @@ fn tone_color(tone: StatusTone) -> egui::Color32 {
     }
 }
 
+fn render_suite_checkbox_row(
+    ui: &mut egui::Ui,
+    row: &SuiteRowView,
+    disabled: bool,
+) -> egui::Response {
+    let order = row
+        .selected_order
+        .map(|value| format!(" #{value}"))
+        .unwrap_or_default();
+    let focus = if row.focused { " · current" } else { "" };
+    let label = format!("{}{}{}", row.suite_label, order, focus);
+    let visual = suite_checkbox_visual_spec(row.checked, row.focused, disabled);
+    let mut text = egui::text::LayoutJob::default();
+    text.append(
+        visual.icon,
+        0.0,
+        egui::text::TextFormat {
+            font_id: egui::FontId::proportional(visual.icon_size_px),
+            color: visual.icon_color,
+            ..Default::default()
+        },
+    );
+    text.append(
+        "  ",
+        0.0,
+        egui::text::TextFormat {
+            font_id: egui::FontId::proportional(META_TEXT_SIZE),
+            color: visual.text_color,
+            ..Default::default()
+        },
+    );
+    text.append(
+        &label,
+        0.0,
+        egui::text::TextFormat {
+            font_id: egui::FontId::proportional(META_TEXT_SIZE),
+            color: visual.text_color,
+            ..Default::default()
+        },
+    );
+
+    let button = egui::Button::new(text)
+        .fill(visual.row_fill)
+        .stroke(visual.row_stroke)
+        .rounding(8.0)
+        .min_size(egui::vec2(ui.available_width(), 30.0));
+    ui.add_enabled(!disabled, button)
+}
+
+fn phosphor_collapsing_icon(ui: &mut egui::Ui, openness: f32, response: &egui::Response) {
+    let icon = suite_group_dropdown_icon(openness > 0.5);
+    let visuals = ui.style().interact(response);
+    ui.painter().text(
+        response.rect.center(),
+        egui::Align2::CENTER_CENTER,
+        icon,
+        egui::FontId::proportional(BODY_TEXT_SIZE),
+        visuals.fg_stroke.color,
+    );
+}
+
 fn suite_selector(
     ui: &mut egui::Ui,
     model: &mut SuiteSelectionModel,
@@ -2341,105 +2448,47 @@ fn suite_selector(
         }
         ui.add_space(RELATED_GAP_PX);
 
-        let mut active_group_id = String::new();
-        let mut group_index = 0usize;
-        for row in checklist.rows.clone() {
-            if row.group_id != active_group_id {
-                if !active_group_id.is_empty() {
-                    ui.add_space(SECTION_GAP_PX);
-                    group_index += 1;
-                }
-                active_group_id = row.group_id.clone();
-                let group_count = checklist
-                    .rows
-                    .iter()
-                    .filter(|candidate| candidate.group_id == row.group_id)
-                    .count();
-                section_subheader(
-                    ui,
-                    &suite_group_header_text(&row.group_label, group_count),
-                    suite_group_tone(group_index),
-                );
-                ui.add_space(RELATED_GAP_PX);
-            }
+        let mut row_index = 0usize;
+        while row_index < checklist.rows.len() {
+            let first_row = &checklist.rows[row_index];
+            let group_id = first_row.group_id.clone();
+            let group_label = first_row.group_label.clone();
+            let group_rows: Vec<SuiteRowView> = checklist
+                .rows
+                .iter()
+                .filter(|candidate| candidate.group_id == group_id)
+                .cloned()
+                .collect();
+            let group_count = group_rows.len();
+            let spec = suite_picker_typography_spec();
+            let header = egui::RichText::new(suite_group_header_text(&group_label, group_count))
+                .strong()
+                .color(spec.group_header_text_color)
+                .size(spec.group_header_text_size_px);
 
-            let mut checked = row.checked;
-            let order = row
-                .selected_order
-                .map(|value| format!(" #{value}"))
-                .unwrap_or_default();
-            let focus = if row.focused { " · current" } else { "" };
-            let label = format!("{}{}{}", row.suite_label, order, focus);
-            ui.horizontal(|ui| {
-                ui.label(
-                    egui::RichText::new(suite_row_indent_marker())
-                        .color(CARD_BORDER)
-                        .size(BODY_TEXT_SIZE),
-                );
-                let response = ui.add_enabled(!disabled, egui::Checkbox::new(&mut checked, label));
-                if disabled {
-                    response.on_disabled_hover_text(
-                        "Suite selection is available when the Unity host is ready.",
-                    );
-                } else if response.changed() {
-                    let _ = model.toggle_suite_selection_by_id(&row.suite_id);
-                }
-            });
+            egui::CollapsingHeader::new(header)
+                .id_source(format!("suite-selector-group-{group_id}"))
+                .default_open(true)
+                .icon(phosphor_collapsing_icon)
+                .show(ui, |ui| {
+                    for row in &group_rows {
+                        let response = render_suite_checkbox_row(ui, row, disabled);
+                        if disabled {
+                            response.on_disabled_hover_text(
+                                "Suite selection is available when the Unity host is ready.",
+                            );
+                        } else if response.clicked() {
+                            let _ = model.toggle_suite_selection_by_id(&row.suite_id);
+                        }
+                    }
+                });
+
+            row_index += group_count;
+            if row_index < checklist.rows.len() {
+                ui.add_space(SECTION_GAP_PX);
+            }
         }
     });
-}
-
-fn running_summary_card(
-    ui: &mut egui::Ui,
-    poll: Option<&StartupPollResult>,
-    fallback_suite_id: &str,
-) {
-    let summary = running_summary_from_poll(poll, fallback_suite_id);
-    show_full_width_frame(
-        ui,
-        egui::Frame::default()
-            .fill(PANEL_RAISED)
-            .rounding(CARD_RADIUS_PX)
-            .inner_margin(CARD_MARGIN_PX),
-        CARD_MARGIN_PX,
-        |ui| {
-            ui.label(
-                egui::RichText::new("Running now")
-                    .strong()
-                    .size(CARD_TITLE_TEXT_SIZE),
-            );
-            ui.add_space(RELATED_GAP_PX);
-            ui.label(
-                egui::RichText::new(format!("Suite: {}", summary.suite_id))
-                    .strong()
-                    .color(TEXT)
-                    .size(BODY_TEXT_SIZE),
-            );
-            if let Some(step_id) = summary.step_id.as_deref() {
-                ui.label(
-                    egui::RichText::new(format!("Step: {step_id}"))
-                        .color(MUTED)
-                        .size(META_TEXT_SIZE),
-                );
-            }
-            if let Some(message) = summary.latest_message.as_deref() {
-                ui.label(
-                    egui::RichText::new(format!("Latest: {message}"))
-                        .color(TEXT)
-                        .size(META_TEXT_SIZE),
-                );
-            }
-            let run_label = summary.run_id.as_deref().unwrap_or("pending");
-            ui.label(
-                egui::RichText::new(format!(
-                    "Run: {run_label} · events: {}",
-                    summary.event_count
-                ))
-                .color(MUTED)
-                .size(META_TEXT_SIZE),
-            );
-        },
-    );
 }
 
 fn review_evidence_card(
@@ -2510,85 +2559,6 @@ fn review_evidence_card(
                 );
             }
         },
-    );
-}
-
-fn advanced_card(
-    ui: &mut egui::Ui,
-    app: &mut SmokeOverlayApp,
-    controls: OverlayControlState,
-    phase: OperatorPhase,
-) {
-    let response = egui::CollapsingHeader::new("Advanced")
-        .id_source("advanced-card")
-        .default_open(app.advanced_open)
-        .show(ui, |ui| {
-            step_sleep_timer_card(ui, &mut app.model, !controls.can_edit_step_sleep_timer);
-            ui.add_space(SECTION_GAP_PX);
-            telemetry_card(ui, telemetry_summary_from_poll(app.latest_poll.as_ref()));
-            if let Some(suite) = app.model.selected_suite() {
-                ui.add_space(SECTION_GAP_PX);
-                ui.label(
-                    egui::RichText::new("Selected-suite details")
-                        .strong()
-                        .color(TEXT)
-                        .size(BODY_TEXT_SIZE),
-                );
-                ui.label(
-                    egui::RichText::new(format!("Reset: {}", suite.reset_override))
-                        .color(MUTED)
-                        .size(META_TEXT_SIZE),
-                );
-                ui.label(
-                    egui::RichText::new(format!("Expected: {}", suite.expected_outcome))
-                        .color(MUTED)
-                        .size(META_TEXT_SIZE),
-                );
-            }
-            if matches!(phase, OperatorPhase::Running) {
-                ui.label(
-                    egui::RichText::new(
-                        "Advanced is collapsed during a run to prioritize progress.",
-                    )
-                    .color(MUTED)
-                    .size(META_TEXT_SIZE),
-                );
-            }
-        });
-    app.advanced_open = !response.fully_closed();
-}
-
-fn telemetry_card(ui: &mut egui::Ui, telemetry: TelemetrySummaryModel) {
-    ui.label(
-        egui::RichText::new("Telemetry")
-            .strong()
-            .color(TEXT)
-            .size(BODY_TEXT_SIZE),
-    );
-    let active_run = telemetry.active_run_id.as_deref().unwrap_or("none");
-    let event_seq = telemetry
-        .last_event_seq
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "none".to_string());
-    let command_seq = telemetry
-        .last_command_seq
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "none".to_string());
-    let heartbeat = telemetry.heartbeat_utc.as_deref().unwrap_or("none");
-    ui.label(
-        egui::RichText::new(format!("activeRun={active_run}"))
-            .color(MUTED)
-            .size(META_TEXT_SIZE),
-    );
-    ui.label(
-        egui::RichText::new(format!("eventSeq={event_seq} · commandSeq={command_seq}"))
-            .color(MUTED)
-            .size(META_TEXT_SIZE),
-    );
-    ui.label(
-        egui::RichText::new(format!("heartbeat={heartbeat}"))
-            .color(MUTED)
-            .size(META_TEXT_SIZE),
     );
 }
 
@@ -2672,7 +2642,7 @@ fn run_monitor_card(
             if recent_event_log_row_count(poll) > 0 {
                 egui::ScrollArea::vertical()
                     .id_source("recent-events-log")
-                    .max_height(RECENT_EVENT_LOG_MAX_HEIGHT_PX)
+                    .max_height(recent_event_log_scroll_max_height_px())
                     .stick_to_bottom(true)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
@@ -2735,38 +2705,6 @@ fn review_result_visual_model(result: &str) -> StatusVisualModel {
             headline: "UNKNOWN",
             tone: StatusTone::Warning,
         },
-    }
-}
-
-fn running_summary_from_poll(
-    poll: Option<&StartupPollResult>,
-    fallback_suite_id: &str,
-) -> RunningSummaryModel {
-    let latest_event = poll.and_then(|poll| poll.events.last());
-    let run_id = poll
-        .and_then(|poll| poll.host_state.as_ref())
-        .and_then(|host_state| non_empty_string(&host_state.active_run_id))
-        .or_else(|| latest_event.and_then(|event| non_empty_string(&event.run_id)));
-    let suite_id = latest_event
-        .and_then(|event| non_empty_string(&event.suite_id))
-        .unwrap_or_else(|| fallback_suite_id.trim().to_string());
-    RunningSummaryModel {
-        run_id,
-        suite_id,
-        step_id: latest_event.and_then(|event| non_empty_string(&event.step_id)),
-        latest_event_type: latest_event.and_then(|event| non_empty_string(&event.event_type)),
-        latest_message: latest_event.and_then(|event| non_empty_string(&event.message)),
-        event_count: poll.map(|poll| poll.events.len()).unwrap_or_default(),
-    }
-}
-
-fn telemetry_summary_from_poll(poll: Option<&StartupPollResult>) -> TelemetrySummaryModel {
-    let host_state = poll.and_then(|poll| poll.host_state.as_ref());
-    TelemetrySummaryModel {
-        active_run_id: host_state.and_then(|state| non_empty_string(&state.active_run_id)),
-        last_event_seq: host_state.map(|state| state.last_event_seq),
-        last_command_seq: host_state.map(|state| state.last_command_seq),
-        heartbeat_utc: host_state.and_then(|state| non_empty_string(&state.heartbeat_utc)),
     }
 }
 
@@ -2844,6 +2782,10 @@ fn active_suite_id(poll: Option<&StartupPollResult>, fallback_suite_id: &str) ->
 
 fn recent_event_log_row_count(poll: Option<&StartupPollResult>) -> usize {
     poll.map(|poll| poll.events.len()).unwrap_or_default()
+}
+
+fn recent_event_log_scroll_max_height_px() -> f32 {
+    RECENT_EVENT_LOG_MAX_HEIGHT_PX
 }
 
 fn review_summary_for_poll(
@@ -3116,25 +3058,6 @@ mod tests {
     }
 
     #[test]
-    fn telemetry_summary_preserves_sequence_details_for_advanced() {
-        let poll = StartupPollResult {
-            status: UnityHostSupervisorStatus::Ready,
-            host_state: Some(host_state(HOST_STATE_READY, "run-123")),
-            events: Vec::new(),
-            warnings: Vec::new(),
-        };
-
-        let telemetry = telemetry_summary_from_poll(Some(&poll));
-        assert_eq!(telemetry.active_run_id.as_deref(), Some("run-123"));
-        assert_eq!(telemetry.last_event_seq, Some(1));
-        assert_eq!(telemetry.last_command_seq, Some(1));
-        assert_eq!(
-            telemetry.heartbeat_utc.as_deref(),
-            Some("2026-04-23T04:37:09Z")
-        );
-    }
-
-    #[test]
     fn operator_density_keeps_panel_narrow_with_reference_touch_targets() {
         let density = operator_density_spec();
 
@@ -3152,43 +3075,6 @@ mod tests {
         assert!(glow.len() >= 3);
         assert!(glow.iter().any(|layer| layer.alpha >= 44));
         assert!(glow.iter().any(|layer| layer.radius_factor >= 0.70));
-    }
-
-    #[test]
-    fn advanced_defaults_open_before_run_and_collapsed_during_run() {
-        assert!(advanced_default_open_for_phase(OperatorPhase::NotLaunched));
-        assert!(advanced_default_open_for_phase(OperatorPhase::Starting));
-        assert!(advanced_default_open_for_phase(OperatorPhase::Ready));
-        assert!(!advanced_default_open_for_phase(OperatorPhase::Running));
-        assert!(!advanced_default_open_for_phase(
-            OperatorPhase::ReviewRequired
-        ));
-        assert!(advanced_default_open_for_phase(OperatorPhase::HostError));
-
-        assert_eq!(
-            advanced_open_after_phase_transition(
-                Some(OperatorPhase::Ready),
-                OperatorPhase::Running,
-                true
-            ),
-            false
-        );
-        assert_eq!(
-            advanced_open_after_phase_transition(
-                Some(OperatorPhase::Running),
-                OperatorPhase::ReviewRequired,
-                false
-            ),
-            false
-        );
-        assert_eq!(
-            advanced_open_after_phase_transition(
-                Some(OperatorPhase::ReviewRequired),
-                OperatorPhase::ReviewRequired,
-                true
-            ),
-            true
-        );
     }
 
     #[test]
@@ -3332,12 +3218,60 @@ mod tests {
     }
 
     #[test]
-    fn suite_group_tones_keep_suite_picker_visually_calm() {
-        assert_eq!(suite_group_tone(0), DashboardSectionTone::Cream);
-        assert_eq!(suite_group_tone(1), DashboardSectionTone::Cream);
-        assert_eq!(suite_group_tone(2), DashboardSectionTone::Cream);
-        assert_eq!(suite_group_tone(3), DashboardSectionTone::Cream);
-        assert_eq!(suite_group_tone(4), DashboardSectionTone::Cream);
+    fn suite_picker_typography_matches_current_run_plan_hierarchy() {
+        let spec = suite_picker_typography_spec();
+
+        assert_eq!(spec.summary_text_color, MUTED);
+        assert_eq!(spec.summary_text_size_px, META_TEXT_SIZE);
+        assert_eq!(spec.group_header_text_color, TEXT);
+        assert_eq!(spec.group_header_text_size_px, BODY_TEXT_SIZE);
+        assert!(spec.group_header_bold);
+        assert!(spec.group_header_uses_collapsing_header);
+        assert_eq!(spec.row_text_color, TEXT);
+        assert_eq!(spec.row_text_size_px, META_TEXT_SIZE);
+        assert_eq!(suite_group_header_text("Setup", 1), "Setup · 1 suite");
+    }
+
+    #[test]
+    fn suite_picker_dropdowns_use_phosphor_open_and_closed_icons() {
+        assert_eq!(suite_group_dropdown_icon(true), icons::CARET_DOWN);
+        assert_eq!(suite_group_dropdown_icon(false), icons::CARET_RIGHT);
+        assert!(is_private_icon_glyph(suite_group_dropdown_icon(true)));
+        assert!(is_private_icon_glyph(suite_group_dropdown_icon(false)));
+        assert_ne!(
+            suite_group_dropdown_icon(true),
+            suite_group_dropdown_icon(false)
+        );
+    }
+
+    #[test]
+    fn selected_suite_checkbox_visual_uses_high_contrast_active_state() {
+        let checked = suite_checkbox_visual_spec(true, false, false);
+        let unchecked = suite_checkbox_visual_spec(false, false, false);
+        let disabled_checked = suite_checkbox_visual_spec(true, false, true);
+
+        assert_eq!(checked.icon, icons::CHECK_SQUARE);
+        assert_eq!(unchecked.icon, icons::SQUARE);
+        assert_eq!(checked.icon_color, ACTIVE_BLUE);
+        assert_eq!(checked.text_color, TEXT);
+        assert_ne!(checked.icon_color, CARD_BORDER);
+        assert_ne!(
+            checked.icon_color,
+            dashboard_section_fill(DashboardSectionTone::Gold)
+        );
+        assert_eq!(unchecked.icon_color, MUTED);
+        assert_eq!(unchecked.text_color, TEXT);
+        assert_eq!(disabled_checked.icon_color, DISABLED_TEXT);
+        assert!(checked.icon_size_px > BODY_TEXT_SIZE);
+    }
+
+    #[test]
+    fn dashboard_section_order_ends_at_run_monitor_before_footer() {
+        assert_eq!(overlay_section_order().len(), 7);
+        assert_eq!(
+            overlay_section_order_for_phase(OperatorPhase::Running).len(),
+            7
+        );
     }
 
     #[test]
@@ -3349,12 +3283,17 @@ mod tests {
                 OverlaySectionId::CurrentRunPlan,
                 OverlaySectionId::SuitePicker,
                 OverlaySectionId::CurrentSuite,
-                OverlaySectionId::Controls,
                 OverlaySectionId::RunMonitor,
-                OverlaySectionId::Advanced,
+                OverlaySectionId::Controls,
                 OverlaySectionId::FooterStatus,
             ]
         );
+    }
+
+    #[test]
+    fn dashboard_no_longer_renders_running_now_card() {
+        let removed_title = ["Running", "now"].join(" ");
+        assert!(!include_str!("gui.rs").contains(&removed_title));
     }
 
     #[test]
@@ -3364,11 +3303,10 @@ mod tests {
             vec![
                 OverlaySectionId::HeaderStatus,
                 OverlaySectionId::CurrentSuite,
+                OverlaySectionId::RunMonitor,
                 OverlaySectionId::CurrentRunPlan,
                 OverlaySectionId::SuitePicker,
                 OverlaySectionId::Controls,
-                OverlaySectionId::RunMonitor,
-                OverlaySectionId::Advanced,
                 OverlaySectionId::FooterStatus,
             ]
         );
@@ -3456,8 +3394,11 @@ mod tests {
     #[test]
     fn suite_navigation_markers_use_phosphor_icons() {
         let group = suite_group_header_text("Setup", 1);
-        assert_eq!(group, format!("{} Setup · 1 suite", icons::CARET_DOWN));
-        assert!(group.starts_with(icons::CARET_DOWN));
+        assert_eq!(group, "Setup · 1 suite");
+        assert_eq!(suite_group_dropdown_icon(true), icons::CARET_DOWN);
+        assert_eq!(suite_group_dropdown_icon(false), icons::CARET_RIGHT);
+        assert!(is_private_icon_glyph(suite_group_dropdown_icon(true)));
+        assert!(is_private_icon_glyph(suite_group_dropdown_icon(false)));
         assert_eq!(suite_row_indent_marker(), icons::DOT_OUTLINE);
         assert_eq!(current_suite_badge_text("unknown-suite"), icons::DIAMOND);
         assert!(!group.contains('\u{25BE}'));
@@ -3575,74 +3516,77 @@ mod tests {
     }
 
     #[test]
-    fn disabled_standard_action_tiles_collapse_to_compact_single_line_chips() {
-        let phase_action = PhaseControlActionModel {
-            action: ControlActionModel {
-                id: ControlActionId::LaunchHost,
-                label: "Launch Unity Host".to_string(),
-                role: ControlActionRole::Primary,
-                enabled: false,
-                disabled_reason: Some("not available"),
-            },
-            emphasis: ControlActionEmphasis::Standard,
-        };
-
-        let size = action_button_size_for_action(&phase_action);
-        assert!(size.y <= 38.0);
-        assert!(size.x <= ACTION_TILE_WIDTH_PX);
-
-        let label = action_button_label_for_action(&phase_action);
-        assert!(!label.contains('\n'));
-        assert!(label.contains("Launch Unity Host"));
-    }
-
-    #[test]
-    fn phase_primary_action_tiles_keep_large_reference_cta_scale() {
-        let phase_action = PhaseControlActionModel {
-            action: ControlActionModel {
-                id: ControlActionId::RunSelectedSuite,
-                label: "Run Selected Suite".to_string(),
-                role: ControlActionRole::Primary,
-                enabled: false,
-                disabled_reason: Some("not available"),
-            },
-            emphasis: ControlActionEmphasis::PhasePrimary,
-        };
+    fn action_tiles_use_uniform_smaller_size_for_aligned_bottom_dock() {
+        let expected = egui::vec2(ACTION_TILE_WIDTH_PX, ACTION_TILE_HEIGHT_PX);
 
         assert_eq!(
-            action_button_size_for_action(&phase_action),
-            egui::vec2(
-                PHASE_PRIMARY_ACTION_TILE_WIDTH_PX,
-                PHASE_PRIMARY_ACTION_TILE_HEIGHT_PX
-            )
+            action_button_size(ControlActionEmphasis::PhasePrimary),
+            expected
         );
-        assert!(action_button_label_for_action(&phase_action).contains('\n'));
+        assert_eq!(
+            action_button_size(ControlActionEmphasis::DecisionPeer),
+            expected
+        );
+        assert_eq!(
+            action_button_size(ControlActionEmphasis::Standard),
+            expected
+        );
+        assert!(expected.x < PHASE_PRIMARY_ACTION_TILE_WIDTH_PX);
+        assert!(expected.y < PHASE_PRIMARY_ACTION_TILE_HEIGHT_PX);
     }
 
     #[test]
-    fn action_tiles_use_reduced_footprint_for_bottom_dock_fit() {
-        let primary = action_button_size(ControlActionEmphasis::PhasePrimary);
-        let standard = action_button_size(ControlActionEmphasis::Standard);
-        let decision_peer = action_button_size(ControlActionEmphasis::DecisionPeer);
-        let compact_disabled = action_button_size_for_action(&PhaseControlActionModel {
-            action: ControlActionModel {
-                id: ControlActionId::LaunchHost,
-                label: "Launch Unity Host".to_string(),
-                role: ControlActionRole::Primary,
-                enabled: false,
-                disabled_reason: Some("not available"),
+    fn all_action_tiles_keep_icon_and_text_on_one_line() {
+        for phase_action in [
+            PhaseControlActionModel {
+                action: ControlActionModel {
+                    id: ControlActionId::RunSelectedSuite,
+                    label: "Run Selected Suite".to_string(),
+                    role: ControlActionRole::Primary,
+                    enabled: true,
+                    disabled_reason: None,
+                },
+                emphasis: ControlActionEmphasis::PhasePrimary,
             },
-            emphasis: ControlActionEmphasis::Standard,
-        });
+            PhaseControlActionModel {
+                action: ControlActionModel {
+                    id: ControlActionId::ExportLogs,
+                    label: "Export Logs".to_string(),
+                    role: ControlActionRole::Secondary,
+                    enabled: true,
+                    disabled_reason: None,
+                },
+                emphasis: ControlActionEmphasis::DecisionPeer,
+            },
+            PhaseControlActionModel {
+                action: ControlActionModel {
+                    id: ControlActionId::LaunchHost,
+                    label: "Launch Unity Host".to_string(),
+                    role: ControlActionRole::Primary,
+                    enabled: false,
+                    disabled_reason: Some("not available"),
+                },
+                emphasis: ControlActionEmphasis::Standard,
+            },
+        ] {
+            let label = action_button_label_for_action(&phase_action);
+            assert!(!label.contains('\n'));
+            assert!(label.contains(' '));
+            assert_eq!(
+                action_button_size_for_action(&phase_action),
+                action_button_size(ControlActionEmphasis::Standard)
+            );
+        }
+    }
 
-        assert!(primary.x <= 224.0);
-        assert!(primary.y <= 52.0);
-        assert!(standard.x <= 108.0);
-        assert!(standard.y <= 44.0);
-        assert_eq!(decision_peer, standard);
-        assert!(compact_disabled.x <= 104.0);
-        assert!(compact_disabled.y <= 30.0);
-        assert!(primary.y > standard.y);
+    #[test]
+    fn subsection_titles_render_as_plain_bold_text_without_badge_bubbles() {
+        let spec = section_subheader_visual_spec();
+
+        assert!(spec.bold_text);
+        assert!(!spec.uses_bubble_frame);
+        assert!(!spec.uses_background_fill);
+        assert_eq!(spec.text_color, MUTED);
     }
 
     #[test]
@@ -3699,6 +3643,44 @@ mod tests {
     }
 
     #[test]
+    fn current_suite_info_note_keeps_single_line_operator_copy() {
+        let catalog = crate::catalog::load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        let briefing = build_current_suite_briefing_model(&model).expect("briefing should exist");
+
+        assert!(briefing.info_note.len() <= 54);
+        assert!(briefing.info_note.starts_with("Failure:"));
+        assert!(briefing.info_note.contains("Export Logs"));
+        assert!(briefing.info_note.contains("Rerun Suite"));
+        assert!(!briefing
+            .info_note
+            .contains("review-required before returning"));
+    }
+
+    #[test]
+    fn current_suite_info_callout_uses_legible_phosphor_symbol() {
+        let spec = current_suite_info_callout_visual_spec();
+
+        assert_eq!(spec.icon, icons::INFO);
+        assert_ne!(spec.icon, "i");
+        assert!(is_private_icon_glyph(spec.icon));
+        assert_eq!(spec.icon_color, ACTIVE_BLUE);
+        assert_eq!(spec.text_color, TEXT);
+        assert!(spec.icon_size_px > META_TEXT_SIZE);
+    }
+
+    #[test]
+    fn recent_events_scroll_area_shows_more_event_history() {
+        assert!(recent_event_log_scroll_max_height_px() >= 240.0);
+        assert_eq!(
+            recent_event_log_scroll_max_height_px(),
+            RECENT_EVENT_LOG_MAX_HEIGHT_PX
+        );
+    }
+
+    #[test]
     fn footer_status_model_summarizes_host_events_pending_selection_and_batch_progress() {
         let catalog = crate::catalog::load_canonical_catalog().expect("catalog should load");
         let mut model =
@@ -3749,39 +3731,6 @@ mod tests {
         assert_eq!(footer.pending_command, None);
         assert_eq!(footer.selected_suite_count, 1);
         assert_eq!(footer.batch_progress, None);
-    }
-
-    #[test]
-    fn running_summary_extracts_latest_event_and_counts_events() {
-        let poll = StartupPollResult {
-            status: UnityHostSupervisorStatus::Ready,
-            host_state: Some(host_state(HOST_STATE_RUNNING, "run-123")),
-            events: (1..=3).map(test_event).collect(),
-            warnings: Vec::new(),
-        };
-
-        let summary = running_summary_from_poll(Some(&poll), "fallback-suite");
-        assert_eq!(summary.run_id.as_deref(), Some("run-123"));
-        assert_eq!(summary.suite_id, "suite-test");
-        assert_eq!(summary.step_id.as_deref(), Some("step-003"));
-        assert_eq!(summary.latest_event_type.as_deref(), Some("step-complete"));
-        assert_eq!(summary.latest_message.as_deref(), Some("event 3"));
-        assert_eq!(summary.event_count, 3);
-    }
-
-    #[test]
-    fn running_summary_falls_back_to_selected_suite_without_events() {
-        let poll = StartupPollResult {
-            status: UnityHostSupervisorStatus::Ready,
-            host_state: Some(host_state(HOST_STATE_RUNNING, "run-123")),
-            events: Vec::new(),
-            warnings: Vec::new(),
-        };
-
-        let summary = running_summary_from_poll(Some(&poll), "fallback-suite");
-        assert_eq!(summary.suite_id, "fallback-suite");
-        assert_eq!(summary.event_count, 0);
-        assert!(summary.latest_message.is_none());
     }
 
     #[test]
