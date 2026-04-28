@@ -190,8 +190,42 @@ namespace ASMLite.Tests.Editor
         public string label;
         public string description;
         public string actionType;
+        public ASMLiteSmokeStepArgs args;
         public string expectedOutcome;
         public string debugHint;
+    }
+
+    [Serializable]
+    internal sealed class ASMLiteSmokeStepArgs
+    {
+        public string scenePath;
+        public string avatarName;
+        public string objectName;
+        public string fixtureMutation;
+        public string expectedPrimaryAction;
+        public string expectedDiagnosticCode;
+        public string expectedDiagnosticContains;
+        public string expectedState;
+        public bool expectStepFailure;
+        public bool preserveFailureEvidence;
+        public bool requireCleanReset;
+
+        internal void Normalize()
+        {
+            scenePath = NormalizeOptional(scenePath);
+            avatarName = NormalizeOptional(avatarName);
+            objectName = NormalizeOptional(objectName);
+            fixtureMutation = NormalizeOptional(fixtureMutation);
+            expectedPrimaryAction = NormalizeOptional(expectedPrimaryAction);
+            expectedDiagnosticCode = NormalizeOptional(expectedDiagnosticCode);
+            expectedDiagnosticContains = NormalizeOptional(expectedDiagnosticContains);
+            expectedState = NormalizeOptional(expectedState);
+        }
+
+        private static string NormalizeOptional(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
     }
 
     internal static class ASMLiteSmokeCatalog
@@ -348,6 +382,17 @@ namespace ASMLite.Tests.Editor
             step.actionType = RequireNonBlank(step.actionType, path + ".actionType");
             if (!s_allowedActionTypes.Contains(step.actionType))
                 throw new InvalidOperationException($"{path}.actionType '{step.actionType}' is not supported.");
+            step.args = step.args ?? new ASMLiteSmokeStepArgs();
+            step.args.Normalize();
+            if (step.args.expectStepFailure)
+            {
+                step.args.expectedDiagnosticCode = RequireNonBlank(
+                    step.args.expectedDiagnosticCode,
+                    path + ".args.expectedDiagnosticCode");
+                step.args.expectedDiagnosticContains = RequireNonBlank(
+                    step.args.expectedDiagnosticContains,
+                    path + ".args.expectedDiagnosticContains");
+            }
             step.expectedOutcome = RequireNonBlank(step.expectedOutcome, path + ".expectedOutcome");
             step.debugHint = RequireNonBlank(step.debugHint, path + ".debugHint");
         }

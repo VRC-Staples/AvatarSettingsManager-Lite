@@ -36,6 +36,56 @@ namespace ASMLite.Tests.Editor
         internal List<ASMLiteSmokeExecutionEventPayload> Events = new List<ASMLiteSmokeExecutionEventPayload>();
     }
 
+    internal static class ASMLiteSmokeExpectedDiagnosticMatcher
+    {
+        internal static bool ExpectsStepFailure(ASMLiteSmokeStepDefinition step)
+        {
+            return step != null && step.args != null && step.args.expectStepFailure;
+        }
+
+        internal static bool MatchesExpectedDiagnostic(
+            ASMLiteSmokeStepDefinition step,
+            string detail,
+            out string passMessage,
+            out string mismatchMessage)
+        {
+            ASMLiteSmokeStepArgs args = step == null ? null : step.args;
+            string diagnosticCode = args == null ? string.Empty : Normalize(args.expectedDiagnosticCode);
+            string diagnosticContains = args == null ? string.Empty : Normalize(args.expectedDiagnosticContains);
+            string actual = Normalize(detail);
+
+            bool hasCode = !string.IsNullOrEmpty(diagnosticCode)
+                && actual.IndexOf(diagnosticCode, StringComparison.Ordinal) >= 0;
+            bool hasText = !string.IsNullOrEmpty(diagnosticContains)
+                && actual.IndexOf(diagnosticContains, StringComparison.Ordinal) >= 0;
+
+            if (hasCode && hasText)
+            {
+                passMessage = $"Expected diagnostic '{diagnosticCode}' matched for step '{step.stepId}'.";
+                mismatchMessage = string.Empty;
+                return true;
+            }
+
+            passMessage = string.Empty;
+            mismatchMessage = $"Expected diagnostic code '{diagnosticCode}' containing '{diagnosticContains}', but observed: {actual}";
+            return false;
+        }
+
+        internal static string BuildUnexpectedSuccessMessage(ASMLiteSmokeStepDefinition step)
+        {
+            ASMLiteSmokeStepArgs args = step == null ? null : step.args;
+            string diagnosticCode = args == null ? string.Empty : Normalize(args.expectedDiagnosticCode);
+            string diagnosticContains = args == null ? string.Empty : Normalize(args.expectedDiagnosticContains);
+            string stepId = step == null ? "unknown-step" : step.stepId;
+            return $"Step '{stepId}' was expected to fail with diagnostic code '{diagnosticCode}' containing '{diagnosticContains}', but it passed.";
+        }
+
+        private static string Normalize(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+    }
+
     internal static class ASMLiteSmokeRunExecutor
     {
         internal delegate bool StepExecutor(
@@ -93,8 +143,20 @@ namespace ASMLite.Tests.Editor
                     AddEvent(result, "step-started", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, $"Step '{step.stepId}' started ({step.actionType}).");
 
                     bool stepPassed = stepExecutor(step, out string detail, out string stackTrace);
+                    bool expectsStepFailure = ASMLiteSmokeExpectedDiagnosticMatcher.ExpectsStepFailure(step);
                     if (stepPassed)
                     {
+                        if (expectsStepFailure)
+                        {
+                            string unexpectedSuccessMessage = ASMLiteSmokeExpectedDiagnosticMatcher.BuildUnexpectedSuccessMessage(step);
+                            AddEvent(result, "step-failed", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, unexpectedSuccessMessage);
+                            AddEvent(result, "suite-failed", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, $"Suite '{suite.suiteId}' failed at step '{step.stepId}'.");
+
+                            result.Failure = BuildFailure(suiteCase, step, unexpectedSuccessMessage, stackTrace);
+                            result.Succeeded = false;
+                            return result;
+                        }
+
                         string stepPassedMessage = string.IsNullOrWhiteSpace(detail)
                             ? $"Step '{step.stepId}' passed."
                             : detail.Trim();
@@ -106,19 +168,25 @@ namespace ASMLite.Tests.Editor
                         ? $"Step '{step.stepId}' failed."
                         : detail.Trim();
 
+                    if (expectsStepFailure)
+                    {
+                        if (ASMLiteSmokeExpectedDiagnosticMatcher.MatchesExpectedDiagnostic(
+                            step,
+                            failureMessage,
+                            out string expectedFailurePassMessage,
+                            out string expectedFailureMismatchMessage))
+                        {
+                            AddEvent(result, "step-passed", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, expectedFailurePassMessage);
+                            continue;
+                        }
+
+                        failureMessage = expectedFailureMismatchMessage;
+                    }
+
                     AddEvent(result, "step-failed", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, failureMessage);
                     AddEvent(result, "suite-failed", suite.suiteId, suiteCase.caseId, step.stepId, effectiveResetPolicy, $"Suite '{suite.suiteId}' failed at step '{step.stepId}'.");
 
-                    result.Failure = new ASMLiteSmokeExecutionFailure
-                    {
-                        CaseId = suiteCase.caseId,
-                        CaseLabel = suiteCase.label,
-                        StepId = step.stepId,
-                        StepLabel = step.label,
-                        FailureMessage = failureMessage,
-                        StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
-                    };
-
+                    result.Failure = BuildFailure(suiteCase, step, failureMessage, stackTrace);
                     result.Succeeded = false;
                     return result;
                 }
@@ -147,6 +215,23 @@ namespace ASMLite.Tests.Editor
             }
 
             return string.Empty;
+        }
+
+        private static ASMLiteSmokeExecutionFailure BuildFailure(
+            ASMLiteSmokeCaseDefinition suiteCase,
+            ASMLiteSmokeStepDefinition step,
+            string failureMessage,
+            string stackTrace)
+        {
+            return new ASMLiteSmokeExecutionFailure
+            {
+                CaseId = suiteCase.caseId,
+                CaseLabel = suiteCase.label,
+                StepId = step.stepId,
+                StepLabel = step.label,
+                FailureMessage = failureMessage,
+                StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
+            };
         }
 
         private static void AddEvent(

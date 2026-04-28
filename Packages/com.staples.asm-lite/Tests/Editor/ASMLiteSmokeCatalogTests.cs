@@ -67,6 +67,60 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadFromJson_deserializes_typed_step_args()
+        {
+            string rawJson = BuildSingleStepCatalogJson(
+                "\"args\": { "
+                + "\"scenePath\": \"Assets/Setup.unity\", "
+                + "\"avatarName\": \"Oct25_Dress\", "
+                + "\"objectName\": \"Setup Host\", "
+                + "\"fixtureMutation\": \"missing-scene\", "
+                + "\"expectedPrimaryAction\": \"Add Prefab\", "
+                + "\"expectedDiagnosticCode\": \"SETUP_SCENE_MISSING\", "
+                + "\"expectedDiagnosticContains\": \"scene could not be found\", "
+                + "\"expectedState\": \"host-ready\", "
+                + "\"expectStepFailure\": true, "
+                + "\"preserveFailureEvidence\": true, "
+                + "\"requireCleanReset\": true }\n");
+
+            var catalog = ASMLiteSmokeCatalog.LoadFromJson(rawJson);
+            var args = catalog.groups[0].suites[0].cases[0].steps[0].args;
+
+            Assert.AreEqual("Assets/Setup.unity", args.scenePath);
+            Assert.AreEqual("Oct25_Dress", args.avatarName);
+            Assert.AreEqual("Setup Host", args.objectName);
+            Assert.AreEqual("missing-scene", args.fixtureMutation);
+            Assert.AreEqual("Add Prefab", args.expectedPrimaryAction);
+            Assert.AreEqual("SETUP_SCENE_MISSING", args.expectedDiagnosticCode);
+            Assert.AreEqual("scene could not be found", args.expectedDiagnosticContains);
+            Assert.AreEqual("host-ready", args.expectedState);
+            Assert.IsTrue(args.expectStepFailure);
+            Assert.IsTrue(args.preserveFailureEvidence);
+            Assert.IsTrue(args.requireCleanReset);
+        }
+
+        [Test]
+        public void LoadFromJson_allows_omitted_step_args_as_empty_typed_args()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadFromJson(BuildSingleStepCatalogJson(argsJson: null));
+            var args = catalog.groups[0].suites[0].cases[0].steps[0].args;
+
+            Assert.NotNull(args);
+            Assert.AreEqual(string.Empty, args.scenePath);
+            Assert.AreEqual(string.Empty, args.expectedDiagnosticCode);
+            Assert.IsFalse(args.expectStepFailure);
+        }
+
+        [Test]
+        public void LoadFromJson_rejects_expected_failure_without_code_and_text()
+        {
+            string rawJson = BuildSingleStepCatalogJson("\"args\": { \"expectStepFailure\": true, \"expectedDiagnosticCode\": \"SETUP_SCENE_MISSING\" }\n");
+
+            var exception = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(rawJson));
+            StringAssert.Contains("expectedDiagnosticContains", exception.Message);
+        }
+
+        [Test]
         public void LoadFromJson_rejects_blank_group_ids()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"groupId\": \"editor-window\"", "\"groupId\": \"   \"", StringComparison.Ordinal);
@@ -137,6 +191,59 @@ namespace ASMLite.Tests.Editor
 
             var exception = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(rawJson));
             StringAssert.Contains("steps", exception.Message);
+        }
+
+        private static string BuildSingleStepCatalogJson(string argsJson)
+        {
+            string argsLine = string.IsNullOrWhiteSpace(argsJson) ? string.Empty : "              " + argsJson.Trim() + ",\n";
+            return "{\n"
+                + "  \"catalogVersion\": 1,\n"
+                + "  \"protocolVersion\": \"1.0.0\",\n"
+                + "  \"fixture\": { \"scenePath\": \"Assets/Click ME.unity\", \"avatarName\": \"Oct25_Dress\" },\n"
+                + "  \"groups\": [\n"
+                + "    {\n"
+                + "      \"groupId\": \"editor-window\",\n"
+                + "      \"label\": \"Editor Window\",\n"
+                + "      \"description\": \"desc\",\n"
+                + "      \"suites\": [\n"
+                + "        {\n"
+                + "          \"suiteId\": \"setup-negative-diagnostics\",\n"
+                + "          \"label\": \"Setup Negative Diagnostics\",\n"
+                + "          \"description\": \"desc\",\n"
+                + "          \"resetOverride\": \"Inherit\",\n"
+                + "          \"speed\": \"standard\",\n"
+                + "          \"risk\": \"safe\",\n"
+                + "          \"defaultSelected\": false,\n"
+                + "          \"presetGroups\": [\"safe-negatives\"],\n"
+                + "          \"requiresPlayMode\": false,\n"
+                + "          \"stopOnFirstFailure\": true,\n"
+                + "          \"expectedOutcome\": \"expected diagnostics match.\",\n"
+                + "          \"debugHint\": \"hint\",\n"
+                + "          \"cases\": [\n"
+                + "            {\n"
+                + "              \"caseId\": \"missing-scene\",\n"
+                + "              \"label\": \"Missing scene\",\n"
+                + "              \"description\": \"desc\",\n"
+                + "              \"expectedOutcome\": \"diagnostic appears.\",\n"
+                + "              \"debugHint\": \"hint\",\n"
+                + "              \"steps\": [\n"
+                + "                {\n"
+                + "                  \"stepId\": \"assert-missing-scene\",\n"
+                + "                  \"label\": \"Assert Missing Scene\",\n"
+                + "                  \"description\": \"desc\",\n"
+                + "                  \"actionType\": \"assert-host-ready\",\n"
+                + argsLine
+                + "                  \"expectedOutcome\": \"diagnostic appears.\",\n"
+                + "                  \"debugHint\": \"hint\"\n"
+                + "                }\n"
+                + "              ]\n"
+                + "            }\n"
+                + "          ]\n"
+                + "        }\n"
+                + "      ]\n"
+                + "    }\n"
+                + "  ]\n"
+                + "}";
         }
 
         private static string LoadCanonicalCatalogJson()
