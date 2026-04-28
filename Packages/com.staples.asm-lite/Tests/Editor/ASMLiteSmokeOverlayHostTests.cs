@@ -214,6 +214,20 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void SetupSuite_AppliesFixtureMutationAndStepTargetOverridesBeforeAction()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                WriteCommand(context.Paths, BuildRunSuiteCommand(11, "cmd_000011_run-suite", "fixture-mutation-host"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[] { ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection }));
+                Assert.That(context.Runtime.OpenedScenes, Is.EqualTo(new[] { "Assets/FixtureOverride.unity" }));
+                Assert.That(context.Runtime.LastMutationObjectName, Is.EqualTo("Wrong Target"));
+            }
+        }
+
+        [Test]
         public void Runner_DoesNotRegisterAfterReady_WhenExitOnReadyIsTrue()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: true))
@@ -556,7 +570,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.True);
                 Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
-                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "vendorize" }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "lifecycle-hygiene-cleanup", "vendorize" }));
 
                 string failurePath = context.Paths.GetFailurePath(1, "lifecycle-roundtrip");
                 Assert.That(File.Exists(failurePath), Is.True);
@@ -588,8 +602,8 @@ namespace ASMLite.Tests.Editor
                 Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.True);
                 Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
                 Assert.That(events.Where(item => string.Equals(item.eventType, "step-started", StringComparison.Ordinal))
-                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "vendorize" }));
-                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "vendorize" }));
+                    .Select(item => item.stepId), Is.EqualTo(new[] { "rebuild", "hygiene-cleanup-after-rebuild", "vendorize" }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "rebuild", "lifecycle-hygiene-cleanup", "vendorize" }));
 
                 string resultPath = context.Paths.GetResultPath(1, "lifecycle-roundtrip");
                 string failurePath = context.Paths.GetFailurePath(1, "lifecycle-roundtrip");
@@ -883,16 +897,22 @@ namespace ASMLite.Tests.Editor
 
         private static void AdvanceUntilIdleAfterRun(RunnerTestContext context, int maxTicks = 64)
         {
+            ASMLiteSmokeHostStateDocument lastState = null;
             for (int i = 0; i < maxTicks; i++)
             {
                 context.Runtime.AdvanceSeconds(1);
-                var hostState = ReadHostState(context.Paths.HostStatePath);
-                if (string.Equals(hostState.state, ASMLiteSmokeProtocol.HostStateIdle, StringComparison.Ordinal)
-                    && hostState.lastEventSeq > 2)
+                lastState = ReadHostState(context.Paths.HostStatePath);
+                if (string.Equals(lastState.state, ASMLiteSmokeProtocol.HostStateIdle, StringComparison.Ordinal)
+                    && lastState.lastEventSeq > 2)
                     return;
             }
 
-            Assert.Fail("Runner did not return to idle within the expected tick budget.");
+            string eventSummary = string.Join(", ", ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                .Select(item => $"{item.eventSeq}:{item.eventType}:{item.message}"));
+            string stateSummary = lastState == null
+                ? "<no host state>"
+                : $"state={lastState.state}; lastEventSeq={lastState.lastEventSeq}; lastCommandSeq={lastState.lastCommandSeq}; message={lastState.message}";
+            Assert.Fail($"Runner did not return to idle within the expected tick budget. {stateSummary}. Events: {eventSummary}");
         }
 
         private static ASMLiteSmokeProtocolCommand BuildRunSuiteCommand(int commandSeq, string commandId, string suiteId = "lifecycle-roundtrip")
@@ -1003,6 +1023,9 @@ namespace ASMLite.Tests.Editor
                                 label = "Setup Scene / Avatar / Prefab",
                                 description = "Loads the canonical scene, selects the target avatar, and adds the prefab scaffold on request.",
                                 resetOverride = "Inherit",
+                                speed = "quick",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
                                 requiresPlayMode = false,
                                 stopOnFirstFailure = true,
                                 expectedOutcome = "The scene is open, Oct25_Dress is selected, and the prefab scaffold is ready.",
@@ -1033,6 +1056,9 @@ namespace ASMLite.Tests.Editor
                                 label = "Lifecycle Roundtrip",
                                 description = "Validates rebuild/vendorize/detach/return lifecycle.",
                                 resetOverride = "FullPackageRebuild",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-lifecycle" },
                                 requiresPlayMode = false,
                                 stopOnFirstFailure = true,
                                 expectedOutcome = "All lifecycle steps pass in order.",
@@ -1049,9 +1075,56 @@ namespace ASMLite.Tests.Editor
                                         steps = new[]
                                         {
                                             new ASMLiteSmokeStepDefinition { stepId = "rebuild", label = "Rebuild", description = "Rebuild package state.", actionType = "rebuild", expectedOutcome = "Rebuild succeeds.", debugHint = "Inspect rebuild logs." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-rebuild", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after rebuild.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after rebuild." },
                                             new ASMLiteSmokeStepDefinition { stepId = "vendorize", label = "Vendorize", description = "Vendorize generated assets.", actionType = "vendorize", expectedOutcome = "Vendorize succeeds.", debugHint = "Inspect vendorized assets." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-vendorize", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after vendorize.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after vendorize." },
                                             new ASMLiteSmokeStepDefinition { stepId = "detach", label = "Detach", description = "Detach from package-managed state.", actionType = "detach", expectedOutcome = "Detach succeeds.", debugHint = "Confirm detached workspace state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-detach", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after detach.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after detach." },
                                             new ASMLiteSmokeStepDefinition { stepId = "return-to-package-managed", label = "Return", description = "Return to package-managed baseline.", actionType = "return-to-package-managed", expectedOutcome = "Return succeeds.", debugHint = "Confirm package-managed state restored." },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "fixture-mutation-host",
+                                label = "Fixture Mutation Host",
+                                description = "Validates fixture mutation dispatch and step target overrides.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Fixture mutation runs before the catalog action.",
+                                debugHint = "Inspect fixture mutation dispatch and step args.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "fixture-mutation-host-case",
+                                        label = "Fixture mutation host case",
+                                        description = "Apply a wrong-object fixture mutation, then run a step with overridden target paths.",
+                                        expectedOutcome = "Mutation and target override both execute.",
+                                        debugHint = "Inspect fake runtime mutation and opened scene lists.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "mutate-then-open-scene",
+                                                label = "Mutate then open scene",
+                                                description = "Apply wrong-object mutation and open override scene.",
+                                                actionType = "open-scene",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection,
+                                                    scenePath = "Assets/FixtureOverride.unity",
+                                                    avatarName = "FixtureOverrideAvatar",
+                                                    objectName = "Wrong Target",
+                                                },
+                                                expectedOutcome = "Mutation runs and override scene opens.",
+                                                debugHint = "Inspect fixture mutation args.",
+                                            },
                                         },
                                     },
                                 },
@@ -1062,6 +1135,9 @@ namespace ASMLite.Tests.Editor
                                 label = "Playmode Runtime Validation",
                                 description = "Validates playmode enter/assert/exit flow.",
                                 resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-playmode" },
                                 requiresPlayMode = true,
                                 stopOnFirstFailure = true,
                                 expectedOutcome = "Playmode runtime checks complete successfully.",
@@ -1220,6 +1296,8 @@ namespace ASMLite.Tests.Editor
             internal List<string> ExecutedActions { get; } = new List<string>();
             internal List<string> OpenedScenes { get; } = new List<string>();
             internal List<string> SelectedAvatars { get; } = new List<string>();
+            internal List<string> AppliedFixtureMutations { get; } = new List<string>();
+            internal string LastMutationObjectName { get; private set; } = string.Empty;
 
             private readonly Dictionary<string, string> _forcedFailuresByAction = new Dictionary<string, string>(StringComparer.Ordinal);
             private readonly List<Tuple<string, string>> _consoleErrors = new List<Tuple<string, string>>();
@@ -1296,7 +1374,33 @@ namespace ASMLite.Tests.Editor
                 return File.ReadAllText(path);
             }
 
-            public bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace)
+            public bool ApplySetupFixtureMutation(
+                ASMLiteSmokeStepArgs args,
+                string defaultScenePath,
+                string defaultAvatarName,
+                string evidenceRootPath,
+                out string detail,
+                out string stackTrace)
+            {
+                string mutation = args == null || string.IsNullOrWhiteSpace(args.fixtureMutation)
+                    ? string.Empty
+                    : args.fixtureMutation.Trim();
+                AppliedFixtureMutations.Add(mutation);
+                LastMutationObjectName = args == null || string.IsNullOrWhiteSpace(args.objectName)
+                    ? string.Empty
+                    : args.objectName.Trim();
+                detail = $"{mutation} fixture mutation applied.";
+                stackTrace = string.Empty;
+                return true;
+            }
+
+            public bool ExecuteCatalogStep(
+                string actionType,
+                ASMLiteSmokeStepArgs args,
+                string scenePath,
+                string avatarName,
+                out string detail,
+                out string stackTrace)
             {
                 string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
                 ExecutedActions.Add(normalizedAction);

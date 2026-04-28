@@ -124,7 +124,20 @@ namespace ASMLite.Tests.Editor
         void UnregisterUpdate(EditorApplication.CallbackFunction tick);
         string[] EnumerateCommandFiles(string commandsDirectoryPath);
         string ReadAllText(string path);
-        bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace);
+        bool ApplySetupFixtureMutation(
+            ASMLiteSmokeStepArgs args,
+            string defaultScenePath,
+            string defaultAvatarName,
+            string evidenceRootPath,
+            out string detail,
+            out string stackTrace);
+        bool ExecuteCatalogStep(
+            string actionType,
+            ASMLiteSmokeStepArgs args,
+            string scenePath,
+            string avatarName,
+            out string detail,
+            out string stackTrace);
         void StartConsoleErrorCapture();
         void StopConsoleErrorCapture();
         int GetConsoleErrorCheckpoint();
@@ -137,6 +150,7 @@ namespace ASMLite.Tests.Editor
         internal static readonly ASMLiteSmokeOverlayHostUnityRuntime Instance = new ASMLiteSmokeOverlayHostUnityRuntime();
 
         private readonly List<ConsoleErrorRecord> _consoleErrors = new List<ConsoleErrorRecord>();
+        private readonly ASMLiteSmokeSetupFixtureService _fixtureService = new ASMLiteSmokeSetupFixtureService();
         private bool _consoleErrorCaptureActive;
 
         private ASMLiteSmokeOverlayHostUnityRuntime()
@@ -280,7 +294,25 @@ namespace ASMLite.Tests.Editor
             return File.ReadAllText(path);
         }
 
-        public bool ExecuteCatalogStep(string actionType, string scenePath, string avatarName, out string detail, out string stackTrace)
+        public bool ApplySetupFixtureMutation(
+            ASMLiteSmokeStepArgs args,
+            string defaultScenePath,
+            string defaultAvatarName,
+            string evidenceRootPath,
+            out string detail,
+            out string stackTrace)
+        {
+            stackTrace = string.Empty;
+            return _fixtureService.ApplyMutation(args, defaultScenePath, defaultAvatarName, evidenceRootPath, out detail);
+        }
+
+        public bool ExecuteCatalogStep(
+            string actionType,
+            ASMLiteSmokeStepArgs args,
+            string scenePath,
+            string avatarName,
+            out string detail,
+            out string stackTrace)
         {
             detail = string.Empty;
             stackTrace = string.Empty;
@@ -1719,8 +1751,26 @@ namespace ASMLite.Tests.Editor
                 return false;
             }
 
+            ASMLiteSmokeStepArgs args = step.args ?? new ASMLiteSmokeStepArgs();
+            string scenePath = string.IsNullOrWhiteSpace(args.scenePath) ? _configuration.ScenePath : args.scenePath.Trim();
+            string avatarName = string.IsNullOrWhiteSpace(args.avatarName) ? _configuration.AvatarName : args.avatarName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(args.fixtureMutation))
+            {
+                string evidenceRootPath = Path.Combine(_paths.SessionRootPath, "fixture-evidence");
+                bool fixturePassed = _runtime.ApplySetupFixtureMutation(
+                    args,
+                    _configuration.ScenePath,
+                    _configuration.AvatarName,
+                    evidenceRootPath,
+                    out detail,
+                    out stackTrace);
+                if (!fixturePassed)
+                    return false;
+            }
+
             int consoleErrorCheckpoint = _runtime.GetConsoleErrorCheckpoint();
-            bool stepPassed = _runtime.ExecuteCatalogStep(step.actionType, _configuration.ScenePath, _configuration.AvatarName, out detail, out stackTrace);
+            bool stepPassed = _runtime.ExecuteCatalogStep(step.actionType, args, scenePath, avatarName, out detail, out stackTrace);
             if (_runtime.TryGetConsoleErrorsSince(consoleErrorCheckpoint, out string consoleErrorDetail, out string consoleErrorStackTrace))
             {
                 detail = consoleErrorDetail;
