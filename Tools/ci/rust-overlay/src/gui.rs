@@ -18,7 +18,9 @@ use crate::theme::{
     META_TEXT_SIZE, OUTER_MARGIN_PX, PRIMARY_BUTTON_HEIGHT_PX, RELATED_GAP_PX,
     RIGHT_PANEL_WIDTH_PX, SECTION_GAP_PX,
 };
-use crate::ui_suite_list::{build_current_run_plan_view, build_suite_checklist_view, SuiteRowView};
+use crate::ui_suite_list::{
+    build_current_run_plan_view, build_suite_checklist_view, RunPlanStepRowView, SuiteRowView,
+};
 use crate::unity_launcher::{spawn_unity_host, UnityHostLaunchConfig, UnityHostSupervisorStatus};
 use eframe::egui;
 use egui_phosphor::regular as icons;
@@ -328,6 +330,16 @@ pub struct InfoCalloutVisualSpec {
     pub text_color: egui::Color32,
     pub icon_size_px: f32,
     pub text_size_px: f32,
+    pub row_vertical_align: egui::Align,
+    pub horizontal_wrapped: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CurrentRunPlanStepVisualSpec {
+    pub ordinal_bold: bool,
+    pub ordinal_uses_bubble_frame: bool,
+    pub separator_icon: &'static str,
+    pub renders_trailing_step_index: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -536,7 +548,7 @@ pub fn build_current_suite_briefing_model_for_poll(
         description: suite.description.clone(),
         expected_outcomes,
         steps,
-        info_note: "Failure: Export Logs or Rerun Suite, then Return.".to_string(),
+        info_note: "On failure: export logs, rerun this suite, or return.".to_string(),
         debug_hint: suite.debug_hint.clone(),
     })
 }
@@ -702,6 +714,23 @@ pub fn current_suite_steps_section_label() -> &'static str {
 
 pub fn current_suite_step_label(step: &CurrentSuiteStepModel) -> String {
     format!("{} {}", step.icon, step.label)
+}
+
+pub fn current_run_plan_step_visual_spec() -> CurrentRunPlanStepVisualSpec {
+    CurrentRunPlanStepVisualSpec {
+        ordinal_bold: true,
+        ordinal_uses_bubble_frame: false,
+        separator_icon: icons::CARET_RIGHT,
+        renders_trailing_step_index: false,
+    }
+}
+
+pub fn current_run_plan_step_label(
+    step_label: &str,
+    _ordinal: usize,
+    _suite_step_index: usize,
+) -> String {
+    step_label.trim().to_string()
 }
 
 pub fn operator_density_spec() -> OperatorDensitySpec {
@@ -1672,28 +1701,38 @@ fn current_run_plan_card(ui: &mut egui::Ui, model: &SuiteSelectionModel, collaps
                             .inner_margin(egui::Margin::symmetric(8.0, 5.0)),
                         8.0,
                         |ui| {
-                            ui.horizontal(|ui| {
-                                badge_label(ui, &format!("{}", row.ordinal), ACTIVE_BLUE);
-                                ui.label(
-                                    egui::RichText::new(&row.step_label)
-                                        .color(TEXT)
-                                        .size(META_TEXT_SIZE),
-                                );
-                                ui.label(
-                                    egui::RichText::new(format!(
-                                        "{}.{}",
-                                        row.ordinal,
-                                        suite_step_index + 1
-                                    ))
-                                    .color(MUTED)
-                                    .size(META_TEXT_SIZE),
-                                );
-                            });
+                            current_run_plan_step_row(ui, row, suite_step_index + 1);
                         },
                     );
                 }
             });
         }
+    });
+}
+
+fn current_run_plan_step_row(ui: &mut egui::Ui, row: &RunPlanStepRowView, suite_step_index: usize) {
+    let spec = current_run_plan_step_visual_spec();
+    ui.horizontal(|ui| {
+        ui.label(
+            egui::RichText::new(format!("{}", row.ordinal))
+                .strong()
+                .color(ACTIVE_BLUE)
+                .size(META_TEXT_SIZE),
+        );
+        ui.label(
+            egui::RichText::new(spec.separator_icon)
+                .color(MUTED)
+                .size(META_TEXT_SIZE),
+        );
+        ui.label(
+            egui::RichText::new(current_run_plan_step_label(
+                &row.step_label,
+                row.ordinal,
+                suite_step_index,
+            ))
+            .color(TEXT)
+            .size(META_TEXT_SIZE),
+        );
     });
 }
 
@@ -2106,6 +2145,8 @@ pub fn current_suite_info_callout_visual_spec() -> InfoCalloutVisualSpec {
         text_color: TEXT,
         icon_size_px: BODY_TEXT_SIZE + 2.0,
         text_size_px: META_TEXT_SIZE,
+        row_vertical_align: egui::Align::Center,
+        horizontal_wrapped: false,
     }
 }
 
@@ -2157,7 +2198,7 @@ fn info_callout(ui: &mut egui::Ui, text: &str) {
             .inner_margin(egui::Margin::symmetric(10.0, 6.0)),
         10.0,
         |ui| {
-            ui.horizontal_wrapped(|ui| {
+            ui.with_layout(egui::Layout::left_to_right(spec.row_vertical_align), |ui| {
                 ui.label(
                     egui::RichText::new(spec.icon)
                         .color(spec.icon_color)
@@ -2362,8 +2403,17 @@ fn render_suite_checkbox_row(
         .map(|value| format!(" #{value}"))
         .unwrap_or_default();
     let focus = if row.focused { " · current" } else { "" };
-    let label = format!("{}{}{}", row.suite_label, order, focus);
-    let visual = suite_checkbox_visual_spec(row.checked, row.focused, disabled);
+    let default_marker = if row.default_selected {
+        " · default"
+    } else {
+        ""
+    };
+    let label = format!(
+        "{}{}{} · {} · {}{}",
+        row.suite_label, order, focus, row.speed, row.risk, default_marker
+    );
+    let row_disabled = disabled || !row.selectable;
+    let visual = suite_checkbox_visual_spec(row.checked, row.focused, row_disabled);
     let mut text = egui::text::LayoutJob::default();
     text.append(
         visual.icon,
@@ -2398,7 +2448,7 @@ fn render_suite_checkbox_row(
         .stroke(visual.row_stroke)
         .rounding(8.0)
         .min_size(egui::vec2(ui.available_width(), 30.0));
-    ui.add_enabled(!disabled, button)
+    ui.add_enabled(!row_disabled, button)
 }
 
 fn phosphor_collapsing_icon(ui: &mut egui::Ui, openness: f32, response: &egui::Response) {
@@ -2477,6 +2527,8 @@ fn suite_selector(
                             response.on_disabled_hover_text(
                                 "Suite selection is available when the Unity host is ready.",
                             );
+                        } else if let Some(reason) = row.disabled_reason {
+                            response.on_disabled_hover_text(reason);
                         } else if response.clicked() {
                             let _ = model.toggle_suite_selection_by_id(&row.suite_id);
                         }
@@ -3245,6 +3297,21 @@ mod tests {
     }
 
     #[test]
+    fn current_run_plan_step_numbers_are_plain_bold_with_phosphor_separator() {
+        let spec = current_run_plan_step_visual_spec();
+
+        assert!(spec.ordinal_bold);
+        assert!(!spec.ordinal_uses_bubble_frame);
+        assert_eq!(spec.separator_icon, icons::CARET_RIGHT);
+        assert!(is_private_icon_glyph(spec.separator_icon));
+        assert!(!spec.renders_trailing_step_index);
+        assert_eq!(
+            current_run_plan_step_label("Open Click ME scene", 1, 3),
+            "Open Click ME scene"
+        );
+    }
+
+    #[test]
     fn selected_suite_checkbox_visual_uses_high_contrast_active_state() {
         let checked = suite_checkbox_visual_spec(true, false, false);
         let unchecked = suite_checkbox_visual_spec(false, false, false);
@@ -3456,9 +3523,6 @@ mod tests {
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
         model
-            .toggle_suite_selection_by_id("lifecycle-roundtrip")
-            .expect("lifecycle should toggle into the selected batch");
-        model
             .set_current_suite_id_preserving_batch("lifecycle-roundtrip")
             .expect("current suite should move inside batch");
         let poll = StartupPollResult {
@@ -3621,9 +3685,6 @@ mod tests {
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
         model
-            .toggle_suite_selection_by_id("lifecycle-roundtrip")
-            .expect("lifecycle should toggle into the selected batch");
-        model
             .set_current_suite_id_preserving_batch("lifecycle-roundtrip")
             .expect("lifecycle should be a valid suite");
 
@@ -3639,7 +3700,7 @@ mod tests {
             .expected_outcomes
             .iter()
             .any(|item| item.contains("hygiene cleanup")));
-        assert!(briefing.info_note.contains("Rerun Suite"));
+        assert!(briefing.info_note.contains("rerun this suite"));
     }
 
     #[test]
@@ -3650,10 +3711,15 @@ mod tests {
 
         let briefing = build_current_suite_briefing_model(&model).expect("briefing should exist");
 
+        assert_eq!(
+            briefing.info_note,
+            "On failure: export logs, rerun this suite, or return."
+        );
         assert!(briefing.info_note.len() <= 54);
-        assert!(briefing.info_note.starts_with("Failure:"));
-        assert!(briefing.info_note.contains("Export Logs"));
-        assert!(briefing.info_note.contains("Rerun Suite"));
+        assert!(briefing.info_note.contains("export logs"));
+        assert!(briefing.info_note.contains("rerun this suite"));
+        assert!(briefing.info_note.contains("or return"));
+        assert!(!briefing.info_note.contains("then Return"));
         assert!(!briefing
             .info_note
             .contains("review-required before returning"));
@@ -3672,6 +3738,14 @@ mod tests {
     }
 
     #[test]
+    fn current_suite_info_callout_centers_icon_and_text_row() {
+        let spec = current_suite_info_callout_visual_spec();
+
+        assert_eq!(spec.row_vertical_align, egui::Align::Center);
+        assert!(!spec.horizontal_wrapped);
+    }
+
+    #[test]
     fn recent_events_scroll_area_shows_more_event_history() {
         assert!(recent_event_log_scroll_max_height_px() >= 240.0);
         assert_eq!(
@@ -3685,9 +3759,6 @@ mod tests {
         let catalog = crate::catalog::load_canonical_catalog().expect("catalog should load");
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
-        model
-            .toggle_suite_selection_by_id("lifecycle-roundtrip")
-            .expect("second suite should toggle on");
         model
             .set_current_suite_id_preserving_batch("lifecycle-roundtrip")
             .expect("current suite should move inside batch");
@@ -3705,10 +3776,10 @@ mod tests {
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_RUNNING));
         assert_eq!(footer.event_count, 4);
         assert_eq!(footer.pending_command.as_deref(), Some("command-0005"));
-        assert_eq!(footer.selected_suite_count, 2);
+        assert_eq!(footer.selected_suite_count, 3);
         assert_eq!(
             footer.batch_progress.as_deref(),
-            Some("2/2 lifecycle-roundtrip")
+            Some("2/3 lifecycle-roundtrip")
         );
     }
 
@@ -3729,7 +3800,7 @@ mod tests {
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_READY));
         assert_eq!(footer.event_count, 0);
         assert_eq!(footer.pending_command, None);
-        assert_eq!(footer.selected_suite_count, 1);
+        assert_eq!(footer.selected_suite_count, 3);
         assert_eq!(footer.batch_progress, None);
     }
 

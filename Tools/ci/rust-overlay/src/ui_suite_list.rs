@@ -9,6 +9,13 @@ pub struct SuiteRowView {
     pub group_label: String,
     pub suite_id: String,
     pub suite_label: String,
+    pub speed: String,
+    pub risk: String,
+    pub default_selected: bool,
+    pub preset_groups: Vec<String>,
+    pub destructive: bool,
+    pub selectable: bool,
+    pub disabled_reason: Option<&'static str>,
     pub selected: bool,
     pub checked: bool,
     pub focused: bool,
@@ -148,6 +155,13 @@ pub fn build_grouped_suite_rows(model: &SuiteSelectionModel) -> Vec<SuiteRowView
                 group_label: group.label.clone(),
                 suite_id: suite.suite_id.clone(),
                 suite_label: suite.label.clone(),
+                speed: suite.speed.clone(),
+                risk: suite.risk.clone(),
+                default_selected: suite.default_selected,
+                preset_groups: suite.preset_groups.clone(),
+                destructive: suite.is_destructive(),
+                selectable: model.is_suite_selectable(&suite.suite_id),
+                disabled_reason: model.disabled_reason_for_suite_id(&suite.suite_id),
                 selected: checked,
                 checked,
                 focused: suite.suite_id == model.selected_suite_id,
@@ -187,9 +201,18 @@ pub fn render_pre_run_surface(model: &SuiteSelectionModel) -> String {
             .unwrap_or_default();
         let focus = if row.focused { " ← current" } else { "" };
         lines.push(format!(
-            "{marker} [{}]{} {}{}",
-            row.suite_id, order, row.suite_label, focus
+            "{marker} [{}]{} {}{} · speed={} risk={} presets={}",
+            row.suite_id,
+            order,
+            row.suite_label,
+            focus,
+            row.speed,
+            row.risk,
+            row.preset_groups.join(",")
         ));
+        if let Some(reason) = row.disabled_reason {
+            lines.push(format!("  {reason}"));
+        }
     }
 
     if let (Some(group), Some(suite)) = (model.selected_group(), model.selected_suite()) {
@@ -276,14 +299,10 @@ mod tests {
     #[test]
     fn suite_checklist_view_tracks_checkbox_focus_and_selected_count() {
         let catalog = load_canonical_catalog().expect("catalog should load");
-        let mut model =
+        let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
-        model
-            .toggle_suite_selection_by_id("lifecycle-roundtrip")
-            .expect("lifecycle should toggle on");
-
         let checklist = build_suite_checklist_view(&model);
-        assert_eq!(checklist.selected_count, 2);
+        assert_eq!(checklist.selected_count, 3);
         assert!(checklist.can_run_selected_batch);
 
         let setup = checklist
@@ -294,6 +313,13 @@ mod tests {
         assert!(setup.checked);
         assert!(setup.focused);
         assert_eq!(setup.selected_order, Some(1));
+        assert_eq!(setup.speed, "quick");
+        assert_eq!(setup.risk, "safe");
+        assert!(setup.default_selected);
+        assert!(setup.preset_groups.contains(&"all-setup".to_string()));
+        assert!(!setup.destructive);
+        assert!(setup.selectable);
+        assert_eq!(setup.disabled_reason, None);
 
         let lifecycle = checklist
             .rows
@@ -309,9 +335,9 @@ mod tests {
             .iter()
             .find(|row| row.suite_id == "playmode-runtime-validation")
             .expect("playmode row should exist");
-        assert!(!playmode.checked);
+        assert!(playmode.checked);
         assert!(!playmode.focused);
-        assert_eq!(playmode.selected_order, None);
+        assert_eq!(playmode.selected_order, Some(3));
     }
 
     #[test]
@@ -327,16 +353,39 @@ mod tests {
             .map(|row| row.step_label.as_str())
             .collect();
 
-        assert_eq!(plan.available_suite_count, 3);
-        assert_eq!(plan.selected_suite_count, 1);
-        assert_eq!(plan.total_step_count, 5);
+        let available_suite_count = catalog
+            .groups
+            .iter()
+            .map(|group| group.suites.len())
+            .sum::<usize>();
+        let default_selected_count = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected)
+            .count();
+        let default_step_count = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected)
+            .flat_map(|suite| suite.cases.iter())
+            .map(|case_item| case_item.steps.len())
+            .sum::<usize>();
+
+        assert!(plan.available_suite_count >= 3);
+        assert_eq!(plan.available_suite_count, available_suite_count);
+        assert_eq!(plan.selected_suite_count, default_selected_count);
+        assert_eq!(plan.total_step_count, default_step_count);
         assert_eq!(
             plan.summary,
-            "3 suites available · 1 selected · 5 total steps"
+            format!(
+                "{available_suite_count} suites available · {default_selected_count} selected · {default_step_count} total steps"
+            )
         );
         assert_eq!(
-            labels,
-            vec![
+            &labels[..5],
+            &[
                 "Open Click ME scene",
                 "Open ASM-Lite window",
                 "Select Oct25_Dress",
@@ -347,7 +396,7 @@ mod tests {
         assert!(plan
             .rows
             .iter()
-            .all(|row| row.suite_id == "setup-scene-avatar"));
+            .any(|row| row.suite_id == "setup-scene-avatar"));
     }
 
     #[test]
@@ -387,7 +436,13 @@ mod tests {
 
         let plan = build_current_run_plan_view(&model);
 
-        assert_eq!(plan.suite_sections.len(), 1);
+        let default_selected_count = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected)
+            .count();
+        assert_eq!(plan.suite_sections.len(), default_selected_count);
         let section = &plan.suite_sections[0];
         assert_eq!(section.title, "Setup · Setup Scene / Avatar / Prefab");
         assert_eq!(section.suite_id, "setup-scene-avatar");
@@ -446,12 +501,17 @@ mod tests {
         let plan = build_current_run_plan_view(&model);
 
         assert!(plan.rows.is_empty());
-        assert_eq!(plan.available_suite_count, 3);
+        let available_suite_count = catalog
+            .groups
+            .iter()
+            .map(|group| group.suites.len())
+            .sum::<usize>();
+        assert_eq!(plan.available_suite_count, available_suite_count);
         assert_eq!(plan.selected_suite_count, 0);
         assert_eq!(plan.total_step_count, 0);
         assert_eq!(
             plan.summary,
-            "3 suites available · 0 selected · 0 total steps"
+            format!("{available_suite_count} suites available · 0 selected · 0 total steps")
         );
         assert_eq!(
             plan.empty_message.as_deref(),

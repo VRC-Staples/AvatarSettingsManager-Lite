@@ -65,6 +65,10 @@ pub struct SmokeSuiteDefinition {
     pub label: String,
     pub description: String,
     pub reset_override: String,
+    pub speed: String,
+    pub risk: String,
+    pub default_selected: bool,
+    pub preset_groups: Vec<String>,
     pub requires_play_mode: bool,
     pub stop_on_first_failure: bool,
     pub expected_outcome: String,
@@ -72,6 +76,12 @@ pub struct SmokeSuiteDefinition {
     pub cases: Vec<SmokeCaseDefinition>,
     #[serde(skip)]
     pub case_index_by_id: BTreeMap<String, usize>,
+}
+
+impl SmokeSuiteDefinition {
+    pub fn is_destructive(&self) -> bool {
+        self.risk == "destructive"
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -193,6 +203,24 @@ fn normalize_and_validate_suite(
     } else {
         suite.reset_override.trim().to_string()
     };
+    suite.speed = normalize_enum_value(
+        &suite.speed,
+        &(path.clone() + ".speed"),
+        &[
+            "quick",
+            "standard",
+            "exhaustive",
+            "destructive",
+            "manual-only",
+        ],
+    )?;
+    suite.risk = normalize_enum_value(
+        &suite.risk,
+        &(path.clone() + ".risk"),
+        &["safe", "destructive"],
+    )?;
+    suite.preset_groups =
+        normalize_preset_groups(&suite.preset_groups, &(path.clone() + ".presetGroups"))?;
     suite.expected_outcome = require_non_blank(
         &suite.expected_outcome,
         &(path.clone() + ".expectedOutcome"),
@@ -281,6 +309,39 @@ fn normalize_unique_id(
         return Err(ContractError(format!(
             "{path} '{normalized}' must be unique within its scope."
         )));
+    }
+    Ok(normalized)
+}
+
+fn normalize_enum_value(
+    value: &str,
+    path: &str,
+    allowed_values: &[&str],
+) -> Result<String, ContractError> {
+    let normalized = require_non_blank(value, path)?;
+    if !allowed_values.iter().any(|allowed| *allowed == normalized) {
+        return Err(ContractError(format!(
+            "{path} '{normalized}' is not supported."
+        )));
+    }
+    Ok(normalized)
+}
+
+fn normalize_preset_groups(values: &[String], path: &str) -> Result<Vec<String>, ContractError> {
+    if values.is_empty() {
+        return Err(ContractError(format!(
+            "{path} must include at least one preset group."
+        )));
+    }
+
+    let mut seen = HashSet::new();
+    let mut normalized = Vec::with_capacity(values.len());
+    for (index, value) in values.iter().enumerate() {
+        normalized.push(normalize_unique_id(
+            value,
+            &format!("{path}[{index}]"),
+            &mut seen,
+        )?);
     }
     Ok(normalized)
 }
@@ -376,6 +437,63 @@ mod tests {
     }
 
     #[test]
+    fn catalog_parses_suite_metadata_for_default_presets_and_risk() {
+        let catalog = load_canonical_catalog().expect("canonical catalog should parse");
+        let suites: Vec<&SmokeSuiteDefinition> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .collect();
+        let default_ids: Vec<&str> = suites
+            .iter()
+            .filter(|suite| suite.default_selected)
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+
+        assert_eq!(
+            default_ids,
+            vec![
+                "setup-scene-avatar",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
+        );
+        assert!(suites.iter().all(|suite| suite.risk == "safe"));
+        assert!(suites.iter().all(|suite| !suite.is_destructive()));
+        assert!(suites
+            .iter()
+            .all(|suite| suite.preset_groups.contains(&"quick-default".to_string())));
+        assert_eq!(
+            suites
+                .iter()
+                .find(|suite| suite.suite_id == "setup-scene-avatar")
+                .expect("setup suite exists")
+                .speed,
+            "quick"
+        );
+    }
+
+    #[test]
+    fn catalog_rejects_unknown_suite_metadata_values() {
+        let raw = fs::read_to_string(canonical_catalog_path())
+            .expect("catalog fixture should exist")
+            .replace("\"risk\": \"safe\"", "\"risk\": \"maybe\"");
+
+        let error = load_catalog_from_str(&raw).expect_err("unknown risk should fail");
+        assert!(error.to_string().contains("risk"));
+    }
+
+    #[test]
+    fn catalog_rejects_blank_preset_groups() {
+        let raw = fs::read_to_string(canonical_catalog_path())
+            .expect("catalog fixture should exist")
+            .replace("\"quick-default\"", "\"   \"");
+
+        let error = load_catalog_from_str(&raw).expect_err("blank preset should fail");
+        assert!(error.to_string().contains("presetGroups"));
+    }
+
+    #[test]
     fn catalog_rejects_blank_group_ids() {
         let raw = fs::read_to_string(canonical_catalog_path())
             .expect("catalog fixture should exist")
@@ -429,6 +547,10 @@ mod tests {
             "          \"label\": \"Open\",\n",
             "          \"description\": \"desc\",\n",
             "          \"resetOverride\": \"Inherit\",\n",
+            "          \"speed\": \"quick\",\n",
+            "          \"risk\": \"safe\",\n",
+            "          \"defaultSelected\": true,\n",
+            "          \"presetGroups\": [\"quick-default\"],\n",
             "          \"requiresPlayMode\": false,\n",
             "          \"stopOnFirstFailure\": true,\n",
             "          \"expectedOutcome\": \"ok\",\n",

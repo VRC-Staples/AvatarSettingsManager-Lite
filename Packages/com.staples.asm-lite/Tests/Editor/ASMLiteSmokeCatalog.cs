@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 namespace ASMLite.Tests.Editor
@@ -14,6 +15,10 @@ namespace ASMLite.Tests.Editor
 
         internal static string GetRepositoryRootPath()
         {
+            PackageInfo packageInfo = PackageInfo.FindForAssembly(typeof(ASMLiteSmokeContractPaths).Assembly);
+            if (packageInfo != null && !string.IsNullOrWhiteSpace(packageInfo.resolvedPath))
+                return Path.GetFullPath(Path.Combine(packageInfo.resolvedPath, "..", ".."));
+
             return Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "..", ".."));
         }
 
@@ -115,11 +120,17 @@ namespace ASMLite.Tests.Editor
         public string label;
         public string description;
         public string resetOverride;
+        public string speed;
+        public string risk;
+        public bool defaultSelected;
+        public string[] presetGroups = Array.Empty<string>();
         public bool requiresPlayMode;
         public bool stopOnFirstFailure;
         public string expectedOutcome;
         public string debugHint;
         public ASMLiteSmokeCaseDefinition[] cases = Array.Empty<ASMLiteSmokeCaseDefinition>();
+
+        internal bool IsDestructive => string.Equals(risk, "destructive", StringComparison.Ordinal);
 
         [NonSerialized] private Dictionary<string, ASMLiteSmokeCaseDefinition> _casesById = new Dictionary<string, ASMLiteSmokeCaseDefinition>(StringComparer.Ordinal);
 
@@ -277,6 +288,15 @@ namespace ASMLite.Tests.Editor
             suite.resetOverride = string.IsNullOrWhiteSpace(suite.resetOverride)
                 ? "Inherit"
                 : suite.resetOverride.Trim();
+            suite.speed = NormalizeEnumValue(
+                suite.speed,
+                path + ".speed",
+                new[] { "quick", "standard", "exhaustive", "destructive", "manual-only" });
+            suite.risk = NormalizeEnumValue(
+                suite.risk,
+                path + ".risk",
+                new[] { "safe", "destructive" });
+            suite.presetGroups = NormalizePresetGroups(suite.presetGroups, path + ".presetGroups");
             suite.expectedOutcome = RequireNonBlank(suite.expectedOutcome, path + ".expectedOutcome");
             suite.debugHint = RequireNonBlank(suite.debugHint, path + ".debugHint");
             suite.cases = suite.cases ?? Array.Empty<ASMLiteSmokeCaseDefinition>();
@@ -337,6 +357,31 @@ namespace ASMLite.Tests.Editor
             string normalized = RequireNonBlank(value, path);
             if (!seenIds.Add(normalized))
                 throw new InvalidOperationException($"{path} '{normalized}' must be unique within its scope.");
+            return normalized;
+        }
+
+        private static string NormalizeEnumValue(string value, string path, string[] allowedValues)
+        {
+            string normalized = RequireNonBlank(value, path);
+            if (!allowedValues.Contains(normalized, StringComparer.Ordinal))
+                throw new InvalidOperationException($"{path} '{normalized}' is not supported.");
+            return normalized;
+        }
+
+        private static string[] NormalizePresetGroups(string[] values, string path)
+        {
+            values = values ?? Array.Empty<string>();
+            if (values.Length == 0)
+                throw new InvalidOperationException(path + " must include at least one preset group.");
+
+            var normalized = new string[values.Length];
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int index = 0; index < values.Length; index++)
+            {
+                string item = NormalizeUniqueId(values[index], $"{path}[{index}]", seen);
+                normalized[index] = item;
+            }
+
             return normalized;
         }
 

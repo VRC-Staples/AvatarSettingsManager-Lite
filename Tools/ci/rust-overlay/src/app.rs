@@ -1059,6 +1059,10 @@ mod tests {
         let catalog = load_canonical_catalog().expect("catalog should load");
         let mut suite_model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        suite_model.clear_suite_selection();
+        suite_model
+            .toggle_suite_selection_by_id("setup-scene-avatar")
+            .expect("setup should toggle on");
         suite_model
             .toggle_suite_selection_by_id("lifecycle-roundtrip")
             .expect("lifecycle should toggle on");

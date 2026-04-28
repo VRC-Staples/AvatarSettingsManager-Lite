@@ -12,6 +12,7 @@ pub const DEFAULT_POLL_INTERVAL_MILLIS: u64 = 250;
 pub const DEFAULT_STEP_SLEEP_SECONDS: f64 = 1.5;
 pub const RUN_DISPATCH_READY_MESSAGE: &str =
     "Selecting a suite queues a run-suite command in session/commands for Unity host execution.";
+pub const DESTRUCTIVE_DISABLED_REASON: &str = "Enable destructive drills to select this suite.";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OverlayMode {
@@ -140,6 +141,7 @@ pub struct SuiteSelectionModel {
     selected_suite_ids: Vec<String>,
     pub global_reset_default: GlobalResetDefault,
     pub step_sleep_timer: StepSleepTimerModel,
+    pub destructive_suites_enabled: bool,
 }
 
 impl SuiteSelectionModel {
@@ -151,18 +153,33 @@ impl SuiteSelectionModel {
         let first_suite = first_group.suites.first().ok_or_else(|| {
             "suite catalog requires at least one suite in the first group".to_string()
         })?;
+        let mut selected_suite_ids: Vec<String> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected && !suite.is_destructive())
+            .map(|suite| suite.suite_id.clone())
+            .collect();
+        if selected_suite_ids.is_empty() {
+            selected_suite_ids.push(first_suite.suite_id.clone());
+        }
+        let selected_suite_id = selected_suite_ids
+            .first()
+            .cloned()
+            .unwrap_or_else(|| first_suite.suite_id.clone());
 
         Ok(Self {
             catalog: catalog.clone(),
-            selected_suite_id: first_suite.suite_id.clone(),
-            selected_suite_ids: vec![first_suite.suite_id.clone()],
+            selected_suite_id,
+            selected_suite_ids,
             global_reset_default: GlobalResetDefault::SceneReload,
             step_sleep_timer: StepSleepTimerModel::default(),
+            destructive_suites_enabled: false,
         })
     }
 
     pub fn select_suite_by_id(&mut self, suite_id: &str) -> Result<(), String> {
-        let normalized = self.require_known_suite_id(suite_id)?;
+        let normalized = self.require_selectable_suite_id(suite_id)?;
         self.selected_suite_id = normalized.to_string();
         self.selected_suite_ids = vec![normalized.to_string()];
         Ok(())
@@ -171,7 +188,7 @@ impl SuiteSelectionModel {
     pub fn select_suite_batch_by_ids(&mut self, suite_ids: &[String]) -> Result<(), String> {
         let mut normalized_ids = Vec::new();
         for suite_id in suite_ids {
-            let normalized = self.require_known_suite_id(suite_id)?;
+            let normalized = self.require_selectable_suite_id(suite_id)?;
             normalized_ids.push(normalized.to_string());
         }
         if normalized_ids.is_empty() {
@@ -183,7 +200,7 @@ impl SuiteSelectionModel {
     }
 
     pub fn toggle_suite_selection_by_id(&mut self, suite_id: &str) -> Result<(), String> {
-        let normalized = self.require_known_suite_id(suite_id)?;
+        let normalized = self.require_selectable_suite_id(suite_id)?;
         if let Some(index) = self
             .selected_suite_ids
             .iter()
@@ -200,6 +217,33 @@ impl SuiteSelectionModel {
     pub fn clear_suite_selection(&mut self) {
         self.selected_suite_ids.clear();
         self.selected_suite_id.clear();
+    }
+
+    pub fn apply_preset_group(&mut self, preset_group: &str) -> Result<(), String> {
+        let normalized = preset_group.trim();
+        if normalized.is_empty() {
+            return Err("preset_group must not be blank".to_string());
+        }
+
+        let suite_ids: Vec<String> = self
+            .catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.preset_groups.iter().any(|group| group == normalized))
+            .filter(|suite| self.destructive_suites_enabled || !suite.is_destructive())
+            .map(|suite| suite.suite_id.clone())
+            .collect();
+
+        if suite_ids.is_empty() {
+            return Err(format!(
+                "preset_group '{normalized}' has no selectable suites"
+            ));
+        }
+
+        self.selected_suite_ids = suite_ids;
+        self.sync_selected_suite_head();
+        Ok(())
     }
 
     pub fn selected_suite_ids(&self) -> Vec<&str> {
@@ -262,6 +306,63 @@ impl SuiteSelectionModel {
         }
     }
 
+    fn require_selectable_suite_id<'a>(&self, suite_id: &'a str) -> Result<&'a str, String> {
+        let normalized = self.require_known_suite_id(suite_id)?;
+        if !self.is_suite_selectable(normalized) {
+            return Err(DESTRUCTIVE_DISABLED_REASON.to_string());
+        }
+        Ok(normalized)
+    }
+
+    pub fn is_suite_selectable(&self, suite_id: &str) -> bool {
+        let normalized = suite_id.trim();
+        let Some(suite) = self.suite_by_id(normalized) else {
+            return false;
+        };
+        self.destructive_suites_enabled || !suite.is_destructive()
+    }
+
+    pub fn disabled_reason_for_suite_id(&self, suite_id: &str) -> Option<&'static str> {
+        if self.is_suite_selectable(suite_id) {
+            None
+        } else if self.suite_by_id(suite_id.trim()).is_some() {
+            Some(DESTRUCTIVE_DISABLED_REASON)
+        } else {
+            None
+        }
+    }
+
+    fn suite_by_id(&self, suite_id: &str) -> Option<&SmokeSuiteDefinition> {
+        let (group_index, suite_index) = self.catalog.suite_index_by_id.get(suite_id).copied()?;
+        self.catalog
+            .groups
+            .get(group_index)?
+            .suites
+            .get(suite_index)
+    }
+
+    fn remove_disabled_destructive_selections(&mut self) {
+        if self.destructive_suites_enabled {
+            return;
+        }
+        let catalog = self.catalog.clone();
+        self.selected_suite_ids.retain(|suite_id| {
+            let Some((group_index, suite_index)) = catalog.suite_index_by_id.get(suite_id).copied()
+            else {
+                return false;
+            };
+            let Some(suite) = catalog
+                .groups
+                .get(group_index)
+                .and_then(|group| group.suites.get(suite_index))
+            else {
+                return false;
+            };
+            !suite.is_destructive()
+        });
+        self.sync_selected_suite_head();
+    }
+
     fn sync_selected_suite_head(&mut self) {
         self.selected_suite_id = self
             .selected_suite_ids
@@ -294,6 +395,11 @@ impl SuiteSelectionModel {
 
     pub fn set_global_reset_default(&mut self, value: GlobalResetDefault) {
         self.global_reset_default = value;
+    }
+
+    pub fn set_destructive_suites_enabled(&mut self, enabled: bool) {
+        self.destructive_suites_enabled = enabled;
+        self.remove_disabled_destructive_selections();
     }
 
     pub fn set_step_sleep_enabled(&mut self, enabled: bool) {
@@ -490,7 +596,96 @@ pub fn review_actions() -> [ReviewAction; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::catalog::load_canonical_catalog;
+    use crate::catalog::{load_canonical_catalog, load_catalog_from_str};
+
+    fn load_destructive_gate_catalog() -> SmokeSuiteCatalog {
+        load_catalog_from_str(
+            r#"{
+  "catalogVersion": 1,
+  "protocolVersion": "asmlite-smoke-v1",
+  "fixture": {
+    "scenePath": "Assets/Scenes/Click ME.unity",
+    "avatarName": "Oct25_Dress"
+  },
+  "groups": [
+    {
+      "groupId": "setup",
+      "label": "Setup",
+      "description": "Setup suites",
+      "suites": [
+        {
+          "suiteId": "safe-default",
+          "label": "Safe default",
+          "description": "Safe setup suite",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": true,
+          "presetGroups": ["quick-default", "all-setup"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "safe outcome",
+          "debugHint": "safe hint",
+          "cases": [
+            {
+              "caseId": "safe-case",
+              "label": "Safe case",
+              "description": "Safe case",
+              "expectedOutcome": "safe outcome",
+              "debugHint": "safe hint",
+              "steps": [
+                {
+                  "stepId": "safe-step",
+                  "label": "Safe step",
+                  "description": "Safe step",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "safe outcome",
+                  "debugHint": "safe hint"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "destructive-drill",
+          "label": "Destructive drill",
+          "description": "Destructive setup suite",
+          "resetOverride": "FullPackageRebuild",
+          "speed": "destructive",
+          "risk": "destructive",
+          "defaultSelected": true,
+          "presetGroups": ["all-setup", "destructive-drills"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "destructive outcome",
+          "debugHint": "destructive hint",
+          "cases": [
+            {
+              "caseId": "destructive-case",
+              "label": "Destructive case",
+              "description": "Destructive case",
+              "expectedOutcome": "destructive outcome",
+              "debugHint": "destructive hint",
+              "steps": [
+                {
+                  "stepId": "destructive-step",
+                  "label": "Destructive step",
+                  "description": "Destructive step",
+                  "actionType": "rebuild",
+                  "expectedOutcome": "destructive outcome",
+                  "debugHint": "destructive hint"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}"#,
+        )
+        .expect("destructive gate catalog should load")
+    }
 
     #[test]
     fn step_sleep_timer_defaults_off_with_one_point_five_seconds_ready_when_enabled() {
@@ -575,13 +770,88 @@ mod tests {
     }
 
     #[test]
-    fn suite_selection_defaults_to_setup_scene_avatar_only() {
+    fn suite_selection_defaults_to_metadata_selected_suites() {
         let catalog = load_canonical_catalog().expect("catalog should load");
         let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
-        assert_eq!(model.selected_suite_ids(), vec!["setup-scene-avatar"]);
+        assert_eq!(
+            model.selected_suite_ids(),
+            vec![
+                "setup-scene-avatar",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
+        );
+        assert_eq!(model.selected_suite_id, "setup-scene-avatar");
         assert!(model.can_run_selected_suite());
+    }
+
+    #[test]
+    fn destructive_suites_are_gated_until_explicit_toggle() {
+        let catalog = load_destructive_gate_catalog();
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        assert_eq!(model.selected_suite_ids(), vec!["safe-default"]);
+        assert!(!model.destructive_suites_enabled);
+        assert!(!model.is_suite_selectable("destructive-drill"));
+        assert_eq!(
+            model.disabled_reason_for_suite_id("destructive-drill"),
+            Some(DESTRUCTIVE_DISABLED_REASON)
+        );
+        assert!(model
+            .toggle_suite_selection_by_id("destructive-drill")
+            .is_err());
+
+        model.set_destructive_suites_enabled(true);
+        model
+            .toggle_suite_selection_by_id("destructive-drill")
+            .expect("explicit toggle should unlock destructive selection");
+        assert_eq!(
+            model.selected_suite_ids(),
+            vec!["safe-default", "destructive-drill"]
+        );
+
+        model.set_destructive_suites_enabled(false);
+        assert_eq!(model.selected_suite_ids(), vec!["safe-default"]);
+    }
+
+    #[test]
+    fn destructive_presets_do_not_auto_enable_destructive_suites() {
+        let catalog = load_destructive_gate_catalog();
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+
+        model
+            .apply_preset_group("destructive-drills")
+            .expect_err("destructive preset should remain disabled");
+        assert_eq!(model.selected_suite_ids(), Vec::<&str>::new());
+
+        model.set_destructive_suites_enabled(true);
+        model
+            .apply_preset_group("destructive-drills")
+            .expect("destructive preset should apply after explicit toggle");
+        assert_eq!(model.selected_suite_ids(), vec!["destructive-drill"]);
+    }
+
+    #[test]
+    fn preset_group_replaces_selection_without_appending_to_prior_choices() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("playmode-runtime-validation")
+            .expect("playmode should toggle on");
+
+        model
+            .apply_preset_group("all-setup")
+            .expect("all setup preset should apply");
+
+        assert_eq!(model.selected_suite_ids(), vec!["setup-scene-avatar"]);
+        assert_eq!(model.selected_suite_id, "setup-scene-avatar");
     }
 
     #[test]
@@ -687,6 +957,10 @@ mod tests {
         let catalog = load_canonical_catalog().expect("catalog should load");
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("setup-scene-avatar")
+            .expect("setup should toggle on");
         model
             .toggle_suite_selection_by_id("lifecycle-roundtrip")
             .expect("lifecycle should toggle on");
@@ -708,6 +982,10 @@ mod tests {
         let catalog = load_canonical_catalog().expect("catalog should load");
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("setup-scene-avatar")
+            .expect("setup should toggle on");
         model
             .toggle_suite_selection_by_id("lifecycle-roundtrip")
             .expect("lifecycle should toggle on");
@@ -730,6 +1008,10 @@ mod tests {
         let catalog = load_canonical_catalog().expect("catalog should load");
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model.clear_suite_selection();
+        model
+            .toggle_suite_selection_by_id("setup-scene-avatar")
+            .expect("setup should toggle on");
         model
             .toggle_suite_selection_by_id("lifecycle-roundtrip")
             .expect("lifecycle should toggle on");
