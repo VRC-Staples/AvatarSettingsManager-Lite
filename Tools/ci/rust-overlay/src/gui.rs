@@ -19,7 +19,8 @@ use crate::theme::{
     RIGHT_PANEL_WIDTH_PX, SECTION_GAP_PX,
 };
 use crate::ui_suite_list::{
-    build_current_run_plan_view, build_suite_checklist_view, RunPlanStepRowView, SuiteRowView,
+    build_current_run_plan_view, build_filtered_suite_checklist_view, RunPlanStepRowView,
+    SuiteChecklistFilter, SuiteRowView, SuiteSpeedFilter,
 };
 use crate::unity_launcher::{spawn_unity_host, UnityHostLaunchConfig, UnityHostSupervisorStatus};
 use eframe::egui;
@@ -192,6 +193,8 @@ struct SmokeOverlayApp {
     pending_command_id: Option<String>,
     pending_command_seq: Option<i32>,
     batch_queue: Option<BatchRunQueue>,
+    suite_filter_query: String,
+    suite_speed_filter: Option<SuiteSpeedFilter>,
     startup_window_placement_applied: bool,
     icon_font_registered: bool,
     last_operator_phase: Option<OperatorPhase>,
@@ -348,6 +351,7 @@ pub struct FooterStatusModel {
     pub event_count: usize,
     pub pending_command: Option<String>,
     pub selected_suite_count: usize,
+    pub hidden_by_filter_count: usize,
     pub batch_progress: Option<String>,
 }
 
@@ -1106,6 +1110,8 @@ impl SmokeOverlayApp {
             pending_command_id: None,
             pending_command_seq: None,
             batch_queue: None,
+            suite_filter_query: String::new(),
+            suite_speed_filter: None,
             startup_window_placement_applied: false,
             icon_font_registered: false,
             last_operator_phase: None,
@@ -1478,10 +1484,17 @@ impl eframe::App for SmokeOverlayApp {
         );
         self.last_operator_phase = Some(operator_phase);
 
+        let footer_filter = SuiteChecklistFilter {
+            search_query: self.suite_filter_query.clone(),
+            speed_filter: self.suite_speed_filter,
+        };
+        let footer_hidden_by_filter_count =
+            build_filtered_suite_checklist_view(&self.model, &footer_filter).hidden_by_filter_count;
         let footer_model = footer_status_model(
             self.latest_poll.as_ref(),
             self.pending_command_id.as_deref(),
             &self.model,
+            footer_hidden_by_filter_count,
             self.batch_queue.as_ref(),
         );
         egui::TopBottomPanel::bottom("footer-status-strip")
@@ -1552,6 +1565,8 @@ impl eframe::App for SmokeOverlayApp {
                             suite_selector(
                                 ui,
                                 &mut self.model,
+                                &mut self.suite_filter_query,
+                                &mut self.suite_speed_filter,
                                 !controls.can_select_suite,
                                 dashboard_card_collapsed_for_phase(
                                     operator_phase,
@@ -1561,7 +1576,14 @@ impl eframe::App for SmokeOverlayApp {
                         } else {
                             current_run_plan_card(ui, &self.model, false);
                             ui.add_space(SECTION_GAP_PX);
-                            suite_selector(ui, &mut self.model, !controls.can_select_suite, false);
+                            suite_selector(
+                                ui,
+                                &mut self.model,
+                                &mut self.suite_filter_query,
+                                &mut self.suite_speed_filter,
+                                !controls.can_select_suite,
+                                false,
+                            );
                             ui.add_space(SECTION_GAP_PX);
                             selected_suite_card(ui, &self.model, self.latest_poll.as_ref());
                             ui.add_space(SECTION_GAP_PX);
@@ -2463,32 +2485,145 @@ fn phosphor_collapsing_icon(ui: &mut egui::Ui, openness: f32, response: &egui::R
     );
 }
 
+pub fn suite_filter_summary_text(
+    selected_count: usize,
+    visible_count: usize,
+    hidden_by_filter_count: usize,
+) -> String {
+    let mut summary = format!("Selected suites: {selected_count}/{visible_count} visible");
+    if hidden_by_filter_count > 0 {
+        summary.push_str(&format!(" · {hidden_by_filter_count} hidden by filters"));
+    }
+    summary
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SuitePresetButtonSpec {
+    pub label: &'static str,
+    pub preset_group: &'static str,
+}
+
+pub fn suite_preset_button_specs() -> [SuitePresetButtonSpec; 4] {
+    [
+        SuitePresetButtonSpec {
+            label: "Quick default",
+            preset_group: "quick-default",
+        },
+        SuitePresetButtonSpec {
+            label: "All setup",
+            preset_group: "all-setup",
+        },
+        SuitePresetButtonSpec {
+            label: "Safe negatives",
+            preset_group: "safe-negatives",
+        },
+        SuitePresetButtonSpec {
+            label: "Destructive drills",
+            preset_group: "destructive-drills",
+        },
+    ]
+}
+
 fn suite_selector(
     ui: &mut egui::Ui,
     model: &mut SuiteSelectionModel,
+    filter_query: &mut String,
+    speed_filter: &mut Option<SuiteSpeedFilter>,
     disabled: bool,
     collapsed: bool,
 ) {
-    let checklist = build_suite_checklist_view(model);
+    let filter = SuiteChecklistFilter {
+        search_query: filter_query.clone(),
+        speed_filter: *speed_filter,
+    };
+    let checklist = build_filtered_suite_checklist_view(model, &filter);
+    let selected_suite_count = model.selected_suite_ids().len();
+    let summary = suite_filter_summary_text(
+        selected_suite_count,
+        checklist.rows.len(),
+        checklist.hidden_by_filter_count,
+    );
     if collapsed {
-        let summary = format!(
-            "Selected suites: {}/{}",
-            checklist.selected_count,
-            checklist.rows.len()
-        );
         dashboard_collapsed_section(ui, "Suites", DashboardSectionTone::Gold, &summary);
         return;
     }
     dashboard_section(ui, "Suites", DashboardSectionTone::Gold, |ui| {
         ui.label(
-            egui::RichText::new(format!(
-                "Selected suites: {}/{}",
-                checklist.selected_count,
-                checklist.rows.len()
-            ))
-            .color(MUTED)
-            .size(META_TEXT_SIZE),
+            egui::RichText::new(summary)
+                .color(MUTED)
+                .size(META_TEXT_SIZE),
         );
+        ui.add_space(RELATED_GAP_PX);
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                egui::RichText::new("Filter")
+                    .color(MUTED)
+                    .size(META_TEXT_SIZE),
+            );
+            ui.add(
+                egui::TextEdit::singleline(filter_query)
+                    .hint_text("Search id, label, description, or preset")
+                    .desired_width(180.0),
+            );
+            if !filter_query.trim().is_empty() && ui.small_button("Clear").clicked() {
+                filter_query.clear();
+            }
+        });
+        ui.horizontal_wrapped(|ui| {
+            if ui.selectable_label(speed_filter.is_none(), "All").clicked() {
+                *speed_filter = None;
+            }
+            for (label, value) in [
+                ("Quick", SuiteSpeedFilter::Quick),
+                ("Standard", SuiteSpeedFilter::Standard),
+                ("Exhaustive", SuiteSpeedFilter::Exhaustive),
+                ("Destructive", SuiteSpeedFilter::Destructive),
+            ] {
+                if ui
+                    .selectable_label(*speed_filter == Some(value), label)
+                    .clicked()
+                {
+                    *speed_filter = Some(value);
+                }
+            }
+        });
+        ui.add_enabled_ui(!disabled, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    egui::RichText::new("Presets")
+                        .color(MUTED)
+                        .size(META_TEXT_SIZE),
+                );
+                for preset in suite_preset_button_specs() {
+                    let destructive_preset = preset.preset_group == "destructive-drills";
+                    let enabled = !destructive_preset || model.destructive_suites_enabled;
+                    if ui
+                        .add_enabled(enabled, egui::Button::new(preset.label))
+                        .clicked()
+                    {
+                        let _ = model.apply_preset_group(preset.preset_group);
+                    }
+                }
+            });
+            ui.horizontal_wrapped(|ui| {
+                let mut destructive_enabled = model.destructive_suites_enabled;
+                if ui
+                    .checkbox(&mut destructive_enabled, "Enable destructive drills")
+                    .changed()
+                {
+                    model.set_destructive_suites_enabled(destructive_enabled);
+                }
+                if !model.destructive_suites_enabled {
+                    ui.label(
+                        egui::RichText::new(
+                            "Destructive suites stay visible but disabled until enabled.",
+                        )
+                        .color(MUTED)
+                        .size(META_TEXT_SIZE),
+                    );
+                }
+            });
+        });
         if checklist.selected_count == 0 {
             ui.label(
                 egui::RichText::new("Select at least one suite to enable Run selected suite.")
@@ -2496,32 +2631,31 @@ fn suite_selector(
                     .size(META_TEXT_SIZE),
             );
         }
+        if checklist.rows.is_empty() {
+            ui.label(
+                egui::RichText::new("No suites match the current filters.")
+                    .color(WARNING)
+                    .size(META_TEXT_SIZE),
+            );
+            return;
+        }
         ui.add_space(RELATED_GAP_PX);
 
-        let mut row_index = 0usize;
-        while row_index < checklist.rows.len() {
-            let first_row = &checklist.rows[row_index];
-            let group_id = first_row.group_id.clone();
-            let group_label = first_row.group_label.clone();
-            let group_rows: Vec<SuiteRowView> = checklist
-                .rows
-                .iter()
-                .filter(|candidate| candidate.group_id == group_id)
-                .cloned()
-                .collect();
-            let group_count = group_rows.len();
+        for (section_index, section) in checklist.group_sections.iter().enumerate() {
+            let group_count = section.rows.len();
             let spec = suite_picker_typography_spec();
-            let header = egui::RichText::new(suite_group_header_text(&group_label, group_count))
-                .strong()
-                .color(spec.group_header_text_color)
-                .size(spec.group_header_text_size_px);
+            let header =
+                egui::RichText::new(suite_group_header_text(&section.group_label, group_count))
+                    .strong()
+                    .color(spec.group_header_text_color)
+                    .size(spec.group_header_text_size_px);
 
             egui::CollapsingHeader::new(header)
-                .id_source(format!("suite-selector-group-{group_id}"))
-                .default_open(true)
+                .id_source(format!("suite-selector-group-{}", section.group_id))
+                .default_open(section.default_open)
                 .icon(phosphor_collapsing_icon)
                 .show(ui, |ui| {
-                    for row in &group_rows {
+                    for row in &section.rows {
                         let response = render_suite_checkbox_row(ui, row, disabled);
                         if disabled {
                             response.on_disabled_hover_text(
@@ -2535,8 +2669,7 @@ fn suite_selector(
                     }
                 });
 
-            row_index += group_count;
-            if row_index < checklist.rows.len() {
+            if section_index + 1 < checklist.group_sections.len() {
                 ui.add_space(SECTION_GAP_PX);
             }
         }
@@ -2764,6 +2897,7 @@ fn footer_status_model(
     poll: Option<&StartupPollResult>,
     pending_command: Option<&str>,
     model: &SuiteSelectionModel,
+    hidden_by_filter_count: usize,
     batch_queue: Option<&BatchRunQueue>,
 ) -> FooterStatusModel {
     let host_state = poll
@@ -2786,6 +2920,7 @@ fn footer_status_model(
         event_count: poll.map(|poll| poll.events.len()).unwrap_or_default(),
         pending_command: pending_command.and_then(non_empty_string),
         selected_suite_count: model.selected_suite_ids().len(),
+        hidden_by_filter_count,
         batch_progress,
     }
 }
@@ -2801,6 +2936,7 @@ fn footer_status_strip(ui: &mut egui::Ui, footer: &FooterStatusModel) {
         );
         meta_chip(ui, &format!("Events: {}", footer.event_count));
         meta_chip(ui, &format!("Selected: {}", footer.selected_suite_count));
+        meta_chip(ui, &format!("Hidden: {}", footer.hidden_by_filter_count));
         if let Some(command) = footer.pending_command.as_deref() {
             meta_chip(ui, &format!("Pending: {command}"));
         } else {
@@ -2896,6 +3032,44 @@ fn civil_from_days(days_since_epoch: i64) -> (i64, i64, i64) {
 mod tests {
     use super::*;
     use crate::session::SmokeHostStateDocument;
+
+    #[test]
+    fn suite_filter_summary_surfaces_visible_and_hidden_counts() {
+        assert_eq!(
+            suite_filter_summary_text(4, 12, 0),
+            "Selected suites: 4/12 visible"
+        );
+        assert_eq!(
+            suite_filter_summary_text(4, 1, 11),
+            "Selected suites: 4/1 visible · 11 hidden by filters"
+        );
+    }
+
+    #[test]
+    fn suite_preset_buttons_use_locked_catalog_preset_tokens() {
+        let specs = suite_preset_button_specs();
+        let labels: Vec<&str> = specs.iter().map(|spec| spec.label).collect();
+        let preset_groups: Vec<&str> = specs.iter().map(|spec| spec.preset_group).collect();
+
+        assert_eq!(
+            labels,
+            vec![
+                "Quick default",
+                "All setup",
+                "Safe negatives",
+                "Destructive drills"
+            ]
+        );
+        assert_eq!(
+            preset_groups,
+            vec![
+                "quick-default",
+                "all-setup",
+                "safe-negatives",
+                "destructive-drills"
+            ]
+        );
+    }
 
     #[test]
     fn native_window_keeps_default_width_and_allows_resize() {
@@ -3771,12 +3945,14 @@ mod tests {
             warnings: Vec::new(),
         };
 
-        let footer = footer_status_model(Some(&poll), Some("command-0005"), &model, Some(&queue));
+        let footer =
+            footer_status_model(Some(&poll), Some("command-0005"), &model, 11, Some(&queue));
 
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_RUNNING));
         assert_eq!(footer.event_count, 4);
         assert_eq!(footer.pending_command.as_deref(), Some("command-0005"));
         assert_eq!(footer.selected_suite_count, 4);
+        assert_eq!(footer.hidden_by_filter_count, 11);
         assert_eq!(
             footer.batch_progress.as_deref(),
             Some("2/4 setup-package-presence")
@@ -3795,12 +3971,13 @@ mod tests {
             warnings: Vec::new(),
         };
 
-        let footer = footer_status_model(Some(&poll), None, &model, None);
+        let footer = footer_status_model(Some(&poll), None, &model, 0, None);
 
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_READY));
         assert_eq!(footer.event_count, 0);
         assert_eq!(footer.pending_command, None);
         assert_eq!(footer.selected_suite_count, 4);
+        assert_eq!(footer.hidden_by_filter_count, 0);
         assert_eq!(footer.batch_progress, None);
     }
 

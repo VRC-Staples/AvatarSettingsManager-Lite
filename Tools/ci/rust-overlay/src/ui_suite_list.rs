@@ -9,6 +9,7 @@ pub struct SuiteRowView {
     pub group_label: String,
     pub suite_id: String,
     pub suite_label: String,
+    pub suite_description: String,
     pub speed: String,
     pub risk: String,
     pub default_selected: bool,
@@ -23,10 +24,72 @@ pub struct SuiteRowView {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SuiteGroupSectionView {
+    pub group_id: String,
+    pub group_label: String,
+    pub default_open: bool,
+    pub rows: Vec<SuiteRowView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SuiteChecklistViewModel {
     pub rows: Vec<SuiteRowView>,
+    pub group_sections: Vec<SuiteGroupSectionView>,
     pub selected_count: usize,
+    pub hidden_by_filter_count: usize,
     pub can_run_selected_batch: bool,
+}
+
+impl SuiteChecklistViewModel {
+    pub fn visible_suite_ids(&self) -> Vec<&str> {
+        self.rows.iter().map(|row| row.suite_id.as_str()).collect()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SuiteSpeedFilter {
+    Quick,
+    Standard,
+    Exhaustive,
+    Destructive,
+}
+
+impl SuiteSpeedFilter {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Quick => "quick",
+            Self::Standard => "standard",
+            Self::Exhaustive => "exhaustive",
+            Self::Destructive => "destructive",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SuiteChecklistFilter {
+    pub search_query: String,
+    pub speed_filter: Option<SuiteSpeedFilter>,
+}
+
+impl SuiteChecklistFilter {
+    pub fn search(query: &str) -> Self {
+        Self {
+            search_query: query.to_string(),
+            speed_filter: None,
+        }
+    }
+
+    pub fn speed(speed_filter: SuiteSpeedFilter) -> Self {
+        Self {
+            search_query: String::new(),
+            speed_filter: Some(speed_filter),
+        }
+    }
+
+    pub fn with_speed(mut self, speed_filter: Option<SuiteSpeedFilter>) -> Self {
+        self.speed_filter = speed_filter;
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -135,13 +198,100 @@ pub fn build_current_run_plan_view(model: &SuiteSelectionModel) -> CurrentRunPla
 }
 
 pub fn build_suite_checklist_view(model: &SuiteSelectionModel) -> SuiteChecklistViewModel {
-    let rows = build_grouped_suite_rows(model);
+    build_filtered_suite_checklist_view(model, &SuiteChecklistFilter::default())
+}
+
+pub fn build_filtered_suite_checklist_view(
+    model: &SuiteSelectionModel,
+    filter: &SuiteChecklistFilter,
+) -> SuiteChecklistViewModel {
+    let all_rows = build_grouped_suite_rows(model);
+    let rows: Vec<SuiteRowView> = all_rows
+        .iter()
+        .filter(|row| suite_row_matches_filter(row, filter))
+        .cloned()
+        .collect();
     let selected_count = rows.iter().filter(|row| row.checked).count();
+    let hidden_by_filter_count = all_rows.len().saturating_sub(rows.len());
+    let group_sections = build_suite_group_sections(&rows, filter);
     SuiteChecklistViewModel {
         rows,
+        group_sections,
         selected_count,
+        hidden_by_filter_count,
         can_run_selected_batch: model.can_run_selected_suite(),
     }
+}
+
+fn build_suite_group_sections(
+    rows: &[SuiteRowView],
+    filter: &SuiteChecklistFilter,
+) -> Vec<SuiteGroupSectionView> {
+    let default_open = !matches!(
+        filter.speed_filter,
+        Some(SuiteSpeedFilter::Exhaustive | SuiteSpeedFilter::Destructive)
+    );
+    let mut sections = Vec::new();
+    let mut row_index = 0usize;
+    while row_index < rows.len() {
+        let first_row = &rows[row_index];
+        let group_id = first_row.group_id.clone();
+        let group_label = first_row.group_label.clone();
+        let group_rows: Vec<SuiteRowView> = rows
+            .iter()
+            .skip(row_index)
+            .take_while(|candidate| candidate.group_id == group_id)
+            .cloned()
+            .collect();
+        row_index += group_rows.len();
+        sections.push(SuiteGroupSectionView {
+            group_id,
+            group_label,
+            default_open,
+            rows: group_rows,
+        });
+    }
+    sections
+}
+
+fn suite_row_matches_filter(row: &SuiteRowView, filter: &SuiteChecklistFilter) -> bool {
+    if let Some(speed_filter) = filter.speed_filter {
+        let speed_matches = match speed_filter {
+            SuiteSpeedFilter::Quick => {
+                !row.destructive
+                    && (row.speed == speed_filter.as_str()
+                        || row
+                            .preset_groups
+                            .iter()
+                            .any(|preset| preset == "quick-default"))
+            }
+            SuiteSpeedFilter::Standard => row.speed == speed_filter.as_str() && !row.destructive,
+            SuiteSpeedFilter::Exhaustive => row.speed == speed_filter.as_str() && !row.destructive,
+            SuiteSpeedFilter::Destructive => row.destructive,
+        };
+        if !speed_matches {
+            return false;
+        }
+    }
+
+    let search_query = filter.search_query.trim().to_lowercase();
+    if search_query.is_empty() {
+        return true;
+    }
+
+    let haystack = format!(
+        "{} {} {} {} {} {}",
+        row.suite_id,
+        row.suite_label,
+        row.suite_description,
+        row.speed,
+        row.risk,
+        row.preset_groups.join(" ")
+    )
+    .to_lowercase();
+    search_query
+        .split_whitespace()
+        .all(|token| haystack.contains(token))
 }
 
 pub fn build_grouped_suite_rows(model: &SuiteSelectionModel) -> Vec<SuiteRowView> {
@@ -155,6 +305,7 @@ pub fn build_grouped_suite_rows(model: &SuiteSelectionModel) -> Vec<SuiteRowView
                 group_label: group.label.clone(),
                 suite_id: suite.suite_id.clone(),
                 suite_label: suite.label.clone(),
+                suite_description: suite.description.clone(),
                 speed: suite.speed.clone(),
                 risk: suite.risk.clone(),
                 default_selected: suite.default_selected,
@@ -276,7 +427,9 @@ pub fn render_review_surface(review: &ReviewSummaryModel) -> String {
 mod tests {
     use super::*;
     use crate::catalog::load_canonical_catalog;
-    use crate::model::{ReviewFailureExcerpt, ReviewSummaryModel, SuiteSelectionModel};
+    use crate::model::{
+        ReviewFailureExcerpt, ReviewSummaryModel, SuiteSelectionModel, DESTRUCTIVE_DISABLED_REASON,
+    };
 
     #[test]
     fn grouped_rows_follow_catalog_order() {
@@ -561,5 +714,104 @@ mod tests {
         assert!(rendered.contains("Return to Suite List (return-to-suite-list)"));
         assert!(rendered.contains("Rerun Suite (rerun-suite)"));
         assert!(rendered.contains("Exit (exit)"));
+    }
+
+    #[test]
+    fn suite_filter_search_matches_id_label_description_and_preset_tags_without_mutating_selection()
+    {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let before = model.selected_suite_ids();
+
+        let label_filtered = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::search("negative diagnostics"),
+        );
+        assert_eq!(
+            label_filtered.visible_suite_ids(),
+            vec!["setup-negative-diagnostics"]
+        );
+
+        let tag_filtered = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::search("safe-negatives"),
+        );
+        assert_eq!(
+            tag_filtered.visible_suite_ids(),
+            vec!["setup-negative-diagnostics"]
+        );
+        assert_eq!(tag_filtered.hidden_by_filter_count, 11);
+        assert_eq!(model.selected_suite_ids(), before);
+    }
+
+    #[test]
+    fn suite_filter_speed_chips_match_quick_standard_and_destructive_rows() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        let quick = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::speed(SuiteSpeedFilter::Quick),
+        );
+        assert_eq!(
+            quick.visible_suite_ids(),
+            vec![
+                "setup-scene-avatar",
+                "setup-package-presence",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
+        );
+
+        let standard = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::speed(SuiteSpeedFilter::Standard),
+        );
+        assert!(standard
+            .visible_suite_ids()
+            .contains(&"setup-generated-asset-readiness"));
+        assert!(!standard
+            .visible_suite_ids()
+            .contains(&"setup-destructive-recovery-reset"));
+
+        let destructive = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::speed(SuiteSpeedFilter::Destructive),
+        );
+        assert_eq!(
+            destructive.visible_suite_ids(),
+            vec!["setup-destructive-recovery-reset"]
+        );
+        assert_eq!(
+            destructive.rows[0].disabled_reason,
+            Some(DESTRUCTIVE_DISABLED_REASON)
+        );
+    }
+
+    #[test]
+    fn suite_group_sections_open_quick_defaults_and_collapse_exhaustive_or_destructive_buckets() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+
+        let quick = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::speed(SuiteSpeedFilter::Quick),
+        );
+        assert!(quick
+            .group_sections
+            .iter()
+            .all(|section| section.default_open));
+
+        let destructive = build_filtered_suite_checklist_view(
+            &model,
+            &SuiteChecklistFilter::speed(SuiteSpeedFilter::Destructive),
+        );
+        assert!(destructive
+            .group_sections
+            .iter()
+            .all(|section| !section.default_open));
     }
 }
