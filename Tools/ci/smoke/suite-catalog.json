@@ -413,6 +413,272 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-avatar-discovery-selection",
+          "label": "Setup Avatar Discovery and Selection",
+          "description": "Validate deterministic avatar discovery, selected-object precedence, ambiguity handling, inactive avatar policy, prefab asset rejection, and missing-avatar diagnostics.",
+          "resetOverride": "SceneReload",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": false,
+          "expectedOutcome": "Avatar selection resolves only deterministic scene avatar targets and reports coded diagnostics for invalid or ambiguous targets.",
+          "debugHint": "If these cases fail, inspect Unity selection state, fixture mutation cleanup, prefab asset persistence, and avatar-name normalization before deeper setup suites.",
+          "cases": [
+            {
+              "caseId": "selected-canonical-avatar",
+              "label": "Selected canonical avatar",
+              "description": "Select the canonical scene avatar before running avatar selection.",
+              "expectedOutcome": "The selected canonical avatar is used as the automation target.",
+              "debugHint": "If this fails, inspect selected-scene-avatar precedence.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Selected canonical avatar",
+                  "description": "Select the canonical scene avatar before running avatar selection.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "The selected canonical avatar is used as the automation target.",
+                  "debugHint": "If this fails, inspect selected-scene-avatar precedence.",
+                  "args": {
+                    "fixtureMutation": "selected-canonical-avatar"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "find-by-fixture-name",
+              "label": "Find by fixture name",
+              "description": "Clear Unity selection and resolve the canonical avatar by configured fixture name.",
+              "expectedOutcome": "The active scene avatar matching the fixture name is selected.",
+              "debugHint": "If this fails, inspect avatar name normalization and active scene object discovery.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Find by fixture name",
+                  "description": "Clear Unity selection and resolve the canonical avatar by configured fixture name.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "The active scene avatar matching the fixture name is selected.",
+                  "debugHint": "If this fails, inspect avatar name normalization and active scene object discovery.",
+                  "args": {
+                    "fixtureMutation": "clear-selection"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "wrong-object-selected",
+              "label": "Wrong object selected",
+              "description": "Select a non-avatar scene object that shares the fixture target name.",
+              "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported without mutating a prefab asset.",
+              "debugHint": "If this fails, inspect selected object type checks before name lookup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Wrong object selected",
+                  "description": "Select a non-avatar scene object that shares the fixture target name.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported without mutating a prefab asset.",
+                  "debugHint": "If this fails, inspect selected object type checks before name lookup.",
+                  "args": {
+                    "fixtureMutation": "wrong-object-selection",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SELECTED_OBJECT_NOT_AVATAR",
+                    "expectedDiagnosticContains": "selected object is not a valid avatar",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "wrong-avatar-selected",
+              "label": "Wrong avatar selected",
+              "description": "Select an alternate scene avatar while the fixture name points at the canonical avatar.",
+              "expectedOutcome": "The selected avatar wins over fixture-name lookup deterministically.",
+              "debugHint": "If this fails, inspect selected-avatar precedence and wrong-avatar fixture setup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Wrong avatar selected",
+                  "description": "Select an alternate scene avatar while the fixture name points at the canonical avatar.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "The selected avatar wins over fixture-name lookup deterministically.",
+                  "debugHint": "If this fails, inspect selected-avatar precedence and wrong-avatar fixture setup.",
+                  "args": {
+                    "fixtureMutation": "wrong-avatar-selection",
+                    "objectName": "ASM-Lite Wrong Avatar"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "selected-inactive-avatar",
+              "label": "Selected inactive avatar",
+              "description": "Select the canonical avatar while it is inactive.",
+              "expectedOutcome": "The explicitly selected inactive scene avatar is accepted.",
+              "debugHint": "If this fails, inspect selected-object policy versus active-name lookup policy.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Selected inactive avatar",
+                  "description": "Select the canonical avatar while it is inactive.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "The explicitly selected inactive scene avatar is accepted.",
+                  "debugHint": "If this fails, inspect selected-object policy versus active-name lookup policy.",
+                  "args": {
+                    "fixtureMutation": "selected-inactive-avatar"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "unselected-inactive-avatar",
+              "label": "Unselected inactive avatar",
+              "description": "Make the canonical avatar inactive and clear Unity selection.",
+              "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because inactive unselected avatars are not surprise-selected.",
+              "debugHint": "If this fails, inspect activeInHierarchy filtering in avatar name lookup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Unselected inactive avatar",
+                  "description": "Make the canonical avatar inactive and clear Unity selection.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because inactive unselected avatars are not surprise-selected.",
+                  "debugHint": "If this fails, inspect activeInHierarchy filtering in avatar name lookup.",
+                  "args": {
+                    "fixtureMutation": "unselected-inactive-avatar",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_NOT_FOUND",
+                    "expectedDiagnosticContains": "avatar could not be found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "duplicate-avatar-name",
+              "label": "Duplicate avatar name",
+              "description": "Create a duplicate active scene avatar with the fixture name and clear selection.",
+              "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported until the operator selects a target.",
+              "debugHint": "If this fails, inspect duplicate-name counting and selection cleanup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Duplicate avatar name",
+                  "description": "Create a duplicate active scene avatar with the fixture name and clear selection.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported until the operator selects a target.",
+                  "debugHint": "If this fails, inspect duplicate-name counting and selection cleanup.",
+                  "args": {
+                    "fixtureMutation": "duplicate-avatar-name",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_AMBIGUOUS",
+                    "expectedDiagnosticContains": "Multiple avatar descriptors",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "selected-duplicate-avatar-disambiguates",
+              "label": "Selected duplicate avatar disambiguates",
+              "description": "Create a duplicate active scene avatar and select the canonical avatar.",
+              "expectedOutcome": "The selected canonical avatar disambiguates duplicate names.",
+              "debugHint": "If this fails, inspect selected-avatar precedence over ambiguous name lookup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Selected duplicate avatar disambiguates",
+                  "description": "Create a duplicate active scene avatar and select the canonical avatar.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "The selected canonical avatar disambiguates duplicate names.",
+                  "debugHint": "If this fails, inspect selected-avatar precedence over ambiguous name lookup.",
+                  "args": {
+                    "fixtureMutation": "selected-duplicate-avatar"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "prefab-asset-avatar-selected",
+              "label": "Prefab asset avatar selected",
+              "description": "Select a prefab asset containing an avatar descriptor.",
+              "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported because prefab assets are not scene avatar instances.",
+              "debugHint": "If this fails, inspect EditorUtility.IsPersistent checks before scene object selection.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Prefab asset avatar selected",
+                  "description": "Select a prefab asset containing an avatar descriptor.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported because prefab assets are not scene avatar instances.",
+                  "debugHint": "If this fails, inspect EditorUtility.IsPersistent checks before scene object selection.",
+                  "args": {
+                    "fixtureMutation": "selected-prefab-asset",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_PREFAB_ASSET",
+                    "expectedDiagnosticContains": "prefab asset",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "missing-avatar",
+              "label": "Missing avatar",
+              "description": "Clear selection and override the fixture name to an intentionally missing avatar.",
+              "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported for the missing fixture avatar.",
+              "debugHint": "If this fails, inspect selection cleanup and avatarName overrides.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Missing avatar",
+                  "description": "Clear selection and override the fixture name to an intentionally missing avatar.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported for the missing fixture avatar.",
+                  "debugHint": "If this fails, inspect selection cleanup and avatarName overrides.",
+                  "args": {
+                    "avatarName": "ASM-Lite Missing Avatar",
+                    "fixtureMutation": "missing-avatar-by-override-name",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_NOT_FOUND",
+                    "expectedDiagnosticContains": "avatar could not be found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "same-name-non-avatar-ignored",
+              "label": "Same-name non-avatar ignored",
+              "description": "Create a same-name scene object without VRCAvatarDescriptor while targeting that name.",
+              "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because non-avatar objects are ignored during name lookup.",
+              "debugHint": "If this fails, inspect descriptor filtering during name lookup.",
+              "steps": [
+                {
+                  "stepId": "select-avatar",
+                  "label": "Same-name non-avatar ignored",
+                  "description": "Create a same-name scene object without VRCAvatarDescriptor while targeting that name.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because non-avatar objects are ignored during name lookup.",
+                  "debugHint": "If this fails, inspect descriptor filtering during name lookup.",
+                  "args": {
+                    "avatarName": "ASM-Lite Same Name Non Avatar",
+                    "objectName": "ASM-Lite Same Name Non Avatar",
+                    "fixtureMutation": "same-name-non-avatar",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_NOT_FOUND",
+                    "expectedDiagnosticContains": "avatar could not be found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },

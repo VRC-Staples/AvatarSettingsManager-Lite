@@ -45,7 +45,7 @@ namespace ASMLite.Tests.Editor
                 new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
             CollectionAssert.AreEquivalent(
-                new[] { "setup-scene-avatar", "setup-package-presence", "setup-scene-acquisition", "setup-window-launch-focus" },
+                new[] { "setup-scene-avatar", "setup-package-presence", "setup-scene-acquisition", "setup-window-launch-focus", "setup-avatar-discovery-selection" },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-package-presence").speed);
@@ -105,6 +105,54 @@ namespace ASMLite.Tests.Editor
                 "already-open-reuse-focus",
                 "stale-closed-window-handled",
             }));
+        }
+
+        [Test]
+        public void LoadCanonical_includes_phase05_avatar_discovery_selection_suite()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
+
+            ASMLiteSmokeSuiteDefinition avatarSelection = suites.Single(suite => suite.suiteId == "setup-avatar-discovery-selection");
+            Assert.That(avatarSelection.defaultSelected, Is.False);
+            Assert.AreEqual("standard", avatarSelection.speed);
+            Assert.AreEqual("safe", avatarSelection.risk);
+            CollectionAssert.Contains(avatarSelection.presetGroups, "all-setup");
+            Assert.That(avatarSelection.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "selected-canonical-avatar",
+                "find-by-fixture-name",
+                "wrong-object-selected",
+                "wrong-avatar-selected",
+                "selected-inactive-avatar",
+                "unselected-inactive-avatar",
+                "duplicate-avatar-name",
+                "selected-duplicate-avatar-disambiguates",
+                "prefab-asset-avatar-selected",
+                "missing-avatar",
+                "same-name-non-avatar-ignored",
+            }));
+
+            ASMLiteSmokeStepArgs wrongObjectArgs = avatarSelection.cases.Single(item => item.caseId == "wrong-object-selected").steps.Single().args;
+            Assert.AreEqual("wrong-object-selection", wrongObjectArgs.fixtureMutation);
+            Assert.That(wrongObjectArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_SELECTED_OBJECT_NOT_AVATAR", wrongObjectArgs.expectedDiagnosticCode);
+            StringAssert.Contains("selected object is not a valid avatar", wrongObjectArgs.expectedDiagnosticContains);
+
+            ASMLiteSmokeStepArgs duplicateArgs = avatarSelection.cases.Single(item => item.caseId == "duplicate-avatar-name").steps.Single().args;
+            Assert.AreEqual("duplicate-avatar-name", duplicateArgs.fixtureMutation);
+            Assert.That(duplicateArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_AVATAR_AMBIGUOUS", duplicateArgs.expectedDiagnosticCode);
+
+            ASMLiteSmokeStepArgs prefabArgs = avatarSelection.cases.Single(item => item.caseId == "prefab-asset-avatar-selected").steps.Single().args;
+            Assert.AreEqual("selected-prefab-asset", prefabArgs.fixtureMutation);
+            Assert.That(prefabArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_AVATAR_PREFAB_ASSET", prefabArgs.expectedDiagnosticCode);
+
+            ASMLiteSmokeStepArgs missingArgs = avatarSelection.cases.Single(item => item.caseId == "missing-avatar").steps.Single().args;
+            Assert.AreEqual("missing-avatar-by-override-name", missingArgs.fixtureMutation);
+            Assert.That(missingArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_AVATAR_NOT_FOUND", missingArgs.expectedDiagnosticCode);
         }
 
         [Test]

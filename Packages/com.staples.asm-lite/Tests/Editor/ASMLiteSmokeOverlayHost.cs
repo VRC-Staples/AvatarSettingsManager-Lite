@@ -208,17 +208,84 @@ namespace ASMLite.Tests.Editor
             return componentFallback ?? activeSceneFallback ?? fallback;
         }
 
+        internal static bool TryResolveAvatarForSelection(string avatarName, out VRCAvatarDescriptor avatar, out string detail)
+        {
+            avatar = null;
+            string normalizedName = NormalizeUnityRuntimeName(avatarName);
+
+            GameObject selectedObject = GetSelectedGameObject();
+            if (selectedObject != null)
+            {
+                VRCAvatarDescriptor selectedAvatar = selectedObject.GetComponent<VRCAvatarDescriptor>();
+                if (selectedAvatar != null && EditorUtility.IsPersistent(selectedObject))
+                {
+                    detail = $"SETUP_AVATAR_PREFAB_ASSET: selected avatar target is a prefab asset, not a scene avatar instance: '{selectedObject.name}'.";
+                    return false;
+                }
+
+                if (selectedAvatar == null || !IsLoadedSceneObject(selectedObject))
+                {
+                    detail = $"SETUP_SELECTED_OBJECT_NOT_AVATAR: selected object is not a valid avatar target: '{selectedObject.name}'.";
+                    return false;
+                }
+
+                avatar = selectedAvatar;
+                detail = $"Resolved selected avatar '{selectedObject.name}' for setup automation.";
+                return true;
+            }
+
+            var matches = Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()
+                .Where(item => IsRuntimeSceneAvatarMatch(item, normalizedName) && item.gameObject.activeInHierarchy)
+                .ToArray();
+
+            if (matches.Length == 1)
+            {
+                avatar = matches[0];
+                detail = $"Resolved avatar '{avatar.gameObject.name}' found by fixture name '{normalizedName}'.";
+                return true;
+            }
+
+            if (matches.Length > 1)
+            {
+                detail = $"SETUP_AVATAR_AMBIGUOUS: Multiple avatar descriptors named '{normalizedName}' were found; select one avatar to disambiguate.";
+                return false;
+            }
+
+            detail = $"SETUP_AVATAR_NOT_FOUND: avatar could not be found for fixture name '{normalizedName}'.";
+            return false;
+        }
+
+        private static GameObject GetSelectedGameObject()
+        {
+            UnityEngine.Object selected = Selection.activeObject;
+            if (selected == null)
+                return null;
+
+            if (selected is GameObject gameObject)
+                return gameObject;
+
+            if (selected is Component component)
+                return component.gameObject;
+
+            return null;
+        }
+
+        private static bool IsLoadedSceneObject(GameObject gameObject)
+        {
+            if (gameObject == null || EditorUtility.IsPersistent(gameObject))
+                return false;
+
+            Scene scene = gameObject.scene;
+            return scene.IsValid() && scene.isLoaded;
+        }
+
         private static bool IsRuntimeSceneAvatarMatch(VRCAvatarDescriptor avatar, string normalizedName)
         {
             if (avatar == null || avatar.gameObject == null)
                 return false;
 
             GameObject avatarObject = avatar.gameObject;
-            if (EditorUtility.IsPersistent(avatarObject))
-                return false;
-
-            Scene scene = avatarObject.scene;
-            if (!scene.IsValid() || !scene.isLoaded)
+            if (!IsLoadedSceneObject(avatarObject))
                 return false;
 
             return string.Equals(NormalizeUnityRuntimeName(avatarObject.name), normalizedName, StringComparison.Ordinal);
@@ -356,15 +423,10 @@ namespace ASMLite.Tests.Editor
                     case "select-avatar":
                     {
                         window = ASMLiteWindow.OpenForAutomation();
-                        VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
-                        if (avatar == null)
-                        {
-                            detail = $"Avatar '{avatarName}' was not found.";
+                        if (!TryResolveAvatarForSelection(avatarName, out VRCAvatarDescriptor avatar, out detail))
                             return false;
-                        }
 
                         window.SelectAvatarForAutomation(avatar);
-                        detail = $"Selected avatar '{avatarName}'.";
                         return true;
                     }
 

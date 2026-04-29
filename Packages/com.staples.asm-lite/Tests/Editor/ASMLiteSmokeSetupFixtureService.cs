@@ -14,12 +14,17 @@ namespace ASMLite.Tests.Editor
     internal static class ASMLiteSmokeSetupFixtureMutationIds
     {
         internal const string TempSceneSetupRestore = "temp-scene-setup-restore";
+        internal const string ClearSelection = "clear-selection";
+        internal const string SelectedCanonicalAvatar = "selected-canonical-avatar";
         internal const string DuplicateAvatarName = "duplicate-avatar-name";
+        internal const string SelectedDuplicateAvatar = "selected-duplicate-avatar";
         internal const string SelectedInactiveAvatar = "selected-inactive-avatar";
+        internal const string UnselectedInactiveAvatar = "unselected-inactive-avatar";
         internal const string SelectedPrefabAsset = "selected-prefab-asset";
         internal const string WrongObjectSelection = "wrong-object-selection";
         internal const string WrongAvatarSelection = "wrong-avatar-selection";
         internal const string MissingAvatarByOverrideName = "missing-avatar-by-override-name";
+        internal const string SameNameNonAvatar = "same-name-non-avatar";
         internal const string RemoveComponent = "remove-component";
         internal const string ExistingComponentBaseline = "existing-component-baseline";
         internal const string StaleGeneratedFolder = "stale-generated-folder";
@@ -72,10 +77,18 @@ namespace ASMLite.Tests.Editor
                 {
                     case ASMLiteSmokeSetupFixtureMutationIds.TempSceneSetupRestore:
                         return ApplyTempSceneSetup(out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.ClearSelection:
+                        return ApplyClearSelection(out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.SelectedCanonicalAvatar:
+                        return ApplySelectedCanonicalAvatar(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.DuplicateAvatarName:
                         return ApplyDuplicateAvatarName(avatarName, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.SelectedDuplicateAvatar:
+                        return ApplySelectedDuplicateAvatar(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.SelectedInactiveAvatar:
                         return ApplySelectedInactiveAvatar(avatarName, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar:
+                        return ApplyUnselectedInactiveAvatar(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.SelectedPrefabAsset:
                         return ApplySelectedPrefabAsset(objectName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection:
@@ -83,8 +96,9 @@ namespace ASMLite.Tests.Editor
                     case ASMLiteSmokeSetupFixtureMutationIds.WrongAvatarSelection:
                         return ApplyWrongAvatarSelection(objectName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.MissingAvatarByOverrideName:
-                        detail = $"Fixture avatar override will target missing avatar '{avatarName}'.";
-                        return true;
+                        return ApplyMissingAvatarByOverrideName(avatarName, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.SameNameNonAvatar:
+                        return ApplySameNameNonAvatar(objectName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent:
                         return ApplyRemoveComponent(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.ExistingComponentBaseline:
@@ -171,6 +185,31 @@ namespace ASMLite.Tests.Editor
             return true;
         }
 
+        private bool ApplyClearSelection(out string detail)
+        {
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            _cleanupLedger.Push(new CleanupEntry("restore cleared selection", () => Selection.activeObject = previousSelection));
+            Selection.activeObject = null;
+            detail = "Unity selection cleared and restore recorded.";
+            return true;
+        }
+
+        private bool ApplySelectedCanonicalAvatar(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            if (avatar == null)
+            {
+                detail = $"Avatar '{avatarName}' was not found for selected-canonical fixture mutation.";
+                return false;
+            }
+
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            _cleanupLedger.Push(new CleanupEntry("restore canonical avatar selection", () => Selection.activeObject = previousSelection));
+            Selection.activeObject = avatar.gameObject;
+            detail = $"Canonical avatar '{avatarName}' selected and restore recorded.";
+            return true;
+        }
+
         private bool ApplyDuplicateAvatarName(string avatarName, out string detail)
         {
             VRCAvatarDescriptor source = FindSceneAvatarByName(avatarName);
@@ -180,11 +219,40 @@ namespace ASMLite.Tests.Editor
                 return false;
             }
 
+            UnityEngine.Object previousSelection = Selection.activeObject;
             GameObject duplicate = UnityEngine.Object.Instantiate(source.gameObject);
             duplicate.name = source.gameObject.name;
-            _cleanupLedger.Push(new CleanupEntry("destroy duplicate avatar", () => DestroyObject(duplicate)));
+            _cleanupLedger.Push(new CleanupEntry("destroy duplicate avatar", () =>
+            {
+                Selection.activeObject = previousSelection;
+                DestroyObject(duplicate);
+            }));
+            Selection.activeObject = null;
 
-            detail = $"Duplicate avatar named '{avatarName}' created and cleanup recorded.";
+            detail = $"Duplicate avatar named '{avatarName}' created, selection cleared, and cleanup recorded.";
+            return true;
+        }
+
+        private bool ApplySelectedDuplicateAvatar(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor source = FindSceneAvatarByName(avatarName);
+            if (source == null)
+            {
+                detail = $"Avatar '{avatarName}' was not found for selected-duplicate fixture mutation.";
+                return false;
+            }
+
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            GameObject duplicate = UnityEngine.Object.Instantiate(source.gameObject);
+            duplicate.name = source.gameObject.name;
+            _cleanupLedger.Push(new CleanupEntry("destroy selected duplicate avatar", () =>
+            {
+                Selection.activeObject = previousSelection;
+                DestroyObject(duplicate);
+            }));
+            Selection.activeObject = source.gameObject;
+
+            detail = $"Duplicate avatar named '{avatarName}' created, canonical avatar selected, and cleanup recorded.";
             return true;
         }
 
@@ -209,6 +277,30 @@ namespace ASMLite.Tests.Editor
             avatar.gameObject.SetActive(false);
             Selection.activeObject = avatar.gameObject;
             detail = $"Inactive avatar '{avatarName}' selected and restore recorded.";
+            return true;
+        }
+
+        private bool ApplyUnselectedInactiveAvatar(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            if (avatar == null)
+            {
+                detail = $"Avatar '{avatarName}' was not found for unselected-inactive fixture mutation.";
+                return false;
+            }
+
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            bool previousActive = avatar.gameObject.activeSelf;
+            _cleanupLedger.Push(new CleanupEntry("restore unselected inactive avatar", () =>
+            {
+                if (avatar != null && avatar.gameObject != null)
+                    avatar.gameObject.SetActive(previousActive);
+                Selection.activeObject = previousSelection;
+            }));
+
+            avatar.gameObject.SetActive(false);
+            Selection.activeObject = null;
+            detail = $"Avatar '{avatarName}' made inactive, selection cleared, and restore recorded.";
             return true;
         }
 
@@ -261,6 +353,30 @@ namespace ASMLite.Tests.Editor
 
             Selection.activeObject = wrongAvatar;
             detail = $"Alternate avatar '{wrongAvatar.name}' selected and cleanup recorded.";
+            return true;
+        }
+
+        private bool ApplyMissingAvatarByOverrideName(string avatarName, out string detail)
+        {
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            _cleanupLedger.Push(new CleanupEntry("restore missing avatar selection", () => Selection.activeObject = previousSelection));
+            Selection.activeObject = null;
+            detail = $"Fixture avatar override will target missing avatar '{avatarName}' with selection cleared.";
+            return true;
+        }
+
+        private bool ApplySameNameNonAvatar(string objectName, out string detail)
+        {
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            var nonAvatar = new GameObject(string.IsNullOrWhiteSpace(objectName) ? "ASM-Lite Same Name Non Avatar" : objectName);
+            _cleanupLedger.Push(new CleanupEntry("destroy same-name non-avatar", () =>
+            {
+                Selection.activeObject = previousSelection;
+                DestroyObject(nonAvatar);
+            }));
+
+            Selection.activeObject = null;
+            detail = $"Same-name non-avatar object '{nonAvatar.name}' created, selection cleared, and cleanup recorded.";
             return true;
         }
 

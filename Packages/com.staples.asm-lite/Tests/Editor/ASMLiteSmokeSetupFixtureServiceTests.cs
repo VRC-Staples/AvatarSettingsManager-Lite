@@ -77,6 +77,72 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void SelectedDuplicateAvatarMutation_SelectsCanonicalAvatarAndRestoresSingleDescriptor()
+        {
+            var args = new ASMLiteSmokeStepArgs
+            {
+                avatarName = "FixtureAvatar",
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SelectedDuplicateAvatar,
+            };
+
+            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+
+            Assert.That(applied, Is.True, detail);
+            Assert.That(CountSceneAvatarsNamed("FixtureAvatar"), Is.EqualTo(2));
+            Assert.That(Selection.activeGameObject, Is.SameAs(_ctx.AvatarGo));
+
+            bool reset = _service.Reset(out string resetDetail);
+
+            Assert.That(reset, Is.True, resetDetail);
+            Assert.That(CountSceneAvatarsNamed("FixtureAvatar"), Is.EqualTo(1));
+            Assert.That(Selection.activeGameObject, Is.Not.SameAs(_ctx.AvatarGo));
+        }
+
+        [Test]
+        public void UnselectedInactiveAvatarMutation_ClearsSelectionAndRestoresActiveState()
+        {
+            Selection.activeObject = _ctx.AvatarGo;
+            var args = new ASMLiteSmokeStepArgs
+            {
+                avatarName = "FixtureAvatar",
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar,
+            };
+
+            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+
+            Assert.That(applied, Is.True, detail);
+            Assert.That(_ctx.AvatarGo.activeSelf, Is.False);
+            Assert.That(Selection.activeObject, Is.Null);
+
+            bool reset = _service.Reset(out string resetDetail);
+
+            Assert.That(reset, Is.True, resetDetail);
+            Assert.That(_ctx.AvatarGo.activeSelf, Is.True);
+            Assert.That(Selection.activeGameObject, Is.SameAs(_ctx.AvatarGo));
+        }
+
+        [Test]
+        public void SameNameNonAvatarMutation_CreatesNonAvatarWithoutSelectingIt()
+        {
+            var args = new ASMLiteSmokeStepArgs
+            {
+                objectName = "FixtureAvatar",
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SameNameNonAvatar,
+            };
+
+            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+
+            Assert.That(applied, Is.True, detail);
+            Assert.That(Selection.activeObject, Is.Null);
+            Assert.That(GameObject.FindObjectsOfType<GameObject>().Any(item => item.name == "FixtureAvatar" && item.GetComponent<VRCAvatarDescriptor>() == null), Is.True);
+
+            bool reset = _service.Reset(out string resetDetail);
+
+            Assert.That(reset, Is.True, resetDetail);
+            Assert.That(GameObject.FindObjectsOfType<GameObject>().Any(item => item.name == "FixtureAvatar" && item.GetComponent<VRCAvatarDescriptor>() == null), Is.False);
+        }
+
+        [Test]
         public void StaleGeneratedFolderMutation_SnapshotsEvidenceBeforeCleanup()
         {
             string evidenceRoot = Path.Combine(Path.GetTempPath(), "asmlite-fixture-evidence-" + System.Guid.NewGuid().ToString("N"));

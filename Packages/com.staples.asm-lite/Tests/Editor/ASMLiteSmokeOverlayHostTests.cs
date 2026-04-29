@@ -279,6 +279,226 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_AvatarSelection_UsesSelectedSceneAvatarBeforeNameLookup()
+        {
+            GameObject canonical = null;
+            GameObject alternate = null;
+            try
+            {
+                canonical = new GameObject("FixtureAvatar");
+                canonical.AddComponent<VRCAvatarDescriptor>();
+                alternate = new GameObject("AlternateAvatar");
+                VRCAvatarDescriptor alternateDescriptor = alternate.AddComponent<VRCAvatarDescriptor>();
+                Selection.activeObject = alternate;
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.True, detail);
+                Assert.That(avatar, Is.SameAs(alternateDescriptor));
+                StringAssert.Contains("selected avatar 'AlternateAvatar'", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (canonical != null)
+                    UnityEngine.Object.DestroyImmediate(canonical);
+                if (alternate != null)
+                    UnityEngine.Object.DestroyImmediate(alternate);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_FindsSingleActiveAvatarByFixtureNameWhenNothingSelected()
+        {
+            GameObject avatarObject = null;
+            try
+            {
+                Selection.activeObject = null;
+                avatarObject = new GameObject("FixtureAvatar");
+                VRCAvatarDescriptor descriptor = avatarObject.AddComponent<VRCAvatarDescriptor>();
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.True, detail);
+                Assert.That(avatar, Is.SameAs(descriptor));
+                StringAssert.Contains("found by fixture name", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_ReportsWrongSelectedObjectDiagnostic()
+        {
+            GameObject wrongObject = null;
+            try
+            {
+                wrongObject = new GameObject("FixtureAvatar");
+                Selection.activeObject = wrongObject;
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.False);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_SELECTED_OBJECT_NOT_AVATAR", detail);
+                StringAssert.Contains("selected object is not a valid avatar", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (wrongObject != null)
+                    UnityEngine.Object.DestroyImmediate(wrongObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_ReportsAmbiguousDuplicateNamesWithoutSelectedDisambiguator()
+        {
+            GameObject first = null;
+            GameObject second = null;
+            try
+            {
+                Selection.activeObject = null;
+                first = new GameObject("FixtureAvatar");
+                first.AddComponent<VRCAvatarDescriptor>();
+                second = new GameObject("FixtureAvatar");
+                second.AddComponent<VRCAvatarDescriptor>();
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.False);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_AMBIGUOUS", detail);
+                StringAssert.Contains("Multiple avatar descriptors", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (first != null)
+                    UnityEngine.Object.DestroyImmediate(first);
+                if (second != null)
+                    UnityEngine.Object.DestroyImmediate(second);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_AllowsSelectedInactiveAvatarButDoesNotFindUnselectedInactiveAvatar()
+        {
+            GameObject avatarObject = null;
+            try
+            {
+                avatarObject = new GameObject("FixtureAvatar");
+                VRCAvatarDescriptor descriptor = avatarObject.AddComponent<VRCAvatarDescriptor>();
+                avatarObject.SetActive(false);
+                Selection.activeObject = null;
+
+                bool unselectedResolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor unselectedAvatar,
+                    out string unselectedDetail);
+
+                Assert.That(unselectedResolved, Is.False);
+                Assert.That(unselectedAvatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_NOT_FOUND", unselectedDetail);
+
+                Selection.activeObject = avatarObject;
+                bool selectedResolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor selectedAvatar,
+                    out string selectedDetail);
+
+                Assert.That(selectedResolved, Is.True, selectedDetail);
+                Assert.That(selectedAvatar, Is.SameAs(descriptor));
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_IgnoresSameNameNonAvatarObjectsDuringNameLookup()
+        {
+            GameObject nonAvatar = null;
+            try
+            {
+                Selection.activeObject = null;
+                nonAvatar = new GameObject("FixtureAvatar");
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.False);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_NOT_FOUND", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (nonAvatar != null)
+                    UnityEngine.Object.DestroyImmediate(nonAvatar);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_ReportsPrefabAssetSelectionDiagnostic()
+        {
+            const string folderPath = "Assets/ASMLiteAvatarSelectionTests_Temp";
+            const string prefabPath = folderPath + "/FixturePrefabAvatar.prefab";
+            GameObject source = null;
+            try
+            {
+                if (!AssetDatabase.IsValidFolder(folderPath))
+                    AssetDatabase.CreateFolder("Assets", "ASMLiteAvatarSelectionTests_Temp");
+                source = new GameObject("FixtureAvatar");
+                source.AddComponent<VRCAvatarDescriptor>();
+                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(source, prefabPath);
+                UnityEngine.Object.DestroyImmediate(source);
+                source = null;
+                Selection.activeObject = prefab;
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.False);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_PREFAB_ASSET", detail);
+                StringAssert.Contains("prefab asset", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (source != null)
+                    UnityEngine.Object.DestroyImmediate(source);
+                AssetDatabase.DeleteAsset(prefabPath);
+                if (AssetDatabase.IsValidFolder(folderPath))
+                    AssetDatabase.DeleteAsset(folderPath);
+            }
+        }
+
+        [Test]
         public void Runner_RemainsRegisteredAfterReady_WhenExitOnReadyIsFalse()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
