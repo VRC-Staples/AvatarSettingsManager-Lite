@@ -55,6 +55,14 @@ function Stop-WithUsageError {
 }
 
 function Resolve-CargoCommand {
+    $preferNativeCargo = $RepoRoot -match '^/' -or -not [string]::IsNullOrWhiteSpace($env:WSL_DISTRO_NAME)
+    if ($preferNativeCargo) {
+        $command = Get-Command cargo -ErrorAction SilentlyContinue
+        if ($null -ne $command -and -not $command.Source.EndsWith('.exe', [StringComparison]::OrdinalIgnoreCase)) {
+            return $command.Source
+        }
+    }
+
     $command = Get-Command cargo.exe -ErrorAction SilentlyContinue
     if ($null -ne $command) {
         return $command.Source

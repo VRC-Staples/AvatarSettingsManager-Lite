@@ -862,6 +862,7 @@ mod tests {
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
+                "setup-negative-diagnostics",
             ]
         );
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
@@ -921,6 +922,7 @@ mod tests {
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
+                "setup-negative-diagnostics",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]

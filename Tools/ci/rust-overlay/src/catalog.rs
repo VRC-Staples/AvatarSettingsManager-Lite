@@ -416,7 +416,7 @@ mod tests {
                 "assert-primary-action"
             ]
         );
-        assert_eq!(catalog.groups[0].suites.len(), 8);
+        assert_eq!(catalog.groups[0].suites.len(), 9);
         assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
             .steps

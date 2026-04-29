@@ -55,6 +55,7 @@ namespace ASMLite.Tests.Editor
                     "setup-scaffold-add-idempotency",
                     "setup-existing-state-recognition",
                     "setup-generated-asset-readiness",
+                    "setup-negative-diagnostics",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
@@ -245,6 +246,77 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadCanonical_includes_phase07a_safe_negative_diagnostics_suite()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
+
+            Assert.That(suites.ContainsKey("setup-negative-diagnostics"), Is.True);
+
+            ASMLiteSmokeSuiteDefinition negatives = suites["setup-negative-diagnostics"];
+            Assert.That(negatives.defaultSelected, Is.False);
+            Assert.AreEqual("standard", negatives.speed);
+            Assert.AreEqual("safe", negatives.risk);
+            CollectionAssert.AreEquivalent(new[] { "safe-negatives", "all-setup" }, negatives.presetGroups);
+            Assert.That(negatives.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "missing-scene",
+                "non-scene-path",
+                "missing-package-resource",
+                "missing-avatar",
+                "duplicate-avatar-ambiguity",
+                "prefab-asset-avatar-selected",
+                "wrong-object-selected",
+            }));
+
+            AssertExpectedDiagnostic(
+                negatives,
+                "missing-scene",
+                "SETUP_SCENE_MISSING",
+                "scene could not be found",
+                expectedActionType: "open-scene",
+                expectedScenePath: "Assets/Missing.unity");
+            AssertExpectedDiagnostic(
+                negatives,
+                "non-scene-path",
+                "SETUP_SCENE_PATH_INVALID",
+                "not a Unity scene",
+                expectedActionType: "open-scene",
+                expectedScenePath: "Packages/com.staples.asm-lite/package.json");
+            AssertExpectedDiagnostic(
+                negatives,
+                "missing-package-resource",
+                "SETUP_PACKAGE_RESOURCE_MISSING",
+                "prefab source was not found",
+                expectedActionType: "assert-package-resource-present",
+                expectedObjectName: "Packages/com.staples.asm-lite/Missing.prefab");
+            AssertExpectedDiagnostic(
+                negatives,
+                "missing-avatar",
+                "SETUP_AVATAR_NOT_FOUND",
+                "No descriptor-bearing avatar",
+                expectedMutation: "missing-avatar-by-override-name");
+            AssertExpectedDiagnostic(
+                negatives,
+                "duplicate-avatar-ambiguity",
+                "SETUP_AVATAR_AMBIGUOUS",
+                "Multiple avatars match",
+                expectedMutation: "duplicate-avatar-name");
+            AssertExpectedDiagnostic(
+                negatives,
+                "prefab-asset-avatar-selected",
+                "SETUP_AVATAR_PREFAB_ASSET",
+                "prefab asset",
+                expectedMutation: "selected-prefab-asset");
+            AssertExpectedDiagnostic(
+                negatives,
+                "wrong-object-selected",
+                "SETUP_SELECTED_OBJECT_NOT_AVATAR",
+                "selected object is not a valid avatar",
+                expectedMutation: "wrong-object-selection");
+        }
+
+        [Test]
         public void LoadFromJson_rejects_unknown_suite_metadata_values()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"risk\": \"safe\"", "\"risk\": \"maybe\"", StringComparison.Ordinal);
@@ -387,6 +459,30 @@ namespace ASMLite.Tests.Editor
 
             var exception = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(rawJson));
             StringAssert.Contains("steps", exception.Message);
+        }
+
+        private static void AssertExpectedDiagnostic(
+            ASMLiteSmokeSuiteDefinition suite,
+            string caseId,
+            string expectedCode,
+            string expectedText,
+            string expectedActionType = "select-avatar",
+            string expectedScenePath = null,
+            string expectedObjectName = null,
+            string expectedMutation = null)
+        {
+            ASMLiteSmokeStepDefinition step = suite.cases.Single(item => item.caseId == caseId).steps.Single();
+            Assert.AreEqual(expectedActionType, step.actionType);
+            Assert.That(step.args.expectStepFailure, Is.True);
+            Assert.That(step.args.preserveFailureEvidence, Is.True);
+            Assert.AreEqual(expectedCode, step.args.expectedDiagnosticCode);
+            StringAssert.Contains(expectedText, step.args.expectedDiagnosticContains);
+            if (expectedScenePath != null)
+                Assert.AreEqual(expectedScenePath, step.args.scenePath);
+            if (expectedObjectName != null)
+                Assert.AreEqual(expectedObjectName, step.args.objectName);
+            if (expectedMutation != null)
+                Assert.AreEqual(expectedMutation, step.args.fixtureMutation);
         }
 
         private static string BuildSingleStepCatalogJson(string argsJson)

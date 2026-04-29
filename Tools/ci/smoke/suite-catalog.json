@@ -1469,6 +1469,193 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-negative-diagnostics",
+          "label": "Setup Negative Diagnostics",
+          "description": "Validate safe setup diagnostic paths for bad scene, package resource, and avatar targets using expected-failure semantics.",
+          "resetOverride": "SceneReload",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "safe-negatives",
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": false,
+          "expectedOutcome": "Each safe negative reports the locked diagnostic code and useful human text without destructive project mutation.",
+          "debugHint": "If a negative diagnostic drifts, inspect the owning setup action and expectedDiagnostic args before changing product behavior.",
+          "cases": [
+            {
+              "caseId": "missing-scene",
+              "label": "Missing scene diagnostic",
+              "description": "Try to open a scene path that is intentionally absent.",
+              "expectedOutcome": "SETUP_SCENE_MISSING is reported as an expected failure.",
+              "debugHint": "If this unexpectedly succeeds, verify the missing test path is still absent.",
+              "steps": [
+                {
+                  "stepId": "negative-missing-scene",
+                  "label": "Assert missing scene diagnostic",
+                  "description": "Attempt to open Assets/Missing.unity and require the missing-scene diagnostic.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "SETUP_SCENE_MISSING is reported.",
+                  "debugHint": "Inspect scene path validation before OpenScene.",
+                  "args": {
+                    "scenePath": "Assets/Missing.unity",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SCENE_MISSING",
+                    "expectedDiagnosticContains": "scene could not be found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "non-scene-path",
+              "label": "Non-scene path diagnostic",
+              "description": "Try to open an existing package JSON path as a scene.",
+              "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported as an expected failure.",
+              "debugHint": "If the diagnostic changes, inspect path extension validation before scene loading.",
+              "steps": [
+                {
+                  "stepId": "negative-non-scene-path",
+                  "label": "Assert non-scene path diagnostic",
+                  "description": "Attempt to open package.json as a Unity scene and require the invalid-path diagnostic.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported.",
+                  "debugHint": "Inspect path extension validation before scene loading.",
+                  "args": {
+                    "scenePath": "Packages/com.staples.asm-lite/package.json",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SCENE_PATH_INVALID",
+                    "expectedDiagnosticContains": "not a Unity scene",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "missing-package-resource",
+              "label": "Missing package resource diagnostic",
+              "description": "Check an intentionally absent package prefab path without mutating package installation.",
+              "expectedOutcome": "SETUP_PACKAGE_RESOURCE_MISSING is reported as an expected failure.",
+              "debugHint": "If this unexpectedly succeeds, verify the missing package resource path is still absent.",
+              "steps": [
+                {
+                  "stepId": "negative-missing-package-resource",
+                  "label": "Assert missing package resource diagnostic",
+                  "description": "Attempt to resolve a missing package prefab source and require the resource diagnostic.",
+                  "actionType": "assert-package-resource-present",
+                  "expectedOutcome": "SETUP_PACKAGE_RESOURCE_MISSING is reported.",
+                  "debugHint": "Inspect package resource path override handling.",
+                  "args": {
+                    "objectName": "Packages/com.staples.asm-lite/Missing.prefab",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_PACKAGE_RESOURCE_MISSING",
+                    "expectedDiagnosticContains": "prefab source was not found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "missing-avatar",
+              "label": "Missing avatar diagnostic",
+              "description": "Use a fixture avatar-name override that does not match any descriptor-bearing scene avatar.",
+              "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported as an expected failure.",
+              "debugHint": "Inspect avatar name lookup and descriptor filtering.",
+              "steps": [
+                {
+                  "stepId": "negative-missing-avatar",
+                  "label": "Assert missing avatar diagnostic",
+                  "description": "Apply missing-avatar fixture state and require the not-found diagnostic.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported.",
+                  "debugHint": "Inspect avatar lookup and fixture override name.",
+                  "args": {
+                    "fixtureMutation": "missing-avatar-by-override-name",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_NOT_FOUND",
+                    "expectedDiagnosticContains": "No descriptor-bearing avatar",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "duplicate-avatar-ambiguity",
+              "label": "Duplicate avatar ambiguity diagnostic",
+              "description": "Create duplicate descriptor-bearing avatars with the fixture target name and no disambiguating selection.",
+              "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported as an expected failure.",
+              "debugHint": "Inspect duplicate-name fixture cleanup and selected-avatar disambiguation policy.",
+              "steps": [
+                {
+                  "stepId": "negative-duplicate-avatar-ambiguity",
+                  "label": "Assert duplicate avatar ambiguity diagnostic",
+                  "description": "Apply duplicate-avatar fixture state and require the ambiguous diagnostic.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported.",
+                  "debugHint": "Inspect duplicate descriptor-bearing scene avatar setup.",
+                  "args": {
+                    "fixtureMutation": "duplicate-avatar-name",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_AMBIGUOUS",
+                    "expectedDiagnosticContains": "Multiple avatars match",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "prefab-asset-avatar-selected",
+              "label": "Prefab asset avatar selected diagnostic",
+              "description": "Select a prefab asset instead of a scene avatar instance.",
+              "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported as an expected failure.",
+              "debugHint": "Inspect prefab asset selection checks before scene-avatar lookup.",
+              "steps": [
+                {
+                  "stepId": "negative-prefab-asset-avatar-selected",
+                  "label": "Assert prefab asset diagnostic",
+                  "description": "Apply selected-prefab-asset fixture state and require the prefab-asset diagnostic.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported.",
+                  "debugHint": "Inspect prefab asset type checks.",
+                  "args": {
+                    "fixtureMutation": "selected-prefab-asset",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_AVATAR_PREFAB_ASSET",
+                    "expectedDiagnosticContains": "prefab asset",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "wrong-object-selected",
+              "label": "Wrong object selected diagnostic",
+              "description": "Select a non-avatar scene object and require the selected-object diagnostic.",
+              "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported as an expected failure.",
+              "debugHint": "Inspect selected object type checks before name lookup.",
+              "steps": [
+                {
+                  "stepId": "negative-wrong-object-selected",
+                  "label": "Assert wrong object selected diagnostic",
+                  "description": "Apply wrong-object-selection fixture state and require the selected-object diagnostic.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported.",
+                  "debugHint": "Inspect selected-object type checks and fixture cleanup.",
+                  "args": {
+                    "fixtureMutation": "wrong-object-selection",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SELECTED_OBJECT_NOT_AVATAR",
+                    "expectedDiagnosticContains": "selected object is not a valid avatar",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },

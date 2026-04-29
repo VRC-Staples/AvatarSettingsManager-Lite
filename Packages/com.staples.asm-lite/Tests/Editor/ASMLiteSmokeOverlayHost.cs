@@ -555,7 +555,7 @@ namespace ASMLite.Tests.Editor
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             if (prefab == null)
             {
-                detail = $"Package resource check failed: ASM-Lite prefab source was not found at {prefabPath}.";
+                detail = $"SETUP_PACKAGE_RESOURCE_MISSING: ASM-Lite prefab source was not found at {prefabPath}.";
                 return false;
             }
 

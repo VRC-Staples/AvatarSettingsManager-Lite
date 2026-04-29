@@ -123,6 +123,22 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_AssertsPackageResourceMissingWithStableDiagnosticCode()
+        {
+            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-package-resource-present",
+                    new ASMLiteSmokeStepArgs { objectName = "Packages/com.staples.asm-lite/Missing.prefab" },
+                    "Assets/Click ME.unity",
+                    "Oct25_Dress",
+                    out string detail,
+                    out string stackTrace),
+                Is.False);
+            StringAssert.Contains("SETUP_PACKAGE_RESOURCE_MISSING", detail);
+            StringAssert.Contains("prefab source was not found", detail);
+            Assert.That(stackTrace, Is.Empty);
+        }
+
+        [Test]
         public void UnityRuntime_AssertsExpectedPrimaryActionFromStepArgs()
         {
             var avatarObject = new GameObject("Phase06_AddPrefabAvatar");

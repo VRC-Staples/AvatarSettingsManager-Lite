@@ -297,6 +297,7 @@ mod tests {
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
+                "setup-negative-diagnostics",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
