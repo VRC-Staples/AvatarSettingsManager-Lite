@@ -416,7 +416,7 @@ mod tests {
                 "assert-primary-action"
             ]
         );
-        assert_eq!(catalog.groups[0].suites.len(), 9);
+        assert_eq!(catalog.groups[0].suites.len(), 10);
         assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
             .steps
@@ -464,8 +464,21 @@ mod tests {
                 "playmode-runtime-validation"
             ]
         );
-        assert!(suites.iter().all(|suite| suite.risk == "safe"));
-        assert!(suites.iter().all(|suite| !suite.is_destructive()));
+        assert!(suites
+            .iter()
+            .filter(|suite| suite.default_selected)
+            .all(|suite| suite.risk == "safe"));
+        assert!(suites
+            .iter()
+            .filter(|suite| suite.default_selected)
+            .all(|suite| !suite.is_destructive()));
+        let destructive = suites
+            .iter()
+            .find(|suite| suite.suite_id == "setup-destructive-recovery-reset")
+            .expect("destructive recovery suite exists");
+        assert_eq!(destructive.speed, "destructive");
+        assert_eq!(destructive.risk, "destructive");
+        assert!(destructive.is_destructive());
         let quick_default_ids: Vec<&str> = suites
             .iter()
             .filter(|suite| suite.preset_groups.contains(&"quick-default".to_string()))

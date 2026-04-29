@@ -923,6 +923,7 @@ mod tests {
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
                 "setup-negative-diagnostics",
+                "setup-destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]

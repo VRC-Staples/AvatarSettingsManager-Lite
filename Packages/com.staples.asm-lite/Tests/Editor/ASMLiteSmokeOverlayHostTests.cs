@@ -678,6 +678,67 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void SetupDestructiveRecoverySuite_ResetsAfterEveryDestructiveCase()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000014_run-suite";
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(14, commandId, "setup-destructive-recovery-reset"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.ControlledCorruptGeneratedAsset,
+                    ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
+                    ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
+                    ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
+                    ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
+                }));
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(5));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Count(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && item.message.Contains("Clean reset passed")), Is.EqualTo(5));
+            }
+        }
+
+        [Test]
+        public void SetupDestructiveRecoverySuite_StopsWhenCleanResetFails()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000015_run-suite";
+                context.Runtime.FailNextSetupFixtureReset("simulated cleanup ledger failure");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(15, commandId, "setup-destructive-recovery-reset"));
+                AdvanceUntilReviewRequired(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.ControlledCorruptGeneratedAsset,
+                }));
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)
+                    && item.message.Contains("SETUP_DESTRUCTIVE_RESET_FAILED")
+                    && item.message.Contains("simulated cleanup ledger failure")), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal)), Is.True);
+            }
+        }
+
+        [Test]
         public void SetupSuite_TreatsExpectedDiagnosticStepFailureAsPassed()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
@@ -1709,6 +1770,51 @@ namespace ASMLite.Tests.Editor
                             },
                             new ASMLiteSmokeSuiteDefinition
                             {
+                                suiteId = "setup-destructive-recovery-reset",
+                                label = "Destructive Recovery Reset",
+                                description = "Exercises destructive setup fixture states and proves clean reset after every case.",
+                                resetOverride = "FullPackageRebuild",
+                                speed = "destructive",
+                                risk = "destructive",
+                                presetGroups = new[] { "all-setup", "destructive-drills" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Every destructive fixture state is cleaned before the next case runs.",
+                                debugHint = "Inspect clean reset proof and destructive fixture evidence before rerunning.",
+                                cases = new[]
+                                {
+                                    BuildDestructiveResetCase(
+                                        "controlled-corrupt-generated-asset",
+                                        "Controlled corrupt generated asset",
+                                        ASMLiteSmokeSetupFixtureMutationIds.ControlledCorruptGeneratedAsset,
+                                        "Assert Rebuild is still recoverable after a controlled generated asset corruption."),
+                                    BuildDestructiveResetCase(
+                                        "stale-vendorized-references",
+                                        "Stale vendorized references",
+                                        ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
+                                        "Assert package-managed return is available from stale vendorized references.",
+                                        "ReturnToPackageManaged"),
+                                    BuildDestructiveResetCase(
+                                        "removed-generated-assets-after-component",
+                                        "Removed generated assets after component exists",
+                                        ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
+                                        "Assert Rebuild is available when generated assets are missing after component setup."),
+                                    BuildDestructiveResetCase(
+                                        "removed-component-after-generated-assets",
+                                        "Removed component after generated assets exist",
+                                        ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
+                                        "Assert Add Prefab is available when generated assets exist without the component.",
+                                        "AddPrefab"),
+                                    BuildDestructiveResetCase(
+                                        "interrupted-detached-state",
+                                        "Interrupted detached state",
+                                        ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
+                                        "Assert Add Prefab is available from a staged detached baseline.",
+                                        "AddPrefab"),
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
                                 suiteId = "expected-diagnostic-host",
                                 label = "Expected Diagnostic Host",
                                 description = "Validates active run expected diagnostic handling.",
@@ -1788,6 +1894,42 @@ namespace ASMLite.Tests.Editor
             };
 
             return JsonUtility.ToJson(catalog, prettyPrint: true);
+        }
+
+        private static ASMLiteSmokeCaseDefinition BuildDestructiveResetCase(
+            string caseId,
+            string label,
+            string fixtureMutation,
+            string description,
+            string expectedPrimaryAction = "Rebuild")
+        {
+            return new ASMLiteSmokeCaseDefinition
+            {
+                caseId = caseId,
+                label = label,
+                description = description,
+                expectedOutcome = "The destructive fixture state is exercised and then reset to a clean baseline.",
+                debugHint = "Inspect destructive fixture mutation details and clean reset proof.",
+                steps = new[]
+                {
+                    new ASMLiteSmokeStepDefinition
+                    {
+                        stepId = caseId,
+                        label = label,
+                        description = description,
+                        actionType = "assert-primary-action",
+                        args = new ASMLiteSmokeStepArgs
+                        {
+                            fixtureMutation = fixtureMutation,
+                            expectedPrimaryAction = expectedPrimaryAction,
+                            preserveFailureEvidence = true,
+                            requireCleanReset = true,
+                        },
+                        expectedOutcome = "The destructive state is recoverable and clean reset proof is recorded.",
+                        debugHint = "Inspect primary action contract and setup fixture reset detail.",
+                    },
+                },
+            };
         }
 
         private static ASMLiteSmokeProtocolCommand BuildShutdownCommand(int commandSeq, string commandId)
@@ -1920,11 +2062,13 @@ namespace ASMLite.Tests.Editor
             internal List<string> SelectedAvatars { get; } = new List<string>();
             internal List<string> AppliedFixtureMutations { get; } = new List<string>();
             internal string LastMutationObjectName { get; private set; } = string.Empty;
+            internal int ResetSetupFixtureCount { get; private set; }
 
             private readonly Dictionary<string, string> _forcedFailuresByAction = new Dictionary<string, string>(StringComparer.Ordinal);
             private readonly List<Tuple<string, string>> _consoleErrors = new List<Tuple<string, string>>();
             private readonly Dictionary<string, string> _consoleErrorsByAction = new Dictionary<string, string>(StringComparer.Ordinal);
             private bool _consoleErrorCaptureActive;
+            private string _nextSetupFixtureResetFailure = string.Empty;
 
             internal double CurrentTimeSeconds { get; private set; }
 
@@ -2016,6 +2160,21 @@ namespace ASMLite.Tests.Editor
                 return true;
             }
 
+            public bool ResetSetupFixture(out string detail, out string stackTrace)
+            {
+                ResetSetupFixtureCount++;
+                stackTrace = string.Empty;
+                if (!string.IsNullOrWhiteSpace(_nextSetupFixtureResetFailure))
+                {
+                    detail = _nextSetupFixtureResetFailure;
+                    _nextSetupFixtureResetFailure = string.Empty;
+                    return false;
+                }
+
+                detail = "Setup fixture reset completed with clean baseline proof.";
+                return true;
+            }
+
             public bool ExecuteCatalogStep(
                 string actionType,
                 ASMLiteSmokeStepArgs args,
@@ -2099,6 +2258,13 @@ namespace ASMLite.Tests.Editor
 
                 _forcedFailuresByAction[actionType.Trim()] = string.IsNullOrWhiteSpace(failureMessage)
                     ? "Injected action failure."
+                    : failureMessage.Trim();
+            }
+
+            internal void FailNextSetupFixtureReset(string failureMessage)
+            {
+                _nextSetupFixtureResetFailure = string.IsNullOrWhiteSpace(failureMessage)
+                    ? "Injected setup fixture reset failure."
                     : failureMessage.Trim();
             }
 

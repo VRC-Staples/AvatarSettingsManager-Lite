@@ -131,6 +131,7 @@ namespace ASMLite.Tests.Editor
             string evidenceRootPath,
             out string detail,
             out string stackTrace);
+        bool ResetSetupFixture(out string detail, out string stackTrace);
         bool ExecuteCatalogStep(
             string actionType,
             ASMLiteSmokeStepArgs args,
@@ -371,6 +372,12 @@ namespace ASMLite.Tests.Editor
         {
             stackTrace = string.Empty;
             return _fixtureService.ApplyMutation(args, defaultScenePath, defaultAvatarName, evidenceRootPath, out detail);
+        }
+
+        public bool ResetSetupFixture(out string detail, out string stackTrace)
+        {
+            stackTrace = string.Empty;
+            return _fixtureService.Reset(out detail);
         }
 
         public bool ExecuteCatalogStep(
@@ -1374,9 +1381,18 @@ namespace ASMLite.Tests.Editor
                     return;
                 }
 
-                PassActiveRunStep(activeRun, suiteCase, step, string.IsNullOrWhiteSpace(detail)
+                string cleanResetMessage = string.Empty;
+                string cleanResetStackTrace = string.Empty;
+                if (RequiresCleanReset(step) && !TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                {
+                    FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
+                    return;
+                }
+
+                string passMessage = string.IsNullOrWhiteSpace(detail)
                     ? $"Step '{step.stepId}' passed."
-                    : detail.Trim());
+                    : detail.Trim();
+                PassActiveRunStep(activeRun, suiteCase, step, AppendCleanResetPassMessage(passMessage, cleanResetMessage));
                 return;
             }
 
@@ -1392,7 +1408,15 @@ namespace ASMLite.Tests.Editor
                     out string expectedFailurePassMessage,
                     out string expectedFailureMismatchMessage))
                 {
-                    PassActiveRunStep(activeRun, suiteCase, step, expectedFailurePassMessage);
+                    string cleanResetMessage = string.Empty;
+                    string cleanResetStackTrace = string.Empty;
+                    if (RequiresCleanReset(step) && !TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                    {
+                        FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
+                        return;
+                    }
+
+                    PassActiveRunStep(activeRun, suiteCase, step, AppendCleanResetPassMessage(expectedFailurePassMessage, cleanResetMessage));
                     return;
                 }
 
@@ -1472,6 +1496,42 @@ namespace ASMLite.Tests.Editor
             };
             activeRun.Result.Succeeded = false;
             activeRun.Phase = ActiveRunPhase.SuiteFailed;
+        }
+
+        private static bool RequiresCleanReset(ASMLiteSmokeStepDefinition step)
+        {
+            return step != null && step.args != null && step.args.requireCleanReset;
+        }
+
+        private bool TryRunRequiredCleanReset(out string detail, out string stackTrace)
+        {
+            bool reset = _runtime.ResetSetupFixture(out string resetDetail, out stackTrace);
+            string normalizedDetail = string.IsNullOrWhiteSpace(resetDetail) ? string.Empty : resetDetail.Trim();
+            if (reset)
+            {
+                detail = string.IsNullOrWhiteSpace(normalizedDetail)
+                    ? "Clean reset passed."
+                    : $"Clean reset passed: {normalizedDetail}";
+                return true;
+            }
+
+            detail = string.IsNullOrWhiteSpace(normalizedDetail)
+                ? "SETUP_DESTRUCTIVE_RESET_FAILED: clean reset failed after destructive setup case."
+                : $"SETUP_DESTRUCTIVE_RESET_FAILED: clean reset failed after destructive setup case. {normalizedDetail}";
+            return false;
+        }
+
+        private static string AppendCleanResetPassMessage(string stepMessage, string cleanResetMessage)
+        {
+            string normalizedStepMessage = string.IsNullOrWhiteSpace(stepMessage)
+                ? "Step passed."
+                : stepMessage.Trim();
+            string normalizedCleanResetMessage = string.IsNullOrWhiteSpace(cleanResetMessage)
+                ? string.Empty
+                : cleanResetMessage.Trim();
+            return string.IsNullOrWhiteSpace(normalizedCleanResetMessage)
+                ? normalizedStepMessage
+                : $"{normalizedStepMessage} {normalizedCleanResetMessage}";
         }
 
         private static bool ShouldSettleAfterStep(ASMLiteSmokeStepDefinition step)

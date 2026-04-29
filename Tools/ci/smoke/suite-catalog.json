@@ -1656,6 +1656,140 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-destructive-recovery-reset",
+          "label": "Destructive Recovery Reset",
+          "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",
+          "resetOverride": "FullPackageRebuild",
+          "speed": "destructive",
+          "risk": "destructive",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup",
+            "destructive-drills"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Every destructive fixture state is followed by clean reset proof, and reset failure stops the suite for review.",
+          "debugHint": "If this suite fails, inspect preserved evidence and setup fixture clean reset detail before continuing destructive drills.",
+          "cases": [
+            {
+              "caseId": "controlled-corrupt-generated-asset",
+              "label": "Controlled corrupt generated asset",
+              "description": "Corrupt generated content under the controlled ASM-Lite generated folder, then prove the setup flow can recover and reset cleanly.",
+              "expectedOutcome": "Rebuild remains the primary recovery action and clean reset proof is recorded.",
+              "debugHint": "Inspect generated asset corruption evidence and cleanup ledger reset proof.",
+              "steps": [
+                {
+                  "stepId": "controlled-corrupt-generated-asset",
+                  "label": "Assert corrupt generated asset recovery",
+                  "description": "Apply controlled-corrupt-generated-asset and assert Rebuild is available.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available and clean reset proof is recorded.",
+                  "debugHint": "Inspect controlled generated corruption and primary action contract.",
+                  "args": {
+                    "fixtureMutation": "controlled-corrupt-generated-asset",
+                    "expectedPrimaryAction": "Rebuild",
+                    "preserveFailureEvidence": true,
+                    "requireCleanReset": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "stale-vendorized-references",
+              "label": "Stale vendorized references",
+              "description": "Stage vendorized generated references and prove recovery returns to package-managed state after reset.",
+              "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
+              "debugHint": "Inspect vendorized path evidence and reset proof.",
+              "steps": [
+                {
+                  "stepId": "stale-vendorized-references",
+                  "label": "Assert stale vendorized recovery",
+                  "description": "Apply vendorized-state-baseline and assert Return to Package Managed is available.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
+                  "debugHint": "Inspect stale vendorized references and primary action contract.",
+                  "args": {
+                    "fixtureMutation": "vendorized-state-baseline",
+                    "expectedPrimaryAction": "ReturnToPackageManaged",
+                    "preserveFailureEvidence": true,
+                    "requireCleanReset": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "removed-generated-assets-after-component",
+              "label": "Removed generated assets after component exists",
+              "description": "Remove generated assets while the component exists and prove rebuild recovery resets cleanly.",
+              "expectedOutcome": "Rebuild is available and clean reset proof is recorded.",
+              "debugHint": "Inspect missing generated folder evidence and reset proof.",
+              "steps": [
+                {
+                  "stepId": "removed-generated-assets-after-component",
+                  "label": "Assert missing generated assets recovery",
+                  "description": "Apply missing-generated-folder and assert Rebuild is available.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available and clean reset proof is recorded.",
+                  "debugHint": "Inspect missing generated assets and primary action contract.",
+                  "args": {
+                    "fixtureMutation": "missing-generated-folder",
+                    "expectedPrimaryAction": "Rebuild",
+                    "preserveFailureEvidence": true,
+                    "requireCleanReset": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "removed-component-after-generated-assets",
+              "label": "Removed component after generated assets exist",
+              "description": "Leave generated assets behind without the component and prove Add Prefab recovery resets cleanly.",
+              "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+              "debugHint": "Inspect generated-folder-without-component evidence and reset proof.",
+              "steps": [
+                {
+                  "stepId": "removed-component-after-generated-assets",
+                  "label": "Assert generated assets without component recovery",
+                  "description": "Apply generated-folder-without-component and assert Add Prefab is available.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+                  "debugHint": "Inspect component absence and primary action contract.",
+                  "args": {
+                    "fixtureMutation": "generated-folder-without-component",
+                    "expectedPrimaryAction": "AddPrefab",
+                    "preserveFailureEvidence": true,
+                    "requireCleanReset": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "interrupted-detached-state",
+              "label": "Interrupted detached state",
+              "description": "Stage a detached baseline and prove Add Prefab recovery resets cleanly.",
+              "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+              "debugHint": "Inspect detached baseline evidence and reset proof.",
+              "steps": [
+                {
+                  "stepId": "interrupted-detached-state",
+                  "label": "Assert interrupted detached recovery",
+                  "description": "Apply detached-state-baseline and assert Add Prefab is available.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+                  "debugHint": "Inspect detached state and primary action contract.",
+                  "args": {
+                    "fixtureMutation": "detached-state-baseline",
+                    "expectedPrimaryAction": "AddPrefab",
+                    "preserveFailureEvidence": true,
+                    "requireCleanReset": true
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },

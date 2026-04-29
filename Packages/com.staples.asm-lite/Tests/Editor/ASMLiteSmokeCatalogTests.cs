@@ -40,7 +40,7 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.AreEquivalent(
                 new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.defaultSelected).Select(suite => suite.suiteId).ToArray());
-            Assert.IsTrue(suites.All(suite => !suite.IsDestructive));
+            Assert.IsTrue(suites.Where(suite => suite.defaultSelected).All(suite => !suite.IsDestructive));
             CollectionAssert.AreEquivalent(
                 new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
@@ -56,6 +56,7 @@ namespace ASMLite.Tests.Editor
                     "setup-existing-state-recognition",
                     "setup-generated-asset-readiness",
                     "setup-negative-diagnostics",
+                    "setup-destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
@@ -317,6 +318,56 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadCanonical_includes_phase08_destructive_recovery_reset_suite()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
+
+            Assert.That(suites.ContainsKey("setup-destructive-recovery-reset"), Is.True);
+
+            ASMLiteSmokeSuiteDefinition destructive = suites["setup-destructive-recovery-reset"];
+            Assert.That(destructive.defaultSelected, Is.False);
+            Assert.AreEqual("destructive", destructive.speed);
+            Assert.AreEqual("destructive", destructive.risk);
+            Assert.That(destructive.IsDestructive, Is.True);
+            CollectionAssert.AreEquivalent(new[] { "all-setup", "destructive-drills" }, destructive.presetGroups);
+            Assert.That(destructive.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "controlled-corrupt-generated-asset",
+                "stale-vendorized-references",
+                "removed-generated-assets-after-component",
+                "removed-component-after-generated-assets",
+                "interrupted-detached-state",
+            }));
+
+            AssertDestructiveResetCase(
+                destructive,
+                "controlled-corrupt-generated-asset",
+                "controlled-corrupt-generated-asset",
+                "Rebuild");
+            AssertDestructiveResetCase(
+                destructive,
+                "stale-vendorized-references",
+                "vendorized-state-baseline",
+                "ReturnToPackageManaged");
+            AssertDestructiveResetCase(
+                destructive,
+                "removed-generated-assets-after-component",
+                "missing-generated-folder",
+                "Rebuild");
+            AssertDestructiveResetCase(
+                destructive,
+                "removed-component-after-generated-assets",
+                "generated-folder-without-component",
+                "AddPrefab");
+            AssertDestructiveResetCase(
+                destructive,
+                "interrupted-detached-state",
+                "detached-state-baseline",
+                "AddPrefab");
+        }
+
+        [Test]
         public void LoadFromJson_rejects_unknown_suite_metadata_values()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"risk\": \"safe\"", "\"risk\": \"maybe\"", StringComparison.Ordinal);
@@ -483,6 +534,20 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(expectedObjectName, step.args.objectName);
             if (expectedMutation != null)
                 Assert.AreEqual(expectedMutation, step.args.fixtureMutation);
+        }
+
+        private static void AssertDestructiveResetCase(
+            ASMLiteSmokeSuiteDefinition suite,
+            string caseId,
+            string expectedMutation,
+            string expectedPrimaryAction)
+        {
+            ASMLiteSmokeStepDefinition step = suite.cases.Single(item => item.caseId == caseId).steps.Single();
+            Assert.AreEqual("assert-primary-action", step.actionType);
+            Assert.AreEqual(expectedMutation, step.args.fixtureMutation);
+            Assert.AreEqual(expectedPrimaryAction, step.args.expectedPrimaryAction);
+            Assert.That(step.args.preserveFailureEvidence, Is.True);
+            Assert.That(step.args.requireCleanReset, Is.True);
         }
 
         private static string BuildSingleStepCatalogJson(string argsJson)
