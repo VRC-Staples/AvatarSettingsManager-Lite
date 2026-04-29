@@ -336,6 +336,7 @@ namespace ASMLite.Editor
             var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
             win.minSize = new Vector2(600, 680);
             win.Show();
+            win.Focus();
             return win;
         }
 

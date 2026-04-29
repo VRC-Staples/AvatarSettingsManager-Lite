@@ -4,7 +4,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
 
 namespace ASMLite.Tests.Editor
@@ -91,6 +93,110 @@ namespace ASMLite.Tests.Editor
         {
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("Oct25_Dress (Clone)"));
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" Oct25_Dress (Clone) (Clone) "));
+        }
+
+        [Test]
+        public void UnityRuntime_AssertsPackageResourcesAndCanonicalCatalogLoad()
+        {
+            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-package-resource-present",
+                    new ASMLiteSmokeStepArgs(),
+                    "Assets/Click ME.unity",
+                    "Oct25_Dress",
+                    out string packageDetail,
+                    out string packageStackTrace),
+                Is.True);
+            StringAssert.Contains("ASM-Lite.prefab", packageDetail);
+            Assert.That(packageStackTrace, Is.Empty);
+
+            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-catalog-loads",
+                    new ASMLiteSmokeStepArgs(),
+                    "Assets/Click ME.unity",
+                    "Oct25_Dress",
+                    out string catalogDetail,
+                    out string catalogStackTrace),
+                Is.True);
+            StringAssert.Contains("canonical smoke catalog", catalogDetail);
+            Assert.That(catalogStackTrace, Is.Empty);
+        }
+
+        [Test]
+        public void UnityRuntime_RejectsMissingAndNonScenePathsWithPhase04Diagnostics()
+        {
+            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "open-scene",
+                    new ASMLiteSmokeStepArgs(),
+                    "Assets/Missing.unity",
+                    "Oct25_Dress",
+                    out string missingDetail,
+                    out string missingStackTrace),
+                Is.False);
+            StringAssert.Contains("SETUP_SCENE_MISSING", missingDetail);
+            StringAssert.Contains("scene could not be found", missingDetail);
+            Assert.That(missingStackTrace, Is.Empty);
+
+            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "open-scene",
+                    new ASMLiteSmokeStepArgs(),
+                    "Packages/com.staples.asm-lite/package.json",
+                    "Oct25_Dress",
+                    out string invalidDetail,
+                    out string invalidStackTrace),
+                Is.False);
+            StringAssert.Contains("SETUP_SCENE_PATH_INVALID", invalidDetail);
+            StringAssert.Contains("not a Unity scene", invalidDetail);
+            Assert.That(invalidStackTrace, Is.Empty);
+        }
+
+        [Test]
+        public void UnityRuntime_ClosesOpensAndFocusesAutomationWindow()
+        {
+            bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "close-window",
+                    new ASMLiteSmokeStepArgs(),
+                    "Assets/Click ME.unity",
+                    "Oct25_Dress",
+                    out _,
+                    out _);
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "open-window",
+                        new ASMLiteSmokeStepArgs(),
+                        "Assets/Click ME.unity",
+                        "Oct25_Dress",
+                        out string openDetail,
+                        out string openStackTrace),
+                    Is.True);
+                StringAssert.Contains("opened", openDetail);
+                Assert.That(openStackTrace, Is.Empty);
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "assert-window-focused",
+                        new ASMLiteSmokeStepArgs(),
+                        "Assets/Click ME.unity",
+                        "Oct25_Dress",
+                        out string focusDetail,
+                        out string focusStackTrace),
+                    Is.True);
+                StringAssert.Contains("automation", focusDetail);
+                Assert.That(focusStackTrace, Is.Empty);
+            }
+            finally
+            {
+                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "close-window",
+                    new ASMLiteSmokeStepArgs(),
+                    "Assets/Click ME.unity",
+                    "Oct25_Dress",
+                    out _,
+                    out _);
+                LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+            }
         }
 
         [Test]
@@ -224,6 +330,29 @@ namespace ASMLite.Tests.Editor
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[] { ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection }));
                 Assert.That(context.Runtime.OpenedScenes, Is.EqualTo(new[] { "Assets/FixtureOverride.unity" }));
                 Assert.That(context.Runtime.LastMutationObjectName, Is.EqualTo("Wrong Target"));
+            }
+        }
+
+        [Test]
+        public void SetupSuite_TreatsExpectedDiagnosticStepFailureAsPassed()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                context.Runtime.FailAction("open-scene", "SETUP_SCENE_MISSING: configured scene could not be found at Assets/Missing.unity");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilIdleAfterRun(context);
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && item.message.Contains("Expected diagnostic 'SETUP_SCENE_MISSING' matched")), Is.True);
             }
         }
 
@@ -1124,6 +1253,50 @@ namespace ASMLite.Tests.Editor
                                                 },
                                                 expectedOutcome = "Mutation runs and override scene opens.",
                                                 debugHint = "Inspect fixture mutation args.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "expected-diagnostic-host",
+                                label = "Expected Diagnostic Host",
+                                description = "Validates active run expected diagnostic handling.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Expected diagnostic failures are reported as passing steps.",
+                                debugHint = "Inspect expected diagnostic matching in the active run path.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "expected-diagnostic-host-case",
+                                        label = "Expected diagnostic host case",
+                                        description = "Run one expected-failure step through active run execution.",
+                                        expectedOutcome = "The expected diagnostic is treated as a passed step.",
+                                        debugHint = "Inspect expected diagnostic args.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "open-missing-scene",
+                                                label = "Open missing scene",
+                                                description = "Attempt to open an intentionally missing scene.",
+                                                actionType = "open-scene",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    scenePath = "Assets/Missing.unity",
+                                                    expectStepFailure = true,
+                                                    expectedDiagnosticCode = "SETUP_SCENE_MISSING",
+                                                    expectedDiagnosticContains = "scene could not be found",
+                                                },
+                                                expectedOutcome = "Expected scene diagnostic matches.",
+                                                debugHint = "Inspect expected diagnostic matching.",
                                             },
                                         },
                                     },

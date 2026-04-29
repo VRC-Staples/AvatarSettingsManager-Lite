@@ -245,6 +245,10 @@ namespace ASMLite.Tests.Editor
             "exit-playmode",
             "assert-primary-action",
             "assert-runtime-component-valid",
+            "assert-package-resource-present",
+            "assert-catalog-loads",
+            "assert-window-focused",
+            "close-window",
             "assert-host-ready",
         };
 

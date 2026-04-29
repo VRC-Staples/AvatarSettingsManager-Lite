@@ -38,14 +38,73 @@ namespace ASMLite.Tests.Editor
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
 
             CollectionAssert.AreEquivalent(
-                new[] { "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.defaultSelected).Select(suite => suite.suiteId).ToArray());
             Assert.IsTrue(suites.All(suite => !suite.IsDestructive));
-            Assert.IsTrue(suites.All(suite => suite.presetGroups.Contains("quick-default")));
-            Assert.IsTrue(suites.Single(suite => suite.suiteId == "setup-scene-avatar").presetGroups.Contains("all-setup"));
-            Assert.IsTrue(suites.Where(suite => suite.suiteId != "setup-scene-avatar").All(suite => !suite.presetGroups.Contains("all-setup")));
+            CollectionAssert.AreEquivalent(
+                new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
+            CollectionAssert.AreEquivalent(
+                new[] { "setup-scene-avatar", "setup-package-presence", "setup-scene-acquisition", "setup-window-launch-focus" },
+                suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
+            Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-package-presence").speed);
             Assert.AreEqual("standard", suites.Single(suite => suite.suiteId == "lifecycle-roundtrip").speed);
+        }
+
+        [Test]
+        public void LoadCanonical_includes_phase04_package_scene_and_window_suites()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
+
+            ASMLiteSmokeSuiteDefinition packagePresence = suites.Single(suite => suite.suiteId == "setup-package-presence");
+            Assert.That(packagePresence.defaultSelected, Is.True);
+            Assert.AreEqual("quick", packagePresence.speed);
+            CollectionAssert.AreEquivalent(new[] { "quick-default", "all-setup" }, packagePresence.presetGroups);
+            Assert.That(packagePresence.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "window-menu-opens",
+                "package-resources-present",
+                "catalog-loads",
+                "host-ready",
+            }));
+
+            ASMLiteSmokeSuiteDefinition sceneAcquisition = suites.Single(suite => suite.suiteId == "setup-scene-acquisition");
+            Assert.That(sceneAcquisition.defaultSelected, Is.False);
+            Assert.AreEqual("standard", sceneAcquisition.speed);
+            CollectionAssert.Contains(sceneAcquisition.presetGroups, "all-setup");
+            Assert.That(sceneAcquisition.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "canonical-scene-already-open",
+                "different-scene-open",
+                "temp-unsaved-scene-open",
+                "missing-scene",
+                "non-scene-path",
+            }));
+            ASMLiteSmokeStepArgs differentSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "different-scene-open").steps.Single().args;
+            Assert.AreEqual("temp-scene-setup-restore", differentSceneArgs.fixtureMutation);
+            ASMLiteSmokeStepArgs tempSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "temp-unsaved-scene-open").steps.Single().args;
+            Assert.AreEqual("temp-scene-setup-restore", tempSceneArgs.fixtureMutation);
+            ASMLiteSmokeStepArgs missingSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "missing-scene").steps.Single().args;
+            Assert.That(missingSceneArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_SCENE_MISSING", missingSceneArgs.expectedDiagnosticCode);
+            StringAssert.Contains("scene could not be found", missingSceneArgs.expectedDiagnosticContains);
+            ASMLiteSmokeStepArgs nonSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "non-scene-path").steps.Single().args;
+            Assert.That(nonSceneArgs.expectStepFailure, Is.True);
+            Assert.AreEqual("SETUP_SCENE_PATH_INVALID", nonSceneArgs.expectedDiagnosticCode);
+            StringAssert.Contains("not a Unity scene", nonSceneArgs.expectedDiagnosticContains);
+
+            ASMLiteSmokeSuiteDefinition windowLaunch = suites.Single(suite => suite.suiteId == "setup-window-launch-focus");
+            Assert.That(windowLaunch.defaultSelected, Is.False);
+            Assert.AreEqual("standard", windowLaunch.speed);
+            CollectionAssert.Contains(windowLaunch.presetGroups, "all-setup");
+            Assert.That(windowLaunch.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "closed-to-open",
+                "already-open-reuse-focus",
+                "stale-closed-window-handled",
+            }));
         }
 
         [Test]

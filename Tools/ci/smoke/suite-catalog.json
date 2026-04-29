@@ -19,7 +19,10 @@
           "speed": "quick",
           "risk": "safe",
           "defaultSelected": true,
-          "presetGroups": ["quick-default", "all-setup"],
+          "presetGroups": [
+            "quick-default",
+            "all-setup"
+          ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
           "expectedOutcome": "The canonical scene is loaded, ASM-Lite targets Oct25_Dress, the prefab scaffold is present, and the rebuild action is visible without running lifecycle steps.",
@@ -75,6 +78,341 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-package-presence",
+          "label": "Setup Package Presence",
+          "description": "Confirm the ASM-Lite package, menu/window entrypoint, prefab source, catalog, and host readiness before deeper setup suites run.",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": true,
+          "presetGroups": [
+            "quick-default",
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The ASM-Lite package surface is present, the automation window opens, canonical catalog loading works, and the smoke host is ready.",
+          "debugHint": "If this suite fails, confirm the package is installed in the external UAT project and the canonical package prefab/catalog paths resolve.",
+          "cases": [
+            {
+              "caseId": "window-menu-opens",
+              "label": "Window menu opens",
+              "description": "Open the ASM-Lite editor window through the automation entrypoint.",
+              "expectedOutcome": "The ASM-Lite editor window is available for automation.",
+              "debugHint": "If opening fails, inspect menu registration and editor window initialization.",
+              "steps": [
+                {
+                  "stepId": "open-window",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the product window through the automation entrypoint.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window is available and focused for automation.",
+                  "debugHint": "If no window appears, inspect editor layout state and window initialization logs."
+                }
+              ]
+            },
+            {
+              "caseId": "package-resources-present",
+              "label": "Package resources present",
+              "description": "Confirm package-managed resources required by setup automation are available.",
+              "expectedOutcome": "The ASM-Lite prefab source resolves from the package.",
+              "debugHint": "If the prefab is missing, inspect package installation and embedded package paths.",
+              "steps": [
+                {
+                  "stepId": "assert-package-resource-present",
+                  "label": "Verify package prefab source",
+                  "description": "Assert that the package-managed ASM-Lite prefab source resolves.",
+                  "actionType": "assert-package-resource-present",
+                  "expectedOutcome": "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab resolves as a package asset.",
+                  "debugHint": "If the asset does not resolve, confirm the package path and prefab import state."
+                }
+              ]
+            },
+            {
+              "caseId": "catalog-loads",
+              "label": "Canonical catalog loads",
+              "description": "Confirm the smoke host can load the canonical suite catalog.",
+              "expectedOutcome": "The canonical smoke suite catalog loads with required metadata.",
+              "debugHint": "If catalog loading fails, inspect Tools/ci/smoke/suite-catalog.json schema and JSON validity.",
+              "steps": [
+                {
+                  "stepId": "assert-catalog-loads",
+                  "label": "Load canonical smoke catalog",
+                  "description": "Load the canonical smoke catalog through the test-side catalog reader.",
+                  "actionType": "assert-catalog-loads",
+                  "expectedOutcome": "The canonical smoke suite catalog loads successfully.",
+                  "debugHint": "If loading fails, inspect catalog schema validation diagnostics."
+                }
+              ]
+            },
+            {
+              "caseId": "host-ready",
+              "label": "Host ready",
+              "description": "Confirm the smoke host can report baseline readiness.",
+              "expectedOutcome": "The host readiness check passes.",
+              "debugHint": "If readiness fails, inspect host startup state and command directory setup.",
+              "steps": [
+                {
+                  "stepId": "assert-host-ready",
+                  "label": "Verify host readiness",
+                  "description": "Assert that the smoke host is ready to process setup actions.",
+                  "actionType": "assert-host-ready",
+                  "expectedOutcome": "Host readiness check passes.",
+                  "debugHint": "If readiness fails, inspect host startup state and session paths."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "setup-scene-acquisition",
+          "label": "Setup Scene Acquisition",
+          "description": "Validate canonical scene acquisition from common editor states and expected diagnostics for invalid scene paths.",
+          "resetOverride": "SceneReload",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The canonical scene opens from supported editor states and invalid scene inputs report deterministic diagnostics.",
+          "debugHint": "If scene acquisition fails, verify Assets/Click ME.unity exists in the external UAT project and inspect scene path overrides.",
+          "cases": [
+            {
+              "caseId": "canonical-scene-already-open",
+              "label": "Canonical scene already open",
+              "description": "Open the canonical scene when it is already the target scene.",
+              "expectedOutcome": "The canonical scene remains active and setup can continue.",
+              "debugHint": "If this fails, inspect active-scene path normalization.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open Assets/Click ME.unity.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If the scene does not load, confirm the fixture scene exists."
+                }
+              ]
+            },
+            {
+              "caseId": "different-scene-open",
+              "label": "Different scene open",
+              "description": "Open the canonical scene when another scene is active.",
+              "expectedOutcome": "The host switches to Assets/Click ME.unity.",
+              "debugHint": "If this fails, inspect scene manager load diagnostics.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Switch to canonical scene",
+                  "description": "Create a temporary different scene state, then open Assets/Click ME.unity.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If switching fails, confirm the temporary scene mutation ran and no unsaved prompt blocked scene load.",
+                  "args": {
+                    "fixtureMutation": "temp-scene-setup-restore"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "temp-unsaved-scene-open",
+              "label": "Temp unsaved scene open",
+              "description": "Create a temporary unsaved setup scene state, then reacquire the canonical scene.",
+              "expectedOutcome": "The host returns to Assets/Click ME.unity from a temporary scene state.",
+              "debugHint": "If this fails, inspect fixture mutation cleanup and scene restore diagnostics.",
+              "steps": [
+                {
+                  "stepId": "open-scene-after-temp",
+                  "label": "Open canonical scene after temp scene",
+                  "description": "Apply the temporary scene setup mutation and open Assets/Click ME.unity.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active after temporary scene setup.",
+                  "debugHint": "If this fails, inspect temp scene mutation cleanup.",
+                  "args": {
+                    "fixtureMutation": "temp-scene-setup-restore"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "missing-scene",
+              "label": "Missing scene diagnostic",
+              "description": "Try to open a missing scene path as an expected failure.",
+              "expectedOutcome": "The step reports SETUP_SCENE_MISSING without aborting the expected-failure case.",
+              "debugHint": "If the diagnostic changes, inspect scene path validation before OpenScene.",
+              "steps": [
+                {
+                  "stepId": "open-missing-scene",
+                  "label": "Open missing scene",
+                  "description": "Attempt to open a scene path that is intentionally absent.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "SETUP_SCENE_MISSING is reported.",
+                  "debugHint": "If this unexpectedly succeeds, verify the missing test path is still absent.",
+                  "args": {
+                    "scenePath": "Assets/Missing.unity",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SCENE_MISSING",
+                    "expectedDiagnosticContains": "scene could not be found",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "non-scene-path",
+              "label": "Non-scene path diagnostic",
+              "description": "Try to open a non-scene package asset path as an expected failure.",
+              "expectedOutcome": "The step reports SETUP_SCENE_PATH_INVALID without aborting the expected-failure case.",
+              "debugHint": "If the diagnostic changes, inspect path extension validation before scene loading.",
+              "steps": [
+                {
+                  "stepId": "open-non-scene-path",
+                  "label": "Open non-scene path",
+                  "description": "Attempt to open a package JSON path as a scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported.",
+                  "debugHint": "If this unexpectedly succeeds, verify non-scene path validation runs first.",
+                  "args": {
+                    "scenePath": "Packages/com.staples.asm-lite/package.json",
+                    "expectStepFailure": true,
+                    "expectedDiagnosticCode": "SETUP_SCENE_PATH_INVALID",
+                    "expectedDiagnosticContains": "not a Unity scene",
+                    "preserveFailureEvidence": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "setup-window-launch-focus",
+          "label": "Setup Window Launch and Focus",
+          "description": "Validate ASM-Lite editor window launch, reuse, focus, and recovery after a closed automation window.",
+          "resetOverride": "Inherit",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The ASM-Lite window opens from closed state, reuses/focuses when already open, and reopens cleanly after a close.",
+          "debugHint": "If focus is unreliable, inspect Unity editor layout state and window lifecycle logs before treating it as a product setup failure.",
+          "cases": [
+            {
+              "caseId": "closed-to-open",
+              "label": "Closed to open",
+              "description": "Close any existing automation window, then open and focus ASM-Lite.",
+              "expectedOutcome": "The ASM-Lite window opens and is focused.",
+              "debugHint": "If opening fails, inspect editor window initialization logs.",
+              "steps": [
+                {
+                  "stepId": "close-window",
+                  "label": "Close existing window",
+                  "description": "Close any existing ASM-Lite automation window.",
+                  "actionType": "close-window",
+                  "expectedOutcome": "No existing ASM-Lite automation window remains open.",
+                  "debugHint": "If close fails, inspect Unity editor window lifecycle."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the ASM-Lite automation window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window is available and focused.",
+                  "debugHint": "If open fails, inspect menu/window initialization."
+                },
+                {
+                  "stepId": "assert-window-focused",
+                  "label": "Verify focused window",
+                  "description": "Assert the ASM-Lite automation window has editor focus.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is the focused editor window.",
+                  "debugHint": "If focus fails, inspect dock/tab state and retry after closing stale windows."
+                }
+              ]
+            },
+            {
+              "caseId": "already-open-reuse-focus",
+              "label": "Already open reuse focus",
+              "description": "Open ASM-Lite twice and confirm the existing automation window remains focused.",
+              "expectedOutcome": "The existing window is reused and focused.",
+              "debugHint": "If a duplicate or unfocused window appears, inspect OpenForAutomation behavior.",
+              "steps": [
+                {
+                  "stepId": "open-window-first",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the ASM-Lite automation window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window opens.",
+                  "debugHint": "If open fails, inspect window initialization."
+                },
+                {
+                  "stepId": "open-window-again",
+                  "label": "Reuse ASM-Lite window",
+                  "description": "Open the ASM-Lite automation window again.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The existing ASM-Lite window is reused and focused.",
+                  "debugHint": "If reuse fails, inspect GetWindow behavior."
+                },
+                {
+                  "stepId": "assert-window-focused",
+                  "label": "Verify focused window",
+                  "description": "Assert the ASM-Lite automation window has editor focus.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If focus fails, inspect Unity layout state."
+                }
+              ]
+            },
+            {
+              "caseId": "stale-closed-window-handled",
+              "label": "Stale closed window handled",
+              "description": "Close the automation window and reopen it cleanly.",
+              "expectedOutcome": "The ASM-Lite window reopens and focuses after a stale/closed state.",
+              "debugHint": "If reopen fails, inspect stale editor window references.",
+              "steps": [
+                {
+                  "stepId": "open-window-first",
+                  "label": "Open ASM-Lite window",
+                  "description": "Open the ASM-Lite automation window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window opens.",
+                  "debugHint": "If open fails, inspect window initialization."
+                },
+                {
+                  "stepId": "close-window",
+                  "label": "Close ASM-Lite window",
+                  "description": "Close any open ASM-Lite automation window.",
+                  "actionType": "close-window",
+                  "expectedOutcome": "The ASM-Lite automation window is closed.",
+                  "debugHint": "If close fails, inspect stale editor window references."
+                },
+                {
+                  "stepId": "open-window-after-close",
+                  "label": "Reopen ASM-Lite window",
+                  "description": "Reopen the ASM-Lite automation window after closing it.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window reopens cleanly.",
+                  "debugHint": "If reopen fails, inspect stale editor window references."
+                },
+                {
+                  "stepId": "assert-window-focused",
+                  "label": "Verify focused window",
+                  "description": "Assert the reopened ASM-Lite automation window has editor focus.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The reopened ASM-Lite window is focused.",
+                  "debugHint": "If focus fails, inspect Unity layout state."
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -91,7 +429,9 @@
           "speed": "standard",
           "risk": "safe",
           "defaultSelected": true,
-          "presetGroups": ["quick-default"],
+          "presetGroups": [
+            "quick-default"
+          ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
           "expectedOutcome": "Lifecycle actions complete in order and the avatar returns to a clean package-managed ASM-Lite state.",
@@ -179,7 +519,9 @@
           "speed": "standard",
           "risk": "safe",
           "defaultSelected": true,
-          "presetGroups": ["quick-default"],
+          "presetGroups": [
+            "quick-default"
+          ],
           "requiresPlayMode": true,
           "stopOnFirstFailure": true,
           "expectedOutcome": "The canonical avatar enters playmode with valid runtime ASM-Lite state and exits back to edit mode cleanly.",

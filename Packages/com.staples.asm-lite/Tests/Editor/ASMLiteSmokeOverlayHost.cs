@@ -325,6 +325,8 @@ namespace ASMLite.Tests.Editor
                 switch (normalizedAction)
                 {
                     case "open-scene":
+                        if (!TryValidateScenePath(scenePath, out detail))
+                            return false;
                         if (!string.Equals(GetActiveScenePath(), scenePath, StringComparison.Ordinal))
                             OpenScene(scenePath);
                         detail = $"Opened scene '{scenePath}'.";
@@ -332,8 +334,24 @@ namespace ASMLite.Tests.Editor
 
                     case "open-window":
                         window = ASMLiteWindow.OpenForAutomation();
-                        detail = "ASM-Lite window opened for automation.";
+                        detail = window == null
+                            ? "ASM-Lite window could not be opened for automation."
+                            : "ASM-Lite window opened and focused for automation.";
                         return window != null;
+
+                    case "close-window":
+                        CloseAutomationWindowIfOpen();
+                        detail = "ASM-Lite automation window closed if present.";
+                        return true;
+
+                    case "assert-window-focused":
+                        return AssertWindowFocused(out detail);
+
+                    case "assert-package-resource-present":
+                        return AssertPackageResourcePresent(args, out detail);
+
+                    case "assert-catalog-loads":
+                        return AssertCatalogLoads(out detail);
 
                     case "select-avatar":
                     {
@@ -435,6 +453,70 @@ namespace ASMLite.Tests.Editor
                 stackTrace = string.IsNullOrWhiteSpace(ex.StackTrace) ? string.Empty : ex.StackTrace.Trim();
                 return false;
             }
+        }
+
+        private static bool TryValidateScenePath(string scenePath, out string detail)
+        {
+            string normalizedPath = string.IsNullOrWhiteSpace(scenePath) ? string.Empty : scenePath.Trim();
+            if (!string.Equals(Path.GetExtension(normalizedPath), ".unity", StringComparison.OrdinalIgnoreCase))
+            {
+                detail = $"SETUP_SCENE_PATH_INVALID: configured scene path is not a Unity scene: {normalizedPath}";
+                return false;
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(normalizedPath) == null)
+            {
+                detail = $"SETUP_SCENE_MISSING: configured scene could not be found at {normalizedPath}";
+                return false;
+            }
+
+            detail = string.Empty;
+            return true;
+        }
+
+        private static bool AssertPackageResourcePresent(ASMLiteSmokeStepArgs args, out string detail)
+        {
+            const string defaultPrefabPath = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
+            string prefabPath = args == null || string.IsNullOrWhiteSpace(args.objectName)
+                ? defaultPrefabPath
+                : args.objectName.Trim();
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            if (prefab == null)
+            {
+                detail = $"Package resource check failed: ASM-Lite prefab source was not found at {prefabPath}.";
+                return false;
+            }
+
+            detail = $"Package resource check passed: ASM-Lite.prefab resolved at {prefabPath}.";
+            return true;
+        }
+
+        private static bool AssertCatalogLoads(out string detail)
+        {
+            ASMLiteSmokeCatalogDocument catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            int suiteCount = catalog.groups.Sum(group => group.suites.Length);
+            detail = $"Loaded canonical smoke catalog with {catalog.groups.Length} groups and {suiteCount} suites.";
+            return true;
+        }
+
+        private static bool AssertWindowFocused(out string detail)
+        {
+            var focused = EditorWindow.focusedWindow as ASMLiteWindow;
+            if (focused != null)
+            {
+                detail = "ASM-Lite window is focused for automation.";
+                return true;
+            }
+
+            ASMLiteWindow availableWindow = Resources.FindObjectsOfTypeAll<ASMLiteWindow>().FirstOrDefault(window => window != null);
+            if (availableWindow == null)
+            {
+                detail = "ASM-Lite window is not focused for automation because no automation window is open.";
+                return false;
+            }
+
+            detail = "ASM-Lite window is available for automation; focus could not be observed in this editor mode.";
+            return true;
         }
 
         internal static bool ValidateRuntimeComponentState(string avatarName, VRCAvatarDescriptor avatar, bool isPlaying, out string detail)
@@ -1140,33 +1222,40 @@ namespace ASMLite.Tests.Editor
             }
 
             bool stepPassed = ExecuteCatalogStep(step, out string detail, out string stackTrace);
+            bool expectsStepFailure = ASMLiteSmokeExpectedDiagnosticMatcher.ExpectsStepFailure(step);
             if (stepPassed)
             {
-                string stepPassedMessage = string.IsNullOrWhiteSpace(detail)
-                    ? $"Step '{step.stepId}' passed."
-                    : detail.Trim();
-                AppendActiveRunEvent(
-                    activeRun,
-                    "step-passed",
-                    activeRun.Suite.suiteId,
-                    suiteCase.caseId,
-                    step.stepId,
-                    stepPassedMessage);
-                activeRun.StepIndex++;
-                if (ShouldSettleAfterStep(step))
+                if (expectsStepFailure)
                 {
-                    activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
-                    activeRun.Phase = ActiveRunPhase.StepSettle;
+                    string unexpectedSuccessMessage = ASMLiteSmokeExpectedDiagnosticMatcher.BuildUnexpectedSuccessMessage(step);
+                    FailActiveRunStep(activeRun, suiteCase, step, unexpectedSuccessMessage, stackTrace);
                     return;
                 }
 
-                AdvanceActiveRunToNextStepOrCase(activeRun);
+                PassActiveRunStep(activeRun, suiteCase, step, string.IsNullOrWhiteSpace(detail)
+                    ? $"Step '{step.stepId}' passed."
+                    : detail.Trim());
                 return;
             }
 
             string failureMessage = string.IsNullOrWhiteSpace(detail)
                 ? $"Step '{step.stepId}' failed."
                 : detail.Trim();
+
+            if (expectsStepFailure)
+            {
+                if (ASMLiteSmokeExpectedDiagnosticMatcher.MatchesExpectedDiagnostic(
+                    step,
+                    failureMessage,
+                    out string expectedFailurePassMessage,
+                    out string expectedFailureMismatchMessage))
+                {
+                    PassActiveRunStep(activeRun, suiteCase, step, expectedFailurePassMessage);
+                    return;
+                }
+
+                failureMessage = expectedFailureMismatchMessage;
+            }
             AppendActiveRunEvent(
                 activeRun,
                 "step-failed",
@@ -1182,6 +1271,61 @@ namespace ASMLite.Tests.Editor
                 StepId = step.stepId,
                 StepLabel = step.label,
                 FailureMessage = failureMessage,
+                StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
+            };
+            activeRun.Result.Succeeded = false;
+            activeRun.Phase = ActiveRunPhase.SuiteFailed;
+        }
+
+        private void PassActiveRunStep(
+            ActiveRunState activeRun,
+            ASMLiteSmokeCaseDefinition suiteCase,
+            ASMLiteSmokeStepDefinition step,
+            string message)
+        {
+            AppendActiveRunEvent(
+                activeRun,
+                "step-passed",
+                activeRun.Suite.suiteId,
+                suiteCase.caseId,
+                step.stepId,
+                string.IsNullOrWhiteSpace(message) ? $"Step '{step.stepId}' passed." : message.Trim());
+            activeRun.StepIndex++;
+            if (ShouldSettleAfterStep(step))
+            {
+                activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
+                activeRun.Phase = ActiveRunPhase.StepSettle;
+                return;
+            }
+
+            AdvanceActiveRunToNextStepOrCase(activeRun);
+        }
+
+        private void FailActiveRunStep(
+            ActiveRunState activeRun,
+            ASMLiteSmokeCaseDefinition suiteCase,
+            ASMLiteSmokeStepDefinition step,
+            string failureMessage,
+            string stackTrace)
+        {
+            string normalizedFailureMessage = string.IsNullOrWhiteSpace(failureMessage)
+                ? $"Step '{step.stepId}' failed."
+                : failureMessage.Trim();
+            AppendActiveRunEvent(
+                activeRun,
+                "step-failed",
+                activeRun.Suite.suiteId,
+                suiteCase.caseId,
+                step.stepId,
+                normalizedFailureMessage);
+
+            activeRun.Result.Failure = new ASMLiteSmokeExecutionFailure
+            {
+                CaseId = suiteCase.caseId,
+                CaseLabel = suiteCase.label,
+                StepId = step.stepId,
+                StepLabel = step.label,
+                FailureMessage = normalizedFailureMessage,
                 StackTrace = string.IsNullOrWhiteSpace(stackTrace) ? string.Empty : stackTrace.Trim(),
             };
             activeRun.Result.Succeeded = false;
