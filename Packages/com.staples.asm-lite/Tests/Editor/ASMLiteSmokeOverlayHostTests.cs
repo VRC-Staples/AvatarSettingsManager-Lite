@@ -162,6 +162,36 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_AssertsGeneratedReferencesRemainPackageManagedByDefault()
+        {
+            var avatarObject = new GameObject("Phase07B_PackageManagedAvatar");
+            avatarObject.AddComponent<VRCAvatarDescriptor>();
+            var componentObject = new GameObject("ASM-Lite Component");
+            componentObject.transform.SetParent(avatarObject.transform);
+            var component = componentObject.AddComponent<ASMLite.ASMLiteComponent>();
+            component.useVendorizedGeneratedAssets = false;
+            component.vendorizedGeneratedAssetsPath = string.Empty;
+
+            try
+            {
+                bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-generated-references-package-managed",
+                    new ASMLiteSmokeStepArgs(),
+                    string.Empty,
+                    avatarObject.name,
+                    out string detail,
+                    out string stackTrace);
+
+                Assert.That(success, Is.True, detail + "\n" + stackTrace);
+                Assert.That(detail, Is.EqualTo("Generated references are package-managed by default."));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
         public void UnityRuntime_RejectsMissingAndNonScenePathsWithPhase04Diagnostics()
         {
             Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
@@ -590,6 +620,44 @@ namespace ASMLite.Tests.Editor
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[] { ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection }));
                 Assert.That(context.Runtime.OpenedScenes, Is.EqualTo(new[] { "Assets/FixtureOverride.unity" }));
                 Assert.That(context.Runtime.LastMutationObjectName, Is.EqualTo("Wrong Target"));
+            }
+        }
+
+        [Test]
+        public void SetupGeneratedReadinessSuite_AppliesFixtureMutationsAndGeneratedReferenceAssertion()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000013_run-suite";
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-asset-readiness"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                    ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
+                    ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder,
+                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
+                {
+                    "add-prefab",
+                    "add-prefab",
+                    "assert-primary-action",
+                    "assert-primary-action",
+                    "assert-primary-action",
+                    "add-prefab",
+                    "assert-generated-references-package-managed",
+                }));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
             }
         }
 
@@ -1513,6 +1581,111 @@ namespace ASMLite.Tests.Editor
                                                 },
                                                 expectedOutcome = "Mutation runs and override scene opens.",
                                                 debugHint = "Inspect fixture mutation args.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "setup-generated-asset-readiness",
+                                label = "Generated Asset Readiness",
+                                description = "Validates generated readiness fixture dispatch and package-managed assertion actions.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Generated readiness actions pass through the host runner.",
+                                debugHint = "Inspect generated readiness fixture mutations and action ordering.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "generated-readiness-host-case",
+                                        label = "Generated readiness host case",
+                                        description = "Exercise clean add, rebuild assertion, missing/stale generated folder assertions, and generated reference ownership assertion.",
+                                        expectedOutcome = "All generated readiness fixture hooks and assertions execute.",
+                                        debugHint = "Inspect fake runtime mutation and action lists.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "add-prefab-clean-readiness",
+                                                label = "Add Prefab from clean baseline",
+                                                description = "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                                                actionType = "add-prefab",
+                                                args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
+                                                expectedOutcome = "Prefab scaffold is attached from a clean baseline.",
+                                                debugHint = "Inspect remove-component fixture dispatch.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "add-prefab-for-readiness-rebuild",
+                                                label = "Add Prefab before rebuild assertion",
+                                                description = "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                                                actionType = "add-prefab",
+                                                args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
+                                                expectedOutcome = "Prefab scaffold is attached before the rebuild assertion.",
+                                                debugHint = "Inspect remove-component fixture dispatch.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-primary-action-after-readiness-add",
+                                                label = "Assert Rebuild primary action",
+                                                description = "Assert Rebuild is the primary action after Add Prefab.",
+                                                actionType = "assert-primary-action",
+                                                args = new ASMLiteSmokeStepArgs { expectedPrimaryAction = "Rebuild" },
+                                                expectedOutcome = "Rebuild is the primary action.",
+                                                debugHint = "Inspect action hierarchy output.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-primary-action-missing-generated-folder",
+                                                label = "Assert Rebuild for missing generated folder",
+                                                description = "Apply missing-generated-folder and assert Rebuild is the primary action.",
+                                                actionType = "assert-primary-action",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
+                                                    expectedPrimaryAction = "Rebuild",
+                                                },
+                                                expectedOutcome = "Rebuild is the primary action.",
+                                                debugHint = "Inspect missing-generated-folder fixture dispatch.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-primary-action-stale-generated-folder",
+                                                label = "Assert Rebuild for stale generated folder",
+                                                description = "Apply stale-generated-folder and assert Rebuild is the primary action.",
+                                                actionType = "assert-primary-action",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder,
+                                                    expectedPrimaryAction = "Rebuild",
+                                                },
+                                                expectedOutcome = "Rebuild is the primary action.",
+                                                debugHint = "Inspect stale-generated-folder fixture dispatch.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "add-prefab-for-package-managed-references",
+                                                label = "Add Prefab before package-managed assertion",
+                                                description = "Apply remove-component and add the ASM-Lite prefab scaffold before the package-managed assertion.",
+                                                actionType = "add-prefab",
+                                                args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
+                                                expectedOutcome = "Prefab scaffold is attached before generated reference assertion.",
+                                                debugHint = "Inspect remove-component fixture dispatch.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-generated-references-package-managed",
+                                                label = "Assert package-managed generated references",
+                                                description = "Assert generated references are package-managed by default after Add Prefab.",
+                                                actionType = "assert-generated-references-package-managed",
+                                                expectedOutcome = "Generated references are package-managed by default.",
+                                                debugHint = "Inspect generated reference assertion action dispatch.",
                                             },
                                         },
                                     },

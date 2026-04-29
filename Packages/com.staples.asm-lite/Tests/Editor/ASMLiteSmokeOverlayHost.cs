@@ -488,6 +488,12 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
+                    case "assert-generated-references-package-managed":
+                    {
+                        VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+                        return AssertGeneratedReferencesPackageManaged(avatarName, avatar, out detail);
+                    }
+
                     case "enter-playmode":
                         EditorApplication.isPlaying = true;
                         detail = "Entered playmode.";
@@ -647,6 +653,37 @@ namespace ASMLite.Tests.Editor
 
             detail = BuildRuntimeComponentFailureDetail(avatarName, avatar);
             return false;
+        }
+
+        private static bool AssertGeneratedReferencesPackageManaged(string avatarName, VRCAvatarDescriptor avatar, out string detail)
+        {
+            if (avatar == null)
+            {
+                detail = $"Generated reference check failed: avatar '{avatarName}' was not found in the loaded scene.";
+                return false;
+            }
+
+            ASMLite.ASMLiteComponent component = avatar.GetComponentInChildren<ASMLite.ASMLiteComponent>(true);
+            if (component == null)
+            {
+                detail = $"Generated reference check failed: ASM-Lite component was not found under avatar '{avatar.gameObject.name}'.";
+                return false;
+            }
+
+            if (component.useVendorizedGeneratedAssets)
+            {
+                detail = "Generated reference check failed: component is configured to use vendorized generated assets.";
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(component.vendorizedGeneratedAssetsPath))
+            {
+                detail = $"Generated reference check failed: vendorized generated assets path is set to '{component.vendorizedGeneratedAssetsPath.Trim()}'.";
+                return false;
+            }
+
+            detail = "Generated references are package-managed by default.";
+            return true;
         }
 
         private static string BuildRuntimeComponentFailureDetail(string avatarName, VRCAvatarDescriptor avatar)

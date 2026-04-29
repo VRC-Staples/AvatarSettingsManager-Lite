@@ -1210,6 +1210,265 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-generated-asset-readiness",
+          "label": "Generated Asset Readiness",
+          "description": "Validates setup coverage for generated ASM-Lite asset readiness, missing/stale generated folders, and package-managed references.",
+          "resetOverride": "Inherit",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Generated readiness cases confirm setup add/rebuild affordances and package-managed generated references without destructive drills.",
+          "debugHint": "Inspect generated folder state, fixture mutation cleanup, and action hierarchy output.",
+          "cases": [
+            {
+              "caseId": "clean-add-generation-ready-scaffold",
+              "label": "Clean add creates generation-ready scaffold",
+              "description": "Remove any existing ASM-Lite component, add the prefab scaffold, and confirm setup can reach a generation-ready state.",
+              "expectedOutcome": "Add Prefab attaches the ASM-Lite scaffold from a clean avatar baseline.",
+              "debugHint": "Inspect remove-component fixture setup and add-prefab automation output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "add-prefab-clean-readiness",
+                  "label": "Add Prefab from clean baseline",
+                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "Prefab scaffold is attached from a clean baseline.",
+                  "debugHint": "Inspect component attach state after add-prefab.",
+                  "args": {
+                    "fixtureMutation": "remove-component"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "rebuild-action-available-after-add",
+              "label": "Rebuild action available after add",
+              "description": "Add the prefab scaffold from a clean baseline and assert Rebuild becomes the primary action.",
+              "expectedOutcome": "Rebuild is recognized as the primary action after the scaffold is added.",
+              "debugHint": "Inspect action hierarchy after Add Prefab completes.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "add-prefab-for-readiness-rebuild",
+                  "label": "Add Prefab before rebuild assertion",
+                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "Prefab scaffold is attached before the rebuild assertion.",
+                  "debugHint": "Inspect component attach state before asserting primary action.",
+                  "args": {
+                    "fixtureMutation": "remove-component"
+                  }
+                },
+                {
+                  "stepId": "assert-primary-action-after-readiness-add",
+                  "label": "Assert Rebuild primary action",
+                  "description": "Assert Rebuild is the primary action after Add Prefab.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and selected avatar state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "missing-generated-folder-handled",
+              "label": "Missing generated folder handled",
+              "description": "Remove the generated folder and assert the setup flow recognizes Rebuild as the recovery action.",
+              "expectedOutcome": "Rebuild is recognized as primary action when the generated folder is missing.",
+              "debugHint": "Inspect generated folder fixture state and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-missing-generated-folder",
+                  "label": "Assert Rebuild for missing generated folder",
+                  "description": "Apply missing-generated-folder and assert Rebuild is the primary action.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect generated folder mutation cleanup and action hierarchy output.",
+                  "args": {
+                    "fixtureMutation": "missing-generated-folder",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "stale-generated-folder-handled",
+              "label": "Stale generated folder handled",
+              "description": "Apply a stale generated folder and assert the setup flow recognizes Rebuild as the recovery action.",
+              "expectedOutcome": "Rebuild is recognized as primary action when stale generated assets are present.",
+              "debugHint": "Inspect stale generated folder fixture state and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-stale-generated-folder",
+                  "label": "Assert Rebuild for stale generated folder",
+                  "description": "Apply stale-generated-folder and assert Rebuild is the primary action.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect stale generated folder cleanup and action hierarchy output.",
+                  "args": {
+                    "fixtureMutation": "stale-generated-folder",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "generated-references-package-managed-by-default",
+              "label": "Generated references package-managed by default",
+              "description": "Add the prefab scaffold from a clean baseline and assert generated references remain package-managed by default.",
+              "expectedOutcome": "Generated references stay package-managed after the default setup add flow.",
+              "debugHint": "Inspect ASMLiteComponent generated asset ownership fields and generated reference paths.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "add-prefab-for-package-managed-references",
+                  "label": "Add Prefab before package-managed assertion",
+                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "Prefab scaffold is attached before generated reference assertion.",
+                  "debugHint": "Inspect component attach state before asserting generated references.",
+                  "args": {
+                    "fixtureMutation": "remove-component"
+                  }
+                },
+                {
+                  "stepId": "assert-generated-references-package-managed",
+                  "label": "Assert package-managed generated references",
+                  "description": "Assert generated references are package-managed by default after Add Prefab.",
+                  "actionType": "assert-generated-references-package-managed",
+                  "expectedOutcome": "Generated references are package-managed by default.",
+                  "debugHint": "Inspect ASMLiteComponent generated asset ownership fields and generated reference paths."
+                }
+              ]
+            }
+          ]
         }
       ]
     },

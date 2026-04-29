@@ -29,6 +29,7 @@ namespace ASMLite.Tests.Editor
         internal const string RemoveComponent = "remove-component";
         internal const string ExistingComponentBaseline = "existing-component-baseline";
         internal const string StaleGeneratedFolder = "stale-generated-folder";
+        internal const string MissingGeneratedFolder = "missing-generated-folder";
         internal const string VendorizedStateBaseline = "vendorized-state-baseline";
         internal const string DetachedStateBaseline = "detached-state-baseline";
         internal const string GeneratedFolderWithoutComponent = "generated-folder-without-component";
@@ -109,6 +110,8 @@ namespace ASMLite.Tests.Editor
                         return ApplyExistingComponentBaseline(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder:
                         return ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder:
+                        return ApplyMissingGeneratedFolderMutation(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline:
                         return ApplyVendorizedStateBaseline(avatarName, args, evidenceRootPath, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline:
@@ -530,6 +533,57 @@ namespace ASMLite.Tests.Editor
             }
 
             detail = $"Generated folder without component prepared for avatar '{avatarName}'.";
+            return true;
+        }
+
+        private bool ApplyMissingGeneratedFolderMutation(string avatarName, out string detail)
+        {
+            string avatarFolder = GeneratedRoot + "/" + avatarName;
+            string generatedFolder = avatarFolder + "/GeneratedAssets";
+            bool hadGeneratedFolder = AssetDatabase.IsValidFolder(generatedFolder);
+            string snapshotPath = string.Empty;
+
+            if (hadGeneratedFolder)
+            {
+                snapshotPath = Path.Combine(Path.GetTempPath(), "asmlite-generated-folder-" + Guid.NewGuid().ToString("N"));
+                CopyDirectory(ToAbsoluteProjectPath(generatedFolder), snapshotPath);
+            }
+
+            DeleteAssetIfExists(generatedFolder);
+            DeleteAssetIfEmpty(avatarFolder);
+            DeleteAssetIfEmpty(GeneratedRoot);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            _cleanupLedger.Push(new CleanupEntry("restore missing generated fixture folder", () =>
+            {
+                try
+                {
+                    if (hadGeneratedFolder)
+                    {
+                        EnsureAssetFolder(GeneratedRoot, avatarName);
+                        EnsureAssetFolder(avatarFolder, "GeneratedAssets");
+                        if (Directory.Exists(snapshotPath))
+                            CopyDirectory(snapshotPath, ToAbsoluteProjectPath(generatedFolder));
+                    }
+                    else
+                    {
+                        DeleteAssetIfExists(generatedFolder);
+                        DeleteAssetIfEmpty(avatarFolder);
+                        DeleteAssetIfEmpty(GeneratedRoot);
+                    }
+
+                    AssetDatabase.SaveAssets();
+                    AssetDatabase.Refresh();
+                }
+                finally
+                {
+                    if (!string.IsNullOrWhiteSpace(snapshotPath) && Directory.Exists(snapshotPath))
+                        Directory.Delete(snapshotPath, recursive: true);
+                }
+            }));
+
+            detail = $"Generated folder removed for avatar '{avatarName}' and cleanup recorded.";
             return true;
         }
 

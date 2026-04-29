@@ -296,6 +296,7 @@ mod tests {
                 "setup-avatar-discovery-selection",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
+                "setup-generated-asset-readiness",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]

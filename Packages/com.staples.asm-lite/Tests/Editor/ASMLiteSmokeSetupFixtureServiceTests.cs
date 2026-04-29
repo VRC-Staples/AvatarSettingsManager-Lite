@@ -176,6 +176,38 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void MissingGeneratedFolderMutation_RemovesGeneratedFolderAndRestoresBaseline()
+        {
+            try
+            {
+                EnsureTestAssetFolder("Assets", "ASM-Lite");
+                EnsureTestAssetFolder("Assets/ASM-Lite", "FixtureAvatar");
+                EnsureTestAssetFolder("Assets/ASM-Lite/FixtureAvatar", "GeneratedAssets");
+                Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.True);
+
+                var args = new ASMLiteSmokeStepArgs
+                {
+                    avatarName = "FixtureAvatar",
+                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
+                };
+
+                bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+
+                Assert.That(applied, Is.True, detail);
+                Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.False);
+
+                Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+                Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.True);
+            }
+            finally
+            {
+                DeleteTestAssetIfExists("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets");
+                DeleteTestAssetIfExists("Assets/ASM-Lite/FixtureAvatar");
+                DeleteTestAssetIfExists("Assets/ASM-Lite");
+            }
+        }
+
+        [Test]
         public void VendorizedStateBaselineMutation_MarksComponentVendorizedAndRestoresPackageManagedState()
         {
             var args = new ASMLiteSmokeStepArgs
@@ -246,7 +278,20 @@ namespace ASMLite.Tests.Editor
             Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
 
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
-            Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.False);
+        }
+
+        private static void EnsureTestAssetFolder(string parent, string child)
+        {
+            string path = parent.TrimEnd('/') + "/" + child;
+            if (!AssetDatabase.IsValidFolder(path))
+                AssetDatabase.CreateFolder(parent, child);
+        }
+
+        private static void DeleteTestAssetIfExists(string assetPath)
+        {
+            if (AssetDatabase.IsValidFolder(assetPath) || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath) != null)
+                AssetDatabase.DeleteAsset(assetPath);
         }
 
         private static int CountSceneAvatarsNamed(string avatarName)

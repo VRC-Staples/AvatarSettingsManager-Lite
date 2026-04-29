@@ -244,6 +244,7 @@ namespace ASMLite.Tests.Editor
             "enter-playmode",
             "exit-playmode",
             "assert-primary-action",
+            "assert-generated-references-package-managed",
             "assert-runtime-component-valid",
             "assert-package-resource-present",
             "assert-catalog-loads",
