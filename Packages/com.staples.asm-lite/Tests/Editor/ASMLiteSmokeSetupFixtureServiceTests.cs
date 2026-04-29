@@ -194,6 +194,26 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void VendorizedStateBaselineMutation_RemovesTemporaryComponentWhenBaselineWasMissing()
+        {
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+        }
+
+        [Test]
         public void DetachedStateBaselineMutation_RemovesComponentAndRestoresDetachedMarker()
         {
             var args = new ASMLiteSmokeStepArgs

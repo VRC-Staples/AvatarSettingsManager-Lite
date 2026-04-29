@@ -456,8 +456,14 @@ namespace ASMLite.Tests.Editor
             }
 
             ASMLiteComponent component = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            GameObject temporaryComponentObject = null;
             if (component == null)
-                component = avatar.gameObject.AddComponent<ASMLiteComponent>();
+            {
+                temporaryComponentObject = new GameObject("ASMLite");
+                temporaryComponentObject.transform.SetParent(avatar.transform);
+                component = temporaryComponentObject.AddComponent<ASMLiteComponent>();
+                _cleanupLedger.Push(new CleanupEntry("remove temporary vendorized ASM-Lite component baseline", () => DestroyObject(temporaryComponentObject)));
+            }
 
             bool previousVendorized = component.useVendorizedGeneratedAssets;
             string previousVendorizedPath = component.vendorizedGeneratedAssetsPath;

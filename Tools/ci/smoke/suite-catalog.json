@@ -911,9 +911,9 @@
             },
             {
               "caseId": "selected-avatar-change-preserves-prior-avatar",
-              "label": "Selected avatar changes do not break canonical target",
-              "description": "Selected avatar changes do not break canonical target",
-              "expectedOutcome": "Selected avatar changes do not break canonical target",
+              "label": "Selected avatar precedence remains explicit",
+              "description": "Selected avatar precedence remains explicit before canonical primary-action checks",
+              "expectedOutcome": "Selected avatar precedence remains explicit before canonical primary-action checks",
               "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
               "steps": [
                 {
@@ -943,10 +943,10 @@
                 {
                   "stepId": "select-avatar-after-selection-change",
                   "label": "Select Avatar",
-                  "description": "Apply alternate selection, then select canonical avatar by configured name.",
+                  "description": "Apply alternate selection, then verify selected-avatar precedence during selection drift.",
                   "actionType": "select-avatar",
-                  "expectedOutcome": "Canonical avatar is selected despite prior selection drift.",
-                  "debugHint": "Inspect selection resolver.",
+                  "expectedOutcome": "Selected avatar precedence is honored during selection drift.",
+                  "debugHint": "Inspect selection resolver and alternate selection fixture.",
                   "args": {
                     "fixtureMutation": "wrong-avatar-selection",
                     "objectName": "Phase06 Alternate Avatar"
