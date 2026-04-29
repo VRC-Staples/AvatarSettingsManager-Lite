@@ -45,7 +45,16 @@ namespace ASMLite.Tests.Editor
                 new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
             CollectionAssert.AreEquivalent(
-                new[] { "setup-scene-avatar", "setup-package-presence", "setup-scene-acquisition", "setup-window-launch-focus", "setup-avatar-discovery-selection" },
+                new[]
+                {
+                    "setup-scene-avatar",
+                    "setup-package-presence",
+                    "setup-scene-acquisition",
+                    "setup-window-launch-focus",
+                    "setup-avatar-discovery-selection",
+                    "setup-scaffold-add-idempotency",
+                    "setup-existing-state-recognition",
+                },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-package-presence").speed);
@@ -153,6 +162,40 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("missing-avatar-by-override-name", missingArgs.fixtureMutation);
             Assert.That(missingArgs.expectStepFailure, Is.True);
             Assert.AreEqual("SETUP_AVATAR_NOT_FOUND", missingArgs.expectedDiagnosticCode);
+        }
+
+        [Test]
+        public void LoadCanonical_includes_phase06_scaffold_existing_state_suites()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
+
+            Assert.That(suites.ContainsKey("setup-scaffold-add-idempotency"), Is.True);
+            Assert.That(suites.ContainsKey("setup-existing-state-recognition"), Is.True);
+
+            var scaffoldCaseIds = suites["setup-scaffold-add-idempotency"].cases.Select(item => item.caseId).ToArray();
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    "no-component-add-prefab-primary",
+                    "add-prefab-succeeds",
+                    "add-prefab-twice-idempotency",
+                    "existing-component-rebuild-primary",
+                    "selected-avatar-change-preserves-prior-avatar",
+                },
+                scaffoldCaseIds);
+
+            var existingCaseIds = suites["setup-existing-state-recognition"].cases.Select(item => item.caseId).ToArray();
+            CollectionAssert.AreEquivalent(
+                new[]
+                {
+                    "package-managed-component-present",
+                    "vendorized-state-present",
+                    "detached-state-present",
+                    "stale-generated-assets-present",
+                    "generated-folder-without-component",
+                },
+                existingCaseIds);
         }
 
         [Test]

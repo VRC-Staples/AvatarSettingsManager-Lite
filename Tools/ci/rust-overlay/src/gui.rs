@@ -3776,10 +3776,10 @@ mod tests {
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_RUNNING));
         assert_eq!(footer.event_count, 4);
         assert_eq!(footer.pending_command.as_deref(), Some("command-0005"));
-        assert_eq!(footer.selected_suite_count, 3);
+        assert_eq!(footer.selected_suite_count, 4);
         assert_eq!(
             footer.batch_progress.as_deref(),
-            Some("2/3 lifecycle-roundtrip")
+            Some("2/4 setup-package-presence")
         );
     }
 
@@ -3800,7 +3800,7 @@ mod tests {
         assert_eq!(footer.host_state.as_deref(), Some(HOST_STATE_READY));
         assert_eq!(footer.event_count, 0);
         assert_eq!(footer.pending_command, None);
-        assert_eq!(footer.selected_suite_count, 3);
+        assert_eq!(footer.selected_suite_count, 4);
         assert_eq!(footer.batch_progress, None);
     }
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -119,6 +120,45 @@ namespace ASMLite.Tests.Editor
                 Is.True);
             StringAssert.Contains("canonical smoke catalog", catalogDetail);
             Assert.That(catalogStackTrace, Is.Empty);
+        }
+
+        [Test]
+        public void UnityRuntime_AssertsExpectedPrimaryActionFromStepArgs()
+        {
+            var avatarObject = new GameObject("Phase06_AddPrefabAvatar");
+            avatarObject.AddComponent<VRCAvatarDescriptor>();
+
+            try
+            {
+                Selection.activeObject = avatarObject;
+                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
+                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
+                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
+                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
+
+                bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-primary-action",
+                    new ASMLiteSmokeStepArgs { expectedPrimaryAction = "Add Prefab" },
+                    string.Empty,
+                    avatarObject.name,
+                    out string detail,
+                    out string stackTrace);
+
+                Assert.That(success, Is.True, detail + "\n" + stackTrace);
+                Assert.That(detail, Is.EqualTo("Primary action is Add Prefab."));
+            }
+            finally
+            {
+                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "close-window",
+                    new ASMLiteSmokeStepArgs(),
+                    string.Empty,
+                    avatarObject.name,
+                    out _,
+                    out _);
+                UnityEngine.Object.DestroyImmediate(avatarObject);
+                Selection.activeObject = null;
+            }
         }
 
         [Test]

@@ -175,6 +175,60 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void VendorizedStateBaselineMutation_MarksComponentVendorizedAndRestoresPackageManagedState()
+        {
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.Comp.useVendorizedGeneratedAssets, Is.True);
+            Assert.That(_ctx.Comp.vendorizedGeneratedAssetsPath, Does.Contain(_ctx.AvatarGo.name));
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+
+            Assert.That(_ctx.Comp.useVendorizedGeneratedAssets, Is.False);
+            Assert.That(_ctx.Comp.vendorizedGeneratedAssetsPath, Is.Empty);
+        }
+
+        [Test]
+        public void DetachedStateBaselineMutation_RemovesComponentAndRestoresDetachedMarker()
+        {
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.True);
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
+            Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.False);
+        }
+
+        [Test]
+        public void GeneratedFolderWithoutComponentMutation_CreatesFolderAndRemovesComponent()
+        {
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite"), Is.True);
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite"), Is.False);
+        }
+
         private static int CountSceneAvatarsNamed(string avatarName)
         {
             return Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()

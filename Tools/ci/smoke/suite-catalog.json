@@ -679,6 +679,537 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "setup-scaffold-add-idempotency",
+          "label": "Setup Scaffold Add and Idempotency",
+          "description": "Validate no-component scaffold add flow, repeated add safety, existing component primary action, and selection-change resilience.",
+          "resetOverride": "SceneReload",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Scaffold add and existing component flows are stable and idempotent.",
+          "debugHint": "Inspect fixture mutation details, action hierarchy assertions, and prefab add steps.",
+          "cases": [
+            {
+              "caseId": "no-component-add-prefab-primary",
+              "label": "No component exposes add prefab primary",
+              "description": "No component exposes add prefab primary",
+              "expectedOutcome": "No component exposes add prefab primary",
+              "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-no-component",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Add Prefab is the primary action after remove-component.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Add Prefab is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "remove-component",
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "add-prefab-succeeds",
+              "label": "Add prefab succeeds from no component",
+              "description": "Add prefab succeeds from no component",
+              "expectedOutcome": "Add prefab succeeds from no component",
+              "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "add-prefab",
+                  "label": "Add Prefab",
+                  "description": "Add ASM-Lite prefab scaffold from no-component state.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "Prefab scaffold is attached.",
+                  "debugHint": "Inspect prefab add output.",
+                  "args": {
+                    "fixtureMutation": "remove-component"
+                  }
+                },
+                {
+                  "stepId": "assert-primary-action-after-add",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after existing-component-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "add-prefab-twice-idempotency",
+              "label": "Add prefab twice remains safe",
+              "description": "Add prefab twice remains safe",
+              "expectedOutcome": "Add prefab twice remains safe",
+              "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "add-prefab-first",
+                  "label": "Add Prefab First",
+                  "description": "Add ASM-Lite prefab scaffold from no-component state.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "First add succeeds.",
+                  "debugHint": "Inspect first prefab add output.",
+                  "args": {
+                    "fixtureMutation": "remove-component"
+                  }
+                },
+                {
+                  "stepId": "add-prefab-second",
+                  "label": "Add Prefab Second",
+                  "description": "Run add prefab again against existing component state.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "Second add remains safe and idempotent.",
+                  "debugHint": "Inspect second prefab add output.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline"
+                  }
+                },
+                {
+                  "stepId": "assert-primary-action-twice",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after existing-component-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "existing-component-rebuild-primary",
+              "label": "Existing component exposes rebuild primary",
+              "description": "Existing component exposes rebuild primary",
+              "expectedOutcome": "Existing component exposes rebuild primary",
+              "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-existing-component",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after existing-component-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "selected-avatar-change-preserves-prior-avatar",
+              "label": "Selected avatar changes do not break canonical target",
+              "description": "Selected avatar changes do not break canonical target",
+              "expectedOutcome": "Selected avatar changes do not break canonical target",
+              "debugHint": "Inspect Phase 06 scaffold/idempotency evidence.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "select-avatar-after-selection-change",
+                  "label": "Select Avatar",
+                  "description": "Apply alternate selection, then select canonical avatar by configured name.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Canonical avatar is selected despite prior selection drift.",
+                  "debugHint": "Inspect selection resolver.",
+                  "args": {
+                    "fixtureMutation": "wrong-avatar-selection",
+                    "objectName": "Phase06 Alternate Avatar"
+                  }
+                },
+                {
+                  "stepId": "assert-primary-action-selection-change",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after existing-component-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "setup-existing-state-recognition",
+          "label": "Setup Existing State Recognition",
+          "description": "Validate package-managed, vendorized, detached, stale generated, and generated-folder-without-component setup states.",
+          "resetOverride": "SceneReload",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Existing setup states resolve to the expected primary action.",
+          "debugHint": "Inspect fixture mutation state and action hierarchy details.",
+          "cases": [
+            {
+              "caseId": "package-managed-component-present",
+              "label": "Package-managed component present",
+              "description": "Apply existing-component-baseline and assert the expected primary action.",
+              "expectedOutcome": "Rebuild is recognized as primary action.",
+              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-package-managed-component-present",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after existing-component-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "existing-component-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "vendorized-state-present",
+              "label": "Vendorized state present",
+              "description": "Apply vendorized-state-baseline and assert the expected primary action.",
+              "expectedOutcome": "Rebuild is recognized as primary action.",
+              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-vendorized-state-present",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after vendorized-state-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "vendorized-state-baseline",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "detached-state-present",
+              "label": "Detached state present",
+              "description": "Apply detached-state-baseline and assert the expected primary action.",
+              "expectedOutcome": "Return to Package Managed is recognized as primary action.",
+              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-detached-state-present",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Return to Package Managed is the primary action after detached-state-baseline.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Return to Package Managed is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "detached-state-baseline",
+                    "expectedPrimaryAction": "Return to Package Managed"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "stale-generated-assets-present",
+              "label": "Stale generated assets present",
+              "description": "Apply stale-generated-folder and assert the expected primary action.",
+              "expectedOutcome": "Rebuild is recognized as primary action.",
+              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-stale-generated-assets-present",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Rebuild is the primary action after stale-generated-folder.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "stale-generated-folder",
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "generated-folder-without-component",
+              "label": "Generated folder without component",
+              "description": "Apply generated-folder-without-component and assert the expected primary action.",
+              "expectedOutcome": "Add Prefab is recognized as primary action.",
+              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open Scene",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "Open Window",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Select Avatar",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-generated-folder-without-component",
+                  "label": "Assert Primary Action",
+                  "description": "Assert Add Prefab is the primary action after generated-folder-without-component.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Add Prefab is the primary action.",
+                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
+                  "args": {
+                    "fixtureMutation": "generated-folder-without-component",
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     },

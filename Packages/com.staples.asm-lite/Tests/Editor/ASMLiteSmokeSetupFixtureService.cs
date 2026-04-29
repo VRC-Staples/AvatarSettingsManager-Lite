@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Tests.Editor
 {
@@ -28,6 +29,9 @@ namespace ASMLite.Tests.Editor
         internal const string RemoveComponent = "remove-component";
         internal const string ExistingComponentBaseline = "existing-component-baseline";
         internal const string StaleGeneratedFolder = "stale-generated-folder";
+        internal const string VendorizedStateBaseline = "vendorized-state-baseline";
+        internal const string DetachedStateBaseline = "detached-state-baseline";
+        internal const string GeneratedFolderWithoutComponent = "generated-folder-without-component";
         internal const string ControlledCorruptGeneratedAsset = "controlled-corrupt-generated-asset";
         internal const string CleanBaselineAssertion = "clean-baseline-assertion";
     }
@@ -105,6 +109,12 @@ namespace ASMLite.Tests.Editor
                         return ApplyExistingComponentBaseline(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder:
                         return ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline:
+                        return ApplyVendorizedStateBaseline(avatarName, args, evidenceRootPath, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline:
+                        return ApplyDetachedStateBaseline(avatarName, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent:
+                        return ApplyGeneratedFolderWithoutComponent(avatarName, args, evidenceRootPath, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.ControlledCorruptGeneratedAsset:
                         return ApplyGeneratedFolderMutation(avatarName, corruptMarker: true, args, evidenceRootPath, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.CleanBaselineAssertion:
@@ -429,6 +439,126 @@ namespace ASMLite.Tests.Editor
             _cleanupLedger.Push(new CleanupEntry("remove temporary ASM-Lite component baseline", () => DestroyObject(componentObject)));
 
             detail = $"ASM-Lite component baseline created for avatar '{avatarName}' and cleanup recorded.";
+            return true;
+        }
+
+        private bool ApplyVendorizedStateBaseline(
+            string avatarName,
+            ASMLiteSmokeStepArgs args,
+            string evidenceRootPath,
+            out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            if (avatar == null)
+            {
+                detail = $"SETUP_AVATAR_NOT_FOUND: avatar named '{avatarName}' was not found.";
+                return false;
+            }
+
+            ASMLiteComponent component = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            if (component == null)
+                component = avatar.gameObject.AddComponent<ASMLiteComponent>();
+
+            bool previousVendorized = component.useVendorizedGeneratedAssets;
+            string previousVendorizedPath = component.vendorizedGeneratedAssetsPath;
+            component.useVendorizedGeneratedAssets = true;
+            component.vendorizedGeneratedAssetsPath = $"{GeneratedRoot}/{avatar.gameObject.name}/GeneratedAssets";
+
+            _cleanupLedger.Push(new CleanupEntry("restore vendorized ASM-Lite component baseline", () =>
+            {
+                if (component == null)
+                    return;
+
+                component.useVendorizedGeneratedAssets = previousVendorized;
+                component.vendorizedGeneratedAssetsPath = previousVendorizedPath;
+            }));
+
+            if (!ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out string folderDetail))
+            {
+                detail = folderDetail;
+                return false;
+            }
+
+            detail = $"Vendorized state baseline prepared for avatar '{avatarName}'.";
+            return true;
+        }
+
+        private bool ApplyDetachedStateBaseline(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            if (avatar == null)
+            {
+                detail = $"SETUP_AVATAR_NOT_FOUND: avatar named '{avatarName}' was not found.";
+                return false;
+            }
+
+            if (!AddTemporaryAsmLiteExpressionParameter(avatar, "ASMLite_FixtureDetached", out detail))
+                return false;
+
+            if (!ApplyRemoveComponent(avatarName, out string removeDetail))
+            {
+                detail = removeDetail;
+                return false;
+            }
+
+            detail = $"Detached state baseline prepared for avatar '{avatarName}'.";
+            return true;
+        }
+
+        private bool ApplyGeneratedFolderWithoutComponent(
+            string avatarName,
+            ASMLiteSmokeStepArgs args,
+            string evidenceRootPath,
+            out string detail)
+        {
+            if (!ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out string folderDetail))
+            {
+                detail = folderDetail;
+                return false;
+            }
+
+            if (!ApplyRemoveComponent(avatarName, out string removeDetail))
+            {
+                detail = removeDetail;
+                return false;
+            }
+
+            detail = $"Generated folder without component prepared for avatar '{avatarName}'.";
+            return true;
+        }
+
+        private bool AddTemporaryAsmLiteExpressionParameter(VRCAvatarDescriptor avatar, string parameterName, out string detail)
+        {
+            VRCExpressionParameters expressionParameters = avatar.expressionParameters;
+            if (expressionParameters == null)
+            {
+                detail = $"SETUP_AVATAR_NOT_FOUND: avatar '{avatar.gameObject.name}' has no expression parameters asset for detached-state mutation.";
+                return false;
+            }
+
+            var originalParameters = expressionParameters.parameters;
+            var newParameters = originalParameters == null
+                ? new VRCExpressionParameters.Parameter[1]
+                : new VRCExpressionParameters.Parameter[originalParameters.Length + 1];
+            if (originalParameters != null)
+                Array.Copy(originalParameters, newParameters, originalParameters.Length);
+
+            newParameters[newParameters.Length - 1] = new VRCExpressionParameters.Parameter
+            {
+                name = parameterName,
+                valueType = VRCExpressionParameters.ValueType.Bool,
+                defaultValue = 0f,
+                saved = false,
+            };
+            expressionParameters.parameters = newParameters;
+
+            _cleanupLedger.Push(new CleanupEntry("restore detached marker expression parameters", () =>
+            {
+                if (expressionParameters != null)
+                    expressionParameters.parameters = originalParameters;
+            }));
+
+            detail = $"Detached marker '{parameterName}' added.";
             return true;
         }
 

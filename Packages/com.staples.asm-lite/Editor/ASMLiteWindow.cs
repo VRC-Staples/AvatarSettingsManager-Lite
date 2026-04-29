@@ -5803,15 +5803,18 @@ namespace ASMLite.Editor
                 }
             }
 
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            if (avatar.baseAnimationLayers != null)
             {
-                var ctrl = avatar.baseAnimationLayers[i].animatorController;
-                if (!ctrl)
-                    continue;
+                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+                {
+                    var ctrl = avatar.baseAnimationLayers[i].animatorController;
+                    if (!ctrl)
+                        continue;
 
-                string ctrlPath = AssetDatabase.GetAssetPath(ctrl)?.Replace('\\', '/');
-                if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                    return true;
+                    string ctrlPath = AssetDatabase.GetAssetPath(ctrl)?.Replace('\\', '/');
+                    if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
+                        return true;
+                }
             }
 
             return false;
@@ -5836,26 +5839,29 @@ namespace ASMLite.Editor
                 }
             }
 
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+            if (avatar.baseAnimationLayers != null)
             {
-                var ctrl = avatar.baseAnimationLayers[i].animatorController as UnityEditor.Animations.AnimatorController;
-                if (ctrl == null)
-                    continue;
-
-                for (int j = 0; j < ctrl.layers.Length; j++)
+                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
                 {
-                    if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        return true;
-                }
-
-                for (int j = 0; j < ctrl.parameters.Length; j++)
-                {
-                    string paramName = ctrl.parameters[j].name;
-                    if (string.IsNullOrWhiteSpace(paramName))
+                    var ctrl = avatar.baseAnimationLayers[i].animatorController as UnityEditor.Animations.AnimatorController;
+                    if (ctrl == null)
                         continue;
-                    if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(paramName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
+
+                    for (int j = 0; j < ctrl.layers.Length; j++)
+                    {
+                        if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                            return true;
+                    }
+
+                    for (int j = 0; j < ctrl.parameters.Length; j++)
+                    {
+                        string paramName = ctrl.parameters[j].name;
+                        if (string.IsNullOrWhiteSpace(paramName))
+                            continue;
+                        if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal)
+                            || string.Equals(paramName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
+                            return true;
+                    }
                 }
             }
 

@@ -356,6 +356,10 @@ fn require_non_blank(value: &str, path: &str) -> Result<String, ContractError> {
 
 fn is_supported_action_type(action_type: &str) -> bool {
     matches!(action_type, |"open-scene"| "open-window"
+        | "close-window"
+        | "assert-window-focused"
+        | "assert-package-resource-present"
+        | "assert-catalog-loads"
         | "select-avatar"
         | "add-prefab"
         | "rebuild"
@@ -411,7 +415,7 @@ mod tests {
                 "assert-primary-action"
             ]
         );
-        assert_eq!(catalog.groups[0].suites.len(), 1);
+        assert_eq!(catalog.groups[0].suites.len(), 7);
         assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
             .steps
@@ -454,15 +458,27 @@ mod tests {
             default_ids,
             vec![
                 "setup-scene-avatar",
+                "setup-package-presence",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
         );
         assert!(suites.iter().all(|suite| suite.risk == "safe"));
         assert!(suites.iter().all(|suite| !suite.is_destructive()));
-        assert!(suites
+        let quick_default_ids: Vec<&str> = suites
             .iter()
-            .all(|suite| suite.preset_groups.contains(&"quick-default".to_string())));
+            .filter(|suite| suite.preset_groups.contains(&"quick-default".to_string()))
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(
+            quick_default_ids,
+            vec![
+                "setup-scene-avatar",
+                "setup-package-presence",
+                "lifecycle-roundtrip",
+                "playmode-runtime-validation"
+            ]
+        );
         assert_eq!(
             suites
                 .iter()

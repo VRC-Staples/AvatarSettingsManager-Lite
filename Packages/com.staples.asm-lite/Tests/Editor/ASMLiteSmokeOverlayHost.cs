@@ -477,11 +477,15 @@ namespace ASMLite.Tests.Editor
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
                         var hierarchy = window.GetActionHierarchyContract();
-                        bool hasPrimaryRebuild = hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.Rebuild);
-                        detail = hasPrimaryRebuild
-                            ? "Primary rebuild action is available."
-                            : "Primary rebuild action is not available.";
-                        return hasPrimaryRebuild;
+                        var expectedAction = ResolveExpectedPrimaryAction(args);
+                        if (!hierarchy.HasPrimaryAction(expectedAction))
+                        {
+                            detail = $"Primary action was not {FormatPrimaryAction(expectedAction)}.";
+                            return false;
+                        }
+
+                        detail = $"Primary action is {FormatPrimaryAction(expectedAction)}.";
+                        return true;
                     }
 
                     case "enter-playmode":
@@ -559,6 +563,45 @@ namespace ASMLite.Tests.Editor
             int suiteCount = catalog.groups.Sum(group => group.suites.Length);
             detail = $"Loaded canonical smoke catalog with {catalog.groups.Length} groups and {suiteCount} suites.";
             return true;
+        }
+
+        private static ASMLiteWindow.AsmLiteWindowAction ResolveExpectedPrimaryAction(ASMLiteSmokeStepArgs args)
+        {
+            string expected = args?.expectedPrimaryAction;
+            if (string.IsNullOrWhiteSpace(expected))
+                return ASMLiteWindow.AsmLiteWindowAction.Rebuild;
+
+            switch (expected.Trim())
+            {
+                case "Add Prefab":
+                case "AddPrefab":
+                case "add-prefab":
+                    return ASMLiteWindow.AsmLiteWindowAction.AddPrefab;
+                case "Rebuild":
+                case "rebuild":
+                    return ASMLiteWindow.AsmLiteWindowAction.Rebuild;
+                case "Return to Package Managed":
+                case "ReturnToPackageManaged":
+                case "return-to-package-managed":
+                    return ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged;
+                default:
+                    throw new InvalidOperationException($"Unknown expected primary action: {expected}");
+            }
+        }
+
+        private static string FormatPrimaryAction(ASMLiteWindow.AsmLiteWindowAction action)
+        {
+            switch (action)
+            {
+                case ASMLiteWindow.AsmLiteWindowAction.AddPrefab:
+                    return "Add Prefab";
+                case ASMLiteWindow.AsmLiteWindowAction.Rebuild:
+                    return "Rebuild";
+                case ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged:
+                    return "Return to Package Managed";
+                default:
+                    return action.ToString();
+            }
         }
 
         private static bool AssertWindowFocused(out string detail)

@@ -290,6 +290,12 @@ mod tests {
             ids,
             vec![
                 "setup-scene-avatar",
+                "setup-package-presence",
+                "setup-scene-acquisition",
+                "setup-window-launch-focus",
+                "setup-avatar-discovery-selection",
+                "setup-scaffold-add-idempotency",
+                "setup-existing-state-recognition",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
@@ -302,7 +308,7 @@ mod tests {
         let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
         let checklist = build_suite_checklist_view(&model);
-        assert_eq!(checklist.selected_count, 3);
+        assert_eq!(checklist.selected_count, 4);
         assert!(checklist.can_run_selected_batch);
 
         let setup = checklist
@@ -328,7 +334,7 @@ mod tests {
             .expect("lifecycle row should exist");
         assert!(lifecycle.checked);
         assert!(!lifecycle.focused);
-        assert_eq!(lifecycle.selected_order, Some(2));
+        assert_eq!(lifecycle.selected_order, Some(3));
 
         let playmode = checklist
             .rows
@@ -337,7 +343,7 @@ mod tests {
             .expect("playmode row should exist");
         assert!(playmode.checked);
         assert!(!playmode.focused);
-        assert_eq!(playmode.selected_order, Some(3));
+        assert_eq!(playmode.selected_order, Some(4));
     }
 
     #[test]

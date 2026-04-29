@@ -779,6 +779,7 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
+                "setup-package-presence",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
@@ -850,7 +851,18 @@ mod tests {
             .apply_preset_group("all-setup")
             .expect("all setup preset should apply");
 
-        assert_eq!(model.selected_suite_ids(), vec!["setup-scene-avatar"]);
+        assert_eq!(
+            model.selected_suite_ids(),
+            vec![
+                "setup-scene-avatar",
+                "setup-package-presence",
+                "setup-scene-acquisition",
+                "setup-window-launch-focus",
+                "setup-avatar-discovery-selection",
+                "setup-scaffold-add-idempotency",
+                "setup-existing-state-recognition",
+            ]
+        );
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
     }
 
@@ -901,6 +913,12 @@ mod tests {
             model.available_suite_ids(),
             vec![
                 "setup-scene-avatar",
+                "setup-package-presence",
+                "setup-scene-acquisition",
+                "setup-window-launch-focus",
+                "setup-avatar-discovery-selection",
+                "setup-scaffold-add-idempotency",
+                "setup-existing-state-recognition",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
