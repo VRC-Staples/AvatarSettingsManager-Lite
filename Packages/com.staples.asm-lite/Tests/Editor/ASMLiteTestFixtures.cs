@@ -1145,34 +1145,34 @@ namespace ASMLite.Tests.Editor
                 switch (stage)
                 {
                     case AsmLiteVisibleAutomationStage.OpeningWindow:
-                        SetOverlayStep(1, "Opening ASM-Lite editor window");
+                        SetOverlayStep(1, "ASM-Lite window is opening");
                         break;
                     case AsmLiteVisibleAutomationStage.SelectingAvatar:
                         SetOverlayStep(2, GetSelectingAvatarStepText());
                         break;
                     case AsmLiteVisibleAutomationStage.AddingPrefab:
-                        SetOverlayStep(3, "Executing Add ASM-Lite Prefab through the rendered primary action");
+                        SetOverlayStep(3, "ASM-Lite scaffold is being added");
                         break;
                     case AsmLiteVisibleAutomationStage.AttachingDefaultPayload:
-                        SetOverlayStep(4, "Attaching the default ASM-Lite payload to the avatar");
+                        SetOverlayStep(4, "Default ASM-Lite setup is being attached");
                         break;
                     case AsmLiteVisibleAutomationStage.VerifyingRebuild:
-                        SetOverlayStep(5, "Verifying the visible UI refreshed to Rebuild after installation");
+                        SetOverlayStep(5, "Rebuild state is being verified");
                         break;
                     case AsmLiteVisibleAutomationStage.WaitingForPlayMode:
-                        SetOverlayStep(6, "Entering Play Mode for runtime inspection");
+                        SetOverlayStep(6, "Play mode is being entered");
                         break;
                     case AsmLiteVisibleAutomationStage.InspectingPlayMode:
-                        SetOverlayStep(6, "Entering Play Mode for runtime inspection");
+                        SetOverlayStep(6, "Play mode is being entered");
                         break;
                     case AsmLiteVisibleAutomationStage.VerifyingInteractivity:
-                        SetOverlayStep(4, "Verifying the ASM-Lite window remains focused and interactable");
+                        SetOverlayStep(4, "ASM-Lite window focus is being verified");
                         break;
                     case AsmLiteVisibleAutomationStage.AwaitingAcceptance:
                         SetOverlayStep(GetTotalSteps(), GetCompletionSuccessStep(), ASMLiteWindow.VisibleAutomationOverlayState.Success);
                         break;
                     case AsmLiteVisibleAutomationStage.ExitingPlayModeAfterAcceptance:
-                        SetOverlayStep(GetTotalSteps(), "Finishing visible playmode smoke run", ASMLiteWindow.VisibleAutomationOverlayState.Success);
+                        SetOverlayStep(GetTotalSteps(), "Visible play mode smoke run is finishing", ASMLiteWindow.VisibleAutomationOverlayState.Success);
                         break;
                 }
 
@@ -1182,8 +1182,8 @@ namespace ASMLite.Tests.Editor
             private string GetSelectingAvatarStepText()
             {
                 return (AsmLiteVisibleAutomationMode)_configuration.mode == AsmLiteVisibleAutomationMode.LaunchUnity
-                    ? "Loading Assets/Click ME.unity and selecting Oct25_Dress from the hierarchy"
-                    : "Selecting avatar from the live editor hierarchy";
+                    ? "Click ME scene is loading and Oct25_Dress is being selected"
+                    : "Avatar is selected in the editor";
             }
 
             private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)

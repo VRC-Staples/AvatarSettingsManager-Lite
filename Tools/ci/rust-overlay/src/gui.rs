@@ -3827,8 +3827,8 @@ mod tests {
         assert!(is_private_icon_glyph(spec.separator_icon));
         assert!(!spec.renders_trailing_step_index);
         assert_eq!(
-            current_run_plan_step_label("Open Click ME scene", 1, 3),
-            "Open Click ME scene"
+            current_run_plan_step_label("Click ME scene is open", 1, 3),
+            "Click ME scene is open"
         );
     }
 
@@ -4063,17 +4063,19 @@ mod tests {
         let briefing = build_current_suite_briefing_model_for_poll(&model, Some(&poll))
             .expect("briefing should exist");
 
-        assert_eq!(briefing.steps[0].label, "Rebuild ASM-Lite assets");
+        assert_eq!(briefing.steps[0].label, "ASM-Lite assets are rebuilt");
         assert_eq!(briefing.steps[0].status, CurrentSuiteStepStatus::Passed);
         assert_eq!(briefing.steps[0].icon, icons::CHECK_CIRCLE);
         assert_eq!(current_suite_step_color(briefing.steps[0].status), SUCCESS);
-        assert_eq!(briefing.steps[2].label, "Vendorize generated assets");
+        assert_eq!(briefing.steps[2].label, "Generated assets are vendorized");
         assert_eq!(briefing.steps[2].status, CurrentSuiteStepStatus::Running);
-        assert_eq!(briefing.steps[4].label, "Detach ASM-Lite component");
+        assert_eq!(briefing.steps[4].label, "ASM-Lite component is detached");
         assert_eq!(briefing.steps[4].status, CurrentSuiteStepStatus::Failed);
         assert_eq!(briefing.steps[4].icon, icons::X_CIRCLE);
         assert_eq!(current_suite_step_color(briefing.steps[4].status), DANGER);
-        assert!(current_suite_step_label(&briefing.steps[0]).contains("Rebuild ASM-Lite assets"));
+        assert!(
+            current_suite_step_label(&briefing.steps[0]).contains("ASM-Lite assets are rebuilt")
+        );
     }
 
     #[test]
@@ -4096,7 +4098,7 @@ mod tests {
         let briefing = build_current_suite_briefing_model_for_poll(&model, Some(&poll))
             .expect("briefing should exist");
 
-        assert_eq!(briefing.steps[0].label, "Open ASM-Lite");
+        assert_eq!(briefing.steps[0].label, "ASM-Lite is open");
         assert_eq!(briefing.steps[0].status, CurrentSuiteStepStatus::Pending);
     }
 
@@ -4424,8 +4426,8 @@ mod tests {
         );
         assert!(!run_monitor_review_heading(&review).contains("playmode-runtime-validation"));
         assert_eq!(
-            run_monitor_failure_label("Validate runtime component"),
-            "Failed step: Validate runtime component"
+            run_monitor_failure_label("Runtime component is valid"),
+            "Failed step: Runtime component is valid"
         );
     }
 

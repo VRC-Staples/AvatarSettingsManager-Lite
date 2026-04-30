@@ -1547,11 +1547,11 @@ namespace ASMLite.Tests.Editor
                                         debugHint = "Inspect host event stream for setup step boundaries.",
                                         steps = new[]
                                         {
-                                            new ASMLiteSmokeStepDefinition { stepId = "open-scene", label = "Open Scene", description = "Open canonical smoke scene.", actionType = "open-scene", expectedOutcome = "Scene opens.", debugHint = "Inspect scene path." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "open-window", label = "Open Window", description = "Open ASM-Lite window.", actionType = "open-window", expectedOutcome = "Window opens.", debugHint = "Inspect window state." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "select-avatar", label = "Select Avatar", description = "Select Oct25_Dress.", actionType = "select-avatar", expectedOutcome = "Avatar selected.", debugHint = "Inspect avatar lookup." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "add-prefab", label = "Add Prefab", description = "Add the ASM-Lite prefab scaffold.", actionType = "add-prefab", expectedOutcome = "Prefab scaffold is attached.", debugHint = "Inspect avatar prerequisites." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "assert-primary-action", label = "Assert Primary Action", description = "Confirm rebuild action is visible.", actionType = "assert-primary-action", expectedOutcome = "Primary action is visible.", debugHint = "Inspect window refresh state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "open-scene", label = "Scene is open", description = "Open canonical smoke scene.", actionType = "open-scene", expectedOutcome = "Scene opens.", debugHint = "Inspect scene path." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "open-window", label = "ASM-Lite window is open", description = "Open ASM-Lite window.", actionType = "open-window", expectedOutcome = "Window opens.", debugHint = "Inspect window state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "select-avatar", label = "Avatar is selected", description = "Select Oct25_Dress.", actionType = "select-avatar", expectedOutcome = "Avatar selected.", debugHint = "Inspect avatar lookup." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "add-prefab", label = "ASM-Lite scaffold is added", description = "Add the ASM-Lite prefab scaffold.", actionType = "add-prefab", expectedOutcome = "Prefab scaffold is attached.", debugHint = "Inspect avatar prerequisites." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "assert-primary-action", label = "Primary action is shown", description = "Confirm rebuild action is visible.", actionType = "assert-primary-action", expectedOutcome = "Primary action is visible.", debugHint = "Inspect window refresh state." },
                                         },
                                     },
                                 },
@@ -1580,13 +1580,13 @@ namespace ASMLite.Tests.Editor
                                         debugHint = "Inspect host event stream for lifecycle step boundaries.",
                                         steps = new[]
                                         {
-                                            new ASMLiteSmokeStepDefinition { stepId = "rebuild", label = "Rebuild", description = "Rebuild package state.", actionType = "rebuild", expectedOutcome = "Rebuild succeeds.", debugHint = "Inspect rebuild logs." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-rebuild", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after rebuild.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after rebuild." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "vendorize", label = "Vendorize", description = "Vendorize generated assets.", actionType = "vendorize", expectedOutcome = "Vendorize succeeds.", debugHint = "Inspect vendorized assets." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-vendorize", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after vendorize.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after vendorize." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "detach", label = "Detach", description = "Detach from package-managed state.", actionType = "detach", expectedOutcome = "Detach succeeds.", debugHint = "Confirm detached workspace state." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-detach", label = "Hygiene Cleanup", description = "Reset known lifecycle drift after detach.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after detach." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "return-to-package-managed", label = "Return", description = "Return to package-managed baseline.", actionType = "return-to-package-managed", expectedOutcome = "Return succeeds.", debugHint = "Confirm package-managed state restored." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "rebuild", label = "ASM-Lite assets are rebuilt", description = "Rebuild package state.", actionType = "rebuild", expectedOutcome = "Rebuild succeeds.", debugHint = "Inspect rebuild logs." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-rebuild", label = "Post-step cleanup is applied", description = "Reset known lifecycle drift after rebuild.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after rebuild." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "vendorize", label = "Generated assets are vendorized", description = "Vendorize generated assets.", actionType = "vendorize", expectedOutcome = "Vendorize succeeds.", debugHint = "Inspect vendorized assets." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-vendorize", label = "Post-step cleanup is applied", description = "Reset known lifecycle drift after vendorize.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after vendorize." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "detach", label = "ASM-Lite component is detached", description = "Detach from package-managed state.", actionType = "detach", expectedOutcome = "Detach succeeds.", debugHint = "Confirm detached workspace state." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "hygiene-cleanup-after-detach", label = "Post-step cleanup is applied", description = "Reset known lifecycle drift after detach.", actionType = "lifecycle-hygiene-cleanup", expectedOutcome = "Package-managed baseline restored.", debugHint = "Inspect cleanup after detach." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "return-to-package-managed", label = "Package-managed state is restored", description = "Return to package-managed baseline.", actionType = "return-to-package-managed", expectedOutcome = "Return succeeds.", debugHint = "Confirm package-managed state restored." },
                                         },
                                     },
                                 },
@@ -1618,7 +1618,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "mutate-then-open-scene",
-                                                label = "Mutate then open scene",
+                                                label = "Fixture change is applied and scene is open",
                                                 description = "Apply wrong-object mutation and open override scene.",
                                                 actionType = "open-scene",
                                                 args = new ASMLiteSmokeStepArgs
@@ -1662,7 +1662,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "add-prefab-clean-readiness",
-                                                label = "Add Prefab from clean baseline",
+                                                label = "Clean baseline scaffold is added",
                                                 description = "Apply remove-component and add the ASM-Lite prefab scaffold.",
                                                 actionType = "add-prefab",
                                                 args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
@@ -1672,7 +1672,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "add-prefab-for-readiness-rebuild",
-                                                label = "Add Prefab before rebuild assertion",
+                                                label = "Scaffold is added before rebuild check",
                                                 description = "Apply remove-component and add the ASM-Lite prefab scaffold.",
                                                 actionType = "add-prefab",
                                                 args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
@@ -1682,7 +1682,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "assert-primary-action-after-readiness-add",
-                                                label = "Assert Rebuild primary action",
+                                                label = "Rebuild action is shown",
                                                 description = "Assert Rebuild is the primary action after Add Prefab.",
                                                 actionType = "assert-primary-action",
                                                 args = new ASMLiteSmokeStepArgs { expectedPrimaryAction = "Rebuild" },
@@ -1692,7 +1692,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "assert-primary-action-missing-generated-folder",
-                                                label = "Assert Rebuild for missing generated folder",
+                                                label = "Rebuild action is shown for missing generated folder",
                                                 description = "Apply missing-generated-folder and assert Rebuild is the primary action.",
                                                 actionType = "assert-primary-action",
                                                 args = new ASMLiteSmokeStepArgs
@@ -1706,7 +1706,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "assert-primary-action-stale-generated-folder",
-                                                label = "Assert Rebuild for stale generated folder",
+                                                label = "Rebuild action is shown for stale generated folder",
                                                 description = "Apply stale-generated-folder and assert Rebuild is the primary action.",
                                                 actionType = "assert-primary-action",
                                                 args = new ASMLiteSmokeStepArgs
@@ -1720,7 +1720,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "add-prefab-for-package-managed-references",
-                                                label = "Add Prefab before package-managed assertion",
+                                                label = "Scaffold is added before package-managed check",
                                                 description = "Apply remove-component and add the ASM-Lite prefab scaffold before the package-managed assertion.",
                                                 actionType = "add-prefab",
                                                 args = new ASMLiteSmokeStepArgs { fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent },
@@ -1730,7 +1730,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "assert-generated-references-package-managed",
-                                                label = "Assert package-managed generated references",
+                                                label = "Generated references are package-managed",
                                                 description = "Assert generated references are package-managed by default after Add Prefab.",
                                                 actionType = "assert-generated-references-package-managed",
                                                 expectedOutcome = "Generated references are package-managed by default.",
@@ -1812,7 +1812,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "open-missing-scene",
-                                                label = "Open missing scene",
+                                                label = "Missing scene is reported",
                                                 description = "Attempt to open an intentionally missing scene.",
                                                 actionType = "open-scene",
                                                 args = new ASMLiteSmokeStepArgs
@@ -1853,9 +1853,9 @@ namespace ASMLite.Tests.Editor
                                         debugHint = "Check runtime assertion details and playmode transitions.",
                                         steps = new[]
                                         {
-                                            new ASMLiteSmokeStepDefinition { stepId = "enter-playmode", label = "Enter Playmode", description = "Enter playmode session.", actionType = "enter-playmode", expectedOutcome = "Entered playmode.", debugHint = "Inspect playmode enter diagnostics." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "assert-runtime-component-valid", label = "Assert Runtime", description = "Assert runtime component validity.", actionType = "assert-runtime-component-valid", expectedOutcome = "Runtime component is valid.", debugHint = "Check runtime assertion metadata." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "exit-playmode", label = "Exit Playmode", description = "Exit playmode session.", actionType = "exit-playmode", expectedOutcome = "Exited playmode.", debugHint = "Inspect playmode exit diagnostics." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "enter-playmode", label = "Play mode is entered", description = "Enter playmode session.", actionType = "enter-playmode", expectedOutcome = "Entered playmode.", debugHint = "Inspect playmode enter diagnostics." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "assert-runtime-component-valid", label = "Runtime component is valid", description = "Assert runtime component validity.", actionType = "assert-runtime-component-valid", expectedOutcome = "Runtime component is valid.", debugHint = "Check runtime assertion metadata." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "exit-playmode", label = "Play mode is exited", description = "Exit playmode session.", actionType = "exit-playmode", expectedOutcome = "Exited playmode.", debugHint = "Inspect playmode exit diagnostics." },
                                         },
                                     },
                                 },

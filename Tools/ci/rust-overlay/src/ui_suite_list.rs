@@ -565,10 +565,10 @@ mod tests {
         assert_eq!(
             &labels[..4],
             &[
-                "Open ASM-Lite",
-                "Find ASM-Lite prefab",
-                "Load smoke checklist",
-                "Confirm test host is ready"
+                "ASM-Lite is open",
+                "ASM-Lite prefab is available",
+                "Smoke checklist is available",
+                "Test host is ready"
             ]
         );
         assert!(plan
@@ -599,9 +599,9 @@ mod tests {
         assert_eq!(
             hygiene_labels,
             vec![
-                "Hygiene cleanup after rebuild",
-                "Hygiene cleanup after vendorize",
-                "Hygiene cleanup after detach"
+                "Post-rebuild cleanup is applied",
+                "Post-vendorize cleanup is applied",
+                "Post-detach cleanup is applied"
             ]
         );
     }
@@ -626,7 +626,7 @@ mod tests {
         assert_eq!(section.suite_id, "setup-package-presence");
         assert!(!section.default_open);
         assert_eq!(section.steps.len(), 6);
-        assert_eq!(section.steps[0].step_label, "Open ASM-Lite");
+        assert_eq!(section.steps[0].step_label, "ASM-Lite is open");
     }
 
     #[test]
@@ -731,7 +731,7 @@ mod tests {
             suite_label: "Enter / Validate / Exit Playmode".to_string(),
             run_result: "failed".to_string(),
             failure_excerpt: Some(ReviewFailureExcerpt {
-                step_label: "Validate runtime component".to_string(),
+                step_label: "Runtime component is valid".to_string(),
                 failure_message: "Runtime ASM-Lite component missing expected parameter state."
                     .to_string(),
                 context_line: Some("step-failed assert-runtime-component-valid".to_string()),

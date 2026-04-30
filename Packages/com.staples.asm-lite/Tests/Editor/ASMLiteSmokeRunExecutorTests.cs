@@ -139,7 +139,7 @@ namespace ASMLite.Tests.Editor
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "assert-missing-scene",
-                                                label = "Assert missing scene",
+                                                label = "Missing scene is reported",
                                                 description = "Assert missing scene diagnostic.",
                                                 actionType = "assert-host-ready",
                                                 expectedOutcome = "Expected diagnostic matches.",

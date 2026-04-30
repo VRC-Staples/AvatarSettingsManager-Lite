@@ -26,11 +26,11 @@ namespace ASMLite.Tests.Editor
         private const string ExternalOverlayAckPathEnvVarName = "ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH";
         private static readonly string[] VisibleSmokeChecklist =
         {
-            "Load Unity",
-            "Open 'Click ME' scene and wait for load",
-            "Open ASM-Lite Tool",
-            "Add 'Oct25_Dress' as avatar root",
-            "Add ASM-Lite default setup to avatar",
+            "Unity is loaded",
+            "Click ME scene is open",
+            "ASM-Lite window is open",
+            "Oct25_Dress is selected",
+            "ASM-Lite default setup is added",
         };
         private const float DefaultStepDelaySeconds = 1.0f;
         private const string StepDelayEnvVarName = "ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS";
@@ -325,40 +325,40 @@ namespace ASMLite.Tests.Editor
             _window.ConfigureExternalVisibleAutomationOverlay(_externalOverlayStatePath, _externalOverlayAckPath);
             _window.position = new Rect(120f, 120f, 920f, 900f);
             _window.Focus();
-            SetOverlayStep(1, "Load Unity");
+            SetOverlayStep(1, "Unity is loaded");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 1, "Load Unity");
+            yield return WaitForVisibleStep(_window, 1, "Unity is loaded");
 
-            SetOverlayStep(2, "Open 'Click ME' scene and wait for load");
+            SetOverlayStep(2, "Click ME scene is open");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 2, "Open 'Click ME' scene and wait for load");
+            yield return WaitForVisibleStep(_window, 2, "Click ME scene is open");
 
             Assert.IsTrue(EditorWindow.HasOpenInstances<ASMLite.Editor.ASMLiteWindow>(),
                 "Visible smoke automation should open the ASM-Lite editor window on screen.");
 
-            SetOverlayStep(3, "Open ASM-Lite Tool");
+            SetOverlayStep(3, "ASM-Lite window is open");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 3, "Open ASM-Lite Tool");
+            yield return WaitForVisibleStep(_window, 3, "ASM-Lite window is open");
 
             Selection.activeGameObject = _ctx.AvatarGo;
-            SetOverlayStep(4, "Add 'Oct25_Dress' as avatar root");
+            SetOverlayStep(4, "Oct25_Dress is selected");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 4, "Add 'Oct25_Dress' as avatar root");
+            yield return WaitForVisibleStep(_window, 4, "Oct25_Dress is selected");
             yield return WaitForSelectedAvatar(_window, _ctx.AvDesc, 30);
 
             var beforeHierarchy = _window.GetActionHierarchyContract();
             Assert.IsTrue(beforeHierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab),
                 "Visible smoke automation should expose Add ASM-Lite Prefab as the primary action before installation.");
 
-            SetOverlayStep(5, "Add ASM-Lite default setup to avatar");
+            SetOverlayStep(5, "ASM-Lite default setup is added");
             _window.QueueVisibleAutomationAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.AddPrefab);
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 5, "Add ASM-Lite default setup to avatar");
+            yield return WaitForVisibleStep(_window, 5, "ASM-Lite default setup is added");
             yield return WaitForComponent(_window, _ctx.AvDesc, 120);
 
             var component = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
@@ -374,14 +374,14 @@ namespace ASMLite.Tests.Editor
 
             SetOverlayStep(
                 5,
-                "Add ASM-Lite default setup to avatar",
+                "ASM-Lite default setup is added",
                 ASMLite.Editor.ASMLiteWindow.VisibleAutomationOverlayState.Success);
             _window.Repaint();
 
             yield return WaitForVisibleStep(
                 _window,
                 5,
-                "Add ASM-Lite default setup to avatar",
+                "ASM-Lite default setup is added",
                 ASMLite.Editor.ASMLiteWindow.VisibleAutomationOverlayState.Success);
 
             _window.ShowVisibleAutomationCompletionReview();

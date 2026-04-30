@@ -36,7 +36,7 @@
               "steps": [
                 {
                   "stepId": "open-window",
-                  "label": "Open ASM-Lite",
+                  "label": "ASM-Lite is open",
                   "description": "Open the ASM-Lite editor window.",
                   "actionType": "open-window",
                   "expectedOutcome": "ASM-Lite opens and is ready for automation.",
@@ -53,7 +53,7 @@
               "steps": [
                 {
                   "stepId": "assert-package-resource-present",
-                  "label": "Find ASM-Lite prefab",
+                  "label": "ASM-Lite prefab is available",
                   "description": "Find the ASM-Lite prefab inside the installed package.",
                   "actionType": "assert-package-resource-present",
                   "expectedOutcome": "The ASM-Lite prefab is found inside the installed package.",
@@ -70,7 +70,7 @@
               "steps": [
                 {
                   "stepId": "assert-catalog-loads",
-                  "label": "Load smoke checklist",
+                  "label": "Smoke checklist is available",
                   "description": "Load the smoke-test checklist used by the overlay.",
                   "actionType": "assert-catalog-loads",
                   "expectedOutcome": "The overlay can load the smoke-test checklist.",
@@ -87,7 +87,7 @@
               "steps": [
                 {
                   "stepId": "assert-host-ready",
-                  "label": "Confirm test host is ready",
+                  "label": "Test host is ready",
                   "description": "Confirm the Unity test host is ready to receive overlay commands.",
                   "actionType": "assert-host-ready",
                   "expectedOutcome": "The Unity test host is ready to receive overlay commands.",
@@ -104,7 +104,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open canonical scene",
+                  "label": "Canonical scene is open",
                   "description": "Open Assets/Click ME.unity.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Assets/Click ME.unity is active.",
@@ -121,7 +121,7 @@
               "steps": [
                 {
                   "stepId": "open-scene-after-temp",
-                  "label": "Open canonical scene after temp scene",
+                  "label": "Canonical scene is reopened",
                   "description": "Apply the temporary scene setup mutation and open Assets/Click ME.unity.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Assets/Click ME.unity is active after temporary scene setup.",
@@ -167,7 +167,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Click ME scene",
+                  "label": "Click ME scene is open",
                   "description": "Load the canonical smoke-test scene on operator request.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Assets/Click ME.unity is the active Unity scene.",
@@ -175,7 +175,7 @@
                 },
                 {
                   "stepId": "close-window-before-open",
-                  "label": "Close existing window",
+                  "label": "Existing window is closed",
                   "description": "Close any existing ASM-Lite automation window before the first open check.",
                   "actionType": "close-window",
                   "expectedOutcome": "No existing ASM-Lite automation window remains open.",
@@ -183,7 +183,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open ASM-Lite window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open the ASM-Lite automation window from a closed state.",
                   "actionType": "open-window",
                   "expectedOutcome": "The ASM-Lite window is available and focused.",
@@ -191,7 +191,7 @@
                 },
                 {
                   "stepId": "assert-window-focused-after-open",
-                  "label": "Verify focused window",
+                  "label": "ASM-Lite window is focused",
                   "description": "Assert the ASM-Lite automation window has editor focus after opening.",
                   "actionType": "assert-window-focused",
                   "expectedOutcome": "The ASM-Lite window is the focused editor window.",
@@ -199,7 +199,7 @@
                 },
                 {
                   "stepId": "close-window-before-reopen",
-                  "label": "Close ASM-Lite window",
+                  "label": "ASM-Lite window is closed",
                   "description": "Close the ASM-Lite automation window before the reopen check.",
                   "actionType": "close-window",
                   "expectedOutcome": "The ASM-Lite automation window is closed.",
@@ -207,7 +207,7 @@
                 },
                 {
                   "stepId": "open-window-after-close",
-                  "label": "Reopen ASM-Lite window",
+                  "label": "ASM-Lite window is reopened",
                   "description": "Reopen the ASM-Lite automation window after closing it.",
                   "actionType": "open-window",
                   "expectedOutcome": "The ASM-Lite window reopens cleanly.",
@@ -215,7 +215,7 @@
                 },
                 {
                   "stepId": "assert-window-focused-after-reopen",
-                  "label": "Verify focused window",
+                  "label": "ASM-Lite window is focused",
                   "description": "Assert the reopened ASM-Lite automation window has editor focus.",
                   "actionType": "assert-window-focused",
                   "expectedOutcome": "The reopened ASM-Lite window is focused.",
@@ -223,7 +223,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Oct25_Dress",
+                  "label": "Oct25_Dress is selected",
                   "description": "Bind the canonical avatar fixture to the automation window.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Oct25_Dress is the active automation target in the ASM-Lite window.",
@@ -231,7 +231,7 @@
                 },
                 {
                   "stepId": "add-prefab",
-                  "label": "Add ASM-Lite prefab",
+                  "label": "ASM-Lite scaffold is added",
                   "description": "Add the ASM-Lite prefab scaffold to the current automation target.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "The ASM-Lite prefab scaffold is attached to Oct25_Dress and generation-ready.",
@@ -239,7 +239,7 @@
                 },
                 {
                   "stepId": "assert-primary-action",
-                  "label": "Verify rebuild action is visible",
+                  "label": "Rebuild action is visible",
                   "description": "Assert that the primary rebuild action is now available in the window.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "The primary rebuild action is visible, signaling that the scaffold install succeeded.",
@@ -274,7 +274,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Use the avatar I already picked",
+                  "label": "Selected avatar is used",
                   "description": "Use the scene avatar that is already selected before the smoke tool starts picking a target.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected canonical avatar is used as the automation target.",
@@ -294,7 +294,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Find the main avatar by name",
+                  "label": "Avatar is found by name",
                   "description": "With nothing selected, find the expected scene avatar by name.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The active scene avatar matching the fixture name is selected.",
@@ -314,7 +314,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Tell me I picked the wrong object",
+                  "label": "Non-avatar selection is reported",
                   "description": "If the current selection is not an avatar, stop and explain that clearly.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported without mutating a prefab asset.",
@@ -338,7 +338,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Respect the avatar I picked",
+                  "label": "Selected alternate avatar is used",
                   "description": "If I deliberately pick a different avatar, use that one instead of guessing.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected avatar wins over fixture-name lookup deterministically.",
@@ -359,7 +359,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Allow the avatar I picked even if it is hidden",
+                  "label": "Selected inactive avatar is used",
                   "description": "If I explicitly picked a hidden avatar, keep using my choice.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The explicitly selected inactive scene avatar is accepted.",
@@ -379,7 +379,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Do not auto-pick a hidden avatar",
+                  "label": "Unselected inactive avatar is not used",
                   "description": "If a hidden avatar is not selected, do not grab it automatically.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because inactive unselected avatars are not surprise-selected.",
@@ -403,7 +403,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Ask me to choose when two avatars match",
+                  "label": "Duplicate avatar names are reported",
                   "description": "If two live avatars share the same name, stop and ask for a clearer pick.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported until the operator selects a target.",
@@ -427,7 +427,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Use my pick when names clash",
+                  "label": "Selected avatar resolves duplicate names",
                   "description": "If names clash but I already selected one avatar, use my chosen target.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected canonical avatar disambiguates duplicate names.",
@@ -447,7 +447,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Reject a prefab from the Project window",
+                  "label": "Prefab asset selection is reported",
                   "description": "If I selected a prefab asset instead of a scene avatar, reject it clearly.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported because prefab assets are not scene avatar instances.",
@@ -471,7 +471,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Explain when the avatar is missing",
+                  "label": "Missing avatar is reported",
                   "description": "If the expected avatar is gone, explain that clearly instead of guessing.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported for the missing fixture avatar.",
@@ -496,7 +496,7 @@
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Ignore same-name objects that are not avatars",
+                  "label": "Same-name non-avatar objects are ignored",
                   "description": "Ignore lookalike scene objects that share the name but are not real avatars.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because non-avatar objects are ignored during name lookup.",
@@ -540,7 +540,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -548,7 +548,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -556,7 +556,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -564,7 +564,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-no-component",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Add Prefab is the primary action after remove-component.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Add Prefab is the primary action.",
@@ -585,7 +585,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -593,7 +593,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -601,7 +601,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -609,7 +609,7 @@
                 },
                 {
                   "stepId": "add-prefab",
-                  "label": "Add Prefab",
+                  "label": "ASM-Lite scaffold is added",
                   "description": "Add ASM-Lite prefab scaffold from no-component state.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached.",
@@ -620,7 +620,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-after-add",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after existing-component-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -641,7 +641,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -649,7 +649,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -657,7 +657,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -665,7 +665,7 @@
                 },
                 {
                   "stepId": "add-prefab-first",
-                  "label": "Add Prefab First",
+                  "label": "First scaffold add completes",
                   "description": "Add ASM-Lite prefab scaffold from no-component state.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "First add succeeds.",
@@ -676,7 +676,7 @@
                 },
                 {
                   "stepId": "add-prefab-second",
-                  "label": "Add Prefab Second",
+                  "label": "Second scaffold add completes",
                   "description": "Run add prefab again against existing component state.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Second add remains safe and idempotent.",
@@ -687,7 +687,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-twice",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after existing-component-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -708,7 +708,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -716,7 +716,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -724,7 +724,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -732,7 +732,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-existing-component",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after existing-component-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -753,7 +753,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -761,7 +761,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -769,7 +769,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -777,7 +777,7 @@
                 },
                 {
                   "stepId": "select-avatar-after-selection-change",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Apply alternate selection, then verify selected-avatar precedence during selection drift.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Selected avatar precedence is honored during selection drift.",
@@ -789,7 +789,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-selection-change",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after existing-component-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -828,7 +828,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -836,7 +836,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -844,7 +844,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -852,7 +852,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-package-managed-component-present",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after existing-component-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -873,7 +873,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -881,7 +881,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -889,7 +889,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -897,7 +897,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-vendorized-state-present",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after vendorized-state-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -918,7 +918,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -926,7 +926,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -934,7 +934,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -942,7 +942,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-detached-state-present",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Return to Package Managed is the primary action after detached-state-baseline.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Return to Package Managed is the primary action.",
@@ -963,7 +963,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -971,7 +971,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -979,7 +979,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -987,7 +987,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-stale-generated-assets-present",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Rebuild is the primary action after stale-generated-folder.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -1008,7 +1008,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1016,7 +1016,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1024,7 +1024,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1032,7 +1032,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-generated-folder-without-component",
-                  "label": "Assert Primary Action",
+                  "label": "Primary action is shown",
                   "description": "Assert Add Prefab is the primary action after generated-folder-without-component.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Add Prefab is the primary action.",
@@ -1071,7 +1071,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1079,7 +1079,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1087,7 +1087,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1095,7 +1095,7 @@
                 },
                 {
                   "stepId": "add-prefab-clean-readiness",
-                  "label": "Add Prefab from clean baseline",
+                  "label": "Clean baseline scaffold is added",
                   "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached from a clean baseline.",
@@ -1115,7 +1115,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1123,7 +1123,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1131,7 +1131,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1139,7 +1139,7 @@
                 },
                 {
                   "stepId": "add-prefab-for-readiness-rebuild",
-                  "label": "Add Prefab before rebuild assertion",
+                  "label": "Scaffold is added before rebuild check",
                   "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached before the rebuild assertion.",
@@ -1150,7 +1150,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-after-readiness-add",
-                  "label": "Assert Rebuild primary action",
+                  "label": "Rebuild action is shown",
                   "description": "Assert Rebuild is the primary action after Add Prefab.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -1170,7 +1170,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1178,7 +1178,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1186,7 +1186,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1194,7 +1194,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-missing-generated-folder",
-                  "label": "Assert Rebuild for missing generated folder",
+                  "label": "Rebuild action is shown for missing generated folder",
                   "description": "Apply missing-generated-folder and assert Rebuild is the primary action.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -1215,7 +1215,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1223,7 +1223,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1231,7 +1231,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1239,7 +1239,7 @@
                 },
                 {
                   "stepId": "assert-primary-action-stale-generated-folder",
-                  "label": "Assert Rebuild for stale generated folder",
+                  "label": "Rebuild action is shown for stale generated folder",
                   "description": "Apply stale-generated-folder and assert Rebuild is the primary action.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is the primary action.",
@@ -1260,7 +1260,7 @@
               "steps": [
                 {
                   "stepId": "open-scene",
-                  "label": "Open Scene",
+                  "label": "Scene is open",
                   "description": "Open canonical smoke scene.",
                   "actionType": "open-scene",
                   "expectedOutcome": "Scene opens.",
@@ -1268,7 +1268,7 @@
                 },
                 {
                   "stepId": "open-window",
-                  "label": "Open Window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open ASM-Lite window.",
                   "actionType": "open-window",
                   "expectedOutcome": "Window opens.",
@@ -1276,7 +1276,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Avatar",
+                  "label": "Avatar is selected",
                   "description": "Select Oct25_Dress.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Avatar selected.",
@@ -1284,7 +1284,7 @@
                 },
                 {
                   "stepId": "add-prefab-for-package-managed-references",
-                  "label": "Add Prefab before package-managed assertion",
+                  "label": "Scaffold is added before package-managed check",
                   "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached before generated reference assertion.",
@@ -1295,7 +1295,7 @@
                 },
                 {
                   "stepId": "assert-generated-references-package-managed",
-                  "label": "Assert package-managed generated references",
+                  "label": "Generated references are package-managed",
                   "description": "Assert generated references are package-managed by default after Add Prefab.",
                   "actionType": "assert-generated-references-package-managed",
                   "expectedOutcome": "Generated references are package-managed by default.",
@@ -1331,7 +1331,7 @@
               "steps": [
                 {
                   "stepId": "negative-missing-package-resource",
-                  "label": "Assert missing package resource diagnostic",
+                  "label": "Missing package resource is reported",
                   "description": "Attempt to resolve a missing package prefab source and require the resource diagnostic.",
                   "actionType": "assert-package-resource-present",
                   "expectedOutcome": "SETUP_PACKAGE_RESOURCE_MISSING is reported.",
@@ -1355,7 +1355,7 @@
               "steps": [
                 {
                   "stepId": "negative-missing-avatar",
-                  "label": "Assert missing avatar diagnostic",
+                  "label": "Missing avatar is reported",
                   "description": "Apply missing-avatar fixture state and require the not-found diagnostic.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported.",
@@ -1379,7 +1379,7 @@
               "steps": [
                 {
                   "stepId": "negative-duplicate-avatar-ambiguity",
-                  "label": "Assert duplicate avatar ambiguity diagnostic",
+                  "label": "Duplicate avatar match is reported",
                   "description": "Apply duplicate-avatar fixture state and require the ambiguous diagnostic.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported.",
@@ -1403,7 +1403,7 @@
               "steps": [
                 {
                   "stepId": "negative-prefab-asset-avatar-selected",
-                  "label": "Assert prefab asset diagnostic",
+                  "label": "Prefab asset selection is reported",
                   "description": "Apply selected-prefab-asset fixture state and require the prefab-asset diagnostic.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported.",
@@ -1427,7 +1427,7 @@
               "steps": [
                 {
                   "stepId": "negative-wrong-object-selected",
-                  "label": "Assert wrong object selected diagnostic",
+                  "label": "Non-avatar selection is reported",
                   "description": "Apply wrong-object-selection fixture state and require the selected-object diagnostic.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported.",
@@ -1470,7 +1470,7 @@
               "steps": [
                 {
                   "stepId": "controlled-corrupt-generated-asset",
-                  "label": "Assert corrupt generated asset recovery",
+                  "label": "Corrupt generated asset recovery is confirmed",
                   "description": "Apply controlled-corrupt-generated-asset and assert Rebuild is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is available and clean reset proof is recorded.",
@@ -1493,7 +1493,7 @@
               "steps": [
                 {
                   "stepId": "stale-vendorized-references",
-                  "label": "Assert stale vendorized recovery",
+                  "label": "Stale vendorized recovery is confirmed",
                   "description": "Apply vendorized-state-baseline and assert Return to Package Managed is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
@@ -1516,7 +1516,7 @@
               "steps": [
                 {
                   "stepId": "removed-generated-assets-after-component",
-                  "label": "Assert missing generated assets recovery",
+                  "label": "Missing generated assets recovery is confirmed",
                   "description": "Apply missing-generated-folder and assert Rebuild is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Rebuild is available and clean reset proof is recorded.",
@@ -1539,7 +1539,7 @@
               "steps": [
                 {
                   "stepId": "removed-component-after-generated-assets",
-                  "label": "Assert generated assets without component recovery",
+                  "label": "Generated assets without component recovery is confirmed",
                   "description": "Apply generated-folder-without-component and assert Add Prefab is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
@@ -1562,7 +1562,7 @@
               "steps": [
                 {
                   "stepId": "interrupted-detached-state",
-                  "label": "Assert interrupted detached recovery",
+                  "label": "Interrupted detached recovery is confirmed",
                   "description": "Apply detached-state-baseline and assert Add Prefab is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
@@ -1610,7 +1610,7 @@
               "steps": [
                 {
                   "stepId": "rebuild",
-                  "label": "Rebuild ASM-Lite assets",
+                  "label": "ASM-Lite assets are rebuilt",
                   "description": "Rebuild generated ASM-Lite assets for the canonical avatar.",
                   "actionType": "rebuild",
                   "expectedOutcome": "Generated assets rebuild successfully and reflect the latest package-managed source.",
@@ -1618,7 +1618,7 @@
                 },
                 {
                   "stepId": "hygiene-cleanup-after-rebuild",
-                  "label": "Hygiene cleanup after rebuild",
+                  "label": "Post-rebuild cleanup is applied",
                   "description": "Reset known ASM-Lite lifecycle drift before the next lifecycle action.",
                   "actionType": "lifecycle-hygiene-cleanup",
                   "expectedOutcome": "Known ASM-Lite generated/vendorized state is returned to a package-managed baseline.",
@@ -1626,7 +1626,7 @@
                 },
                 {
                   "stepId": "vendorize",
-                  "label": "Vendorize generated assets",
+                  "label": "Generated assets are vendorized",
                   "description": "Copy generated assets under Assets/ASM-Lite for vendorized workflow coverage.",
                   "actionType": "vendorize",
                   "expectedOutcome": "Vendorized generated assets exist and the avatar now points at the vendorized copy.",
@@ -1634,7 +1634,7 @@
                 },
                 {
                   "stepId": "hygiene-cleanup-after-vendorize",
-                  "label": "Hygiene cleanup after vendorize",
+                  "label": "Post-vendorize cleanup is applied",
                   "description": "Return known ASM-Lite vendorized state to package-managed baseline before detach coverage.",
                   "actionType": "lifecycle-hygiene-cleanup",
                   "expectedOutcome": "Vendorized references and known generated state are cleaned back to package-managed baseline.",
@@ -1642,7 +1642,7 @@
                 },
                 {
                   "stepId": "detach",
-                  "label": "Detach ASM-Lite component",
+                  "label": "ASM-Lite component is detached",
                   "description": "Detach the editable ASM-Lite component while preserving the baked content.",
                   "actionType": "detach",
                   "expectedOutcome": "The avatar is detached from the editable component without breaking the generated state.",
@@ -1650,7 +1650,7 @@
                 },
                 {
                   "stepId": "hygiene-cleanup-after-detach",
-                  "label": "Hygiene cleanup after detach",
+                  "label": "Post-detach cleanup is applied",
                   "description": "Restore the detached avatar to package-managed baseline before final return verification.",
                   "actionType": "lifecycle-hygiene-cleanup",
                   "expectedOutcome": "Detached state is recovered and known ASM-Lite generated state is package-managed again.",
@@ -1658,7 +1658,7 @@
                 },
                 {
                   "stepId": "return-to-package-managed",
-                  "label": "Return to package-managed state",
+                  "label": "Package-managed state is restored",
                   "description": "Reattach the avatar to package-managed ASM-Lite assets and clear vendorized drift.",
                   "actionType": "return-to-package-managed",
                   "expectedOutcome": "The avatar returns to a package-managed ASM-Lite state with no lingering vendorized dependency.",
@@ -1700,7 +1700,7 @@
               "steps": [
                 {
                   "stepId": "open-window",
-                  "label": "Open ASM-Lite window",
+                  "label": "ASM-Lite window is open",
                   "description": "Open the product window before runtime setup begins.",
                   "actionType": "open-window",
                   "expectedOutcome": "The ASM-Lite window is available for runtime preparation.",
@@ -1708,7 +1708,7 @@
                 },
                 {
                   "stepId": "select-avatar",
-                  "label": "Select Oct25_Dress",
+                  "label": "Oct25_Dress is selected",
                   "description": "Target the canonical avatar fixture before runtime preparation.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "Oct25_Dress is the active runtime-preparation target.",
@@ -1716,7 +1716,7 @@
                 },
                 {
                   "stepId": "add-prefab",
-                  "label": "Ensure ASM-Lite scaffold exists",
+                  "label": "ASM-Lite scaffold is present",
                   "description": "Add the ASM-Lite prefab scaffold if the avatar is not already prepared for runtime checks.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "The avatar has the ASM-Lite scaffold required for runtime validation.",
@@ -1724,7 +1724,7 @@
                 },
                 {
                   "stepId": "enter-playmode",
-                  "label": "Enter playmode",
+                  "label": "Play mode is entered",
                   "description": "Transition the Unity host into playmode for runtime coverage.",
                   "actionType": "enter-playmode",
                   "expectedOutcome": "The host enters playmode and begins runtime validation on the canonical avatar.",
@@ -1732,7 +1732,7 @@
                 },
                 {
                   "stepId": "assert-runtime-component-valid",
-                  "label": "Validate runtime component",
+                  "label": "Runtime component is valid",
                   "description": "Assert that ASM-Lite survives playmode preprocessing on the prepared avatar.",
                   "actionType": "assert-runtime-component-valid",
                   "expectedOutcome": "The prepared avatar is valid after playmode preprocessing; editor-only ASM-Lite component stripping is accepted.",
@@ -1740,7 +1740,7 @@
                 },
                 {
                   "stepId": "exit-playmode",
-                  "label": "Exit playmode",
+                  "label": "Play mode is exited",
                   "description": "Return the host to edit mode after runtime validation completes.",
                   "actionType": "exit-playmode",
                   "expectedOutcome": "The host exits playmode cleanly and returns to edit mode without restarting Unity.",

@@ -171,17 +171,17 @@ namespace ASMLite.Tests.Editor
             }));
             Assert.That(avatarSelection.cases.Select(item => item.steps.Single().label), Is.EqualTo(new[]
             {
-                "Use the avatar I already picked",
-                "Find the main avatar by name",
-                "Tell me I picked the wrong object",
-                "Respect the avatar I picked",
-                "Allow the avatar I picked even if it is hidden",
-                "Do not auto-pick a hidden avatar",
-                "Ask me to choose when two avatars match",
-                "Use my pick when names clash",
-                "Reject a prefab from the Project window",
-                "Explain when the avatar is missing",
-                "Ignore same-name objects that are not avatars",
+                "Selected avatar is used",
+                "Avatar is found by name",
+                "Non-avatar selection is reported",
+                "Selected alternate avatar is used",
+                "Selected inactive avatar is used",
+                "Unselected inactive avatar is not used",
+                "Duplicate avatar names are reported",
+                "Selected avatar resolves duplicate names",
+                "Prefab asset selection is reported",
+                "Missing avatar is reported",
+                "Same-name non-avatar objects are ignored",
             }));
 
             ASMLiteSmokeStepArgs wrongObjectArgs = avatarSelection.cases.Single(item => item.caseId == "wrong-object-selected").steps.Single().args;

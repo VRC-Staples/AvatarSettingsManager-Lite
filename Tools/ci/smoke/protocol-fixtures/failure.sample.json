@@ -7,7 +7,7 @@
   "caseId": "runtime-validation",
   "caseLabel": "Runtime validation",
   "stepId": "assert-runtime-component-valid",
-  "stepLabel": "Validate runtime component",
+  "stepLabel": "Runtime component is valid",
   "failureMessage": "Runtime ASM-Lite component missing expected parameter state.",
   "stackTrace": "System.InvalidOperationException: Runtime component validation failed at ASMLite.Tests.Editor.RuntimeValidator.AssertComponentState()",
   "effectiveResetPolicy": "SceneReload",

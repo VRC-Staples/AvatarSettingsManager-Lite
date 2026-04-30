@@ -987,7 +987,7 @@ mod tests {
         let excerpt = summary
             .failure_excerpt
             .expect("failed run should include failure excerpt");
-        assert_eq!(excerpt.step_label, "Validate runtime component");
+        assert_eq!(excerpt.step_label, "Runtime component is valid");
         assert!(excerpt
             .failure_message
             .contains("Runtime ASM-Lite component missing expected parameter state."));
