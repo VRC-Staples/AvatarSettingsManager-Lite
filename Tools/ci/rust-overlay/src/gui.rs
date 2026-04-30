@@ -827,7 +827,7 @@ fn current_suite_info_note() -> &'static str {
 fn recent_event_log_default_open(phase: OperatorPhase) -> bool {
     matches!(
         phase,
-        OperatorPhase::ReviewRequired | OperatorPhase::HostError
+        OperatorPhase::Running | OperatorPhase::ReviewRequired | OperatorPhase::HostError
     )
 }
 
@@ -4275,11 +4275,11 @@ mod tests {
     }
 
     #[test]
-    fn recent_event_log_expands_only_for_review_and_host_error_phases() {
+    fn recent_event_log_auto_opens_for_live_and_recovery_phases() {
         assert!(!recent_event_log_default_open(OperatorPhase::NotLaunched));
         assert!(!recent_event_log_default_open(OperatorPhase::Starting));
         assert!(!recent_event_log_default_open(OperatorPhase::Ready));
-        assert!(!recent_event_log_default_open(OperatorPhase::Running));
+        assert!(recent_event_log_default_open(OperatorPhase::Running));
         assert!(recent_event_log_default_open(OperatorPhase::ReviewRequired));
         assert!(recent_event_log_default_open(OperatorPhase::HostError));
     }
