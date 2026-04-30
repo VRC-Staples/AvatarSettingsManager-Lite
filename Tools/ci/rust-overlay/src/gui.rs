@@ -816,6 +816,18 @@ fn utilities_section_title() -> &'static str {
     "Utilities / Advanced"
 }
 
+fn review_evidence_title() -> &'static str {
+    "Review Evidence"
+}
+
+fn run_monitor_title() -> &'static str {
+    "Run Monitor"
+}
+
+fn recent_events_section_title() -> &'static str {
+    "Recent Events"
+}
+
 fn destructive_drills_helper_copy(enabled: bool) -> &'static str {
     if enabled {
         "Destructive drills still require a confirm before they run."
@@ -852,8 +864,24 @@ fn current_suite_info_note() -> &'static str {
     "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
 }
 
+fn review_followup_copy() -> &'static str {
+    "Inspect Unity, then rerun from the first selected suite or return to the suite list."
+}
+
 fn review_failure_excerpt_color() -> egui::Color32 {
     tone_color(StatusTone::Warning)
+}
+
+fn run_monitor_review_heading(review: &ReviewSummaryModel) -> String {
+    format!(
+        "{} · {}",
+        review.run_result.to_ascii_uppercase(),
+        review.suite_label
+    )
+}
+
+fn run_monitor_failure_label(step_label: &str) -> String {
+    format!("Failed step: {step_label}")
 }
 
 fn recent_event_log_default_open(phase: OperatorPhase) -> bool {
@@ -2870,7 +2898,7 @@ fn review_evidence_card(
         CARD_MARGIN_PX,
         |ui| {
             ui.label(
-                egui::RichText::new("Review evidence")
+                egui::RichText::new(review_evidence_title())
                     .strong()
                     .size(CARD_TITLE_TEXT_SIZE),
             );
@@ -2910,7 +2938,7 @@ fn review_evidence_card(
                 }
                 ui.add_space(RELATED_GAP_PX);
                 ui.label(
-                    egui::RichText::new("Inspect Unity, then return to suite list or rerun.")
+                    egui::RichText::new(review_followup_copy())
                         .color(MUTED)
                         .size(META_TEXT_SIZE),
                 );
@@ -2942,7 +2970,7 @@ fn run_monitor_card(
         CARD_MARGIN_PX,
         |ui| {
             ui.label(
-                egui::RichText::new("Run monitor")
+                egui::RichText::new(run_monitor_title())
                     .strong()
                     .size(CARD_TITLE_TEXT_SIZE),
             );
@@ -2959,14 +2987,10 @@ fn run_monitor_card(
                             .size(CARD_TITLE_TEXT_SIZE),
                     );
                     ui.label(
-                        egui::RichText::new(format!(
-                            "{} · {}",
-                            review.run_result.to_ascii_uppercase(),
-                            review.suite_id
-                        ))
-                        .color(color)
-                        .strong()
-                        .size(BODY_TEXT_SIZE),
+                        egui::RichText::new(run_monitor_review_heading(&review))
+                            .color(color)
+                            .strong()
+                            .size(BODY_TEXT_SIZE),
                     );
                 });
                 ui.label(
@@ -2977,7 +3001,7 @@ fn run_monitor_card(
                 if let Some(excerpt) = review.failure_excerpt {
                     ui.add_space(RELATED_GAP_PX);
                     ui.label(
-                        egui::RichText::new(format!("Failed: {}", excerpt.step_label))
+                        egui::RichText::new(run_monitor_failure_label(&excerpt.step_label))
                             .color(review_failure_excerpt_color())
                             .strong()
                             .size(BODY_TEXT_SIZE),
@@ -2998,7 +3022,7 @@ fn run_monitor_card(
 
             ui.add_space(SECTION_GAP_PX);
             egui::CollapsingHeader::new(
-                egui::RichText::new("Recent events")
+                egui::RichText::new(recent_events_section_title())
                     .strong()
                     .color(TEXT)
                     .size(BODY_TEXT_SIZE),
@@ -4337,6 +4361,9 @@ mod tests {
             "Rerun from First Selected"
         );
         assert_eq!(utilities_section_title(), "Utilities / Advanced");
+        assert_eq!(review_evidence_title(), "Review Evidence");
+        assert_eq!(run_monitor_title(), "Run Monitor");
+        assert_eq!(recent_events_section_title(), "Recent Events");
         assert_eq!(debug_hint_section_title(), "Debug hint");
         assert_eq!(
             current_suite_empty_state_copy(),
@@ -4364,6 +4391,32 @@ mod tests {
         );
         assert!(recent_event_log_empty_state_copy().contains("Run a suite"));
         assert!(recent_event_log_empty_state_copy().contains("stream activity"));
+    }
+
+    #[test]
+    fn review_copy_keeps_rerun_guidance_operator_facing() {
+        let review = ReviewSummaryModel {
+            run_id: "run-0002-playmode-runtime-validation".to_string(),
+            suite_id: "playmode-runtime-validation".to_string(),
+            suite_label: "Enter / Validate / Exit Playmode".to_string(),
+            run_result: "failed".to_string(),
+            failure_excerpt: None,
+        };
+
+        assert_eq!(
+            review_followup_copy(),
+            "Inspect Unity, then rerun from the first selected suite or return to the suite list."
+        );
+        assert!(review_followup_copy().contains("rerun from the first selected suite"));
+        assert_eq!(
+            run_monitor_review_heading(&review),
+            "FAILED · Enter / Validate / Exit Playmode"
+        );
+        assert!(!run_monitor_review_heading(&review).contains("playmode-runtime-validation"));
+        assert_eq!(
+            run_monitor_failure_label("Validate runtime component"),
+            "Failed step: Validate runtime component"
+        );
     }
 
     #[test]
