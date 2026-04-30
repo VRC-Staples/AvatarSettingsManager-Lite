@@ -15,20 +15,21 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
 
             CollectionAssert.AreEqual(
-                new[] { "editor-window", "lifecycle", "playmode-runtime" },
+                new[] { "preflight", "editor-window", "lifecycle", "playmode-runtime" },
                 catalog.groups.Select(group => group.groupId).ToArray());
             Assert.AreEqual("Assets/Click ME.unity", catalog.fixture.scenePath);
             Assert.AreEqual("Oct25_Dress", catalog.fixture.avatarName);
-            Assert.AreEqual("setup-scene-avatar", catalog.groups[0].suites[0].suiteId);
+            Assert.AreEqual("setup-package-presence", catalog.groups[0].suites[0].suiteId);
+            Assert.AreEqual("setup-scene-avatar", catalog.groups[1].suites[0].suiteId);
             CollectionAssert.AreEqual(
                 new[] { "open-scene", "open-window", "select-avatar", "add-prefab", "assert-primary-action" },
-                catalog.groups[0].suites[0].cases[0].steps.Select(step => step.actionType).ToArray());
+                catalog.groups[1].suites[0].cases[0].steps.Select(step => step.actionType).ToArray());
             CollectionAssert.IsSubsetOf(
                 new[] { "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 catalog.groups.SelectMany(group => group.suites).Select(suite => suite.suiteId).ToArray());
             Assert.GreaterOrEqual(catalog.groups.Sum(group => group.suites.Length), 3);
-            Assert.AreEqual("lifecycle-roundtrip", catalog.groups[1].suites[0].suiteId);
-            Assert.AreEqual("playmode-runtime-validation", catalog.groups[2].suites[0].suiteId);
+            Assert.AreEqual("lifecycle-roundtrip", catalog.groups[2].suites[0].suiteId);
+            Assert.AreEqual("playmode-runtime-validation", catalog.groups[3].suites[0].suiteId);
         }
 
         [Test]
@@ -38,17 +39,16 @@ namespace ASMLite.Tests.Editor
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
 
             CollectionAssert.AreEquivalent(
-                new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                new[] { "setup-package-presence", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.defaultSelected).Select(suite => suite.suiteId).ToArray());
             Assert.IsTrue(suites.Where(suite => suite.defaultSelected).All(suite => !suite.IsDestructive));
             CollectionAssert.AreEquivalent(
-                new[] { "setup-scene-avatar", "setup-package-presence", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                new[] { "setup-package-presence", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
             CollectionAssert.AreEquivalent(
                 new[]
                 {
                     "setup-scene-avatar",
-                    "setup-package-presence",
                     "setup-scene-acquisition",
                     "setup-window-launch-focus",
                     "setup-avatar-discovery-selection",
@@ -73,7 +73,8 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeSuiteDefinition packagePresence = suites.Single(suite => suite.suiteId == "setup-package-presence");
             Assert.That(packagePresence.defaultSelected, Is.True);
             Assert.AreEqual("quick", packagePresence.speed);
-            CollectionAssert.AreEquivalent(new[] { "quick-default", "all-setup" }, packagePresence.presetGroups);
+            CollectionAssert.AreEquivalent(new[] { "quick-default" }, packagePresence.presetGroups);
+            Assert.AreEqual("ASM-Lite Readiness Check", packagePresence.label);
             Assert.That(packagePresence.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
                 "window-menu-opens",

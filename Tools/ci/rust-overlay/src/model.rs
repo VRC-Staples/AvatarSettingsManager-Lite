@@ -719,7 +719,7 @@ mod tests {
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
-        assert_eq!(model.selected_suite_id, "setup-scene-avatar");
+        assert_eq!(model.selected_suite_id, "setup-package-presence");
         model
             .select_suite_by_id("lifecycle-roundtrip")
             .expect("suite id should be selectable");
@@ -778,13 +778,13 @@ mod tests {
         assert_eq!(
             model.selected_suite_ids(),
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
         );
-        assert_eq!(model.selected_suite_id, "setup-scene-avatar");
+        assert_eq!(model.selected_suite_id, "setup-package-presence");
         assert!(model.can_run_selected_suite());
     }
 
@@ -855,7 +855,6 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
-                "setup-package-presence",
                 "setup-scene-acquisition",
                 "setup-window-launch-focus",
                 "setup-avatar-discovery-selection",
@@ -914,8 +913,8 @@ mod tests {
         assert_eq!(
             model.available_suite_ids(),
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "setup-scene-acquisition",
                 "setup-window-launch-focus",
                 "setup-avatar-discovery-selection",

@@ -442,8 +442,8 @@ mod tests {
         assert_eq!(
             ids,
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "setup-scene-acquisition",
                 "setup-window-launch-focus",
                 "setup-avatar-discovery-selection",
@@ -467,14 +467,33 @@ mod tests {
         assert_eq!(checklist.selected_count, 4);
         assert!(checklist.can_run_selected_batch);
 
+        let preflight = checklist
+            .rows
+            .iter()
+            .find(|row| row.suite_id == "setup-package-presence")
+            .expect("preflight row should exist");
+        assert!(preflight.checked);
+        assert!(preflight.focused);
+        assert_eq!(preflight.selected_order, Some(1));
+        assert_eq!(preflight.speed, "quick");
+        assert_eq!(preflight.risk, "safe");
+        assert!(preflight.default_selected);
+        assert!(preflight
+            .preset_groups
+            .contains(&"quick-default".to_string()));
+        assert!(!preflight.preset_groups.contains(&"all-setup".to_string()));
+        assert!(!preflight.destructive);
+        assert!(preflight.selectable);
+        assert_eq!(preflight.disabled_reason, None);
+
         let setup = checklist
             .rows
             .iter()
             .find(|row| row.suite_id == "setup-scene-avatar")
             .expect("setup row should exist");
         assert!(setup.checked);
-        assert!(setup.focused);
-        assert_eq!(setup.selected_order, Some(1));
+        assert!(!setup.focused);
+        assert_eq!(setup.selected_order, Some(2));
         assert_eq!(setup.speed, "quick");
         assert_eq!(setup.risk, "safe");
         assert!(setup.default_selected);
@@ -546,13 +565,12 @@ mod tests {
             )
         );
         assert_eq!(
-            &labels[..5],
+            &labels[..4],
             &[
-                "Open Click ME scene",
-                "Open ASM-Lite window",
-                "Select Oct25_Dress",
-                "Add ASM-Lite prefab",
-                "Verify rebuild action is visible"
+                "Open ASM-Lite",
+                "Find ASM-Lite prefab",
+                "Load smoke checklist",
+                "Confirm test host is ready"
             ]
         );
         assert!(plan
@@ -606,11 +624,11 @@ mod tests {
             .count();
         assert_eq!(plan.suite_sections.len(), default_selected_count);
         let section = &plan.suite_sections[0];
-        assert_eq!(section.title, "Setup · Setup Scene / Avatar / Prefab");
-        assert_eq!(section.suite_id, "setup-scene-avatar");
+        assert_eq!(section.title, "Preflight · ASM-Lite Readiness Check");
+        assert_eq!(section.suite_id, "setup-package-presence");
         assert!(!section.default_open);
-        assert_eq!(section.steps.len(), 5);
-        assert_eq!(section.steps[0].step_label, "Open Click ME scene");
+        assert_eq!(section.steps.len(), 4);
+        assert_eq!(section.steps[0].step_label, "Open ASM-Lite");
     }
 
     #[test]
@@ -758,8 +776,8 @@ mod tests {
         assert_eq!(
             quick.visible_suite_ids(),
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]

@@ -7,6 +7,99 @@
   },
   "groups": [
     {
+      "groupId": "preflight",
+      "label": "Preflight",
+      "description": "Confirm ASM-Lite and the Unity test host are ready before any setup, lifecycle, or runtime suites run.",
+      "suites": [
+        {
+          "suiteId": "setup-package-presence",
+          "label": "ASM-Lite Readiness Check",
+          "description": "Make sure ASM-Lite, its prefab, the smoke checklist, and the Unity test host are ready before running setup or lifecycle suites.",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": true,
+          "presetGroups": [
+            "quick-default"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "ASM-Lite opens, the package prefab is available, the smoke checklist loads, and the Unity test host is ready.",
+          "debugHint": "If this check fails, confirm the package is installed in the external UAT project and the smoke checklist path resolves.",
+          "cases": [
+            {
+              "caseId": "window-menu-opens",
+              "label": "Open ASM-Lite",
+              "description": "Open ASM-Lite from Unity so the overlay can confirm the editor window is available.",
+              "expectedOutcome": "ASM-Lite opens and is ready for automation.",
+              "debugHint": "If this fails, check that the ASM-Lite editor window can open from Unity and that editor logs do not show startup errors.",
+              "steps": [
+                {
+                  "stepId": "open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite opens and is ready for automation.",
+                  "debugHint": "If this fails, check that the ASM-Lite editor window can open from Unity and that editor logs do not show startup errors."
+                }
+              ]
+            },
+            {
+              "caseId": "package-resources-present",
+              "label": "Package files are available",
+              "description": "Check that the installed ASM-Lite package includes the prefab needed by later suites.",
+              "expectedOutcome": "The ASM-Lite prefab is found inside the installed package.",
+              "debugHint": "If this fails, check that the ASM-Lite package is installed and Unity imported its prefab files.",
+              "steps": [
+                {
+                  "stepId": "assert-package-resource-present",
+                  "label": "Find ASM-Lite prefab",
+                  "description": "Find the ASM-Lite prefab inside the installed package.",
+                  "actionType": "assert-package-resource-present",
+                  "expectedOutcome": "The ASM-Lite prefab is found inside the installed package.",
+                  "debugHint": "If this fails, check that the ASM-Lite package is installed and Unity imported its prefab files."
+                }
+              ]
+            },
+            {
+              "caseId": "catalog-loads",
+              "label": "Smoke checklist loads",
+              "description": "Check that the overlay can read the smoke-test checklist it uses to show suites and steps.",
+              "expectedOutcome": "The overlay can load the smoke-test checklist.",
+              "debugHint": "If this fails, check that Tools/ci/smoke/suite-catalog.json is valid JSON and matches the expected schema.",
+              "steps": [
+                {
+                  "stepId": "assert-catalog-loads",
+                  "label": "Load smoke checklist",
+                  "description": "Load the smoke-test checklist used by the overlay.",
+                  "actionType": "assert-catalog-loads",
+                  "expectedOutcome": "The overlay can load the smoke-test checklist.",
+                  "debugHint": "If this fails, check that Tools/ci/smoke/suite-catalog.json is valid JSON and matches the expected schema."
+                }
+              ]
+            },
+            {
+              "caseId": "host-ready",
+              "label": "Test host is ready",
+              "description": "Check that the Unity test host is ready to receive overlay commands.",
+              "expectedOutcome": "The Unity test host is ready to receive overlay commands.",
+              "debugHint": "If this fails, check the smoke session folder, host startup logs, and command/event file paths.",
+              "steps": [
+                {
+                  "stepId": "assert-host-ready",
+                  "label": "Confirm test host is ready",
+                  "description": "Confirm the Unity test host is ready to receive overlay commands.",
+                  "actionType": "assert-host-ready",
+                  "expectedOutcome": "The Unity test host is ready to receive overlay commands.",
+                  "debugHint": "If this fails, check the smoke session folder, host startup logs, and command/event file paths."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "groupId": "editor-window",
       "label": "Setup",
       "description": "Open the canonical scene, target the canonical avatar, and prepare the default ASM-Lite prefab scaffold in one operator-controlled setup suite.",
@@ -74,93 +167,6 @@
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "The primary rebuild action is visible, signaling that the scaffold install succeeded.",
                   "debugHint": "If the primary action does not change, inspect whether the prefab install completed and whether the window refreshed."
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "suiteId": "setup-package-presence",
-          "label": "Setup Package Presence",
-          "description": "Confirm the ASM-Lite package, menu/window entrypoint, prefab source, catalog, and host readiness before deeper setup suites run.",
-          "resetOverride": "Inherit",
-          "speed": "quick",
-          "risk": "safe",
-          "defaultSelected": true,
-          "presetGroups": [
-            "quick-default",
-            "all-setup"
-          ],
-          "requiresPlayMode": false,
-          "stopOnFirstFailure": true,
-          "expectedOutcome": "The ASM-Lite package surface is present, the automation window opens, canonical catalog loading works, and the smoke host is ready.",
-          "debugHint": "If this suite fails, confirm the package is installed in the external UAT project and the canonical package prefab/catalog paths resolve.",
-          "cases": [
-            {
-              "caseId": "window-menu-opens",
-              "label": "Window menu opens",
-              "description": "Open the ASM-Lite editor window through the automation entrypoint.",
-              "expectedOutcome": "The ASM-Lite editor window is available for automation.",
-              "debugHint": "If opening fails, inspect menu registration and editor window initialization.",
-              "steps": [
-                {
-                  "stepId": "open-window",
-                  "label": "Open ASM-Lite window",
-                  "description": "Open the product window through the automation entrypoint.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window is available and focused for automation.",
-                  "debugHint": "If no window appears, inspect editor layout state and window initialization logs."
-                }
-              ]
-            },
-            {
-              "caseId": "package-resources-present",
-              "label": "Package resources present",
-              "description": "Confirm package-managed resources required by setup automation are available.",
-              "expectedOutcome": "The ASM-Lite prefab source resolves from the package.",
-              "debugHint": "If the prefab is missing, inspect package installation and embedded package paths.",
-              "steps": [
-                {
-                  "stepId": "assert-package-resource-present",
-                  "label": "Verify package prefab source",
-                  "description": "Assert that the package-managed ASM-Lite prefab source resolves.",
-                  "actionType": "assert-package-resource-present",
-                  "expectedOutcome": "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab resolves as a package asset.",
-                  "debugHint": "If the asset does not resolve, confirm the package path and prefab import state."
-                }
-              ]
-            },
-            {
-              "caseId": "catalog-loads",
-              "label": "Canonical catalog loads",
-              "description": "Confirm the smoke host can load the canonical suite catalog.",
-              "expectedOutcome": "The canonical smoke suite catalog loads with required metadata.",
-              "debugHint": "If catalog loading fails, inspect Tools/ci/smoke/suite-catalog.json schema and JSON validity.",
-              "steps": [
-                {
-                  "stepId": "assert-catalog-loads",
-                  "label": "Load canonical smoke catalog",
-                  "description": "Load the canonical smoke catalog through the test-side catalog reader.",
-                  "actionType": "assert-catalog-loads",
-                  "expectedOutcome": "The canonical smoke suite catalog loads successfully.",
-                  "debugHint": "If loading fails, inspect catalog schema validation diagnostics."
-                }
-              ]
-            },
-            {
-              "caseId": "host-ready",
-              "label": "Host ready",
-              "description": "Confirm the smoke host can report baseline readiness.",
-              "expectedOutcome": "The host readiness check passes.",
-              "debugHint": "If readiness fails, inspect host startup state and command directory setup.",
-              "steps": [
-                {
-                  "stepId": "assert-host-ready",
-                  "label": "Verify host readiness",
-                  "description": "Assert that the smoke host is ready to process setup actions.",
-                  "actionType": "assert-host-ready",
-                  "expectedOutcome": "Host readiness check passes.",
-                  "debugHint": "If readiness fails, inspect host startup state and session paths."
                 }
               ]
             }

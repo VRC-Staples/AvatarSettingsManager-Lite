@@ -396,12 +396,21 @@ mod tests {
             .collect();
         assert_eq!(
             group_ids,
-            vec!["editor-window", "lifecycle", "playmode-runtime"]
+            vec![
+                "preflight",
+                "editor-window",
+                "lifecycle",
+                "playmode-runtime"
+            ]
         );
         assert_eq!(catalog.fixture.scene_path, "Assets/Click ME.unity");
         assert_eq!(catalog.fixture.avatar_name, "Oct25_Dress");
-        assert_eq!(catalog.groups[0].suites[0].suite_id, "setup-scene-avatar");
-        let setup_steps: Vec<&str> = catalog.groups[0].suites[0].cases[0]
+        assert_eq!(
+            catalog.groups[0].suites[0].suite_id,
+            "setup-package-presence"
+        );
+        assert_eq!(catalog.groups[1].suites[0].suite_id, "setup-scene-avatar");
+        let setup_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
             .steps
             .iter()
             .map(|step| step.action_type.as_str())
@@ -416,9 +425,9 @@ mod tests {
                 "assert-primary-action"
             ]
         );
-        assert_eq!(catalog.groups[0].suites.len(), 10);
-        assert_eq!(catalog.groups[1].suites[0].suite_id, "lifecycle-roundtrip");
-        let lifecycle_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
+        assert_eq!(catalog.groups[1].suites.len(), 9);
+        assert_eq!(catalog.groups[2].suites[0].suite_id, "lifecycle-roundtrip");
+        let lifecycle_steps: Vec<&str> = catalog.groups[2].suites[0].cases[0]
             .steps
             .iter()
             .map(|step| step.step_id.as_str())
@@ -436,7 +445,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            catalog.groups[2].suites[0].suite_id,
+            catalog.groups[3].suites[0].suite_id,
             "playmode-runtime-validation"
         );
     }
@@ -458,8 +467,8 @@ mod tests {
         assert_eq!(
             default_ids,
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
@@ -487,8 +496,8 @@ mod tests {
         assert_eq!(
             quick_default_ids,
             vec![
-                "setup-scene-avatar",
                 "setup-package-presence",
+                "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]

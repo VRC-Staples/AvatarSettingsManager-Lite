@@ -1836,6 +1836,24 @@ fn utilities_card(ui: &mut egui::Ui, model: &mut SuiteSelectionModel, disabled: 
         );
         ui.add_space(RELATED_GAP_PX);
         step_sleep_timer_card(ui, model, disabled);
+        ui.add_space(SECTION_GAP_PX);
+        ui.separator();
+        ui.add_space(RELATED_GAP_PX);
+        ui.label(
+            egui::RichText::new("Risk gates")
+                .strong()
+                .color(TEXT)
+                .size(BODY_TEXT_SIZE),
+        );
+        ui.add_enabled_ui(!disabled, |ui| {
+            let mut destructive_enabled = model.destructive_suites_enabled;
+            if ui
+                .checkbox(&mut destructive_enabled, "Enable destructive drills")
+                .changed()
+            {
+                model.set_destructive_suites_enabled(destructive_enabled);
+            }
+        });
     });
 }
 
@@ -2524,6 +2542,16 @@ pub fn suite_preset_button_specs() -> [SuitePresetButtonSpec; 4] {
     ]
 }
 
+fn apply_suite_preset_selection(
+    model: &mut SuiteSelectionModel,
+    speed_filter: &mut Option<SuiteSpeedFilter>,
+    preset_group: &str,
+) -> Result<(), String> {
+    model.apply_preset_group(preset_group)?;
+    *speed_filter = None;
+    Ok(())
+}
+
 fn suite_selector(
     ui: &mut egui::Ui,
     model: &mut SuiteSelectionModel,
@@ -2569,24 +2597,6 @@ fn suite_selector(
                 filter_query.clear();
             }
         });
-        ui.horizontal_wrapped(|ui| {
-            if ui.selectable_label(speed_filter.is_none(), "All").clicked() {
-                *speed_filter = None;
-            }
-            for (label, value) in [
-                ("Quick", SuiteSpeedFilter::Quick),
-                ("Standard", SuiteSpeedFilter::Standard),
-                ("Exhaustive", SuiteSpeedFilter::Exhaustive),
-                ("Destructive", SuiteSpeedFilter::Destructive),
-            ] {
-                if ui
-                    .selectable_label(*speed_filter == Some(value), label)
-                    .clicked()
-                {
-                    *speed_filter = Some(value);
-                }
-            }
-        });
         ui.add_enabled_ui(!disabled, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(
@@ -2601,26 +2611,9 @@ fn suite_selector(
                         .add_enabled(enabled, egui::Button::new(preset.label))
                         .clicked()
                     {
-                        let _ = model.apply_preset_group(preset.preset_group);
+                        let _ =
+                            apply_suite_preset_selection(model, speed_filter, preset.preset_group);
                     }
-                }
-            });
-            ui.horizontal_wrapped(|ui| {
-                let mut destructive_enabled = model.destructive_suites_enabled;
-                if ui
-                    .checkbox(&mut destructive_enabled, "Enable destructive drills")
-                    .changed()
-                {
-                    model.set_destructive_suites_enabled(destructive_enabled);
-                }
-                if !model.destructive_suites_enabled {
-                    ui.label(
-                        egui::RichText::new(
-                            "Destructive suites stay visible but disabled until enabled.",
-                        )
-                        .color(MUTED)
-                        .size(META_TEXT_SIZE),
-                    );
                 }
             });
         });
@@ -3031,6 +3024,7 @@ fn civil_from_days(days_since_epoch: i64) -> (i64, i64, i64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::catalog::load_canonical_catalog;
     use crate::session::SmokeHostStateDocument;
 
     #[test]
@@ -3067,6 +3061,43 @@ mod tests {
                 "all-setup",
                 "safe-negatives",
                 "destructive-drills"
+            ]
+        );
+    }
+
+    #[test]
+    fn suite_preset_selection_keeps_full_suite_list_visible() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let mut speed_filter = Some(SuiteSpeedFilter::Quick);
+
+        apply_suite_preset_selection(&mut model, &mut speed_filter, "all-setup")
+            .expect("preset should apply");
+
+        let filter = SuiteChecklistFilter {
+            search_query: String::new(),
+            speed_filter,
+        };
+        let checklist = build_filtered_suite_checklist_view(&model, &filter);
+
+        assert_eq!(speed_filter, None);
+        assert_eq!(
+            checklist.visible_suite_ids().len(),
+            model.available_suite_ids().len()
+        );
+        assert_eq!(checklist.hidden_by_filter_count, 0);
+        assert_eq!(
+            model.selected_suite_ids(),
+            vec![
+                "setup-scene-avatar",
+                "setup-scene-acquisition",
+                "setup-window-launch-focus",
+                "setup-avatar-discovery-selection",
+                "setup-scaffold-add-idempotency",
+                "setup-existing-state-recognition",
+                "setup-generated-asset-readiness",
+                "setup-negative-diagnostics"
             ]
         );
     }
@@ -3749,7 +3780,7 @@ mod tests {
         let briefing = build_current_suite_briefing_model_for_poll(&model, Some(&poll))
             .expect("briefing should exist");
 
-        assert_eq!(briefing.steps[0].label, "Open Click ME scene");
+        assert_eq!(briefing.steps[0].label, "Open ASM-Lite");
         assert_eq!(briefing.steps[0].status, CurrentSuiteStepStatus::Pending);
     }
 
@@ -3955,7 +3986,7 @@ mod tests {
         assert_eq!(footer.hidden_by_filter_count, 11);
         assert_eq!(
             footer.batch_progress.as_deref(),
-            Some("2/4 setup-package-presence")
+            Some("2/4 setup-scene-avatar")
         );
     }
 
