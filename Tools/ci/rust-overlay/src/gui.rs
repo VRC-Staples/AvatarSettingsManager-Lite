@@ -844,6 +844,10 @@ fn suite_filter_empty_state_copy() -> &'static str {
     "No suites match the current filters. Clear search or change speed filters."
 }
 
+fn recent_event_log_empty_state_copy() -> &'static str {
+    "No events yet. Run a suite to stream activity here."
+}
+
 fn current_suite_info_note() -> &'static str {
     "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
 }
@@ -3023,7 +3027,7 @@ fn run_monitor_card(
                             }
                         });
                 } else {
-                    ui.label(egui::RichText::new("No events yet.").color(MUTED));
+                    ui.label(egui::RichText::new(recent_event_log_empty_state_copy()).color(MUTED));
                 }
             });
         },
@@ -3289,7 +3293,6 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
-                "setup-window-launch-focus",
                 "setup-avatar-discovery-selection",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
@@ -4351,6 +4354,16 @@ mod tests {
         );
         assert!(suite_filter_empty_state_copy().contains("Clear search"));
         assert!(suite_filter_empty_state_copy().contains("speed filters"));
+    }
+
+    #[test]
+    fn recent_event_log_empty_state_copy_stays_actionable() {
+        assert_eq!(
+            recent_event_log_empty_state_copy(),
+            "No events yet. Run a suite to stream activity here."
+        );
+        assert!(recent_event_log_empty_state_copy().contains("Run a suite"));
+        assert!(recent_event_log_empty_state_copy().contains("stream activity"));
     }
 
     #[test]
