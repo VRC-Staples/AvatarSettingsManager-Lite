@@ -43,6 +43,7 @@ const SUCCESS: egui::Color32 = egui::Color32::from_rgb(76, 214, 122);
 const DANGER: egui::Color32 = egui::Color32::from_rgb(226, 59, 59);
 const DANGER_BUTTON_FILL: egui::Color32 = egui::Color32::from_rgb(185, 28, 28);
 const RECENT_EVENT_LOG_MAX_HEIGHT_PX: f32 = 240.0;
+const RECENT_EVENT_LOG_EXPANDED_HEIGHT_PX: f32 = 360.0;
 const ACTION_TILE_WIDTH_PX: f32 = 184.0;
 const ACTION_TILE_HEIGHT_PX: f32 = 36.0;
 
@@ -335,6 +336,12 @@ pub struct InfoCalloutVisualSpec {
     pub text_size_px: f32,
     pub row_vertical_align: egui::Align,
     pub horizontal_wrapped: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CurrentSuiteInfoPresentation {
+    FramedCallout,
+    InlineMuted,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -1632,7 +1639,12 @@ impl eframe::App for SmokeOverlayApp {
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         if matches!(operator_phase, OperatorPhase::Running) {
-                            selected_suite_card(ui, &self.model, self.latest_poll.as_ref());
+                            selected_suite_card(
+                                ui,
+                                &self.model,
+                                self.latest_poll.as_ref(),
+                                operator_phase,
+                            );
                             ui.add_space(SECTION_GAP_PX);
                             run_monitor_card(
                                 ui,
@@ -1674,7 +1686,12 @@ impl eframe::App for SmokeOverlayApp {
                                 false,
                             );
                             ui.add_space(SECTION_GAP_PX);
-                            selected_suite_card(ui, &self.model, self.latest_poll.as_ref());
+                            selected_suite_card(
+                                ui,
+                                &self.model,
+                                self.latest_poll.as_ref(),
+                                operator_phase,
+                            );
                             ui.add_space(SECTION_GAP_PX);
                             run_monitor_card(
                                 ui,
@@ -1852,6 +1869,7 @@ fn selected_suite_card(
     ui: &mut egui::Ui,
     model: &SuiteSelectionModel,
     poll: Option<&StartupPollResult>,
+    operator_phase: OperatorPhase,
 ) {
     dashboard_section(ui, "Current Suite", DashboardSectionTone::Cream, |ui| {
         if let Some(briefing) = build_current_suite_briefing_model_for_poll(model, poll) {
@@ -1897,7 +1915,14 @@ fn selected_suite_card(
                 },
             );
             ui.add_space(RELATED_GAP_PX);
-            info_callout(ui, &briefing.info_note);
+            match current_suite_info_presentation(operator_phase) {
+                CurrentSuiteInfoPresentation::FramedCallout => {
+                    info_callout(ui, &briefing.info_note);
+                }
+                CurrentSuiteInfoPresentation::InlineMuted => {
+                    compact_current_suite_note(ui, &briefing.info_note);
+                }
+            }
             if !briefing.debug_hint.trim().is_empty() {
                 ui.add_space(RELATED_GAP_PX);
                 egui::CollapsingHeader::new(
@@ -2294,6 +2319,16 @@ pub fn current_suite_info_callout_visual_spec() -> InfoCalloutVisualSpec {
     }
 }
 
+pub fn current_suite_info_presentation(
+    operator_phase: OperatorPhase,
+) -> CurrentSuiteInfoPresentation {
+    if matches!(operator_phase, OperatorPhase::Running) {
+        CurrentSuiteInfoPresentation::InlineMuted
+    } else {
+        CurrentSuiteInfoPresentation::FramedCallout
+    }
+}
+
 fn section_subheader(ui: &mut egui::Ui, title: &str, tone: DashboardSectionTone) {
     let spec = section_subheader_visual_spec();
     let text = egui::RichText::new(title)
@@ -2357,6 +2392,10 @@ fn info_callout(ui: &mut egui::Ui, text: &str) {
             });
         },
     );
+}
+
+fn compact_current_suite_note(ui: &mut egui::Ui, text: &str) {
+    ui.label(egui::RichText::new(text).color(MUTED).size(META_TEXT_SIZE));
 }
 
 fn meta_chip(ui: &mut egui::Ui, text: &str) {
@@ -2932,7 +2971,7 @@ fn run_monitor_card(
                 if recent_event_log_row_count(poll) > 0 {
                     egui::ScrollArea::vertical()
                         .id_source("recent-events-log")
-                        .max_height(recent_event_log_scroll_max_height_px())
+                        .max_height(recent_event_log_scroll_max_height_px(operator_phase))
                         .stick_to_bottom(true)
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
@@ -3081,8 +3120,15 @@ fn recent_event_log_row_count(poll: Option<&StartupPollResult>) -> usize {
     poll.map(|poll| poll.events.len()).unwrap_or_default()
 }
 
-fn recent_event_log_scroll_max_height_px() -> f32 {
-    RECENT_EVENT_LOG_MAX_HEIGHT_PX
+fn recent_event_log_scroll_max_height_px(operator_phase: OperatorPhase) -> f32 {
+    if matches!(
+        operator_phase,
+        OperatorPhase::Running | OperatorPhase::ReviewRequired | OperatorPhase::HostError
+    ) {
+        RECENT_EVENT_LOG_EXPANDED_HEIGHT_PX
+    } else {
+        RECENT_EVENT_LOG_MAX_HEIGHT_PX
+    }
 }
 
 fn review_summary_for_poll(
@@ -4154,11 +4200,42 @@ mod tests {
     }
 
     #[test]
-    fn recent_events_scroll_area_shows_more_event_history() {
-        assert!(recent_event_log_scroll_max_height_px() >= 240.0);
+    fn current_suite_running_phase_uses_compact_note_instead_of_framed_warning_box() {
         assert_eq!(
-            recent_event_log_scroll_max_height_px(),
+            current_suite_info_presentation(OperatorPhase::Running),
+            CurrentSuiteInfoPresentation::InlineMuted
+        );
+        assert_eq!(
+            current_suite_info_presentation(OperatorPhase::Ready),
+            CurrentSuiteInfoPresentation::FramedCallout
+        );
+        assert_eq!(
+            current_suite_info_presentation(OperatorPhase::ReviewRequired),
+            CurrentSuiteInfoPresentation::FramedCallout
+        );
+    }
+
+    #[test]
+    fn recent_events_scroll_area_grows_for_live_run_monitor_states() {
+        assert_eq!(
+            recent_event_log_scroll_max_height_px(OperatorPhase::Ready),
             RECENT_EVENT_LOG_MAX_HEIGHT_PX
+        );
+        assert_eq!(
+            recent_event_log_scroll_max_height_px(OperatorPhase::Running),
+            RECENT_EVENT_LOG_EXPANDED_HEIGHT_PX
+        );
+        assert_eq!(
+            recent_event_log_scroll_max_height_px(OperatorPhase::ReviewRequired),
+            RECENT_EVENT_LOG_EXPANDED_HEIGHT_PX
+        );
+        assert_eq!(
+            recent_event_log_scroll_max_height_px(OperatorPhase::HostError),
+            RECENT_EVENT_LOG_EXPANDED_HEIGHT_PX
+        );
+        assert!(
+            recent_event_log_scroll_max_height_px(OperatorPhase::Running)
+                > recent_event_log_scroll_max_height_px(OperatorPhase::Ready)
         );
     }
 
