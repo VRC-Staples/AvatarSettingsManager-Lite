@@ -2688,7 +2688,8 @@ pub fn suite_filter_summary_text(
     visible_count: usize,
     hidden_by_filter_count: usize,
 ) -> String {
-    let mut summary = format!("Selected suites: {selected_count}/{visible_count} visible");
+    let mut summary =
+        format!("Selected suites: {selected_count} selected · {visible_count} visible");
     if hidden_by_filter_count > 0 {
         summary.push_str(&format!(" · {hidden_by_filter_count} hidden by filters"));
     }
@@ -3225,14 +3226,14 @@ mod tests {
     use crate::session::SmokeHostStateDocument;
 
     #[test]
-    fn suite_filter_summary_surfaces_visible_and_hidden_counts() {
+    fn suite_filter_summary_stays_human_friendly_about_selected_and_visible_counts() {
         assert_eq!(
             suite_filter_summary_text(4, 12, 0),
-            "Selected suites: 4/12 visible"
+            "Selected suites: 4 selected · 12 visible"
         );
         assert_eq!(
             suite_filter_summary_text(4, 1, 11),
-            "Selected suites: 4/1 visible · 11 hidden by filters"
+            "Selected suites: 4 selected · 1 visible · 11 hidden by filters"
         );
     }
 
