@@ -861,7 +861,7 @@ fn recent_event_log_empty_state_copy() -> &'static str {
 }
 
 fn current_suite_info_note() -> &'static str {
-    "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
+    ""
 }
 
 fn review_followup_copy() -> &'static str {
@@ -1974,13 +1974,15 @@ fn selected_suite_card(
                     }
                 },
             );
-            ui.add_space(RELATED_GAP_PX);
-            match current_suite_info_presentation(operator_phase) {
-                CurrentSuiteInfoPresentation::FramedCallout => {
-                    info_callout(ui, &briefing.info_note);
-                }
-                CurrentSuiteInfoPresentation::InlineMuted => {
-                    compact_current_suite_note(ui, &briefing.info_note);
+            if !briefing.info_note.trim().is_empty() {
+                ui.add_space(RELATED_GAP_PX);
+                match current_suite_info_presentation(operator_phase) {
+                    CurrentSuiteInfoPresentation::FramedCallout => {
+                        info_callout(ui, &briefing.info_note);
+                    }
+                    CurrentSuiteInfoPresentation::InlineMuted => {
+                        compact_current_suite_note(ui, &briefing.info_note);
+                    }
                 }
             }
             if !briefing.debug_hint.trim().is_empty() {
@@ -2380,7 +2382,7 @@ pub fn current_suite_info_callout_visual_spec() -> InfoCalloutVisualSpec {
         icon_size_px: BODY_TEXT_SIZE + 2.0,
         text_size_px: META_TEXT_SIZE,
         row_vertical_align: egui::Align::Center,
-        horizontal_wrapped: false,
+        horizontal_wrapped: true,
     }
 }
 
@@ -2442,19 +2444,39 @@ fn info_callout(ui: &mut egui::Ui, text: &str) {
             .inner_margin(egui::Margin::symmetric(10.0, 6.0)),
         10.0,
         |ui| {
-            ui.with_layout(egui::Layout::left_to_right(spec.row_vertical_align), |ui| {
-                ui.label(
-                    egui::RichText::new(spec.icon)
-                        .color(spec.icon_color)
-                        .strong()
-                        .size(spec.icon_size_px),
-                );
-                ui.label(
-                    egui::RichText::new(text)
-                        .color(spec.text_color)
-                        .size(spec.text_size_px),
-                );
-            });
+            if spec.horizontal_wrapped {
+                ui.horizontal_wrapped(|ui| {
+                    ui.spacing_mut().item_spacing.x = RELATED_GAP_PX;
+                    ui.label(
+                        egui::RichText::new(spec.icon)
+                            .color(spec.icon_color)
+                            .strong()
+                            .size(spec.icon_size_px),
+                    );
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(text)
+                                .color(spec.text_color)
+                                .size(spec.text_size_px),
+                        )
+                        .wrap(),
+                    );
+                });
+            } else {
+                ui.with_layout(egui::Layout::left_to_right(spec.row_vertical_align), |ui| {
+                    ui.label(
+                        egui::RichText::new(spec.icon)
+                            .color(spec.icon_color)
+                            .strong()
+                            .size(spec.icon_size_px),
+                    );
+                    ui.label(
+                        egui::RichText::new(text)
+                            .color(spec.text_color)
+                            .size(spec.text_size_px),
+                    );
+                });
+            }
         },
     );
 }
@@ -3317,7 +3339,7 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
-                "setup-avatar-discovery-selection",
+                "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
@@ -3343,6 +3365,13 @@ mod tests {
         assert_eq!(layout.horizontal_inner_margin_px, CARD_MARGIN_PX);
         assert_eq!(layout.content_min_width_px, 900.0 - (CARD_MARGIN_PX * 2.0));
         assert_eq!(operator_density_spec().outer_margin_px, OUTER_MARGIN_PX);
+    }
+
+    #[test]
+    fn current_suite_info_callout_wraps_long_copy_inside_card() {
+        let spec = current_suite_info_callout_visual_spec();
+
+        assert!(spec.horizontal_wrapped);
     }
 
     #[test]
@@ -4215,36 +4244,18 @@ mod tests {
             .expected_outcomes
             .iter()
             .any(|item| item.contains("hygiene cleanup")));
-        assert!(briefing
-            .info_note
-            .contains("rerun from the first selected suite"));
-        assert!(!briefing.info_note.contains("rerun this suite"));
+        assert!(briefing.info_note.is_empty());
     }
 
     #[test]
-    fn current_suite_info_note_keeps_single_line_operator_copy() {
+    fn current_suite_info_note_is_suppressed_to_reduce_clutter() {
         let catalog = crate::catalog::load_canonical_catalog().expect("catalog should load");
         let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
         let briefing = build_current_suite_briefing_model(&model).expect("briefing should exist");
 
-        assert_eq!(
-            briefing.info_note,
-            "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
-        );
-        assert!(briefing.info_note.len() <= 120);
-        assert!(briefing.info_note.contains("inspect evidence"));
-        assert!(briefing
-            .info_note
-            .contains("rerun from the first selected suite"));
-        assert!(briefing.info_note.contains("return to the suite list"));
-        assert!(briefing.info_note.contains("export logs"));
-        assert!(!briefing.info_note.contains("rerun this suite"));
-        assert!(!briefing.info_note.contains("then Return"));
-        assert!(!briefing
-            .info_note
-            .contains("review-required before returning"));
+        assert!(briefing.info_note.is_empty());
     }
 
     #[test]
@@ -4264,7 +4275,7 @@ mod tests {
         let spec = current_suite_info_callout_visual_spec();
 
         assert_eq!(spec.row_vertical_align, egui::Align::Center);
-        assert!(!spec.horizontal_wrapped);
+        assert!(spec.horizontal_wrapped);
     }
 
     #[test]
@@ -4369,8 +4380,7 @@ mod tests {
             current_suite_empty_state_copy(),
             "Select a suite to preview its steps here."
         );
-        assert!(current_suite_info_note().contains("rerun from the first selected suite"));
-        assert!(!current_suite_info_note().contains("rerun this suite"));
+        assert!(current_suite_info_note().is_empty());
     }
 
     #[test]
