@@ -840,6 +840,10 @@ fn current_suite_empty_state_copy() -> &'static str {
     "Select a suite to preview its steps here."
 }
 
+fn suite_filter_empty_state_copy() -> &'static str {
+    "No suites match the current filters. Clear search or change speed filters."
+}
+
 fn current_suite_info_note() -> &'static str {
     "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
 }
@@ -2802,7 +2806,7 @@ fn suite_selector(
         }
         if checklist.rows.is_empty() {
             ui.label(
-                egui::RichText::new("No suites match the current filters.")
+                egui::RichText::new(suite_filter_empty_state_copy())
                     .color(WARNING)
                     .size(META_TEXT_SIZE),
             );
@@ -4336,6 +4340,16 @@ mod tests {
         );
         assert!(current_suite_info_note().contains("rerun from the first selected suite"));
         assert!(!current_suite_info_note().contains("rerun this suite"));
+    }
+
+    #[test]
+    fn suite_picker_filter_empty_state_copy_stays_actionable() {
+        assert_eq!(
+            suite_filter_empty_state_copy(),
+            "No suites match the current filters. Clear search or change speed filters."
+        );
+        assert!(suite_filter_empty_state_copy().contains("Clear search"));
+        assert!(suite_filter_empty_state_copy().contains("speed filters"));
     }
 
     #[test]
