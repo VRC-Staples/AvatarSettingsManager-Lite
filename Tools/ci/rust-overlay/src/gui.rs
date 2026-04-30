@@ -816,6 +816,22 @@ fn utilities_section_title() -> &'static str {
     "Utilities / Advanced"
 }
 
+fn destructive_drills_helper_copy(enabled: bool) -> &'static str {
+    if enabled {
+        "Destructive drills still require a confirm before they run."
+    } else {
+        "Destructive drills stay off until you explicitly enable them."
+    }
+}
+
+fn destructive_drills_helper_color(enabled: bool) -> egui::Color32 {
+    if enabled {
+        WARNING
+    } else {
+        MUTED
+    }
+}
+
 fn debug_hint_section_title() -> &'static str {
     "Debug hint"
 }
@@ -1985,6 +2001,11 @@ fn utilities_card(ui: &mut egui::Ui, model: &mut SuiteSelectionModel, disabled: 
                 {
                     model.set_destructive_suites_enabled(destructive_enabled);
                 }
+                ui.label(
+                    egui::RichText::new(destructive_drills_helper_copy(destructive_enabled))
+                        .color(destructive_drills_helper_color(destructive_enabled))
+                        .size(META_TEXT_SIZE),
+                );
             });
         },
     );
@@ -4305,6 +4326,20 @@ mod tests {
         assert_eq!(debug_hint_section_title(), "Debug hint");
         assert!(current_suite_info_note().contains("rerun from the first selected suite"));
         assert!(!current_suite_info_note().contains("rerun this suite"));
+    }
+
+    #[test]
+    fn destructive_drill_helper_copy_stays_explicit_about_toggle_and_confirm_gate() {
+        assert_eq!(
+            destructive_drills_helper_copy(false),
+            "Destructive drills stay off until you explicitly enable them."
+        );
+        assert_eq!(
+            destructive_drills_helper_copy(true),
+            "Destructive drills still require a confirm before they run."
+        );
+        assert_eq!(destructive_drills_helper_color(false), MUTED);
+        assert_eq!(destructive_drills_helper_color(true), WARNING);
     }
 
     #[test]
