@@ -377,6 +377,7 @@ pub struct HeaderVisualModel {
 pub struct StatusCardViewModel {
     pub icon: &'static str,
     pub headline: &'static str,
+    pub phase_label: &'static str,
     pub tone: StatusTone,
     pub subtext: String,
 }
@@ -449,6 +450,7 @@ pub fn status_card_view_model(label: &str, message: &str) -> StatusCardViewModel
     StatusCardViewModel {
         icon: visual.icon,
         headline: visual.headline,
+        phase_label: status_phase_label(label),
         tone: visual.tone,
         subtext: message.trim().to_string(),
     }
@@ -461,15 +463,22 @@ pub fn action_dock_layout_for_phase(
 ) -> ActionDockLayoutModel {
     let actions =
         phase_control_action_models_for_selected_batch(phase, controls, selected_suite_count);
+    let visible_action_ids = phase_visible_action_ids(phase);
     ActionDockLayoutModel {
         primary_ids: actions
             .iter()
-            .filter(|action| action.emphasis == ControlActionEmphasis::PhasePrimary)
+            .filter(|action| {
+                action.emphasis == ControlActionEmphasis::PhasePrimary
+                    && visible_action_ids.contains(&action.action.id)
+            })
             .map(|action| action.action.id)
             .collect(),
         decision_peer_ids: actions
             .iter()
-            .filter(|action| action.emphasis == ControlActionEmphasis::DecisionPeer)
+            .filter(|action| {
+                action.emphasis == ControlActionEmphasis::DecisionPeer
+                    && visible_action_ids.contains(&action.action.id)
+            })
             .map(|action| action.action.id)
             .collect(),
         secondary_ids: actions
@@ -477,6 +486,7 @@ pub fn action_dock_layout_for_phase(
             .filter(|action| {
                 action.emphasis == ControlActionEmphasis::Standard
                     && action.action.role != ControlActionRole::Destructive
+                    && visible_action_ids.contains(&action.action.id)
             })
             .map(|action| action.action.id)
             .collect(),
@@ -485,6 +495,7 @@ pub fn action_dock_layout_for_phase(
             .filter(|action| {
                 action.emphasis == ControlActionEmphasis::Standard
                     && action.action.id == ControlActionId::Exit
+                    && visible_action_ids.contains(&action.action.id)
             })
             .map(|action| action.action.id)
             .collect(),
@@ -552,7 +563,7 @@ pub fn build_current_suite_briefing_model_for_poll(
         description: suite.description.clone(),
         expected_outcomes,
         steps,
-        info_note: "On failure: export logs, rerun this suite, or return.".to_string(),
+        info_note: current_suite_info_note().to_string(),
         debug_hint: suite.debug_hint.clone(),
     })
 }
@@ -786,6 +797,45 @@ pub fn overlay_section_order_for_phase(phase: OperatorPhase) -> Vec<OverlaySecti
     }
 }
 
+fn run_selected_action_label() -> &'static str {
+    "Run Selected"
+}
+
+fn rerun_from_first_selected_action_label() -> &'static str {
+    "Rerun from First Selected"
+}
+
+fn utilities_section_title() -> &'static str {
+    "Utilities / Advanced"
+}
+
+fn debug_hint_section_title() -> &'static str {
+    "Debug hint"
+}
+
+fn current_suite_info_note() -> &'static str {
+    "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
+}
+
+fn recent_event_log_default_open(phase: OperatorPhase) -> bool {
+    matches!(
+        phase,
+        OperatorPhase::ReviewRequired | OperatorPhase::HostError
+    )
+}
+
+fn batch_progress_copy(current_ordinal: usize, selected_count: usize) -> Option<String> {
+    if selected_count == 0 {
+        return None;
+    }
+
+    Some(format!(
+        "{} of {}",
+        current_ordinal.min(selected_count),
+        selected_count
+    ))
+}
+
 pub fn dashboard_card_collapsed_for_phase(phase: OperatorPhase, section: OverlaySectionId) -> bool {
     matches!(phase, OperatorPhase::Running)
         && matches!(
@@ -839,6 +889,18 @@ pub fn status_visual_model(label: &str) -> StatusVisualModel {
     }
 }
 
+fn status_phase_label(label: &str) -> &'static str {
+    match label {
+        HOST_STATE_READY | HOST_STATE_IDLE => "Unity host idle",
+        HOST_STATE_REVIEW_REQUIRED => "Suite needs review",
+        HOST_STATE_RUNNING => "Batch in progress",
+        HOST_STATE_CRASHED | HOST_STATE_STALLED => "Unity host issue",
+        "timed-out" => "Startup issue",
+        "starting" => "Launching host",
+        _ => "Awaiting launch",
+    }
+}
+
 pub fn control_action_models(controls: OverlayControlState) -> Vec<ControlActionModel> {
     control_action_models_for_selected_batch(controls, 1)
 }
@@ -850,10 +912,6 @@ pub fn control_action_models_for_selected_batch(
     if selected_suite_count == 0 {
         controls.can_run_suite = false;
     }
-    let run_label = format!(
-        "Run {selected_suite_count} Selected Suite{}",
-        if selected_suite_count == 1 { "" } else { "s" }
-    );
     vec![
         ControlActionModel {
             id: ControlActionId::LaunchHost,
@@ -867,7 +925,7 @@ pub fn control_action_models_for_selected_batch(
         },
         ControlActionModel {
             id: ControlActionId::RunSelectedSuite,
-            label: run_label,
+            label: run_selected_action_label().to_string(),
             role: ControlActionRole::Primary,
             enabled: controls.can_run_suite,
             disabled_reason: disabled_reason(
@@ -897,7 +955,7 @@ pub fn control_action_models_for_selected_batch(
         },
         ControlActionModel {
             id: ControlActionId::RerunSuite,
-            label: "Rerun Suite".to_string(),
+            label: rerun_from_first_selected_action_label().to_string(),
             role: ControlActionRole::Primary,
             enabled: controls.can_review,
             disabled_reason: disabled_reason(
@@ -988,6 +1046,22 @@ fn phase_decision_peer_action_ids(phase: OperatorPhase) -> Vec<ControlActionId> 
     }
 }
 
+fn phase_visible_action_ids(phase: OperatorPhase) -> Vec<ControlActionId> {
+    match phase {
+        OperatorPhase::NotLaunched => vec![ControlActionId::LaunchHost, ControlActionId::Exit],
+        OperatorPhase::Starting => vec![ControlActionId::Exit],
+        OperatorPhase::Ready => vec![ControlActionId::RunSelectedSuite, ControlActionId::Exit],
+        OperatorPhase::Running => vec![ControlActionId::AbortRun, ControlActionId::Exit],
+        OperatorPhase::ReviewRequired => vec![
+            ControlActionId::ExportLogs,
+            ControlActionId::RerunSuite,
+            ControlActionId::ReturnToSuiteList,
+            ControlActionId::Exit,
+        ],
+        OperatorPhase::HostError => vec![ControlActionId::RelaunchHost, ControlActionId::Exit],
+    }
+}
+
 pub fn phase_primary_action_ids(
     phase: OperatorPhase,
     controls: OverlayControlState,
@@ -1011,6 +1085,7 @@ pub fn control_state_for_host_state(
     host_state: Option<&SmokeHostStateDocument>,
     supervisor_status: Option<UnityHostSupervisorStatus>,
     command_pending: bool,
+    launch_in_progress: bool,
 ) -> OverlayControlState {
     let host_token = host_state.map(|state| state.state.as_str()).unwrap_or("");
     let crashed_or_stalled = matches!(
@@ -1023,7 +1098,7 @@ pub fn control_state_for_host_state(
     let review = host_token == HOST_STATE_REVIEW_REQUIRED && !command_pending;
 
     OverlayControlState {
-        can_launch: host_state.is_none() && !command_pending,
+        can_launch: host_state.is_none() && !command_pending && !launch_in_progress,
         can_select_suite: ready_for_suite,
         can_run_suite: ready_for_suite,
         can_abort: running,
@@ -1048,6 +1123,7 @@ pub fn operator_phase_for_host_state(
     host_state: Option<&SmokeHostStateDocument>,
     supervisor_status: Option<UnityHostSupervisorStatus>,
     command_pending: bool,
+    launch_in_progress: bool,
 ) -> OperatorPhase {
     if let Some(host_state) = host_state {
         return match host_state.state.as_str() {
@@ -1060,7 +1136,13 @@ pub fn operator_phase_for_host_state(
     }
 
     match supervisor_status {
-        Some(UnityHostSupervisorStatus::Starting) => OperatorPhase::Starting,
+        Some(UnityHostSupervisorStatus::Starting) => {
+            if command_pending || launch_in_progress {
+                OperatorPhase::Starting
+            } else {
+                OperatorPhase::NotLaunched
+            }
+        }
         Some(UnityHostSupervisorStatus::TimedOut)
         | Some(UnityHostSupervisorStatus::Crashed)
         | Some(UnityHostSupervisorStatus::Stalled)
@@ -1073,7 +1155,7 @@ pub fn operator_phase_for_host_state(
             }
         }
         None => {
-            if command_pending {
+            if command_pending || launch_in_progress {
                 OperatorPhase::Starting
             } else {
                 OperatorPhase::NotLaunched
@@ -1217,6 +1299,9 @@ impl SmokeOverlayApp {
         let poll = self
             .reader
             .poll(&current_utc_rfc3339(), elapsed, process_exit_code);
+        if process_exit_code.is_some() {
+            self.child = None;
+        }
         if let (Some(command_seq), Some(host_state)) = (self.pending_command_seq, &poll.host_state)
         {
             if host_state.last_command_seq >= command_seq {
@@ -1469,11 +1554,13 @@ impl eframe::App for SmokeOverlayApp {
         let supervisor_status = self.latest_poll.as_ref().map(|poll| poll.status);
         let status_message = self.status_message.clone();
         let command_pending = self.pending_command_id.is_some();
+        let launch_in_progress = host_state_owned.is_none() && self.child.is_some();
         let controls = control_state_for_suite_selection(
             control_state_for_host_state(
                 host_state_owned.as_ref(),
                 supervisor_status,
                 command_pending,
+                launch_in_progress,
             ),
             &self.model,
         );
@@ -1481,6 +1568,7 @@ impl eframe::App for SmokeOverlayApp {
             host_state_owned.as_ref(),
             supervisor_status,
             command_pending,
+            launch_in_progress,
         );
         self.last_operator_phase = Some(operator_phase);
 
@@ -1551,6 +1639,7 @@ impl eframe::App for SmokeOverlayApp {
                                 self.latest_poll.as_ref(),
                                 &self.session_paths,
                                 &self.model.selected_suite_id,
+                                operator_phase,
                             );
                             ui.add_space(SECTION_GAP_PX);
                             current_run_plan_card(
@@ -1592,6 +1681,7 @@ impl eframe::App for SmokeOverlayApp {
                                 self.latest_poll.as_ref(),
                                 &self.session_paths,
                                 &self.model.selected_suite_id,
+                                operator_phase,
                             );
                         }
                         ui.add_space(SECTION_GAP_PX);
@@ -1810,11 +1900,20 @@ fn selected_suite_card(
             info_callout(ui, &briefing.info_note);
             if !briefing.debug_hint.trim().is_empty() {
                 ui.add_space(RELATED_GAP_PX);
-                ui.label(
-                    egui::RichText::new(format!("Debug: {}", briefing.debug_hint))
+                egui::CollapsingHeader::new(
+                    egui::RichText::new(debug_hint_section_title())
                         .color(MUTED)
                         .size(META_TEXT_SIZE),
-                );
+                )
+                .id_source(format!("debug-hint-{}", briefing.suite_id))
+                .default_open(false)
+                .show(ui, |ui| {
+                    ui.label(
+                        egui::RichText::new(&briefing.debug_hint)
+                            .color(MUTED)
+                            .size(META_TEXT_SIZE),
+                    );
+                });
             }
         } else {
             ui.label(
@@ -1827,34 +1926,39 @@ fn selected_suite_card(
 }
 
 fn utilities_card(ui: &mut egui::Ui, model: &mut SuiteSelectionModel, disabled: bool) {
-    dashboard_section(ui, "Utilities", DashboardSectionTone::Lavender, |ui| {
-        ui.label(
-            egui::RichText::new("Operator pacing")
-                .strong()
-                .color(TEXT)
-                .size(BODY_TEXT_SIZE),
-        );
-        ui.add_space(RELATED_GAP_PX);
-        step_sleep_timer_card(ui, model, disabled);
-        ui.add_space(SECTION_GAP_PX);
-        ui.separator();
-        ui.add_space(RELATED_GAP_PX);
-        ui.label(
-            egui::RichText::new("Risk gates")
-                .strong()
-                .color(TEXT)
-                .size(BODY_TEXT_SIZE),
-        );
-        ui.add_enabled_ui(!disabled, |ui| {
-            let mut destructive_enabled = model.destructive_suites_enabled;
-            if ui
-                .checkbox(&mut destructive_enabled, "Enable destructive drills")
-                .changed()
-            {
-                model.set_destructive_suites_enabled(destructive_enabled);
-            }
-        });
-    });
+    dashboard_section(
+        ui,
+        utilities_section_title(),
+        DashboardSectionTone::Lavender,
+        |ui| {
+            ui.label(
+                egui::RichText::new("Operator pacing")
+                    .strong()
+                    .color(TEXT)
+                    .size(BODY_TEXT_SIZE),
+            );
+            ui.add_space(RELATED_GAP_PX);
+            step_sleep_timer_card(ui, model, disabled);
+            ui.add_space(SECTION_GAP_PX);
+            ui.separator();
+            ui.add_space(RELATED_GAP_PX);
+            ui.label(
+                egui::RichText::new("Risk gates")
+                    .strong()
+                    .color(TEXT)
+                    .size(BODY_TEXT_SIZE),
+            );
+            ui.add_enabled_ui(!disabled, |ui| {
+                let mut destructive_enabled = model.destructive_suites_enabled;
+                if ui
+                    .checkbox(&mut destructive_enabled, "Enable destructive drills")
+                    .changed()
+                {
+                    model.set_destructive_suites_enabled(destructive_enabled);
+                }
+            });
+        },
+    );
 }
 
 fn controls_card(
@@ -2393,11 +2497,11 @@ fn status_card(
             .rounding(CARD_RADIUS_PX)
             .inner_margin(CARD_MARGIN_PX),
         CARD_MARGIN_PX,
-        |ui| status_line(ui, view, label, color),
+        |ui| status_line(ui, view, color),
     );
 }
 
-fn status_line(ui: &mut egui::Ui, view: StatusCardViewModel, label: &str, color: egui::Color32) {
+fn status_line(ui: &mut egui::Ui, view: StatusCardViewModel, color: egui::Color32) {
     let spec = hero_prominence_spec();
     ui.horizontal(|ui| {
         ui.label(
@@ -2413,7 +2517,11 @@ fn status_line(ui: &mut egui::Ui, view: StatusCardViewModel, label: &str, color:
                     .color(color)
                     .size(CARD_TITLE_TEXT_SIZE),
             );
-            ui.label(egui::RichText::new(label).color(TEXT).size(BODY_TEXT_SIZE));
+            ui.label(
+                egui::RichText::new(view.phase_label)
+                    .color(TEXT)
+                    .size(BODY_TEXT_SIZE),
+            );
             ui.label(
                 egui::RichText::new(view.subtext)
                     .color(MUTED)
@@ -2745,6 +2853,7 @@ fn run_monitor_card(
     poll: Option<&StartupPollResult>,
     session_paths: &SmokeSessionPaths,
     selected_suite_id: &str,
+    operator_phase: OperatorPhase,
 ) {
     let review = review_summary_for_poll(poll, session_paths, selected_suite_id);
     show_full_width_frame(
@@ -2811,35 +2920,39 @@ fn run_monitor_card(
             }
 
             ui.add_space(SECTION_GAP_PX);
-            ui.label(
+            egui::CollapsingHeader::new(
                 egui::RichText::new("Recent events")
                     .strong()
                     .color(TEXT)
                     .size(BODY_TEXT_SIZE),
-            );
-            if recent_event_log_row_count(poll) > 0 {
-                egui::ScrollArea::vertical()
-                    .id_source("recent-events-log")
-                    .max_height(recent_event_log_scroll_max_height_px())
-                    .stick_to_bottom(true)
-                    .auto_shrink([false, false])
-                    .show(ui, |ui| {
-                        if let Some(poll) = poll {
-                            for event in &poll.events {
-                                ui.label(
-                                    egui::RichText::new(format!(
-                                        "#{:03} {} — {}",
-                                        event.event_seq, event.event_type, event.message
-                                    ))
-                                    .color(MUTED)
-                                    .size(META_TEXT_SIZE),
-                                );
+            )
+            .id_source("recent-events-log-section")
+            .default_open(recent_event_log_default_open(operator_phase))
+            .show(ui, |ui| {
+                if recent_event_log_row_count(poll) > 0 {
+                    egui::ScrollArea::vertical()
+                        .id_source("recent-events-log")
+                        .max_height(recent_event_log_scroll_max_height_px())
+                        .stick_to_bottom(true)
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            if let Some(poll) = poll {
+                                for event in &poll.events {
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "#{:03} {} — {}",
+                                            event.event_seq, event.event_type, event.message
+                                        ))
+                                        .color(MUTED)
+                                        .size(META_TEXT_SIZE),
+                                    );
+                                }
                             }
-                        }
-                    });
-            } else {
-                ui.label(egui::RichText::new("No events yet.").color(MUTED));
-            }
+                        });
+                } else {
+                    ui.label(egui::RichText::new("No events yet.").color(MUTED));
+                }
+            });
         },
     );
 }
@@ -2898,14 +3011,9 @@ fn footer_status_model(
         .and_then(|state| non_empty_string(&state.state));
     let batch_progress = batch_queue.and_then(|queue| {
         let selected_count = queue.selected_suite_ids().len();
-        let current_suite_id = queue.current_suite_id()?;
+        queue.current_suite_id()?;
         let current_ordinal = queue.completed_suite_ids().len() + 1;
-        Some(format!(
-            "{}/{} {}",
-            current_ordinal.min(selected_count),
-            selected_count,
-            current_suite_id
-        ))
+        batch_progress_copy(current_ordinal, selected_count)
     });
 
     FooterStatusModel {
@@ -2918,25 +3026,33 @@ fn footer_status_model(
     }
 }
 
+fn footer_status_chip_texts(footer: &FooterStatusModel) -> Vec<String> {
+    let mut chips = vec![
+        format!(
+            "Host: {}",
+            footer.host_state.as_deref().unwrap_or("not-launched")
+        ),
+        format!("Events: {}", footer.event_count),
+        format!("Selected: {}", footer.selected_suite_count),
+    ];
+
+    if footer.hidden_by_filter_count > 0 {
+        chips.push(format!("Hidden: {}", footer.hidden_by_filter_count));
+    }
+    if let Some(command) = footer.pending_command.as_deref() {
+        chips.push(format!("Pending: {command}"));
+    }
+    if let Some(progress) = footer.batch_progress.as_deref() {
+        chips.push(format!("Batch: {progress}"));
+    }
+
+    chips
+}
+
 fn footer_status_strip(ui: &mut egui::Ui, footer: &FooterStatusModel) {
     ui.horizontal_wrapped(|ui| {
-        meta_chip(
-            ui,
-            &format!(
-                "Host: {}",
-                footer.host_state.as_deref().unwrap_or("not-launched")
-            ),
-        );
-        meta_chip(ui, &format!("Events: {}", footer.event_count));
-        meta_chip(ui, &format!("Selected: {}", footer.selected_suite_count));
-        meta_chip(ui, &format!("Hidden: {}", footer.hidden_by_filter_count));
-        if let Some(command) = footer.pending_command.as_deref() {
-            meta_chip(ui, &format!("Pending: {command}"));
-        } else {
-            meta_chip(ui, "Pending: none");
-        }
-        if let Some(progress) = footer.batch_progress.as_deref() {
-            meta_chip(ui, &format!("Batch: {progress}"));
+        for chip in footer_status_chip_texts(footer) {
+            meta_chip(ui, &chip);
         }
     });
 }
@@ -3124,15 +3240,34 @@ mod tests {
     #[test]
     fn operator_phase_maps_host_and_supervisor_states() {
         assert_eq!(
-            operator_phase_for_host_state(None, None, false),
+            operator_phase_for_host_state(None, None, false, false),
             OperatorPhase::NotLaunched
         );
         assert_eq!(
-            operator_phase_for_host_state(None, Some(UnityHostSupervisorStatus::Starting), false),
+            operator_phase_for_host_state(
+                None,
+                Some(UnityHostSupervisorStatus::Starting),
+                false,
+                false
+            ),
+            OperatorPhase::NotLaunched
+        );
+        assert_eq!(
+            operator_phase_for_host_state(
+                None,
+                Some(UnityHostSupervisorStatus::Starting),
+                false,
+                true
+            ),
             OperatorPhase::Starting
         );
         assert_eq!(
-            operator_phase_for_host_state(None, Some(UnityHostSupervisorStatus::TimedOut), false),
+            operator_phase_for_host_state(
+                None,
+                Some(UnityHostSupervisorStatus::TimedOut),
+                false,
+                false
+            ),
             OperatorPhase::HostError
         );
 
@@ -3145,7 +3280,8 @@ mod tests {
             operator_phase_for_host_state(
                 Some(&ready),
                 Some(UnityHostSupervisorStatus::Ready),
-                false
+                false,
+                true,
             ),
             OperatorPhase::Ready
         );
@@ -3153,7 +3289,8 @@ mod tests {
             operator_phase_for_host_state(
                 Some(&idle),
                 Some(UnityHostSupervisorStatus::Ready),
-                false
+                false,
+                true,
             ),
             OperatorPhase::Ready
         );
@@ -3161,7 +3298,8 @@ mod tests {
             operator_phase_for_host_state(
                 Some(&running),
                 Some(UnityHostSupervisorStatus::Ready),
-                false
+                false,
+                true,
             ),
             OperatorPhase::Running
         );
@@ -3169,7 +3307,8 @@ mod tests {
             operator_phase_for_host_state(
                 Some(&review),
                 Some(UnityHostSupervisorStatus::Ready),
-                false
+                false,
+                true,
             ),
             OperatorPhase::ReviewRequired
         );
@@ -3177,7 +3316,8 @@ mod tests {
             operator_phase_for_host_state(
                 Some(&crashed),
                 Some(UnityHostSupervisorStatus::Ready),
-                false
+                false,
+                true,
             ),
             OperatorPhase::HostError
         );
@@ -3190,6 +3330,7 @@ mod tests {
             Some(&running),
             Some(UnityHostSupervisorStatus::Starting),
             false,
+            true,
         );
         assert!(controls.can_abort);
         assert!(!controls.can_run_suite);
@@ -3199,6 +3340,7 @@ mod tests {
         let pending = control_state_for_host_state(
             Some(&running),
             Some(UnityHostSupervisorStatus::Starting),
+            true,
             true,
         );
         assert!(!pending.can_abort);
@@ -3211,6 +3353,7 @@ mod tests {
             Some(&review),
             Some(UnityHostSupervisorStatus::Ready),
             false,
+            true,
         );
         assert!(controls.can_review);
         assert!(!controls.can_run_suite);
@@ -3225,6 +3368,7 @@ mod tests {
             Some(&stalled),
             Some(UnityHostSupervisorStatus::Stalled),
             false,
+            true,
         );
         assert!(controls.can_relaunch);
         assert!(!controls.can_run_suite);
@@ -3232,15 +3376,26 @@ mod tests {
 
     #[test]
     fn controls_enable_exit_before_and_after_host_launch() {
-        let boot_controls = control_state_for_host_state(None, None, false);
+        let boot_controls = control_state_for_host_state(None, None, false, false);
         assert!(boot_controls.can_exit);
+        assert!(boot_controls.can_launch);
 
-        let ready = host_state(HOST_STATE_READY, "");
+        let startup_controls = control_state_for_host_state(
+            None,
+            Some(UnityHostSupervisorStatus::Starting),
+            false,
+            true,
+        );
+        assert!(!startup_controls.can_launch);
+        assert!(startup_controls.can_exit);
+
         let ready_controls = control_state_for_host_state(
-            Some(&ready),
+            Some(&host_state(HOST_STATE_READY, "")),
             Some(UnityHostSupervisorStatus::Ready),
             false,
+            true,
         );
+        assert!(!ready_controls.can_launch);
         assert!(ready_controls.can_exit);
         assert!(ready_controls.can_edit_step_sleep_timer);
 
@@ -3249,6 +3404,7 @@ mod tests {
             Some(&running),
             Some(UnityHostSupervisorStatus::Starting),
             false,
+            true,
         );
         assert!(running_controls.can_exit);
 
@@ -3257,6 +3413,7 @@ mod tests {
             Some(&review),
             Some(UnityHostSupervisorStatus::Ready),
             false,
+            true,
         );
         assert!(review_controls.can_exit);
     }
@@ -3282,6 +3439,22 @@ mod tests {
         assert!(is_private_icon_glyph(review.icon));
         assert_eq!(review.headline, "REVIEW REQUIRED");
         assert_eq!(review.tone, StatusTone::Warning);
+    }
+
+    #[test]
+    fn status_card_support_copy_uses_operator_facing_phase_labels() {
+        let ready = status_card_view_model(HOST_STATE_READY, "Unity host ready.");
+        assert_eq!(ready.phase_label, "Unity host idle");
+
+        let running = status_card_view_model(HOST_STATE_RUNNING, "Running selected suite.");
+        assert_eq!(running.phase_label, "Batch in progress");
+
+        let review = status_card_view_model(HOST_STATE_REVIEW_REQUIRED, "Suite entered review.");
+        assert_eq!(review.phase_label, "Suite needs review");
+        assert_ne!(review.phase_label, HOST_STATE_REVIEW_REQUIRED);
+
+        let not_launched = status_card_view_model("not-launched", "Launch Unity host.");
+        assert_eq!(not_launched.phase_label, "Awaiting launch");
     }
 
     #[test]
@@ -3880,8 +4053,31 @@ mod tests {
                 ControlActionId::ReturnToSuiteList
             ]
         );
-        assert!(dock.secondary_ids.contains(&ControlActionId::LaunchHost));
+        assert!(dock.secondary_ids.is_empty());
         assert_eq!(dock.destructive_ids, vec![ControlActionId::Exit]);
+    }
+
+    #[test]
+    fn action_dock_hides_irrelevant_controls_for_each_phase() {
+        let controls = all_controls_enabled();
+
+        let ready = action_dock_layout_for_phase(OperatorPhase::Ready, controls, 2);
+        assert_eq!(ready.primary_ids, vec![ControlActionId::RunSelectedSuite]);
+        assert!(ready.decision_peer_ids.is_empty());
+        assert!(ready.secondary_ids.is_empty());
+        assert_eq!(ready.destructive_ids, vec![ControlActionId::Exit]);
+
+        let starting = action_dock_layout_for_phase(OperatorPhase::Starting, controls, 2);
+        assert!(starting.primary_ids.is_empty());
+        assert!(starting.decision_peer_ids.is_empty());
+        assert!(starting.secondary_ids.is_empty());
+        assert_eq!(starting.destructive_ids, vec![ControlActionId::Exit]);
+
+        let host_error = action_dock_layout_for_phase(OperatorPhase::HostError, controls, 2);
+        assert_eq!(host_error.primary_ids, vec![ControlActionId::RelaunchHost]);
+        assert!(host_error.decision_peer_ids.is_empty());
+        assert!(host_error.secondary_ids.is_empty());
+        assert_eq!(host_error.destructive_ids, vec![ControlActionId::Exit]);
     }
 
     #[test]
@@ -3905,7 +4101,10 @@ mod tests {
             .expected_outcomes
             .iter()
             .any(|item| item.contains("hygiene cleanup")));
-        assert!(briefing.info_note.contains("rerun this suite"));
+        assert!(briefing
+            .info_note
+            .contains("rerun from the first selected suite"));
+        assert!(!briefing.info_note.contains("rerun this suite"));
     }
 
     #[test]
@@ -3918,12 +4117,16 @@ mod tests {
 
         assert_eq!(
             briefing.info_note,
-            "On failure: export logs, rerun this suite, or return."
+            "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
         );
-        assert!(briefing.info_note.len() <= 54);
+        assert!(briefing.info_note.len() <= 120);
+        assert!(briefing.info_note.contains("inspect evidence"));
+        assert!(briefing
+            .info_note
+            .contains("rerun from the first selected suite"));
+        assert!(briefing.info_note.contains("return to the suite list"));
         assert!(briefing.info_note.contains("export logs"));
-        assert!(briefing.info_note.contains("rerun this suite"));
-        assert!(briefing.info_note.contains("or return"));
+        assert!(!briefing.info_note.contains("rerun this suite"));
         assert!(!briefing.info_note.contains("then Return"));
         assert!(!briefing
             .info_note
@@ -3984,10 +4187,37 @@ mod tests {
         assert_eq!(footer.pending_command.as_deref(), Some("command-0005"));
         assert_eq!(footer.selected_suite_count, 4);
         assert_eq!(footer.hidden_by_filter_count, 11);
+        assert_eq!(footer.batch_progress.as_deref(), Some("2 of 4"));
+    }
+
+    #[test]
+    fn footer_batch_progress_copy_uses_count_only_without_suite_label() {
+        assert_eq!(batch_progress_copy(2, 4), Some("2 of 4".to_string()));
+        assert_eq!(batch_progress_copy(0, 4), Some("0 of 4".to_string()));
+        assert_eq!(batch_progress_copy(1, 0), None);
+    }
+
+    #[test]
+    fn recent_event_log_expands_only_for_review_and_host_error_phases() {
+        assert!(!recent_event_log_default_open(OperatorPhase::NotLaunched));
+        assert!(!recent_event_log_default_open(OperatorPhase::Starting));
+        assert!(!recent_event_log_default_open(OperatorPhase::Ready));
+        assert!(!recent_event_log_default_open(OperatorPhase::Running));
+        assert!(recent_event_log_default_open(OperatorPhase::ReviewRequired));
+        assert!(recent_event_log_default_open(OperatorPhase::HostError));
+    }
+
+    #[test]
+    fn current_suite_copy_uses_review_safe_labels() {
+        assert_eq!(run_selected_action_label(), "Run Selected");
         assert_eq!(
-            footer.batch_progress.as_deref(),
-            Some("2/4 setup-scene-avatar")
+            rerun_from_first_selected_action_label(),
+            "Rerun from First Selected"
         );
+        assert_eq!(utilities_section_title(), "Utilities / Advanced");
+        assert_eq!(debug_hint_section_title(), "Debug hint");
+        assert!(current_suite_info_note().contains("rerun from the first selected suite"));
+        assert!(!current_suite_info_note().contains("rerun this suite"));
     }
 
     #[test]
@@ -4010,6 +4240,46 @@ mod tests {
         assert_eq!(footer.selected_suite_count, 4);
         assert_eq!(footer.hidden_by_filter_count, 0);
         assert_eq!(footer.batch_progress, None);
+    }
+
+    #[test]
+    fn footer_status_chip_copy_hides_zero_noise_but_keeps_actionable_signals() {
+        let quiet_footer = FooterStatusModel {
+            host_state: Some(HOST_STATE_READY.to_string()),
+            event_count: 0,
+            pending_command: None,
+            selected_suite_count: 4,
+            hidden_by_filter_count: 0,
+            batch_progress: None,
+        };
+        assert_eq!(
+            footer_status_chip_texts(&quiet_footer),
+            vec![
+                "Host: ready".to_string(),
+                "Events: 0".to_string(),
+                "Selected: 4".to_string(),
+            ]
+        );
+
+        let active_footer = FooterStatusModel {
+            host_state: Some(HOST_STATE_RUNNING.to_string()),
+            event_count: 4,
+            pending_command: Some("command-0005".to_string()),
+            selected_suite_count: 4,
+            hidden_by_filter_count: 11,
+            batch_progress: Some("2 of 4".to_string()),
+        };
+        assert_eq!(
+            footer_status_chip_texts(&active_footer),
+            vec![
+                "Host: running".to_string(),
+                "Events: 4".to_string(),
+                "Selected: 4".to_string(),
+                "Hidden: 11".to_string(),
+                "Pending: command-0005".to_string(),
+                "Batch: 2 of 4".to_string(),
+            ]
+        );
     }
 
     #[test]
@@ -4049,7 +4319,7 @@ mod tests {
     }
 
     #[test]
-    fn ready_primary_cta_labels_selected_batch_count_and_zero_selection_is_disabled() {
+    fn ready_primary_cta_uses_locked_run_selected_label_and_zero_selection_is_disabled() {
         let ready_controls = OverlayControlState {
             can_launch: false,
             can_select_suite: true,
@@ -4066,7 +4336,7 @@ mod tests {
             .iter()
             .find(|action| action.id == ControlActionId::RunSelectedSuite)
             .expect("run action should exist");
-        assert_eq!(run.label.as_str(), "Run 3 Selected Suites");
+        assert_eq!(run.label.as_str(), "Run Selected");
         assert!(run.enabled);
 
         let empty_actions = control_action_models_for_selected_batch(ready_controls, 0);
@@ -4074,8 +4344,30 @@ mod tests {
             .iter()
             .find(|action| action.id == ControlActionId::RunSelectedSuite)
             .expect("run action should exist");
-        assert_eq!(empty_run.label.as_str(), "Run 0 Selected Suites");
+        assert_eq!(empty_run.label.as_str(), "Run Selected");
         assert!(!empty_run.enabled);
+    }
+
+    #[test]
+    fn review_primary_cta_uses_rerun_from_first_selected_label() {
+        let review_controls = OverlayControlState {
+            can_launch: false,
+            can_select_suite: false,
+            can_run_suite: false,
+            can_abort: false,
+            can_review: true,
+            can_exit: true,
+            can_relaunch: false,
+            can_edit_step_sleep_timer: true,
+        };
+
+        let actions = control_action_models(review_controls);
+        let rerun = actions
+            .iter()
+            .find(|action| action.id == ControlActionId::RerunSuite)
+            .expect("rerun action should exist");
+        assert_eq!(rerun.label.as_str(), "Rerun from First Selected");
+        assert_eq!(rerun.role, ControlActionRole::Primary);
     }
 
     #[test]
