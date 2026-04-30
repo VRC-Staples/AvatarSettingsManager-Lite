@@ -19,7 +19,7 @@ namespace ASMLite.Tests.Editor
                 catalog.groups.Select(group => group.groupId).ToArray());
             Assert.AreEqual("Assets/Click ME.unity", catalog.fixture.scenePath);
             Assert.AreEqual("Oct25_Dress", catalog.fixture.avatarName);
-            Assert.AreEqual("setup-package-presence", catalog.groups[0].suites[0].suiteId);
+            Assert.AreEqual("asm-lite-readiness-check", catalog.groups[0].suites[0].suiteId);
             Assert.AreEqual("setup-scene-avatar", catalog.groups[1].suites[0].suiteId);
             CollectionAssert.AreEqual(
                 new[]
@@ -51,11 +51,11 @@ namespace ASMLite.Tests.Editor
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
 
             CollectionAssert.AreEquivalent(
-                new[] { "setup-package-presence", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                new[] { "asm-lite-readiness-check", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.defaultSelected).Select(suite => suite.suiteId).ToArray());
             Assert.IsTrue(suites.Where(suite => suite.defaultSelected).All(suite => !suite.IsDestructive));
             CollectionAssert.AreEquivalent(
-                new[] { "setup-package-presence", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
+                new[] { "asm-lite-readiness-check", "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
                 suites.Where(suite => suite.presetGroups.Contains("quick-default")).Select(suite => suite.suiteId).ToArray());
             CollectionAssert.AreEquivalent(
                 new[]
@@ -70,7 +70,7 @@ namespace ASMLite.Tests.Editor
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
-            Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-package-presence").speed);
+            Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "asm-lite-readiness-check").speed);
             Assert.AreEqual("standard", suites.Single(suite => suite.suiteId == "lifecycle-roundtrip").speed);
         }
 
@@ -80,7 +80,7 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
 
-            ASMLiteSmokeSuiteDefinition packagePresence = suites.Single(suite => suite.suiteId == "setup-package-presence");
+            ASMLiteSmokeSuiteDefinition packagePresence = suites.Single(suite => suite.suiteId == "asm-lite-readiness-check");
             Assert.That(packagePresence.defaultSelected, Is.True);
             Assert.AreEqual("quick", packagePresence.speed);
             CollectionAssert.AreEquivalent(new[] { "quick-default" }, packagePresence.presetGroups);

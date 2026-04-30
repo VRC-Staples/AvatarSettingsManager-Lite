@@ -12,7 +12,7 @@
       "description": "Confirm ASM-Lite, canonical scene access, and the Unity test host are ready before any setup, lifecycle, or runtime suites run.",
       "suites": [
         {
-          "suiteId": "setup-package-presence",
+          "suiteId": "asm-lite-readiness-check",
           "label": "ASM-Lite Readiness Check",
           "description": "Make sure ASM-Lite, its prefab, the smoke checklist, canonical scene acquisition, and the Unity test host are ready before running setup or lifecycle suites.",
           "resetOverride": "Inherit",

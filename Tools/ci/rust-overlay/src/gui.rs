@@ -891,6 +891,38 @@ fn recent_event_log_default_open(phase: OperatorPhase) -> bool {
     )
 }
 
+fn recent_event_log_forced_open(phase: OperatorPhase) -> Option<bool> {
+    if recent_event_log_default_open(phase) {
+        Some(true)
+    } else {
+        None
+    }
+}
+
+fn brief_timestamp_label(timestamp_utc: &str) -> Option<String> {
+    let trimmed = timestamp_utc.trim();
+    let time_portion = trimmed.split('T').nth(1)?;
+    let brief = time_portion.get(..8)?;
+    if brief.chars().enumerate().all(|(index, ch)| match index {
+        2 | 5 => ch == ':',
+        _ => ch.is_ascii_digit(),
+    }) {
+        Some(brief.to_string())
+    } else {
+        None
+    }
+}
+
+fn current_system_time_brief() -> String {
+    brief_timestamp_label(&current_utc_rfc3339()).unwrap_or_else(|| "00:00:00".to_string())
+}
+
+fn format_recent_event_log_entry(event: &crate::protocol::SmokeProtocolEvent) -> String {
+    let timestamp =
+        brief_timestamp_label(&event.timestamp_utc).unwrap_or_else(current_system_time_brief);
+    format!("{timestamp} {} — {}", event.event_type, event.message)
+}
+
 fn batch_progress_copy(current_ordinal: usize, selected_count: usize) -> Option<String> {
     if selected_count == 0 {
         return None;
@@ -3051,6 +3083,7 @@ fn run_monitor_card(
             )
             .id_source("recent-events-log-section")
             .default_open(recent_event_log_default_open(operator_phase))
+            .open(recent_event_log_forced_open(operator_phase))
             .show(ui, |ui| {
                 if recent_event_log_row_count(poll) > 0 {
                     egui::ScrollArea::vertical()
@@ -3062,12 +3095,9 @@ fn run_monitor_card(
                             if let Some(poll) = poll {
                                 for event in &poll.events {
                                     ui.label(
-                                        egui::RichText::new(format!(
-                                            "#{:03} {} — {}",
-                                            event.event_seq, event.event_type, event.message
-                                        ))
-                                        .color(MUTED)
-                                        .size(META_TEXT_SIZE),
+                                        egui::RichText::new(format_recent_event_log_entry(event))
+                                            .color(MUTED)
+                                            .size(META_TEXT_SIZE),
                                     );
                                 }
                             }
@@ -4364,6 +4394,54 @@ mod tests {
         assert!(recent_event_log_default_open(OperatorPhase::Running));
         assert!(recent_event_log_default_open(OperatorPhase::ReviewRequired));
         assert!(recent_event_log_default_open(OperatorPhase::HostError));
+    }
+
+    #[test]
+    fn recent_event_log_forces_open_while_live_or_recovering() {
+        assert_eq!(
+            recent_event_log_forced_open(OperatorPhase::NotLaunched),
+            None
+        );
+        assert_eq!(recent_event_log_forced_open(OperatorPhase::Starting), None);
+        assert_eq!(recent_event_log_forced_open(OperatorPhase::Ready), None);
+        assert_eq!(
+            recent_event_log_forced_open(OperatorPhase::Running),
+            Some(true)
+        );
+        assert_eq!(
+            recent_event_log_forced_open(OperatorPhase::ReviewRequired),
+            Some(true)
+        );
+        assert_eq!(
+            recent_event_log_forced_open(OperatorPhase::HostError),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn recent_event_log_entries_use_brief_timestamps_instead_of_sequence_prefixes() {
+        let event = test_event(7);
+        assert_eq!(
+            brief_timestamp_label(&event.timestamp_utc),
+            Some("04:37:09".to_string())
+        );
+        assert_eq!(
+            format_recent_event_log_entry(&event),
+            "04:37:09 step-complete — event 7"
+        );
+        assert!(!format_recent_event_log_entry(&event).starts_with('#'));
+    }
+
+    #[test]
+    fn recent_event_log_timestamp_falls_back_to_current_system_time_when_event_time_is_invalid() {
+        let mut event = test_event(8);
+        event.timestamp_utc = "not-a-timestamp".to_string();
+
+        let prefix = current_system_time_brief();
+        let rendered = format_recent_event_log_entry(&event);
+
+        assert!(rendered.starts_with(&prefix));
+        assert!(rendered.contains("step-complete — event 8"));
     }
 
     #[test]

@@ -442,7 +442,7 @@ mod tests {
         assert_eq!(
             ids,
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",
@@ -468,7 +468,7 @@ mod tests {
         let preflight = checklist
             .rows
             .iter()
-            .find(|row| row.suite_id == "setup-package-presence")
+            .find(|row| row.suite_id == "asm-lite-readiness-check")
             .expect("preflight row should exist");
         assert!(preflight.checked);
         assert!(preflight.focused);
@@ -623,7 +623,7 @@ mod tests {
         assert_eq!(plan.suite_sections.len(), default_selected_count);
         let section = &plan.suite_sections[0];
         assert_eq!(section.title, "Preflight · ASM-Lite Readiness Check");
-        assert_eq!(section.suite_id, "setup-package-presence");
+        assert_eq!(section.suite_id, "asm-lite-readiness-check");
         assert!(!section.default_open);
         assert_eq!(section.steps.len(), 6);
         assert_eq!(section.steps[0].step_label, "ASM-Lite is open");
@@ -788,7 +788,7 @@ mod tests {
         assert_eq!(
             quick.visible_suite_ids(),
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"

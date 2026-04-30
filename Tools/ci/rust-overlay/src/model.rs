@@ -719,7 +719,7 @@ mod tests {
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
-        assert_eq!(model.selected_suite_id, "setup-package-presence");
+        assert_eq!(model.selected_suite_id, "asm-lite-readiness-check");
         model
             .select_suite_by_id("lifecycle-roundtrip")
             .expect("suite id should be selectable");
@@ -778,13 +778,13 @@ mod tests {
         assert_eq!(
             model.selected_suite_ids(),
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
         );
-        assert_eq!(model.selected_suite_id, "setup-package-presence");
+        assert_eq!(model.selected_suite_id, "asm-lite-readiness-check");
         assert!(model.can_run_selected_suite());
     }
 
@@ -911,7 +911,7 @@ mod tests {
         assert_eq!(
             model.available_suite_ids(),
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",

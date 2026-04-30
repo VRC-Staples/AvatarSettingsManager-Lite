@@ -1049,7 +1049,7 @@ mod tests {
             .command_path(command.command_seq, "run-suite", &command.command_id)
             .expect("command path should build");
         let raw = fs::read_to_string(&command_path).expect("command document should exist");
-        assert!(raw.contains("\"suiteId\": \"setup-package-presence\""));
+        assert!(raw.contains("\"suiteId\": \"asm-lite-readiness-check\""));
         assert!(raw.contains("\"requestedResetDefault\": \"SceneReload\""));
         assert!(!raw.contains("stepSleepSeconds"));
     }

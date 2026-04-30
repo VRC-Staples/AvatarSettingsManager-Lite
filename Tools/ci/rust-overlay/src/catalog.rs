@@ -407,7 +407,7 @@ mod tests {
         assert_eq!(catalog.fixture.avatar_name, "Oct25_Dress");
         assert_eq!(
             catalog.groups[0].suites[0].suite_id,
-            "setup-package-presence"
+            "asm-lite-readiness-check"
         );
         assert_eq!(catalog.groups[1].suites[0].suite_id, "setup-scene-avatar");
         let setup_steps: Vec<&str> = catalog.groups[1].suites[0].cases[0]
@@ -473,7 +473,7 @@ mod tests {
         assert_eq!(
             default_ids,
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
@@ -502,7 +502,7 @@ mod tests {
         assert_eq!(
             quick_default_ids,
             vec![
-                "setup-package-presence",
+                "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
