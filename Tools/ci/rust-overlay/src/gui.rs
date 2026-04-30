@@ -2699,25 +2699,22 @@ fn tone_color(tone: StatusTone) -> egui::Color32 {
     }
 }
 
-fn render_suite_checkbox_row(
-    ui: &mut egui::Ui,
-    row: &SuiteRowView,
-    disabled: bool,
-) -> egui::Response {
+fn suite_checkbox_row_label(row: &SuiteRowView) -> String {
     let order = row
         .selected_order
         .map(|value| format!(" #{value}"))
         .unwrap_or_default();
     let focus = if row.focused { " · current" } else { "" };
-    let default_marker = if row.default_selected {
-        " · default"
-    } else {
-        ""
-    };
-    let label = format!(
-        "{}{}{} · {} · {}{}",
-        row.suite_label, order, focus, row.speed, row.risk, default_marker
-    );
+
+    format!("{}{}{}", row.suite_label, order, focus)
+}
+
+fn render_suite_checkbox_row(
+    ui: &mut egui::Ui,
+    row: &SuiteRowView,
+    disabled: bool,
+) -> egui::Response {
+    let label = suite_checkbox_row_label(row);
     let row_disabled = disabled || !row.selectable;
     let visual = suite_checkbox_visual_spec(row.checked, row.focused, row_disabled);
     let mut text = egui::text::LayoutJob::default();
@@ -3859,6 +3856,33 @@ mod tests {
         assert_eq!(
             current_run_plan_step_label("Click ME scene is open", 1, 3),
             "Click ME scene is open"
+        );
+    }
+
+    #[test]
+    fn suite_checkbox_row_label_keeps_suite_name_but_drops_trailing_membership_clutter() {
+        let row = SuiteRowView {
+            group_id: "setup".to_string(),
+            group_label: "Setup".to_string(),
+            suite_id: "setup-scene-avatar".to_string(),
+            suite_label: "Setup Scene / Avatar / Prefab".to_string(),
+            suite_description: "Bootstrap the canonical scene.".to_string(),
+            speed: "quick".to_string(),
+            risk: "safe".to_string(),
+            default_selected: true,
+            preset_groups: vec!["quick-default".to_string(), "all-setup".to_string()],
+            destructive: false,
+            selectable: true,
+            disabled_reason: None,
+            selected: true,
+            checked: true,
+            focused: true,
+            selected_order: Some(1),
+        };
+
+        assert_eq!(
+            suite_checkbox_row_label(&row),
+            "Setup Scene / Avatar / Prefab #1 · current"
         );
     }
 
