@@ -824,6 +824,10 @@ fn current_suite_info_note() -> &'static str {
     "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
 }
 
+fn review_failure_excerpt_color() -> egui::Color32 {
+    tone_color(StatusTone::Warning)
+}
+
 fn recent_event_log_default_open(phase: OperatorPhase) -> bool {
     matches!(
         phase,
@@ -2860,7 +2864,7 @@ fn review_evidence_card(
                     ui.add_space(RELATED_GAP_PX);
                     ui.label(
                         egui::RichText::new(format!("Failed step: {}", excerpt.step_label))
-                            .color(DANGER)
+                            .color(review_failure_excerpt_color())
                             .strong()
                             .size(BODY_TEXT_SIZE),
                     );
@@ -2940,7 +2944,7 @@ fn run_monitor_card(
                     ui.add_space(RELATED_GAP_PX);
                     ui.label(
                         egui::RichText::new(format!("Failed: {}", excerpt.step_label))
-                            .color(DANGER)
+                            .color(review_failure_excerpt_color())
                             .strong()
                             .size(BODY_TEXT_SIZE),
                     );
@@ -3515,6 +3519,12 @@ mod tests {
 
         let passed = review_result_visual_model("passed");
         assert_eq!(passed.tone, StatusTone::Success);
+    }
+
+    #[test]
+    fn review_failure_excerpt_uses_warning_tone_not_host_error_danger() {
+        assert_eq!(review_failure_excerpt_color(), WARNING);
+        assert_ne!(review_failure_excerpt_color(), DANGER);
     }
 
     #[test]
