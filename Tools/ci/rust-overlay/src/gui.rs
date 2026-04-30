@@ -3096,10 +3096,12 @@ fn footer_status_chip_texts(footer: &FooterStatusModel) -> Vec<String> {
             "Host: {}",
             footer.host_state.as_deref().unwrap_or("not-launched")
         ),
-        format!("Events: {}", footer.event_count),
         format!("Selected: {}", footer.selected_suite_count),
     ];
 
+    if footer.event_count > 0 {
+        chips.push(format!("Events: {}", footer.event_count));
+    }
     if footer.hidden_by_filter_count > 0 {
         chips.push(format!("Hidden: {}", footer.hidden_by_filter_count));
     }
@@ -4376,11 +4378,7 @@ mod tests {
         };
         assert_eq!(
             footer_status_chip_texts(&quiet_footer),
-            vec![
-                "Host: ready".to_string(),
-                "Events: 0".to_string(),
-                "Selected: 4".to_string(),
-            ]
+            vec!["Host: ready".to_string(), "Selected: 4".to_string(),]
         );
 
         let active_footer = FooterStatusModel {
@@ -4395,8 +4393,8 @@ mod tests {
             footer_status_chip_texts(&active_footer),
             vec![
                 "Host: running".to_string(),
-                "Events: 4".to_string(),
                 "Selected: 4".to_string(),
+                "Events: 4".to_string(),
                 "Hidden: 11".to_string(),
                 "Pending: command-0005".to_string(),
                 "Batch: 2 of 4".to_string(),
