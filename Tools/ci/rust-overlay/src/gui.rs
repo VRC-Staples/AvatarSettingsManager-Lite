@@ -858,7 +858,7 @@ fn batch_progress_copy(current_ordinal: usize, selected_count: usize) -> Option<
 
     Some(format!(
         "{} of {}",
-        current_ordinal.min(selected_count),
+        current_ordinal.clamp(1, selected_count),
         selected_count
     ))
 }
@@ -3280,7 +3280,6 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
-                "setup-scene-acquisition",
                 "setup-window-launch-focus",
                 "setup-avatar-discovery-selection",
                 "setup-scaffold-add-idempotency",
@@ -4301,9 +4300,10 @@ mod tests {
     }
 
     #[test]
-    fn footer_batch_progress_copy_uses_count_only_without_suite_label() {
+    fn footer_batch_progress_copy_stays_human_friendly_and_count_only() {
         assert_eq!(batch_progress_copy(2, 4), Some("2 of 4".to_string()));
-        assert_eq!(batch_progress_copy(0, 4), Some("0 of 4".to_string()));
+        assert_eq!(batch_progress_copy(0, 4), Some("1 of 4".to_string()));
+        assert_eq!(batch_progress_copy(9, 4), Some("4 of 4".to_string()));
         assert_eq!(batch_progress_copy(1, 0), None);
     }
 
