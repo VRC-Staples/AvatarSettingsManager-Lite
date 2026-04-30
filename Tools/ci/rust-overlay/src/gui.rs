@@ -836,6 +836,10 @@ fn debug_hint_section_title() -> &'static str {
     "Debug hint"
 }
 
+fn current_suite_empty_state_copy() -> &'static str {
+    "Select a suite to preview its steps here."
+}
+
 fn current_suite_info_note() -> &'static str {
     "If a suite fails, inspect evidence, then rerun from the first selected suite, return to the suite list, or export logs."
 }
@@ -1962,7 +1966,7 @@ fn selected_suite_card(
             }
         } else {
             ui.label(
-                egui::RichText::new("No suite selected.")
+                egui::RichText::new(current_suite_empty_state_copy())
                     .color(MUTED)
                     .size(META_TEXT_SIZE),
             );
@@ -4318,7 +4322,7 @@ mod tests {
     }
 
     #[test]
-    fn current_suite_copy_uses_review_safe_labels() {
+    fn current_suite_copy_uses_review_safe_and_actionable_labels() {
         assert_eq!(run_selected_action_label(), "Run Selected");
         assert_eq!(
             rerun_from_first_selected_action_label(),
@@ -4326,6 +4330,10 @@ mod tests {
         );
         assert_eq!(utilities_section_title(), "Utilities / Advanced");
         assert_eq!(debug_hint_section_title(), "Debug hint");
+        assert_eq!(
+            current_suite_empty_state_copy(),
+            "Select a suite to preview its steps here."
+        );
         assert!(current_suite_info_note().contains("rerun from the first selected suite"));
         assert!(!current_suite_info_note().contains("rerun this suite"));
     }
