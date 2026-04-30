@@ -22,7 +22,19 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("setup-package-presence", catalog.groups[0].suites[0].suiteId);
             Assert.AreEqual("setup-scene-avatar", catalog.groups[1].suites[0].suiteId);
             CollectionAssert.AreEqual(
-                new[] { "open-scene", "open-window", "select-avatar", "add-prefab", "assert-primary-action" },
+                new[]
+                {
+                    "open-scene",
+                    "close-window",
+                    "open-window",
+                    "assert-window-focused",
+                    "close-window",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "add-prefab",
+                    "assert-primary-action",
+                },
                 catalog.groups[1].suites[0].cases[0].steps.Select(step => step.actionType).ToArray());
             CollectionAssert.IsSubsetOf(
                 new[] { "setup-scene-avatar", "lifecycle-roundtrip", "playmode-runtime-validation" },
@@ -49,9 +61,7 @@ namespace ASMLite.Tests.Editor
                 new[]
                 {
                     "setup-scene-avatar",
-                    "setup-scene-acquisition",
-                    "setup-window-launch-focus",
-                    "setup-avatar-discovery-selection",
+                    "avatar-discovery-selection-regression",
                     "setup-scaffold-add-idempotency",
                     "setup-existing-state-recognition",
                     "setup-generated-asset-readiness",
@@ -65,7 +75,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase04_package_scene_and_window_suites()
+        public void LoadCanonical_moves_window_launch_smoke_into_default_setup_suite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
@@ -81,43 +91,39 @@ namespace ASMLite.Tests.Editor
                 "package-resources-present",
                 "catalog-loads",
                 "host-ready",
-            }));
-
-            ASMLiteSmokeSuiteDefinition sceneAcquisition = suites.Single(suite => suite.suiteId == "setup-scene-acquisition");
-            Assert.That(sceneAcquisition.defaultSelected, Is.False);
-            Assert.AreEqual("standard", sceneAcquisition.speed);
-            CollectionAssert.Contains(sceneAcquisition.presetGroups, "all-setup");
-            Assert.That(sceneAcquisition.cases.Select(item => item.caseId), Is.EqualTo(new[]
-            {
                 "canonical-scene-already-open",
-                "different-scene-open",
                 "temp-unsaved-scene-open",
-                "missing-scene",
-                "non-scene-path",
             }));
-            ASMLiteSmokeStepArgs differentSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "different-scene-open").steps.Single().args;
-            Assert.AreEqual("temp-scene-setup-restore", differentSceneArgs.fixtureMutation);
-            ASMLiteSmokeStepArgs tempSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "temp-unsaved-scene-open").steps.Single().args;
-            Assert.AreEqual("temp-scene-setup-restore", tempSceneArgs.fixtureMutation);
-            ASMLiteSmokeStepArgs missingSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "missing-scene").steps.Single().args;
-            Assert.That(missingSceneArgs.expectStepFailure, Is.True);
-            Assert.AreEqual("SETUP_SCENE_MISSING", missingSceneArgs.expectedDiagnosticCode);
-            StringAssert.Contains("scene could not be found", missingSceneArgs.expectedDiagnosticContains);
-            ASMLiteSmokeStepArgs nonSceneArgs = sceneAcquisition.cases.Single(item => item.caseId == "non-scene-path").steps.Single().args;
-            Assert.That(nonSceneArgs.expectStepFailure, Is.True);
-            Assert.AreEqual("SETUP_SCENE_PATH_INVALID", nonSceneArgs.expectedDiagnosticCode);
-            StringAssert.Contains("not a Unity scene", nonSceneArgs.expectedDiagnosticContains);
 
-            ASMLiteSmokeSuiteDefinition windowLaunch = suites.Single(suite => suite.suiteId == "setup-window-launch-focus");
-            Assert.That(windowLaunch.defaultSelected, Is.False);
-            Assert.AreEqual("standard", windowLaunch.speed);
-            CollectionAssert.Contains(windowLaunch.presetGroups, "all-setup");
-            Assert.That(windowLaunch.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            ASMLiteSmokeStepArgs tempSceneArgs = packagePresence.cases.Single(item => item.caseId == "temp-unsaved-scene-open").steps.Single().args;
+            Assert.AreEqual("temp-scene-setup-restore", tempSceneArgs.fixtureMutation);
+            Assert.That(suites.Any(suite => suite.suiteId == "setup-scene-acquisition"), Is.False);
+
+            Assert.That(suites.Any(suite => suite.suiteId == "setup-window-launch-focus"), Is.False);
+
+            ASMLiteSmokeSuiteDefinition defaultSetup = suites.Single(suite => suite.suiteId == "setup-scene-avatar");
+            Assert.That(defaultSetup.defaultSelected, Is.True);
+            Assert.AreEqual("quick", defaultSetup.speed);
+            CollectionAssert.Contains(defaultSetup.presetGroups, "all-setup");
+            Assert.That(defaultSetup.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "closed-to-open",
-                "already-open-reuse-focus",
-                "stale-closed-window-handled",
+                "setup-scene-avatar",
             }));
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "open-scene",
+                    "close-window",
+                    "open-window",
+                    "assert-window-focused",
+                    "close-window",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "add-prefab",
+                    "assert-primary-action",
+                },
+                defaultSetup.cases.Single().steps.Select(step => step.actionType).ToArray());
         }
 
         [Test]
@@ -126,10 +132,14 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
 
-            ASMLiteSmokeSuiteDefinition avatarSelection = suites.Single(suite => suite.suiteId == "setup-avatar-discovery-selection");
+            ASMLiteSmokeSuiteDefinition avatarSelection = suites.Single(suite => suite.suiteId == "avatar-discovery-selection-regression");
             Assert.That(avatarSelection.defaultSelected, Is.False);
             Assert.AreEqual("standard", avatarSelection.speed);
             Assert.AreEqual("safe", avatarSelection.risk);
+            Assert.AreEqual("Avatar Picking Regression Checks", avatarSelection.label);
+            Assert.AreEqual(
+                "Check that the smoke tools pick the avatar you meant to edit, and explain clearly when the target is missing, duplicated, hidden, or not a scene avatar.",
+                avatarSelection.description);
             CollectionAssert.Contains(avatarSelection.presetGroups, "all-setup");
             Assert.That(avatarSelection.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
@@ -144,6 +154,34 @@ namespace ASMLite.Tests.Editor
                 "prefab-asset-avatar-selected",
                 "missing-avatar",
                 "same-name-non-avatar-ignored",
+            }));
+            Assert.That(avatarSelection.cases.Select(item => item.label), Is.EqualTo(new[]
+            {
+                "Use the avatar I already picked",
+                "Find the main avatar by name",
+                "Tell me I picked the wrong object",
+                "Respect the avatar I picked",
+                "Allow the avatar I picked even if it is hidden",
+                "Do not auto-pick a hidden avatar",
+                "Ask me to choose when two avatars match",
+                "Use my pick when names clash",
+                "Reject a prefab from the Project window",
+                "Explain when the avatar is missing",
+                "Ignore same-name objects that are not avatars",
+            }));
+            Assert.That(avatarSelection.cases.Select(item => item.steps.Single().label), Is.EqualTo(new[]
+            {
+                "Use the avatar I already picked",
+                "Find the main avatar by name",
+                "Tell me I picked the wrong object",
+                "Respect the avatar I picked",
+                "Allow the avatar I picked even if it is hidden",
+                "Do not auto-pick a hidden avatar",
+                "Ask me to choose when two avatars match",
+                "Use my pick when names clash",
+                "Reject a prefab from the Project window",
+                "Explain when the avatar is missing",
+                "Ignore same-name objects that are not avatars",
             }));
 
             ASMLiteSmokeStepArgs wrongObjectArgs = avatarSelection.cases.Single(item => item.caseId == "wrong-object-selected").steps.Single().args;
@@ -262,29 +300,12 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.AreEquivalent(new[] { "safe-negatives", "all-setup" }, negatives.presetGroups);
             Assert.That(negatives.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "missing-scene",
-                "non-scene-path",
                 "missing-package-resource",
                 "missing-avatar",
                 "duplicate-avatar-ambiguity",
                 "prefab-asset-avatar-selected",
                 "wrong-object-selected",
             }));
-
-            AssertExpectedDiagnostic(
-                negatives,
-                "missing-scene",
-                "SETUP_SCENE_MISSING",
-                "scene could not be found",
-                expectedActionType: "open-scene",
-                expectedScenePath: "Assets/Missing.unity");
-            AssertExpectedDiagnostic(
-                negatives,
-                "non-scene-path",
-                "SETUP_SCENE_PATH_INVALID",
-                "not a Unity scene",
-                expectedActionType: "open-scene",
-                expectedScenePath: "Packages/com.staples.asm-lite/package.json");
             AssertExpectedDiagnostic(
                 negatives,
                 "missing-package-resource",

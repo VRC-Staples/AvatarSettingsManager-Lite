@@ -9,12 +9,12 @@
     {
       "groupId": "preflight",
       "label": "Preflight",
-      "description": "Confirm ASM-Lite and the Unity test host are ready before any setup, lifecycle, or runtime suites run.",
+      "description": "Confirm ASM-Lite, canonical scene access, and the Unity test host are ready before any setup, lifecycle, or runtime suites run.",
       "suites": [
         {
           "suiteId": "setup-package-presence",
           "label": "ASM-Lite Readiness Check",
-          "description": "Make sure ASM-Lite, its prefab, the smoke checklist, and the Unity test host are ready before running setup or lifecycle suites.",
+          "description": "Make sure ASM-Lite, its prefab, the smoke checklist, canonical scene acquisition, and the Unity test host are ready before running setup or lifecycle suites.",
           "resetOverride": "Inherit",
           "speed": "quick",
           "risk": "safe",
@@ -24,8 +24,8 @@
           ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
-          "expectedOutcome": "ASM-Lite opens, the package prefab is available, the smoke checklist loads, and the Unity test host is ready.",
-          "debugHint": "If this check fails, confirm the package is installed in the external UAT project and the smoke checklist path resolves.",
+          "expectedOutcome": "ASM-Lite opens, the package prefab is available, the smoke checklist loads, the canonical scene can be reacquired from safe editor states, and the Unity test host is ready.",
+          "debugHint": "If this check fails, confirm the package is installed in the external UAT project, Assets/Click ME.unity exists, and the smoke checklist path resolves.",
           "cases": [
             {
               "caseId": "window-menu-opens",
@@ -94,6 +94,43 @@
                   "debugHint": "If this fails, check the smoke session folder, host startup logs, and command/event file paths."
                 }
               ]
+            },
+            {
+              "caseId": "canonical-scene-already-open",
+              "label": "Canonical scene already open",
+              "description": "Open the canonical scene when it is already the target scene.",
+              "expectedOutcome": "The canonical scene remains active and setup can continue.",
+              "debugHint": "If this fails, inspect active-scene path normalization.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open Assets/Click ME.unity.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If the scene does not load, confirm the fixture scene exists."
+                }
+              ]
+            },
+            {
+              "caseId": "temp-unsaved-scene-open",
+              "label": "Temp unsaved scene open",
+              "description": "Create a temporary unsaved setup scene state, then reacquire the canonical scene.",
+              "expectedOutcome": "The host returns to Assets/Click ME.unity from a temporary scene state.",
+              "debugHint": "If this fails, inspect fixture mutation cleanup and scene restore diagnostics.",
+              "steps": [
+                {
+                  "stepId": "open-scene-after-temp",
+                  "label": "Open canonical scene after temp scene",
+                  "description": "Apply the temporary scene setup mutation and open Assets/Click ME.unity.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active after temporary scene setup.",
+                  "debugHint": "If this fails, inspect temp scene mutation cleanup.",
+                  "args": {
+                    "fixtureMutation": "temp-scene-setup-restore"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -107,7 +144,7 @@
         {
           "suiteId": "setup-scene-avatar",
           "label": "Setup Scene / Avatar / Prefab",
-          "description": "Open the canonical scene, open ASM-Lite, select Oct25_Dress, add the default prefab scaffold, and confirm the rebuild action is available when the operator runs this setup suite.",
+          "description": "Open the canonical scene, prove ASM-Lite can open from closed state and reopen after a close, select Oct25_Dress, add the default prefab scaffold, and confirm the rebuild action is available when the operator runs this setup suite.",
           "resetOverride": "Inherit",
           "speed": "quick",
           "risk": "safe",
@@ -118,15 +155,15 @@
           ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
-          "expectedOutcome": "The canonical scene is loaded, ASM-Lite targets Oct25_Dress, the prefab scaffold is present, and the rebuild action is visible without running lifecycle steps.",
-          "debugHint": "Run this combined setup suite before lifecycle or runtime suites when Unity is not already on the canonical scene/avatar/prefab context.",
+          "expectedOutcome": "The canonical scene is loaded, ASM-Lite opens from closed state and reopens cleanly after a close, Oct25_Dress is targeted, the prefab scaffold is present, and the rebuild action is visible without running lifecycle steps.",
+          "debugHint": "Run this combined setup suite before lifecycle or runtime suites when Unity is not already on the canonical scene/avatar/prefab context or when the ASM-Lite window lifecycle needs a quick smoke check.",
           "cases": [
             {
               "caseId": "setup-scene-avatar",
-              "label": "Scene, avatar, and prefab setup",
-              "description": "Establish the canonical scene, editor avatar context, and prefab scaffold only when the operator runs this suite.",
-              "expectedOutcome": "Assets/Click ME.unity is loaded, ASM-Lite is attached to Oct25_Dress, and the primary rebuild action is visible.",
-              "debugHint": "If setup stalls, verify the scene and avatar names match the catalog fixture, inspect prefab prerequisites, and confirm the ASM-Lite window is not hidden behind another dock tab.",
+              "label": "Scene, window, avatar, and prefab setup",
+              "description": "Load the canonical scene, prove the ASM-Lite window opens from a closed state and reopens cleanly after a close, then establish the editor avatar context and prefab scaffold.",
+              "expectedOutcome": "Assets/Click ME.unity is loaded, the ASM-Lite window survives close/open and reopen-after-close checks, ASM-Lite is attached to Oct25_Dress, and the primary rebuild action is visible.",
+              "debugHint": "If setup stalls, verify the scene and avatar names match the catalog fixture, inspect ASM-Lite window lifecycle state, and confirm the window is not hidden behind another dock tab.",
               "steps": [
                 {
                   "stepId": "open-scene",
@@ -137,12 +174,52 @@
                   "debugHint": "If the scene does not load, confirm the fixture scene exists at Assets/Click ME.unity."
                 },
                 {
+                  "stepId": "close-window-before-open",
+                  "label": "Close existing window",
+                  "description": "Close any existing ASM-Lite automation window before the first open check.",
+                  "actionType": "close-window",
+                  "expectedOutcome": "No existing ASM-Lite automation window remains open.",
+                  "debugHint": "If close fails, inspect Unity editor window lifecycle."
+                },
+                {
                   "stepId": "open-window",
                   "label": "Open ASM-Lite window",
-                  "description": "Open the product window through the automation entrypoint.",
+                  "description": "Open the ASM-Lite automation window from a closed state.",
                   "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window instance is available and focused for automation.",
-                  "debugHint": "If no window appears, inspect editor layout state and window initialization logs."
+                  "expectedOutcome": "The ASM-Lite window is available and focused.",
+                  "debugHint": "If open fails, inspect menu/window initialization."
+                },
+                {
+                  "stepId": "assert-window-focused-after-open",
+                  "label": "Verify focused window",
+                  "description": "Assert the ASM-Lite automation window has editor focus after opening.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is the focused editor window.",
+                  "debugHint": "If focus fails, inspect dock/tab state and retry after closing stale windows."
+                },
+                {
+                  "stepId": "close-window-before-reopen",
+                  "label": "Close ASM-Lite window",
+                  "description": "Close the ASM-Lite automation window before the reopen check.",
+                  "actionType": "close-window",
+                  "expectedOutcome": "The ASM-Lite automation window is closed.",
+                  "debugHint": "If close fails, inspect stale editor window references."
+                },
+                {
+                  "stepId": "open-window-after-close",
+                  "label": "Reopen ASM-Lite window",
+                  "description": "Reopen the ASM-Lite automation window after closing it.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window reopens cleanly.",
+                  "debugHint": "If reopen fails, inspect stale editor window references."
+                },
+                {
+                  "stepId": "assert-window-focused-after-reopen",
+                  "label": "Verify focused window",
+                  "description": "Assert the reopened ASM-Lite automation window has editor focus.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The reopened ASM-Lite window is focused.",
+                  "debugHint": "If focus fails, inspect Unity layout state."
                 },
                 {
                   "stepId": "select-avatar",
@@ -173,257 +250,9 @@
           ]
         },
         {
-          "suiteId": "setup-scene-acquisition",
-          "label": "Setup Scene Acquisition",
-          "description": "Validate canonical scene acquisition from common editor states and expected diagnostics for invalid scene paths.",
-          "resetOverride": "SceneReload",
-          "speed": "standard",
-          "risk": "safe",
-          "defaultSelected": false,
-          "presetGroups": [
-            "all-setup"
-          ],
-          "requiresPlayMode": false,
-          "stopOnFirstFailure": true,
-          "expectedOutcome": "The canonical scene opens from supported editor states and invalid scene inputs report deterministic diagnostics.",
-          "debugHint": "If scene acquisition fails, verify Assets/Click ME.unity exists in the external UAT project and inspect scene path overrides.",
-          "cases": [
-            {
-              "caseId": "canonical-scene-already-open",
-              "label": "Canonical scene already open",
-              "description": "Open the canonical scene when it is already the target scene.",
-              "expectedOutcome": "The canonical scene remains active and setup can continue.",
-              "debugHint": "If this fails, inspect active-scene path normalization.",
-              "steps": [
-                {
-                  "stepId": "open-scene",
-                  "label": "Open canonical scene",
-                  "description": "Open Assets/Click ME.unity.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "Assets/Click ME.unity is active.",
-                  "debugHint": "If the scene does not load, confirm the fixture scene exists."
-                }
-              ]
-            },
-            {
-              "caseId": "different-scene-open",
-              "label": "Different scene open",
-              "description": "Open the canonical scene when another scene is active.",
-              "expectedOutcome": "The host switches to Assets/Click ME.unity.",
-              "debugHint": "If this fails, inspect scene manager load diagnostics.",
-              "steps": [
-                {
-                  "stepId": "open-scene",
-                  "label": "Switch to canonical scene",
-                  "description": "Create a temporary different scene state, then open Assets/Click ME.unity.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "Assets/Click ME.unity is active.",
-                  "debugHint": "If switching fails, confirm the temporary scene mutation ran and no unsaved prompt blocked scene load.",
-                  "args": {
-                    "fixtureMutation": "temp-scene-setup-restore"
-                  }
-                }
-              ]
-            },
-            {
-              "caseId": "temp-unsaved-scene-open",
-              "label": "Temp unsaved scene open",
-              "description": "Create a temporary unsaved setup scene state, then reacquire the canonical scene.",
-              "expectedOutcome": "The host returns to Assets/Click ME.unity from a temporary scene state.",
-              "debugHint": "If this fails, inspect fixture mutation cleanup and scene restore diagnostics.",
-              "steps": [
-                {
-                  "stepId": "open-scene-after-temp",
-                  "label": "Open canonical scene after temp scene",
-                  "description": "Apply the temporary scene setup mutation and open Assets/Click ME.unity.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "Assets/Click ME.unity is active after temporary scene setup.",
-                  "debugHint": "If this fails, inspect temp scene mutation cleanup.",
-                  "args": {
-                    "fixtureMutation": "temp-scene-setup-restore"
-                  }
-                }
-              ]
-            },
-            {
-              "caseId": "missing-scene",
-              "label": "Missing scene diagnostic",
-              "description": "Try to open a missing scene path as an expected failure.",
-              "expectedOutcome": "The step reports SETUP_SCENE_MISSING without aborting the expected-failure case.",
-              "debugHint": "If the diagnostic changes, inspect scene path validation before OpenScene.",
-              "steps": [
-                {
-                  "stepId": "open-missing-scene",
-                  "label": "Open missing scene",
-                  "description": "Attempt to open a scene path that is intentionally absent.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "SETUP_SCENE_MISSING is reported.",
-                  "debugHint": "If this unexpectedly succeeds, verify the missing test path is still absent.",
-                  "args": {
-                    "scenePath": "Assets/Missing.unity",
-                    "expectStepFailure": true,
-                    "expectedDiagnosticCode": "SETUP_SCENE_MISSING",
-                    "expectedDiagnosticContains": "scene could not be found",
-                    "preserveFailureEvidence": true
-                  }
-                }
-              ]
-            },
-            {
-              "caseId": "non-scene-path",
-              "label": "Non-scene path diagnostic",
-              "description": "Try to open a non-scene package asset path as an expected failure.",
-              "expectedOutcome": "The step reports SETUP_SCENE_PATH_INVALID without aborting the expected-failure case.",
-              "debugHint": "If the diagnostic changes, inspect path extension validation before scene loading.",
-              "steps": [
-                {
-                  "stepId": "open-non-scene-path",
-                  "label": "Open non-scene path",
-                  "description": "Attempt to open a package JSON path as a scene.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported.",
-                  "debugHint": "If this unexpectedly succeeds, verify non-scene path validation runs first.",
-                  "args": {
-                    "scenePath": "Packages/com.staples.asm-lite/package.json",
-                    "expectStepFailure": true,
-                    "expectedDiagnosticCode": "SETUP_SCENE_PATH_INVALID",
-                    "expectedDiagnosticContains": "not a Unity scene",
-                    "preserveFailureEvidence": true
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "suiteId": "setup-window-launch-focus",
-          "label": "Setup Window Launch and Focus",
-          "description": "Validate ASM-Lite editor window launch, reuse, focus, and recovery after a closed automation window.",
-          "resetOverride": "Inherit",
-          "speed": "standard",
-          "risk": "safe",
-          "defaultSelected": false,
-          "presetGroups": [
-            "all-setup"
-          ],
-          "requiresPlayMode": false,
-          "stopOnFirstFailure": true,
-          "expectedOutcome": "The ASM-Lite window opens from closed state, reuses/focuses when already open, and reopens cleanly after a close.",
-          "debugHint": "If focus is unreliable, inspect Unity editor layout state and window lifecycle logs before treating it as a product setup failure.",
-          "cases": [
-            {
-              "caseId": "closed-to-open",
-              "label": "Closed to open",
-              "description": "Close any existing automation window, then open and focus ASM-Lite.",
-              "expectedOutcome": "The ASM-Lite window opens and is focused.",
-              "debugHint": "If opening fails, inspect editor window initialization logs.",
-              "steps": [
-                {
-                  "stepId": "close-window",
-                  "label": "Close existing window",
-                  "description": "Close any existing ASM-Lite automation window.",
-                  "actionType": "close-window",
-                  "expectedOutcome": "No existing ASM-Lite automation window remains open.",
-                  "debugHint": "If close fails, inspect Unity editor window lifecycle."
-                },
-                {
-                  "stepId": "open-window",
-                  "label": "Open ASM-Lite window",
-                  "description": "Open the ASM-Lite automation window.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window is available and focused.",
-                  "debugHint": "If open fails, inspect menu/window initialization."
-                },
-                {
-                  "stepId": "assert-window-focused",
-                  "label": "Verify focused window",
-                  "description": "Assert the ASM-Lite automation window has editor focus.",
-                  "actionType": "assert-window-focused",
-                  "expectedOutcome": "The ASM-Lite window is the focused editor window.",
-                  "debugHint": "If focus fails, inspect dock/tab state and retry after closing stale windows."
-                }
-              ]
-            },
-            {
-              "caseId": "already-open-reuse-focus",
-              "label": "Already open reuse focus",
-              "description": "Open ASM-Lite twice and confirm the existing automation window remains focused.",
-              "expectedOutcome": "The existing window is reused and focused.",
-              "debugHint": "If a duplicate or unfocused window appears, inspect OpenForAutomation behavior.",
-              "steps": [
-                {
-                  "stepId": "open-window-first",
-                  "label": "Open ASM-Lite window",
-                  "description": "Open the ASM-Lite automation window.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window opens.",
-                  "debugHint": "If open fails, inspect window initialization."
-                },
-                {
-                  "stepId": "open-window-again",
-                  "label": "Reuse ASM-Lite window",
-                  "description": "Open the ASM-Lite automation window again.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The existing ASM-Lite window is reused and focused.",
-                  "debugHint": "If reuse fails, inspect GetWindow behavior."
-                },
-                {
-                  "stepId": "assert-window-focused",
-                  "label": "Verify focused window",
-                  "description": "Assert the ASM-Lite automation window has editor focus.",
-                  "actionType": "assert-window-focused",
-                  "expectedOutcome": "The ASM-Lite window is focused.",
-                  "debugHint": "If focus fails, inspect Unity layout state."
-                }
-              ]
-            },
-            {
-              "caseId": "stale-closed-window-handled",
-              "label": "Stale closed window handled",
-              "description": "Close the automation window and reopen it cleanly.",
-              "expectedOutcome": "The ASM-Lite window reopens and focuses after a stale/closed state.",
-              "debugHint": "If reopen fails, inspect stale editor window references.",
-              "steps": [
-                {
-                  "stepId": "open-window-first",
-                  "label": "Open ASM-Lite window",
-                  "description": "Open the ASM-Lite automation window.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window opens.",
-                  "debugHint": "If open fails, inspect window initialization."
-                },
-                {
-                  "stepId": "close-window",
-                  "label": "Close ASM-Lite window",
-                  "description": "Close any open ASM-Lite automation window.",
-                  "actionType": "close-window",
-                  "expectedOutcome": "The ASM-Lite automation window is closed.",
-                  "debugHint": "If close fails, inspect stale editor window references."
-                },
-                {
-                  "stepId": "open-window-after-close",
-                  "label": "Reopen ASM-Lite window",
-                  "description": "Reopen the ASM-Lite automation window after closing it.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "The ASM-Lite window reopens cleanly.",
-                  "debugHint": "If reopen fails, inspect stale editor window references."
-                },
-                {
-                  "stepId": "assert-window-focused",
-                  "label": "Verify focused window",
-                  "description": "Assert the reopened ASM-Lite automation window has editor focus.",
-                  "actionType": "assert-window-focused",
-                  "expectedOutcome": "The reopened ASM-Lite window is focused.",
-                  "debugHint": "If focus fails, inspect Unity layout state."
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "suiteId": "setup-avatar-discovery-selection",
-          "label": "Setup Avatar Discovery and Selection",
-          "description": "Validate deterministic avatar discovery, selected-object precedence, ambiguity handling, inactive avatar policy, prefab asset rejection, and missing-avatar diagnostics.",
+          "suiteId": "avatar-discovery-selection-regression",
+          "label": "Avatar Picking Regression Checks",
+          "description": "Check that the smoke tools pick the avatar you meant to edit, and explain clearly when the target is missing, duplicated, hidden, or not a scene avatar.",
           "resetOverride": "SceneReload",
           "speed": "standard",
           "risk": "safe",
@@ -438,15 +267,15 @@
           "cases": [
             {
               "caseId": "selected-canonical-avatar",
-              "label": "Selected canonical avatar",
-              "description": "Select the canonical scene avatar before running avatar selection.",
+              "label": "Use the avatar I already picked",
+              "description": "Use the scene avatar that is already selected before the smoke tool starts picking a target.",
               "expectedOutcome": "The selected canonical avatar is used as the automation target.",
               "debugHint": "If this fails, inspect selected-scene-avatar precedence.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Selected canonical avatar",
-                  "description": "Select the canonical scene avatar before running avatar selection.",
+                  "label": "Use the avatar I already picked",
+                  "description": "Use the scene avatar that is already selected before the smoke tool starts picking a target.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected canonical avatar is used as the automation target.",
                   "debugHint": "If this fails, inspect selected-scene-avatar precedence.",
@@ -458,15 +287,15 @@
             },
             {
               "caseId": "find-by-fixture-name",
-              "label": "Find by fixture name",
-              "description": "Clear Unity selection and resolve the canonical avatar by configured fixture name.",
+              "label": "Find the main avatar by name",
+              "description": "With nothing selected, find the expected scene avatar by name.",
               "expectedOutcome": "The active scene avatar matching the fixture name is selected.",
               "debugHint": "If this fails, inspect avatar name normalization and active scene object discovery.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Find by fixture name",
-                  "description": "Clear Unity selection and resolve the canonical avatar by configured fixture name.",
+                  "label": "Find the main avatar by name",
+                  "description": "With nothing selected, find the expected scene avatar by name.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The active scene avatar matching the fixture name is selected.",
                   "debugHint": "If this fails, inspect avatar name normalization and active scene object discovery.",
@@ -478,15 +307,15 @@
             },
             {
               "caseId": "wrong-object-selected",
-              "label": "Wrong object selected",
-              "description": "Select a non-avatar scene object that shares the fixture target name.",
+              "label": "Tell me I picked the wrong object",
+              "description": "If the current selection is not an avatar, stop and explain that clearly.",
               "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported without mutating a prefab asset.",
               "debugHint": "If this fails, inspect selected object type checks before name lookup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Wrong object selected",
-                  "description": "Select a non-avatar scene object that shares the fixture target name.",
+                  "label": "Tell me I picked the wrong object",
+                  "description": "If the current selection is not an avatar, stop and explain that clearly.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_SELECTED_OBJECT_NOT_AVATAR is reported without mutating a prefab asset.",
                   "debugHint": "If this fails, inspect selected object type checks before name lookup.",
@@ -502,15 +331,15 @@
             },
             {
               "caseId": "wrong-avatar-selected",
-              "label": "Wrong avatar selected",
-              "description": "Select an alternate scene avatar while the fixture name points at the canonical avatar.",
+              "label": "Respect the avatar I picked",
+              "description": "If I deliberately pick a different avatar, use that one instead of guessing.",
               "expectedOutcome": "The selected avatar wins over fixture-name lookup deterministically.",
               "debugHint": "If this fails, inspect selected-avatar precedence and wrong-avatar fixture setup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Wrong avatar selected",
-                  "description": "Select an alternate scene avatar while the fixture name points at the canonical avatar.",
+                  "label": "Respect the avatar I picked",
+                  "description": "If I deliberately pick a different avatar, use that one instead of guessing.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected avatar wins over fixture-name lookup deterministically.",
                   "debugHint": "If this fails, inspect selected-avatar precedence and wrong-avatar fixture setup.",
@@ -523,15 +352,15 @@
             },
             {
               "caseId": "selected-inactive-avatar",
-              "label": "Selected inactive avatar",
-              "description": "Select the canonical avatar while it is inactive.",
+              "label": "Allow the avatar I picked even if it is hidden",
+              "description": "If I explicitly picked a hidden avatar, keep using my choice.",
               "expectedOutcome": "The explicitly selected inactive scene avatar is accepted.",
               "debugHint": "If this fails, inspect selected-object policy versus active-name lookup policy.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Selected inactive avatar",
-                  "description": "Select the canonical avatar while it is inactive.",
+                  "label": "Allow the avatar I picked even if it is hidden",
+                  "description": "If I explicitly picked a hidden avatar, keep using my choice.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The explicitly selected inactive scene avatar is accepted.",
                   "debugHint": "If this fails, inspect selected-object policy versus active-name lookup policy.",
@@ -543,15 +372,15 @@
             },
             {
               "caseId": "unselected-inactive-avatar",
-              "label": "Unselected inactive avatar",
-              "description": "Make the canonical avatar inactive and clear Unity selection.",
+              "label": "Do not auto-pick a hidden avatar",
+              "description": "If a hidden avatar is not selected, do not grab it automatically.",
               "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because inactive unselected avatars are not surprise-selected.",
               "debugHint": "If this fails, inspect activeInHierarchy filtering in avatar name lookup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Unselected inactive avatar",
-                  "description": "Make the canonical avatar inactive and clear Unity selection.",
+                  "label": "Do not auto-pick a hidden avatar",
+                  "description": "If a hidden avatar is not selected, do not grab it automatically.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because inactive unselected avatars are not surprise-selected.",
                   "debugHint": "If this fails, inspect activeInHierarchy filtering in avatar name lookup.",
@@ -567,15 +396,15 @@
             },
             {
               "caseId": "duplicate-avatar-name",
-              "label": "Duplicate avatar name",
-              "description": "Create a duplicate active scene avatar with the fixture name and clear selection.",
+              "label": "Ask me to choose when two avatars match",
+              "description": "If two live avatars share the same name, stop and ask for a clearer pick.",
               "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported until the operator selects a target.",
               "debugHint": "If this fails, inspect duplicate-name counting and selection cleanup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Duplicate avatar name",
-                  "description": "Create a duplicate active scene avatar with the fixture name and clear selection.",
+                  "label": "Ask me to choose when two avatars match",
+                  "description": "If two live avatars share the same name, stop and ask for a clearer pick.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_AMBIGUOUS is reported until the operator selects a target.",
                   "debugHint": "If this fails, inspect duplicate-name counting and selection cleanup.",
@@ -591,15 +420,15 @@
             },
             {
               "caseId": "selected-duplicate-avatar-disambiguates",
-              "label": "Selected duplicate avatar disambiguates",
-              "description": "Create a duplicate active scene avatar and select the canonical avatar.",
+              "label": "Use my pick when names clash",
+              "description": "If names clash but I already selected one avatar, use my chosen target.",
               "expectedOutcome": "The selected canonical avatar disambiguates duplicate names.",
               "debugHint": "If this fails, inspect selected-avatar precedence over ambiguous name lookup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Selected duplicate avatar disambiguates",
-                  "description": "Create a duplicate active scene avatar and select the canonical avatar.",
+                  "label": "Use my pick when names clash",
+                  "description": "If names clash but I already selected one avatar, use my chosen target.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "The selected canonical avatar disambiguates duplicate names.",
                   "debugHint": "If this fails, inspect selected-avatar precedence over ambiguous name lookup.",
@@ -611,15 +440,15 @@
             },
             {
               "caseId": "prefab-asset-avatar-selected",
-              "label": "Prefab asset avatar selected",
-              "description": "Select a prefab asset containing an avatar descriptor.",
+              "label": "Reject a prefab from the Project window",
+              "description": "If I selected a prefab asset instead of a scene avatar, reject it clearly.",
               "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported because prefab assets are not scene avatar instances.",
               "debugHint": "If this fails, inspect EditorUtility.IsPersistent checks before scene object selection.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Prefab asset avatar selected",
-                  "description": "Select a prefab asset containing an avatar descriptor.",
+                  "label": "Reject a prefab from the Project window",
+                  "description": "If I selected a prefab asset instead of a scene avatar, reject it clearly.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_PREFAB_ASSET is reported because prefab assets are not scene avatar instances.",
                   "debugHint": "If this fails, inspect EditorUtility.IsPersistent checks before scene object selection.",
@@ -635,15 +464,15 @@
             },
             {
               "caseId": "missing-avatar",
-              "label": "Missing avatar",
-              "description": "Clear selection and override the fixture name to an intentionally missing avatar.",
+              "label": "Explain when the avatar is missing",
+              "description": "If the expected avatar is gone, explain that clearly instead of guessing.",
               "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported for the missing fixture avatar.",
               "debugHint": "If this fails, inspect selection cleanup and avatarName overrides.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Missing avatar",
-                  "description": "Clear selection and override the fixture name to an intentionally missing avatar.",
+                  "label": "Explain when the avatar is missing",
+                  "description": "If the expected avatar is gone, explain that clearly instead of guessing.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported for the missing fixture avatar.",
                   "debugHint": "If this fails, inspect selection cleanup and avatarName overrides.",
@@ -660,15 +489,15 @@
             },
             {
               "caseId": "same-name-non-avatar-ignored",
-              "label": "Same-name non-avatar ignored",
-              "description": "Create a same-name scene object without VRCAvatarDescriptor while targeting that name.",
+              "label": "Ignore same-name objects that are not avatars",
+              "description": "Ignore lookalike scene objects that share the name but are not real avatars.",
               "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because non-avatar objects are ignored during name lookup.",
               "debugHint": "If this fails, inspect descriptor filtering during name lookup.",
               "steps": [
                 {
                   "stepId": "select-avatar",
-                  "label": "Same-name non-avatar ignored",
-                  "description": "Create a same-name scene object without VRCAvatarDescriptor while targeting that name.",
+                  "label": "Ignore same-name objects that are not avatars",
+                  "description": "Ignore lookalike scene objects that share the name but are not real avatars.",
                   "actionType": "select-avatar",
                   "expectedOutcome": "SETUP_AVATAR_NOT_FOUND is reported because non-avatar objects are ignored during name lookup.",
                   "debugHint": "If this fails, inspect descriptor filtering during name lookup.",
@@ -1479,7 +1308,7 @@
         {
           "suiteId": "setup-negative-diagnostics",
           "label": "Setup Negative Diagnostics",
-          "description": "Validate safe setup diagnostic paths for bad scene, package resource, and avatar targets using expected-failure semantics.",
+          "description": "Validate safe setup diagnostic paths for bad package resource and avatar targets using expected-failure semantics.",
           "resetOverride": "SceneReload",
           "speed": "standard",
           "risk": "safe",
@@ -1493,54 +1322,6 @@
           "expectedOutcome": "Each safe negative reports the locked diagnostic code and useful human text without destructive project mutation.",
           "debugHint": "If a negative diagnostic drifts, inspect the owning setup action and expectedDiagnostic args before changing product behavior.",
           "cases": [
-            {
-              "caseId": "missing-scene",
-              "label": "Missing scene diagnostic",
-              "description": "Try to open a scene path that is intentionally absent.",
-              "expectedOutcome": "SETUP_SCENE_MISSING is reported as an expected failure.",
-              "debugHint": "If this unexpectedly succeeds, verify the missing test path is still absent.",
-              "steps": [
-                {
-                  "stepId": "negative-missing-scene",
-                  "label": "Assert missing scene diagnostic",
-                  "description": "Attempt to open Assets/Missing.unity and require the missing-scene diagnostic.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "SETUP_SCENE_MISSING is reported.",
-                  "debugHint": "Inspect scene path validation before OpenScene.",
-                  "args": {
-                    "scenePath": "Assets/Missing.unity",
-                    "expectStepFailure": true,
-                    "expectedDiagnosticCode": "SETUP_SCENE_MISSING",
-                    "expectedDiagnosticContains": "scene could not be found",
-                    "preserveFailureEvidence": true
-                  }
-                }
-              ]
-            },
-            {
-              "caseId": "non-scene-path",
-              "label": "Non-scene path diagnostic",
-              "description": "Try to open an existing package JSON path as a scene.",
-              "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported as an expected failure.",
-              "debugHint": "If the diagnostic changes, inspect path extension validation before scene loading.",
-              "steps": [
-                {
-                  "stepId": "negative-non-scene-path",
-                  "label": "Assert non-scene path diagnostic",
-                  "description": "Attempt to open package.json as a Unity scene and require the invalid-path diagnostic.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "SETUP_SCENE_PATH_INVALID is reported.",
-                  "debugHint": "Inspect path extension validation before scene loading.",
-                  "args": {
-                    "scenePath": "Packages/com.staples.asm-lite/package.json",
-                    "expectStepFailure": true,
-                    "expectedDiagnosticCode": "SETUP_SCENE_PATH_INVALID",
-                    "expectedDiagnosticContains": "not a Unity scene",
-                    "preserveFailureEvidence": true
-                  }
-                }
-              ]
-            },
             {
               "caseId": "missing-package-resource",
               "label": "Missing package resource diagnostic",

@@ -444,9 +444,7 @@ mod tests {
             vec![
                 "setup-package-presence",
                 "setup-scene-avatar",
-                "setup-scene-acquisition",
-                "setup-window-launch-focus",
-                "setup-avatar-discovery-selection",
+                "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
@@ -627,7 +625,7 @@ mod tests {
         assert_eq!(section.title, "Preflight · ASM-Lite Readiness Check");
         assert_eq!(section.suite_id, "setup-package-presence");
         assert!(!section.default_open);
-        assert_eq!(section.steps.len(), 4);
+        assert_eq!(section.steps.len(), 6);
         assert_eq!(section.steps[0].step_label, "Open ASM-Lite");
     }
 
@@ -659,8 +657,22 @@ mod tests {
             }
         }
 
+        let expected_step_count = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| {
+                matches!(
+                    suite.suite_id.as_str(),
+                    "playmode-runtime-validation" | "setup-scene-avatar" | "lifecycle-roundtrip"
+                )
+            })
+            .flat_map(|suite| suite.cases.iter())
+            .map(|case_item| case_item.steps.len())
+            .sum::<usize>();
+
         assert_eq!(plan.selected_suite_count, 3);
-        assert_eq!(plan.total_step_count, 18);
+        assert_eq!(plan.total_step_count, expected_step_count);
         assert_eq!(
             suite_sequence,
             vec![
@@ -759,7 +771,7 @@ mod tests {
             tag_filtered.visible_suite_ids(),
             vec!["setup-negative-diagnostics"]
         );
-        assert_eq!(tag_filtered.hidden_by_filter_count, 11);
+        assert_eq!(tag_filtered.hidden_by_filter_count, 9);
         assert_eq!(model.selected_suite_ids(), before);
     }
 

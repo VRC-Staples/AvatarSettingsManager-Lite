@@ -419,13 +419,19 @@ mod tests {
             setup_steps,
             vec![
                 "open-scene",
+                "close-window",
                 "open-window",
+                "assert-window-focused",
+                "close-window",
+                "open-window",
+                "assert-window-focused",
                 "select-avatar",
                 "add-prefab",
                 "assert-primary-action"
             ]
         );
-        assert_eq!(catalog.groups[1].suites.len(), 9);
+        assert_eq!(catalog.groups[0].suites[0].cases.len(), 6);
+        assert_eq!(catalog.groups[1].suites.len(), 7);
         assert_eq!(catalog.groups[2].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[2].suites[0].cases[0]
             .steps

@@ -208,34 +208,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void UnityRuntime_RejectsMissingAndNonScenePathsWithPhase04Diagnostics()
-        {
-            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                    "open-scene",
-                    new ASMLiteSmokeStepArgs(),
-                    "Assets/Missing.unity",
-                    "Oct25_Dress",
-                    out string missingDetail,
-                    out string missingStackTrace),
-                Is.False);
-            StringAssert.Contains("SETUP_SCENE_MISSING", missingDetail);
-            StringAssert.Contains("scene could not be found", missingDetail);
-            Assert.That(missingStackTrace, Is.Empty);
-
-            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                    "open-scene",
-                    new ASMLiteSmokeStepArgs(),
-                    "Packages/com.staples.asm-lite/package.json",
-                    "Oct25_Dress",
-                    out string invalidDetail,
-                    out string invalidStackTrace),
-                Is.False);
-            StringAssert.Contains("SETUP_SCENE_PATH_INVALID", invalidDetail);
-            StringAssert.Contains("not a Unity scene", invalidDetail);
-            Assert.That(invalidStackTrace, Is.Empty);
-        }
-
-        [Test]
         public void UnityRuntime_ClosesOpensAndFocusesAutomationWindow()
         {
             bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;

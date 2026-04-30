@@ -855,9 +855,7 @@ mod tests {
             model.selected_suite_ids(),
             vec![
                 "setup-scene-avatar",
-                "setup-scene-acquisition",
-                "setup-window-launch-focus",
-                "setup-avatar-discovery-selection",
+                "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
@@ -915,9 +913,7 @@ mod tests {
             vec![
                 "setup-package-presence",
                 "setup-scene-avatar",
-                "setup-scene-acquisition",
-                "setup-window-launch-focus",
-                "setup-avatar-discovery-selection",
+                "avatar-discovery-selection-regression",
                 "setup-scaffold-add-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
