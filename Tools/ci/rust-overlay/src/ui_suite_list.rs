@@ -445,7 +445,7 @@ mod tests {
                 "asm-lite-readiness-check",
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
-                "setup-scaffold-add-idempotency",
+                "add-prefab-idempotency",
                 "setup-existing-state-recognition",
                 "setup-generated-asset-readiness",
                 "setup-negative-diagnostics",

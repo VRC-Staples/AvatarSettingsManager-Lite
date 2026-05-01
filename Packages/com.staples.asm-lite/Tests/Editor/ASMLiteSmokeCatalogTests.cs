@@ -62,7 +62,7 @@ namespace ASMLite.Tests.Editor
                 {
                     "setup-scene-avatar",
                     "avatar-discovery-selection-regression",
-                    "setup-scaffold-add-idempotency",
+                    "add-prefab-idempotency",
                     "setup-existing-state-recognition",
                     "setup-generated-asset-readiness",
                     "setup-negative-diagnostics",
@@ -212,20 +212,24 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-scaffold-add-idempotency"), Is.True);
+            Assert.That(suites.ContainsKey("add-prefab-idempotency"), Is.True);
             Assert.That(suites.ContainsKey("setup-existing-state-recognition"), Is.True);
 
-            var scaffoldCaseIds = suites["setup-scaffold-add-idempotency"].cases.Select(item => item.caseId).ToArray();
-            CollectionAssert.AreEquivalent(
-                new[]
-                {
-                    "no-component-add-prefab-primary",
-                    "add-prefab-succeeds",
-                    "add-prefab-twice-idempotency",
-                    "existing-component-rebuild-primary",
-                    "selected-avatar-change-preserves-prior-avatar",
-                },
-                scaffoldCaseIds);
+            ASMLiteSmokeSuiteDefinition addPrefabIdempotency = suites["add-prefab-idempotency"];
+            Assert.AreEqual("Add Prefab Idempotency", addPrefabIdempotency.label);
+            Assert.That(addPrefabIdempotency.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "no-component-add-prefab-primary",
+                "add-prefab-twice-idempotency",
+            }));
+
+            ASMLiteSmokeStepDefinition secondAddStep = addPrefabIdempotency.cases.Single(item => item.caseId == "add-prefab-twice-idempotency")
+                .steps.Single(step => step.stepId == "add-prefab-second");
+            Assert.That(string.IsNullOrEmpty(secondAddStep.args?.fixtureMutation), Is.True);
+
+            ASMLiteSmokeStepDefinition finalAssertStep = addPrefabIdempotency.cases.Single(item => item.caseId == "add-prefab-twice-idempotency")
+                .steps.Single(step => step.stepId == "assert-primary-action-twice");
+            Assert.That(string.IsNullOrEmpty(finalAssertStep.args?.fixtureMutation), Is.True);
 
             var existingCaseIds = suites["setup-existing-state-recognition"].cases.Select(item => item.caseId).ToArray();
             CollectionAssert.AreEquivalent(
