@@ -883,6 +883,8 @@ namespace ASMLite.Tests.Editor
             internal ActiveRunPhase Phase;
             internal double StepSleepSeconds;
             internal double NextStepExecuteAllowedAtSeconds;
+            internal bool CaseHasAppliedFixtureMutation;
+            internal string PendingSettledStepPassMessage;
 
             internal ASMLiteSmokeCaseDefinition CurrentCase
             {
@@ -1204,6 +1206,8 @@ namespace ASMLite.Tests.Editor
                     Phase = ActiveRunPhase.SuiteStart,
                     StepSleepSeconds = Math.Max(0d, command.runSuite.stepSleepSeconds),
                     NextStepExecuteAllowedAtSeconds = 0d,
+                    CaseHasAppliedFixtureMutation = false,
+                    PendingSettledStepPassMessage = string.Empty,
                 };
 
                 string runningMessage = $"Running suite '{suite.suiteId}' with effective reset policy '{effectiveResetPolicy}'.";
@@ -1314,7 +1318,7 @@ namespace ASMLite.Tests.Editor
                             return;
                         }
 
-                        AdvanceActiveRunToNextStepOrCase(activeRun);
+                        CompleteSettledActiveRunStep(activeRun);
                         PublishHostState(_currentState, _currentMessage, _lastEventSeq, _lastCommandSeq);
                         return;
 
@@ -1370,7 +1374,7 @@ namespace ASMLite.Tests.Editor
                 return;
             }
 
-            bool stepPassed = ExecuteCatalogStep(step, out string detail, out string stackTrace);
+            bool stepPassed = ExecuteCatalogStep(activeRun, step, out string detail, out string stackTrace);
             bool expectsStepFailure = ASMLiteSmokeExpectedDiagnosticMatcher.ExpectsStepFailure(step);
             if (stepPassed)
             {
@@ -1383,10 +1387,15 @@ namespace ASMLite.Tests.Editor
 
                 string cleanResetMessage = string.Empty;
                 string cleanResetStackTrace = string.Empty;
-                if (RequiresCleanReset(step) && !TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                if (RequiresCleanReset(step))
                 {
-                    FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
-                    return;
+                    if (!TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                    {
+                        FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
+                        return;
+                    }
+
+                    activeRun.CaseHasAppliedFixtureMutation = false;
                 }
 
                 string passMessage = string.IsNullOrWhiteSpace(detail)
@@ -1410,10 +1419,15 @@ namespace ASMLite.Tests.Editor
                 {
                     string cleanResetMessage = string.Empty;
                     string cleanResetStackTrace = string.Empty;
-                    if (RequiresCleanReset(step) && !TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                    if (RequiresCleanReset(step))
                     {
-                        FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
-                        return;
+                        if (!TryRunRequiredCleanReset(out cleanResetMessage, out cleanResetStackTrace))
+                        {
+                            FailActiveRunStep(activeRun, suiteCase, step, cleanResetMessage, cleanResetStackTrace);
+                            return;
+                        }
+
+                        activeRun.CaseHasAppliedFixtureMutation = false;
                     }
 
                     PassActiveRunStep(activeRun, suiteCase, step, AppendCleanResetPassMessage(expectedFailurePassMessage, cleanResetMessage));
@@ -1449,21 +1463,75 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeStepDefinition step,
             string message)
         {
+            string normalizedMessage = string.IsNullOrWhiteSpace(message) ? $"Step '{step.stepId}' passed." : message.Trim();
+            bool settlesAfterStep = ShouldSettleAfterStep(step);
+            if (settlesAfterStep)
+            {
+                activeRun.PendingSettledStepPassMessage = normalizedMessage;
+                activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
+                activeRun.Phase = ActiveRunPhase.StepSettle;
+                return;
+            }
+
+            string caseFixtureResetMessage = string.Empty;
+            if (ShouldResetFixtureAfterCase(activeRun, suiteCase, step))
+            {
+                if (!TryResetSetupFixtureAfterCase(out caseFixtureResetMessage, out string caseFixtureResetStackTrace))
+                {
+                    FailActiveRunStep(activeRun, suiteCase, step, caseFixtureResetMessage, caseFixtureResetStackTrace);
+                    return;
+                }
+
+                activeRun.CaseHasAppliedFixtureMutation = false;
+            }
+
             AppendActiveRunEvent(
                 activeRun,
                 "step-passed",
                 activeRun.Suite.suiteId,
                 suiteCase.caseId,
                 step.stepId,
-                string.IsNullOrWhiteSpace(message) ? $"Step '{step.stepId}' passed." : message.Trim());
+                AppendCaseFixtureResetPassMessage(normalizedMessage, caseFixtureResetMessage));
             activeRun.StepIndex++;
-            if (ShouldSettleAfterStep(step))
+            AdvanceActiveRunToNextStepOrCase(activeRun);
+        }
+
+        private void CompleteSettledActiveRunStep(ActiveRunState activeRun)
+        {
+            ASMLiteSmokeCaseDefinition suiteCase = activeRun.CurrentCase;
+            ASMLiteSmokeStepDefinition step = activeRun.CurrentStep;
+            if (suiteCase == null || step == null)
             {
-                activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
-                activeRun.Phase = ActiveRunPhase.StepSettle;
+                activeRun.PendingSettledStepPassMessage = string.Empty;
+                AdvanceActiveRunToNextStepOrCase(activeRun);
                 return;
             }
 
+            string caseFixtureResetMessage = string.Empty;
+            if (ShouldResetFixtureAfterCase(activeRun, suiteCase, step))
+            {
+                if (!TryResetSetupFixtureAfterCase(out caseFixtureResetMessage, out string caseFixtureResetStackTrace))
+                {
+                    activeRun.PendingSettledStepPassMessage = string.Empty;
+                    FailActiveRunStep(activeRun, suiteCase, step, caseFixtureResetMessage, caseFixtureResetStackTrace);
+                    return;
+                }
+
+                activeRun.CaseHasAppliedFixtureMutation = false;
+            }
+
+            string normalizedMessage = string.IsNullOrWhiteSpace(activeRun.PendingSettledStepPassMessage)
+                ? $"Step '{step.stepId}' passed."
+                : activeRun.PendingSettledStepPassMessage.Trim();
+            activeRun.PendingSettledStepPassMessage = string.Empty;
+            AppendActiveRunEvent(
+                activeRun,
+                "step-passed",
+                activeRun.Suite.suiteId,
+                suiteCase.caseId,
+                step.stepId,
+                AppendCaseFixtureResetPassMessage(normalizedMessage, caseFixtureResetMessage));
+            activeRun.StepIndex++;
             AdvanceActiveRunToNextStepOrCase(activeRun);
         }
 
@@ -1553,6 +1621,62 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        private static bool ShouldResetFixtureAfterCase(
+            ActiveRunState activeRun,
+            ASMLiteSmokeCaseDefinition suiteCase,
+            ASMLiteSmokeStepDefinition step)
+        {
+            return activeRun != null
+                && activeRun.CaseHasAppliedFixtureMutation
+                && !RequiresCleanReset(step)
+                && IsLastRunnableStepInCase(suiteCase, activeRun.StepIndex);
+        }
+
+        private static bool IsLastRunnableStepInCase(ASMLiteSmokeCaseDefinition suiteCase, int currentStepIndex)
+        {
+            ASMLiteSmokeStepDefinition[] steps = suiteCase == null
+                ? Array.Empty<ASMLiteSmokeStepDefinition>()
+                : suiteCase.steps ?? Array.Empty<ASMLiteSmokeStepDefinition>();
+
+            for (int index = currentStepIndex + 1; index < steps.Length; index++)
+            {
+                if (steps[index] != null)
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool TryResetSetupFixtureAfterCase(out string detail, out string stackTrace)
+        {
+            bool reset = _runtime.ResetSetupFixture(out string resetDetail, out stackTrace);
+            if (reset)
+            {
+                detail = string.IsNullOrWhiteSpace(resetDetail)
+                    ? "Fixture state reset after case completion."
+                    : resetDetail.Trim();
+                return true;
+            }
+
+            detail = string.IsNullOrWhiteSpace(resetDetail)
+                ? "Fixture state reset failed after case completion."
+                : resetDetail.Trim();
+            return false;
+        }
+
+        private static string AppendCaseFixtureResetPassMessage(string stepMessage, string resetMessage)
+        {
+            string normalizedStepMessage = string.IsNullOrWhiteSpace(stepMessage)
+                ? string.Empty
+                : stepMessage.Trim();
+            string normalizedResetMessage = string.IsNullOrWhiteSpace(resetMessage)
+                ? string.Empty
+                : resetMessage.Trim();
+            return string.IsNullOrWhiteSpace(normalizedResetMessage)
+                ? normalizedStepMessage
+                : $"{normalizedStepMessage} {normalizedResetMessage}";
+        }
+
         private void AdvanceActiveRunToNextCaseOrSuitePassed(ActiveRunState activeRun)
         {
             ASMLiteSmokeCaseDefinition[] cases = activeRun.Suite == null
@@ -1563,6 +1687,8 @@ namespace ASMLite.Tests.Editor
                 activeRun.CaseIndex++;
 
             activeRun.StepIndex = 0;
+            activeRun.CaseHasAppliedFixtureMutation = false;
+            activeRun.PendingSettledStepPassMessage = string.Empty;
             activeRun.Phase = activeRun.CaseIndex < cases.Length
                 ? ActiveRunPhase.CaseStart
                 : ActiveRunPhase.SuitePassed;
@@ -2088,7 +2214,7 @@ namespace ASMLite.Tests.Editor
             return escaped ?? string.Empty;
         }
 
-        private bool ExecuteCatalogStep(ASMLiteSmokeStepDefinition step, out string detail, out string stackTrace)
+        private bool ExecuteCatalogStep(ActiveRunState activeRun, ASMLiteSmokeStepDefinition step, out string detail, out string stackTrace)
         {
             if (step == null)
             {
@@ -2113,6 +2239,9 @@ namespace ASMLite.Tests.Editor
                     out stackTrace);
                 if (!fixturePassed)
                     return false;
+
+                if (activeRun != null)
+                    activeRun.CaseHasAppliedFixtureMutation = true;
             }
 
             int consoleErrorCheckpoint = _runtime.GetConsoleErrorCheckpoint();

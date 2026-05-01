@@ -762,6 +762,130 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void SetupSuite_ResetsFixtureStateAfterExpectedDiagnosticCaseBeforeContinuing()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000016_run-suite";
+                context.Runtime.FailAction(
+                    "select-avatar",
+                    "SETUP_AVATAR_NOT_FOUND: avatar could not be found for fixture name 'Oct25_Dress'.");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(16, commandId, "expected-diagnostic-fixture-reset-host"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar,
+                }));
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && item.message.Contains("Expected diagnostic 'SETUP_AVATAR_NOT_FOUND' matched")), Is.True);
+            }
+        }
+
+        [Test]
+        public void SetupSuite_DoesNotResetTwiceAfterRequiredCleanResetWithinCase()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000017_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(17, commandId, "clean-reset-then-finish-host"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection,
+                }));
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1),
+                    "Required clean reset should clear fixture-mutation state before the case ends.");
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Count(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && item.message.Contains("Clean reset passed")), Is.EqualTo(1));
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && item.message.Contains("Fixture state reset after case completion.")), Is.False,
+                    "No extra case-end fixture reset should run after a required clean reset already restored the baseline.");
+            }
+        }
+
+        [Test]
+        public void SetupSuite_DelaysCaseFixtureResetUntilAfterSettleForFinalMutationStep()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000018_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(18, commandId, "settle-then-reset-host"));
+
+                context.Runtime.AdvanceSeconds(0.1d);
+                var earlyEvents = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(0),
+                    "Fixture reset should wait until the post-add-prefab settle window completes.");
+                Assert.That(earlyEvents.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && string.Equals(item.stepId, "add-prefab-final-mutation-settle", StringComparison.Ordinal)), Is.False,
+                    "Final mutation step should not report passed until deferred cleanup succeeds.");
+
+                AdvanceUntilIdleAfterRun(context);
+
+                var completedEvents = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1),
+                    "Fixture reset should run once the settle window completes.");
+                Assert.That(completedEvents.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && string.Equals(item.stepId, "add-prefab-final-mutation-settle", StringComparison.Ordinal)), Is.True);
+                Assert.That(completedEvents.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)
+                    && string.Equals(item.stepId, "add-prefab-final-mutation-settle", StringComparison.Ordinal)), Is.False);
+            }
+        }
+
+        [Test]
+        public void SetupSuite_FailingDeferredResetDoesNotEmitContradictoryStepPass()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000019_run-suite";
+                context.Runtime.FailNextSetupFixtureReset("simulated cleanup ledger failure");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(19, commandId, "settle-then-reset-host"));
+                AdvanceUntilReviewRequired(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                }));
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
+                    && string.Equals(item.stepId, "add-prefab-final-mutation-settle", StringComparison.Ordinal)), Is.False,
+                    "Deferred cleanup failure should not leave a contradictory step-passed event behind.");
+                Assert.That(events.Any(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal)
+                    && string.Equals(item.stepId, "add-prefab-final-mutation-settle", StringComparison.Ordinal)
+                    && item.message.Contains("simulated cleanup ledger failure")), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "review-required", StringComparison.Ordinal)), Is.True);
+            }
+        }
+
+        [Test]
         public void Runner_DoesNotRegisterAfterReady_WhenExitOnReadyIsTrue()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: true))
@@ -1894,6 +2018,182 @@ namespace ASMLite.Tests.Editor
                                                 },
                                                 expectedOutcome = "Expected scene diagnostic matches.",
                                                 debugHint = "Inspect expected diagnostic matching.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "expected-diagnostic-fixture-reset-host",
+                                label = "Expected Diagnostic Fixture Reset Host",
+                                description = "Validates expected diagnostic cases reset fixture state before the next case runs.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Expected diagnostic fixture cases pass and reset their fixture state before continuing.",
+                                debugHint = "Inspect expected diagnostic matching and fixture reset behavior between cases.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "expected-diagnostic-fixture-reset-case",
+                                        label = "Expected diagnostic fixture reset case",
+                                        description = "Run an expected-failure avatar selection case that mutates fixture state.",
+                                        expectedOutcome = "The expected diagnostic matches and the fixture state is reset before the next case.",
+                                        debugHint = "Inspect fixture mutation cleanup between cases.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "unselected-inactive-avatar",
+                                                label = "Inactive avatar failure is reported",
+                                                description = "Make the avatar inactive and verify the expected missing-avatar diagnostic.",
+                                                actionType = "select-avatar",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar,
+                                                    expectStepFailure = true,
+                                                    expectedDiagnosticCode = "SETUP_AVATAR_NOT_FOUND",
+                                                    expectedDiagnosticContains = "avatar could not be found",
+                                                },
+                                                expectedOutcome = "Expected avatar-not-found diagnostic matches.",
+                                                debugHint = "Inspect inactive-avatar fixture cleanup after the case passes.",
+                                            },
+                                        },
+                                    },
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "follow-up-ready-case",
+                                        label = "Follow-up ready case",
+                                        description = "Confirm the suite continues after the fixture reset.",
+                                        expectedOutcome = "The follow-up case runs after fixture cleanup.",
+                                        debugHint = "Inspect case progression after the expected diagnostic case.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-host-ready",
+                                                label = "Host is ready",
+                                                description = "Run a simple follow-up step after the expected diagnostic case.",
+                                                actionType = "assert-host-ready",
+                                                expectedOutcome = "Host-ready assertion passes.",
+                                                debugHint = "Inspect whether fixture cleanup let the suite continue cleanly.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "clean-reset-then-finish-host",
+                                label = "Clean Reset Then Finish Host",
+                                description = "Validates required clean reset clears fixture-mutation tracking before a later step ends the case.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "A required clean reset runs once and the case finishes without an extra case-end reset.",
+                                debugHint = "Inspect fixture-mutation tracking after required clean reset succeeds mid-case.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "clean-reset-clears-mutation-state",
+                                        label = "Required clean reset clears mutation state",
+                                        description = "Apply a fixture mutation that requires clean reset, then finish the same case with a ready assertion.",
+                                        expectedOutcome = "Only the required clean reset runs and the final step does not trigger duplicate cleanup.",
+                                        debugHint = "Inspect case-end cleanup after required clean reset succeeded earlier in the case.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "mutate-then-clean-reset",
+                                                label = "Mutation requires clean reset",
+                                                description = "Apply wrong-object selection and force a clean reset before continuing the case.",
+                                                actionType = "assert-host-ready",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.WrongObjectSelection,
+                                                    requireCleanReset = true,
+                                                },
+                                                expectedOutcome = "The required clean reset restores the fixture baseline.",
+                                                debugHint = "Inspect whether mutation tracking clears after the required reset.",
+                                            },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "finish-after-clean-reset",
+                                                label = "Case finishes after clean reset",
+                                                description = "Run a ready assertion after the required clean reset already restored the baseline.",
+                                                actionType = "assert-host-ready",
+                                                expectedOutcome = "The case finishes without an extra case-end fixture reset.",
+                                                debugHint = "Inspect whether duplicate case-end cleanup is skipped.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "settle-then-reset-host",
+                                label = "Settle Then Reset Host",
+                                description = "Validates final settle-requiring steps delay fixture reset until the settle window completes.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "The fixture reset waits until the add-prefab settle phase completes before the next case runs.",
+                                debugHint = "Inspect add-prefab settle timing versus case-end fixture reset.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "final-mutation-settle-case",
+                                        label = "Final mutation settle case",
+                                        description = "Apply remove-component on a final add-prefab step so the case needs settle before cleanup.",
+                                        expectedOutcome = "The add-prefab pass settles before fixture reset runs.",
+                                        debugHint = "Inspect whether fixture reset waits for add-prefab settle.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "add-prefab-final-mutation-settle",
+                                                label = "Final add-prefab mutation settles before reset",
+                                                description = "Apply remove-component and add the ASM-Lite prefab scaffold as the last step in the case.",
+                                                actionType = "add-prefab",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                                                },
+                                                expectedOutcome = "The step enters settle before case cleanup runs.",
+                                                debugHint = "Inspect settle ordering for the final mutation step.",
+                                            },
+                                        },
+                                    },
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "post-settle-follow-up-case",
+                                        label = "Post-settle follow-up case",
+                                        description = "Confirm the suite continues after the settled cleanup finishes.",
+                                        expectedOutcome = "The follow-up case runs after the delayed fixture reset.",
+                                        debugHint = "Inspect whether the next case waits for the delayed reset.",
+                                        steps = new[]
+                                        {
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-host-ready-after-settle-reset",
+                                                label = "Host is ready after settle reset",
+                                                description = "Run a simple follow-up step after the settled cleanup.",
+                                                actionType = "assert-host-ready",
+                                                expectedOutcome = "Host-ready assertion passes after delayed cleanup.",
+                                                debugHint = "Inspect post-settle case progression.",
                                             },
                                         },
                                     },
