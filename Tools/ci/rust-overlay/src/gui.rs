@@ -3368,8 +3368,9 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-existing-state-recognition",
-                "setup-generated-asset-readiness",
+                "setup-installed-state-recognition",
+                "setup-generated-asset-recovery-signals",
+                "setup-generated-reference-ownership",
                 "setup-negative-diagnostics"
             ]
         );

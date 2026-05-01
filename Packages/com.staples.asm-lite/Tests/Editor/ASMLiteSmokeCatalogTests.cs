@@ -63,8 +63,9 @@ namespace ASMLite.Tests.Editor
                     "setup-scene-avatar",
                     "avatar-discovery-selection-regression",
                     "add-prefab-idempotency",
-                    "setup-existing-state-recognition",
-                    "setup-generated-asset-readiness",
+                    "setup-installed-state-recognition",
+                    "setup-generated-asset-recovery-signals",
+                    "setup-generated-reference-ownership",
                     "setup-negative-diagnostics",
                     "setup-destructive-recovery-reset",
                 },
@@ -213,7 +214,7 @@ namespace ASMLite.Tests.Editor
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
             Assert.That(suites.ContainsKey("add-prefab-idempotency"), Is.True);
-            Assert.That(suites.ContainsKey("setup-existing-state-recognition"), Is.True);
+            Assert.That(suites.ContainsKey("setup-installed-state-recognition"), Is.True);
 
             ASMLiteSmokeSuiteDefinition addPrefabIdempotency = suites["add-prefab-idempotency"];
             Assert.AreEqual("Add Prefab Idempotency", addPrefabIdempotency.label);
@@ -231,60 +232,77 @@ namespace ASMLite.Tests.Editor
                 .steps.Single(step => step.stepId == "assert-primary-action-twice");
             Assert.That(string.IsNullOrEmpty(finalAssertStep.args?.fixtureMutation), Is.True);
 
-            var existingCaseIds = suites["setup-existing-state-recognition"].cases.Select(item => item.caseId).ToArray();
+            ASMLiteSmokeSuiteDefinition installedStateRecognition = suites["setup-installed-state-recognition"];
+            Assert.AreEqual("Setup Installed State Recognition", installedStateRecognition.label);
+
+            var existingCaseIds = installedStateRecognition.cases.Select(item => item.caseId).ToArray();
             CollectionAssert.AreEquivalent(
                 new[]
                 {
                     "package-managed-component-present",
                     "vendorized-state-present",
                     "detached-state-present",
-                    "stale-generated-assets-present",
-                    "generated-folder-without-component",
                 },
                 existingCaseIds);
         }
 
         [Test]
-        public void LoadCanonical_includes_phase07b_generated_asset_readiness_suite()
+        public void LoadCanonical_splits_generated_asset_recovery_and_reference_ownership_suites()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-generated-asset-readiness"), Is.True);
+            Assert.That(suites.ContainsKey("setup-generated-asset-recovery-signals"), Is.True);
+            Assert.That(suites.ContainsKey("setup-generated-reference-ownership"), Is.True);
 
-            ASMLiteSmokeSuiteDefinition readiness = suites["setup-generated-asset-readiness"];
-            Assert.That(readiness.defaultSelected, Is.False);
-            Assert.AreEqual("standard", readiness.speed);
-            Assert.AreEqual("safe", readiness.risk);
-            CollectionAssert.Contains(readiness.presetGroups, "all-setup");
-            Assert.That(readiness.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            ASMLiteSmokeSuiteDefinition recovery = suites["setup-generated-asset-recovery-signals"];
+            Assert.That(recovery.defaultSelected, Is.False);
+            Assert.AreEqual("standard", recovery.speed);
+            Assert.AreEqual("safe", recovery.risk);
+            CollectionAssert.Contains(recovery.presetGroups, "all-setup");
+            Assert.That(recovery.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
                 "clean-add-generation-ready-scaffold",
                 "rebuild-action-available-after-add",
                 "missing-generated-folder-handled",
                 "stale-generated-folder-handled",
-                "generated-references-package-managed-by-default",
+                "generated-folder-without-component",
             }));
 
-            ASMLiteSmokeStepArgs cleanAddArgs = readiness.cases.Single(item => item.caseId == "clean-add-generation-ready-scaffold")
+            ASMLiteSmokeStepArgs cleanAddArgs = recovery.cases.Single(item => item.caseId == "clean-add-generation-ready-scaffold")
                 .steps.Single(step => step.stepId == "add-prefab-clean-readiness").args;
             Assert.AreEqual("remove-component", cleanAddArgs.fixtureMutation);
 
-            ASMLiteSmokeStepArgs rebuildArgs = readiness.cases.Single(item => item.caseId == "rebuild-action-available-after-add")
+            ASMLiteSmokeStepArgs rebuildArgs = recovery.cases.Single(item => item.caseId == "rebuild-action-available-after-add")
                 .steps.Single(step => step.stepId == "assert-primary-action-after-readiness-add").args;
             Assert.AreEqual("Rebuild", rebuildArgs.expectedPrimaryAction);
 
-            ASMLiteSmokeStepArgs missingFolderArgs = readiness.cases.Single(item => item.caseId == "missing-generated-folder-handled")
+            ASMLiteSmokeStepArgs missingFolderArgs = recovery.cases.Single(item => item.caseId == "missing-generated-folder-handled")
                 .steps.Single(step => step.stepId == "assert-primary-action-missing-generated-folder").args;
             Assert.AreEqual("missing-generated-folder", missingFolderArgs.fixtureMutation);
             Assert.AreEqual("Rebuild", missingFolderArgs.expectedPrimaryAction);
 
-            ASMLiteSmokeStepArgs staleFolderArgs = readiness.cases.Single(item => item.caseId == "stale-generated-folder-handled")
+            ASMLiteSmokeStepArgs staleFolderArgs = recovery.cases.Single(item => item.caseId == "stale-generated-folder-handled")
                 .steps.Single(step => step.stepId == "assert-primary-action-stale-generated-folder").args;
             Assert.AreEqual("stale-generated-folder", staleFolderArgs.fixtureMutation);
             Assert.AreEqual("Rebuild", staleFolderArgs.expectedPrimaryAction);
 
-            ASMLiteSmokeStepDefinition packageManagedStep = readiness.cases.Single(item => item.caseId == "generated-references-package-managed-by-default")
+            ASMLiteSmokeStepArgs generatedFolderWithoutComponentArgs = recovery.cases.Single(item => item.caseId == "generated-folder-without-component")
+                .steps.Single(step => step.stepId == "assert-primary-action-generated-folder-without-component").args;
+            Assert.AreEqual("generated-folder-without-component", generatedFolderWithoutComponentArgs.fixtureMutation);
+            Assert.AreEqual("Add Prefab", generatedFolderWithoutComponentArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeSuiteDefinition ownership = suites["setup-generated-reference-ownership"];
+            Assert.That(ownership.defaultSelected, Is.False);
+            Assert.AreEqual("standard", ownership.speed);
+            Assert.AreEqual("safe", ownership.risk);
+            CollectionAssert.Contains(ownership.presetGroups, "all-setup");
+            Assert.That(ownership.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "generated-references-package-managed-by-default",
+            }));
+
+            ASMLiteSmokeStepDefinition packageManagedStep = ownership.cases.Single(item => item.caseId == "generated-references-package-managed-by-default")
                 .steps.Single(step => step.stepId == "assert-generated-references-package-managed");
             Assert.AreEqual("assert-generated-references-package-managed", packageManagedStep.actionType);
         }

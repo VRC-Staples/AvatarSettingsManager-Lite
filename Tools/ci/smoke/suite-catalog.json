@@ -642,9 +642,9 @@
           ]
         },
         {
-          "suiteId": "setup-existing-state-recognition",
-          "label": "Setup Existing State Recognition",
-          "description": "Validate package-managed, vendorized, detached, stale generated, and generated-folder-without-component setup states.",
+          "suiteId": "setup-installed-state-recognition",
+          "label": "Setup Installed State Recognition",
+          "description": "Validate package-managed, vendorized, and detached installed setup states.",
           "resetOverride": "SceneReload",
           "speed": "standard",
           "risk": "safe",
@@ -654,8 +654,8 @@
           ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
-          "expectedOutcome": "Existing setup states resolve to the expected primary action.",
-          "debugHint": "Inspect fixture mutation state and action hierarchy details.",
+          "expectedOutcome": "Installed setup ownership states resolve to the expected primary action.",
+          "debugHint": "Inspect installed-state fixture mutation details and the primary action hierarchy.",
           "cases": [
             {
               "caseId": "package-managed-component-present",
@@ -791,103 +791,13 @@
                   }
                 }
               ]
-            },
-            {
-              "caseId": "stale-generated-assets-present",
-              "label": "Stale generated assets present",
-              "description": "Apply stale-generated-folder and assert the expected primary action.",
-              "expectedOutcome": "Rebuild is recognized as primary action.",
-              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
-              "steps": [
-                {
-                  "stepId": "open-scene",
-                  "label": "Scene is open",
-                  "description": "Open canonical smoke scene.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "Scene opens.",
-                  "debugHint": "Inspect scene path."
-                },
-                {
-                  "stepId": "open-window",
-                  "label": "ASM-Lite window is open",
-                  "description": "Open ASM-Lite window.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "Window opens.",
-                  "debugHint": "Inspect window state."
-                },
-                {
-                  "stepId": "select-avatar",
-                  "label": "Avatar is selected",
-                  "description": "Select Oct25_Dress.",
-                  "actionType": "select-avatar",
-                  "expectedOutcome": "Avatar selected.",
-                  "debugHint": "Inspect avatar lookup."
-                },
-                {
-                  "stepId": "assert-primary-action-stale-generated-assets-present",
-                  "label": "Primary action is shown",
-                  "description": "Assert Rebuild is the primary action after stale-generated-folder.",
-                  "actionType": "assert-primary-action",
-                  "expectedOutcome": "Rebuild is the primary action.",
-                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
-                  "args": {
-                    "fixtureMutation": "stale-generated-folder",
-                    "expectedPrimaryAction": "Rebuild"
-                  }
-                }
-              ]
-            },
-            {
-              "caseId": "generated-folder-without-component",
-              "label": "Generated folder without component",
-              "description": "Apply generated-folder-without-component and assert the expected primary action.",
-              "expectedOutcome": "Add Prefab is recognized as primary action.",
-              "debugHint": "Inspect existing-state fixture and action hierarchy output.",
-              "steps": [
-                {
-                  "stepId": "open-scene",
-                  "label": "Scene is open",
-                  "description": "Open canonical smoke scene.",
-                  "actionType": "open-scene",
-                  "expectedOutcome": "Scene opens.",
-                  "debugHint": "Inspect scene path."
-                },
-                {
-                  "stepId": "open-window",
-                  "label": "ASM-Lite window is open",
-                  "description": "Open ASM-Lite window.",
-                  "actionType": "open-window",
-                  "expectedOutcome": "Window opens.",
-                  "debugHint": "Inspect window state."
-                },
-                {
-                  "stepId": "select-avatar",
-                  "label": "Avatar is selected",
-                  "description": "Select Oct25_Dress.",
-                  "actionType": "select-avatar",
-                  "expectedOutcome": "Avatar selected.",
-                  "debugHint": "Inspect avatar lookup."
-                },
-                {
-                  "stepId": "assert-primary-action-generated-folder-without-component",
-                  "label": "Primary action is shown",
-                  "description": "Assert Add Prefab is the primary action after generated-folder-without-component.",
-                  "actionType": "assert-primary-action",
-                  "expectedOutcome": "Add Prefab is the primary action.",
-                  "debugHint": "Inspect action hierarchy and fixture mutation state.",
-                  "args": {
-                    "fixtureMutation": "generated-folder-without-component",
-                    "expectedPrimaryAction": "Add Prefab"
-                  }
-                }
-              ]
             }
           ]
         },
         {
-          "suiteId": "setup-generated-asset-readiness",
-          "label": "Generated Asset Readiness",
-          "description": "Validates setup coverage for generated ASM-Lite asset readiness, missing/stale generated folders, and package-managed references.",
+          "suiteId": "setup-generated-asset-recovery-signals",
+          "label": "Generated Asset Recovery Signals",
+          "description": "Validate setup recovery signals for clean add, missing or stale generated folders, and orphaned generated folders without an ASM-Lite component.",
           "resetOverride": "Inherit",
           "speed": "standard",
           "risk": "safe",
@@ -897,7 +807,7 @@
           ],
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
-          "expectedOutcome": "Generated readiness cases confirm setup add/rebuild affordances and package-managed generated references without destructive drills.",
+          "expectedOutcome": "Recovery-signal cases confirm setup add/rebuild affordances and orphaned generated-folder recovery without destructive drills.",
           "debugHint": "Inspect generated folder state, fixture mutation cleanup, and action hierarchy output.",
           "cases": [
             {
@@ -1089,6 +999,69 @@
                 }
               ]
             },
+            {
+              "caseId": "generated-folder-without-component",
+              "label": "Generated folder without component",
+              "description": "Apply generated-folder-without-component and assert the setup flow recognizes Add Prefab as the recovery action.",
+              "expectedOutcome": "Add Prefab is recognized as primary action when generated assets exist without an ASM-Lite component.",
+              "debugHint": "Inspect orphaned generated-folder fixture state and action hierarchy output.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Scene is open",
+                  "description": "Open canonical smoke scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Scene opens.",
+                  "debugHint": "Inspect scene path."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "ASM-Lite window is open",
+                  "description": "Open ASM-Lite window.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "Window opens.",
+                  "debugHint": "Inspect window state."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Avatar is selected",
+                  "description": "Select Oct25_Dress.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Avatar selected.",
+                  "debugHint": "Inspect avatar lookup."
+                },
+                {
+                  "stepId": "assert-primary-action-generated-folder-without-component",
+                  "label": "Add Prefab action is shown for orphaned generated folder",
+                  "description": "Apply generated-folder-without-component and assert Add Prefab is the primary action.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Add Prefab is the primary action.",
+                  "debugHint": "Inspect orphaned generated-folder cleanup and action hierarchy output.",
+                  "args": {
+                    "fixtureMutation": "generated-folder-without-component",
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "setup-generated-reference-ownership",
+          "label": "Generated Reference Ownership",
+          "description": "Validate that the default setup add flow leaves generated references package-managed rather than vendorized.",
+          "resetOverride": "Inherit",
+          "speed": "standard",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "Generated reference ownership stays package-managed after the default setup add flow.",
+          "debugHint": "Inspect ASMLiteComponent generated asset ownership fields and generated reference paths.",
+          "cases": [
             {
               "caseId": "generated-references-package-managed-by-default",
               "label": "Generated references package-managed by default",

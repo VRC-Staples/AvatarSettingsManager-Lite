@@ -612,13 +612,13 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void SetupGeneratedReadinessSuite_AppliesFixtureMutationsAndGeneratedReferenceAssertion()
+        public void SetupGeneratedAssetRecoverySignalsSuite_AppliesFixtureMutationsAndRecoveryAssertions()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {
                 const string commandId = "cmd_000013_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-asset-readiness"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-asset-recovery-signals"));
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
@@ -627,7 +627,7 @@ namespace ASMLite.Tests.Editor
                     ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
                     ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
                     ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder,
-                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                    ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
                 }));
                 Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
                 {
@@ -636,6 +636,34 @@ namespace ASMLite.Tests.Editor
                     "assert-primary-action",
                     "assert-primary-action",
                     "assert-primary-action",
+                    "assert-primary-action",
+                }));
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+            }
+        }
+
+        [Test]
+        public void SetupGeneratedReferenceOwnershipSuite_AppliesPackageManagedAssertion()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000013b_run-suite";
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-reference-ownership"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
+                {
+                    ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent,
+                }));
+                Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[]
+                {
                     "add-prefab",
                     "assert-generated-references-package-managed",
                 }));
@@ -1637,25 +1665,25 @@ namespace ASMLite.Tests.Editor
                             },
                             new ASMLiteSmokeSuiteDefinition
                             {
-                                suiteId = "setup-generated-asset-readiness",
-                                label = "Generated Asset Readiness",
-                                description = "Validates generated readiness fixture dispatch and package-managed assertion actions.",
+                                suiteId = "setup-generated-asset-recovery-signals",
+                                label = "Generated Asset Recovery Signals",
+                                description = "Validates generated asset recovery signal fixture dispatch for clean-add, rebuild, and orphaned generated-folder states.",
                                 resetOverride = "Inherit",
                                 speed = "standard",
                                 risk = "safe",
                                 presetGroups = new[] { "all-setup" },
                                 requiresPlayMode = false,
                                 stopOnFirstFailure = true,
-                                expectedOutcome = "Generated readiness actions pass through the host runner.",
-                                debugHint = "Inspect generated readiness fixture mutations and action ordering.",
+                                expectedOutcome = "Generated recovery signal actions pass through the host runner.",
+                                debugHint = "Inspect generated recovery fixture mutations and action ordering.",
                                 cases = new[]
                                 {
                                     new ASMLiteSmokeCaseDefinition
                                     {
-                                        caseId = "generated-readiness-host-case",
-                                        label = "Generated readiness host case",
-                                        description = "Exercise clean add, rebuild assertion, missing/stale generated folder assertions, and generated reference ownership assertion.",
-                                        expectedOutcome = "All generated readiness fixture hooks and assertions execute.",
+                                        caseId = "generated-recovery-host-case",
+                                        label = "Generated recovery host case",
+                                        description = "Exercise clean add, rebuild assertion, missing/stale generated folder assertions, and orphaned generated folder recovery assertion.",
+                                        expectedOutcome = "All generated recovery fixture hooks and assertions execute.",
                                         debugHint = "Inspect fake runtime mutation and action lists.",
                                         steps = new[]
                                         {
@@ -1717,6 +1745,48 @@ namespace ASMLite.Tests.Editor
                                                 expectedOutcome = "Rebuild is the primary action.",
                                                 debugHint = "Inspect stale-generated-folder fixture dispatch.",
                                             },
+                                            new ASMLiteSmokeStepDefinition
+                                            {
+                                                stepId = "assert-primary-action-generated-folder-without-component",
+                                                label = "Add Prefab action is shown for orphaned generated folder",
+                                                description = "Apply generated-folder-without-component and assert Add Prefab is the primary action.",
+                                                actionType = "assert-primary-action",
+                                                args = new ASMLiteSmokeStepArgs
+                                                {
+                                                    fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
+                                                    expectedPrimaryAction = "Add Prefab",
+                                                },
+                                                expectedOutcome = "Add Prefab is the primary action.",
+                                                debugHint = "Inspect orphaned generated-folder fixture dispatch.",
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                            new ASMLiteSmokeSuiteDefinition
+                            {
+                                suiteId = "setup-generated-reference-ownership",
+                                label = "Generated Reference Ownership",
+                                description = "Validates generated reference ownership assertions after the default setup add flow.",
+                                resetOverride = "Inherit",
+                                speed = "standard",
+                                risk = "safe",
+                                presetGroups = new[] { "all-setup" },
+                                requiresPlayMode = false,
+                                stopOnFirstFailure = true,
+                                expectedOutcome = "Generated reference ownership assertion passes through the host runner.",
+                                debugHint = "Inspect generated reference assertion action ordering.",
+                                cases = new[]
+                                {
+                                    new ASMLiteSmokeCaseDefinition
+                                    {
+                                        caseId = "generated-reference-ownership-host-case",
+                                        label = "Generated reference ownership host case",
+                                        description = "Exercise the clean add and package-managed generated reference ownership assertion.",
+                                        expectedOutcome = "Generated reference ownership fixture hooks and assertions execute.",
+                                        debugHint = "Inspect fake runtime mutation and action lists.",
+                                        steps = new[]
+                                        {
                                             new ASMLiteSmokeStepDefinition
                                             {
                                                 stepId = "add-prefab-for-package-managed-references",

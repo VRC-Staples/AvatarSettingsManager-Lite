@@ -446,8 +446,9 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-existing-state-recognition",
-                "setup-generated-asset-readiness",
+                "setup-installed-state-recognition",
+                "setup-generated-asset-recovery-signals",
+                "setup-generated-reference-ownership",
                 "setup-negative-diagnostics",
                 "setup-destructive-recovery-reset",
                 "lifecycle-roundtrip",
@@ -771,7 +772,7 @@ mod tests {
             tag_filtered.visible_suite_ids(),
             vec!["setup-negative-diagnostics"]
         );
-        assert_eq!(tag_filtered.hidden_by_filter_count, 9);
+        assert_eq!(tag_filtered.hidden_by_filter_count, 10);
         assert_eq!(model.selected_suite_ids(), before);
     }
 
@@ -801,7 +802,10 @@ mod tests {
         );
         assert!(standard
             .visible_suite_ids()
-            .contains(&"setup-generated-asset-readiness"));
+            .contains(&"setup-generated-asset-recovery-signals"));
+        assert!(standard
+            .visible_suite_ids()
+            .contains(&"setup-generated-reference-ownership"));
         assert!(!standard
             .visible_suite_ids()
             .contains(&"setup-destructive-recovery-reset"));
