@@ -489,7 +489,7 @@ mod tests {
             .all(|suite| !suite.is_destructive()));
         let destructive = suites
             .iter()
-            .find(|suite| suite.suite_id == "setup-destructive-recovery-reset")
+            .find(|suite| suite.suite_id == "destructive-recovery-reset")
             .expect("destructive recovery suite exists");
         assert_eq!(destructive.speed, "destructive");
         assert_eq!(destructive.risk, "destructive");

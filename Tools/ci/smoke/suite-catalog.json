@@ -795,7 +795,7 @@
           ]
         },
         {
-          "suiteId": "setup-generated-asset-recovery-signals",
+          "suiteId": "generated-asset-recovery-signals",
           "label": "Generated Asset Recovery Signals",
           "description": "Validate setup recovery signals for clean add, missing or stale generated folders, and orphaned generated folders without an ASM-Lite component.",
           "resetOverride": "Inherit",
@@ -1047,7 +1047,7 @@
           ]
         },
         {
-          "suiteId": "setup-generated-reference-ownership",
+          "suiteId": "generated-reference-ownership",
           "label": "Generated Reference Ownership",
           "description": "Validate that the default setup add flow leaves generated references package-managed rather than vendorized.",
           "resetOverride": "Inherit",
@@ -1256,7 +1256,7 @@
           ]
         },
         {
-          "suiteId": "setup-destructive-recovery-reset",
+          "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",
           "resetOverride": "FullPackageRebuild",

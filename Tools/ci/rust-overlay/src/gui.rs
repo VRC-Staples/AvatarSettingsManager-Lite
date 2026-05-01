@@ -3369,8 +3369,8 @@ mod tests {
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
                 "installed-state-recognition",
-                "setup-generated-asset-recovery-signals",
-                "setup-generated-reference-ownership",
+                "generated-asset-recovery-signals",
+                "generated-reference-ownership",
                 "negative-diagnostics"
             ]
         );

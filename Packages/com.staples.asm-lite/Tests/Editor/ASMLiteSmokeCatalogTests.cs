@@ -64,10 +64,10 @@ namespace ASMLite.Tests.Editor
                     "avatar-discovery-selection-regression",
                     "add-prefab-idempotency",
                     "installed-state-recognition",
-                    "setup-generated-asset-recovery-signals",
-                    "setup-generated-reference-ownership",
+                    "generated-asset-recovery-signals",
+                    "generated-reference-ownership",
                     "negative-diagnostics",
-                    "setup-destructive-recovery-reset",
+                    "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
             Assert.AreEqual("quick", suites.Single(suite => suite.suiteId == "setup-scene-avatar").speed);
@@ -252,10 +252,10 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-generated-asset-recovery-signals"), Is.True);
-            Assert.That(suites.ContainsKey("setup-generated-reference-ownership"), Is.True);
+            Assert.That(suites.ContainsKey("generated-asset-recovery-signals"), Is.True);
+            Assert.That(suites.ContainsKey("generated-reference-ownership"), Is.True);
 
-            ASMLiteSmokeSuiteDefinition recovery = suites["setup-generated-asset-recovery-signals"];
+            ASMLiteSmokeSuiteDefinition recovery = suites["generated-asset-recovery-signals"];
             Assert.That(recovery.defaultSelected, Is.False);
             Assert.AreEqual("standard", recovery.speed);
             Assert.AreEqual("safe", recovery.risk);
@@ -292,7 +292,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("generated-folder-without-component", generatedFolderWithoutComponentArgs.fixtureMutation);
             Assert.AreEqual("Add Prefab", generatedFolderWithoutComponentArgs.expectedPrimaryAction);
 
-            ASMLiteSmokeSuiteDefinition ownership = suites["setup-generated-reference-ownership"];
+            ASMLiteSmokeSuiteDefinition ownership = suites["generated-reference-ownership"];
             Assert.That(ownership.defaultSelected, Is.False);
             Assert.AreEqual("standard", ownership.speed);
             Assert.AreEqual("safe", ownership.risk);
@@ -367,9 +367,9 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-destructive-recovery-reset"), Is.True);
+            Assert.That(suites.ContainsKey("destructive-recovery-reset"), Is.True);
 
-            ASMLiteSmokeSuiteDefinition destructive = suites["setup-destructive-recovery-reset"];
+            ASMLiteSmokeSuiteDefinition destructive = suites["destructive-recovery-reset"];
             Assert.That(destructive.defaultSelected, Is.False);
             Assert.AreEqual("destructive", destructive.speed);
             Assert.AreEqual("destructive", destructive.risk);

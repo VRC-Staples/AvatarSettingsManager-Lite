@@ -447,10 +447,10 @@ mod tests {
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
                 "installed-state-recognition",
-                "setup-generated-asset-recovery-signals",
-                "setup-generated-reference-ownership",
+                "generated-asset-recovery-signals",
+                "generated-reference-ownership",
                 "negative-diagnostics",
-                "setup-destructive-recovery-reset",
+                "destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
             ]
@@ -802,13 +802,13 @@ mod tests {
         );
         assert!(standard
             .visible_suite_ids()
-            .contains(&"setup-generated-asset-recovery-signals"));
+            .contains(&"generated-asset-recovery-signals"));
         assert!(standard
             .visible_suite_ids()
-            .contains(&"setup-generated-reference-ownership"));
+            .contains(&"generated-reference-ownership"));
         assert!(!standard
             .visible_suite_ids()
-            .contains(&"setup-destructive-recovery-reset"));
+            .contains(&"destructive-recovery-reset"));
 
         let destructive = build_filtered_suite_checklist_view(
             &model,
@@ -816,7 +816,7 @@ mod tests {
         );
         assert_eq!(
             destructive.visible_suite_ids(),
-            vec!["setup-destructive-recovery-reset"]
+            vec!["destructive-recovery-reset"]
         );
         assert_eq!(
             destructive.rows[0].disabled_reason,

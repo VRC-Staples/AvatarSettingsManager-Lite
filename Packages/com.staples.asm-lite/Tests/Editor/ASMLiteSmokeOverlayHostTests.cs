@@ -618,7 +618,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000013_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-asset-recovery-signals"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "generated-asset-recovery-signals"));
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
@@ -655,7 +655,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000013b_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "setup-generated-reference-ownership"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(13, commandId, "generated-reference-ownership"));
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
@@ -684,7 +684,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000014_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(14, commandId, "setup-destructive-recovery-reset"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(14, commandId, "destructive-recovery-reset"));
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
@@ -717,7 +717,7 @@ namespace ASMLite.Tests.Editor
                 const string commandId = "cmd_000015_run-suite";
                 context.Runtime.FailNextSetupFixtureReset("simulated cleanup ledger failure");
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(15, commandId, "setup-destructive-recovery-reset"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(15, commandId, "destructive-recovery-reset"));
                 AdvanceUntilReviewRequired(context);
 
                 Assert.That(context.Runtime.AppliedFixtureMutations, Is.EqualTo(new[]
@@ -1665,7 +1665,7 @@ namespace ASMLite.Tests.Editor
                             },
                             new ASMLiteSmokeSuiteDefinition
                             {
-                                suiteId = "setup-generated-asset-recovery-signals",
+                                suiteId = "generated-asset-recovery-signals",
                                 label = "Generated Asset Recovery Signals",
                                 description = "Validates generated asset recovery signal fixture dispatch for clean-add, rebuild, and orphaned generated-folder states.",
                                 resetOverride = "Inherit",
@@ -1765,7 +1765,7 @@ namespace ASMLite.Tests.Editor
                             },
                             new ASMLiteSmokeSuiteDefinition
                             {
-                                suiteId = "setup-generated-reference-ownership",
+                                suiteId = "generated-reference-ownership",
                                 label = "Generated Reference Ownership",
                                 description = "Validates generated reference ownership assertions after the default setup add flow.",
                                 resetOverride = "Inherit",
@@ -1812,7 +1812,7 @@ namespace ASMLite.Tests.Editor
                             },
                             new ASMLiteSmokeSuiteDefinition
                             {
-                                suiteId = "setup-destructive-recovery-reset",
+                                suiteId = "destructive-recovery-reset",
                                 label = "Destructive Recovery Reset",
                                 description = "Exercises destructive setup fixture states and proves clean reset after every case.",
                                 resetOverride = "FullPackageRebuild",
