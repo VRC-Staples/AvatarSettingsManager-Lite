@@ -857,10 +857,10 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-installed-state-recognition",
+                "installed-state-recognition",
                 "setup-generated-asset-recovery-signals",
                 "setup-generated-reference-ownership",
-                "setup-negative-diagnostics",
+                "negative-diagnostics",
             ]
         );
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
@@ -916,10 +916,10 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-installed-state-recognition",
+                "installed-state-recognition",
                 "setup-generated-asset-recovery-signals",
                 "setup-generated-reference-ownership",
-                "setup-negative-diagnostics",
+                "negative-diagnostics",
                 "setup-destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"

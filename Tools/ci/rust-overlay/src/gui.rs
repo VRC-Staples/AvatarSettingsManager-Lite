@@ -3368,10 +3368,10 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-installed-state-recognition",
+                "installed-state-recognition",
                 "setup-generated-asset-recovery-signals",
                 "setup-generated-reference-ownership",
-                "setup-negative-diagnostics"
+                "negative-diagnostics"
             ]
         );
     }

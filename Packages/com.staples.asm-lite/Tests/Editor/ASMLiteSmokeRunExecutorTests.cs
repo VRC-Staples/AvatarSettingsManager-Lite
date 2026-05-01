@@ -113,8 +113,8 @@ namespace ASMLite.Tests.Editor
                         {
                             new ASMLiteSmokeSuiteDefinition
                             {
-                                suiteId = "setup-negative-diagnostics",
-                                label = "Setup Negative Diagnostics",
+                                suiteId = "negative-diagnostics",
+                                label = "Negative Diagnostics",
                                 description = "Expected diagnostic cases.",
                                 resetOverride = "Inherit",
                                 speed = "standard",
@@ -175,7 +175,7 @@ namespace ASMLite.Tests.Editor
                 createdAtUtc = "2026-04-23T00:00:00Z",
                 runSuite = new ASMLiteSmokeRunSuitePayload
                 {
-                    suiteId = "setup-negative-diagnostics",
+                    suiteId = "negative-diagnostics",
                     requestedBy = "operator",
                     requestedResetDefault = "SceneReload",
                     reason = "test",

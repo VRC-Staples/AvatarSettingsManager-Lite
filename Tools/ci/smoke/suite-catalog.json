@@ -642,8 +642,8 @@
           ]
         },
         {
-          "suiteId": "setup-installed-state-recognition",
-          "label": "Setup Installed State Recognition",
+          "suiteId": "installed-state-recognition",
+          "label": "Installed State Recognition",
           "description": "Validate package-managed, vendorized, and detached installed setup states.",
           "resetOverride": "SceneReload",
           "speed": "standard",
@@ -1117,8 +1117,8 @@
           ]
         },
         {
-          "suiteId": "setup-negative-diagnostics",
-          "label": "Setup Negative Diagnostics",
+          "suiteId": "negative-diagnostics",
+          "label": "Negative Diagnostics",
           "description": "Validate safe setup diagnostic paths for bad package resource and avatar targets using expected-failure semantics.",
           "resetOverride": "SceneReload",
           "speed": "standard",

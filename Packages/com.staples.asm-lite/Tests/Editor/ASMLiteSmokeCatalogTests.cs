@@ -63,10 +63,10 @@ namespace ASMLite.Tests.Editor
                     "setup-scene-avatar",
                     "avatar-discovery-selection-regression",
                     "add-prefab-idempotency",
-                    "setup-installed-state-recognition",
+                    "installed-state-recognition",
                     "setup-generated-asset-recovery-signals",
                     "setup-generated-reference-ownership",
-                    "setup-negative-diagnostics",
+                    "negative-diagnostics",
                     "setup-destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -214,7 +214,7 @@ namespace ASMLite.Tests.Editor
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
             Assert.That(suites.ContainsKey("add-prefab-idempotency"), Is.True);
-            Assert.That(suites.ContainsKey("setup-installed-state-recognition"), Is.True);
+            Assert.That(suites.ContainsKey("installed-state-recognition"), Is.True);
 
             ASMLiteSmokeSuiteDefinition addPrefabIdempotency = suites["add-prefab-idempotency"];
             Assert.AreEqual("Add Prefab Idempotency", addPrefabIdempotency.label);
@@ -232,8 +232,8 @@ namespace ASMLite.Tests.Editor
                 .steps.Single(step => step.stepId == "assert-primary-action-twice");
             Assert.That(string.IsNullOrEmpty(finalAssertStep.args?.fixtureMutation), Is.True);
 
-            ASMLiteSmokeSuiteDefinition installedStateRecognition = suites["setup-installed-state-recognition"];
-            Assert.AreEqual("Setup Installed State Recognition", installedStateRecognition.label);
+            ASMLiteSmokeSuiteDefinition installedStateRecognition = suites["installed-state-recognition"];
+            Assert.AreEqual("Installed State Recognition", installedStateRecognition.label);
 
             var existingCaseIds = installedStateRecognition.cases.Select(item => item.caseId).ToArray();
             CollectionAssert.AreEquivalent(
@@ -313,9 +313,9 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-negative-diagnostics"), Is.True);
+            Assert.That(suites.ContainsKey("negative-diagnostics"), Is.True);
 
-            ASMLiteSmokeSuiteDefinition negatives = suites["setup-negative-diagnostics"];
+            ASMLiteSmokeSuiteDefinition negatives = suites["negative-diagnostics"];
             Assert.That(negatives.defaultSelected, Is.False);
             Assert.AreEqual("standard", negatives.speed);
             Assert.AreEqual("safe", negatives.risk);
@@ -608,8 +608,8 @@ namespace ASMLite.Tests.Editor
                 + "      \"description\": \"desc\",\n"
                 + "      \"suites\": [\n"
                 + "        {\n"
-                + "          \"suiteId\": \"setup-negative-diagnostics\",\n"
-                + "          \"label\": \"Setup Negative Diagnostics\",\n"
+                + "          \"suiteId\": \"negative-diagnostics\",\n"
+                + "          \"label\": \"Negative Diagnostics\",\n"
                 + "          \"description\": \"desc\",\n"
                 + "          \"resetOverride\": \"Inherit\",\n"
                 + "          \"speed\": \"standard\",\n"

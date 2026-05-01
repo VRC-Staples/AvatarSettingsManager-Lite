@@ -446,10 +446,10 @@ mod tests {
                 "setup-scene-avatar",
                 "avatar-discovery-selection-regression",
                 "add-prefab-idempotency",
-                "setup-installed-state-recognition",
+                "installed-state-recognition",
                 "setup-generated-asset-recovery-signals",
                 "setup-generated-reference-ownership",
-                "setup-negative-diagnostics",
+                "negative-diagnostics",
                 "setup-destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
@@ -761,7 +761,7 @@ mod tests {
         );
         assert_eq!(
             label_filtered.visible_suite_ids(),
-            vec!["setup-negative-diagnostics"]
+            vec!["negative-diagnostics"]
         );
 
         let tag_filtered = build_filtered_suite_checklist_view(
@@ -770,7 +770,7 @@ mod tests {
         );
         assert_eq!(
             tag_filtered.visible_suite_ids(),
-            vec!["setup-negative-diagnostics"]
+            vec!["negative-diagnostics"]
         );
         assert_eq!(tag_filtered.hidden_by_filter_count, 10);
         assert_eq!(model.selected_suite_ids(), before);
