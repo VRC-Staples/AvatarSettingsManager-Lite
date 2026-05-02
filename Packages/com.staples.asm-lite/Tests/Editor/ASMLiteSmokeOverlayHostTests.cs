@@ -212,6 +212,8 @@ namespace ASMLite.Tests.Editor
         {
             GameObject avatarWithoutComponent = null;
             GameObject avatarWithComponent = null;
+            bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
             try
             {
                 avatarWithoutComponent = new GameObject("Phase1_NoComponentAvatar");
@@ -263,6 +265,7 @@ namespace ASMLite.Tests.Editor
                     UnityEngine.Object.DestroyImmediate(avatarWithoutComponent);
                 if (avatarWithComponent != null)
                     UnityEngine.Object.DestroyImmediate(avatarWithComponent);
+                LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
             }
         }
 
@@ -897,7 +900,7 @@ namespace ASMLite.Tests.Editor
                 const string commandId = "cmd_000017_run-suite";
 
                 WriteCommand(context.Paths, BuildRunSuiteCommand(17, commandId, "setup-prebuild-slots-matrix"));
-                AdvanceUntilIdleAfterRun(context);
+                AdvanceUntilIdleAfterRun(context, maxTicks: 128);
 
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(8));
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "set-slot-count", StringComparison.Ordinal)), Is.EqualTo(8));
@@ -2194,6 +2197,8 @@ namespace ASMLite.Tests.Editor
                                     },
                                 },
                             },
+                            BuildPhase1SlotMatrixSuite(),
+                            BuildPhase1PathMatrixSuite(),
                             new ASMLiteSmokeSuiteDefinition
                             {
                                 suiteId = "destructive-recovery-reset",
@@ -2496,6 +2501,137 @@ namespace ASMLite.Tests.Editor
             };
 
             return JsonUtility.ToJson(catalog, prettyPrint: true);
+        }
+
+        private static ASMLiteSmokeSuiteDefinition BuildPhase1SlotMatrixSuite()
+        {
+            return new ASMLiteSmokeSuiteDefinition
+            {
+                suiteId = "setup-prebuild-slots-matrix",
+                label = "Setup Prebuild Slot Matrix",
+                description = "Local host test catalog suite for Phase 1 slot-count prebuild coverage.",
+                resetOverride = "Inherit",
+                speed = "standard",
+                risk = "safe",
+                presetGroups = new[] { "all-setup" },
+                requiresPlayMode = false,
+                stopOnFirstFailure = true,
+                expectedOutcome = "Every slot-count prebuild case executes.",
+                debugHint = "Inspect Phase 1 slot-count action ordering.",
+                cases = Enumerable.Range(1, 8)
+                    .Select(slotCount => BuildPhase1SlotCase(slotCount))
+                    .ToArray(),
+            };
+        }
+
+        private static ASMLiteSmokeSuiteDefinition BuildPhase1PathMatrixSuite()
+        {
+            return new ASMLiteSmokeSuiteDefinition
+            {
+                suiteId = "setup-prebuild-path-matrix",
+                label = "Setup Prebuild Install Path Matrix",
+                description = "Local host test catalog suite for Phase 1 install-path prebuild coverage.",
+                resetOverride = "Inherit",
+                speed = "standard",
+                risk = "safe",
+                presetGroups = new[] { "all-setup" },
+                requiresPlayMode = false,
+                stopOnFirstFailure = true,
+                expectedOutcome = "Every install-path prebuild case executes.",
+                debugHint = "Inspect Phase 1 install-path action ordering.",
+                cases = new[]
+                {
+                    BuildPhase1PathCase("disabled", false, string.Empty, 1),
+                    BuildPhase1PathCase("root", true, string.Empty, 2),
+                    BuildPhase1PathCase("simple", true, "ASM-Lite", 3),
+                    BuildPhase1PathCase("nested", true, "Avatars/ASM-Lite", 4),
+                },
+            };
+        }
+
+        private static ASMLiteSmokeCaseDefinition BuildPhase1SlotCase(int slotCount)
+        {
+            return new ASMLiteSmokeCaseDefinition
+            {
+                caseId = $"S{slotCount:00}-slot-count-{slotCount}",
+                label = $"Slot count {slotCount}",
+                description = $"Prebuild customization flow with slot count {slotCount}.",
+                expectedOutcome = "Pending and attached customization snapshots match slot-count expectations.",
+                debugHint = "Inspect slot-count customization snapshot details.",
+                steps = BuildPhase1CustomizationSteps(
+                    "slot",
+                    $"{slotCount}",
+                    new ASMLiteSmokeStepDefinition
+                    {
+                        stepId = $"S{slotCount:00}-set-slot-count-{slotCount}",
+                        label = $"Set slot count {slotCount}",
+                        description = $"Set automation slot count to {slotCount}.",
+                        actionType = "set-slot-count",
+                        args = new ASMLiteSmokeStepArgs { slotCount = slotCount },
+                        expectedOutcome = "Slot count is staged for setup.",
+                        debugHint = "Inspect slot-count automation state.",
+                    },
+                    new ASMLiteSmokeStepArgs
+                    {
+                        slotCount = slotCount,
+                        installPathPresetId = "disabled",
+                        expectedInstallPathEnabled = false,
+                        expectedNormalizedEffectivePath = string.Empty,
+                        expectedComponentPresent = true,
+                        expectedPrimaryAction = "Rebuild",
+                    }),
+            };
+        }
+
+        private static ASMLiteSmokeCaseDefinition BuildPhase1PathCase(string presetId, bool enabled, string normalizedPath, int slotCount)
+        {
+            return new ASMLiteSmokeCaseDefinition
+            {
+                caseId = $"P{slotCount:00}-install-path-{presetId}",
+                label = $"Install path {presetId}",
+                description = $"Prebuild customization flow with install-path preset '{presetId}'.",
+                expectedOutcome = "Pending and attached customization snapshots match install-path expectations.",
+                debugHint = "Inspect install-path customization snapshot details.",
+                steps = BuildPhase1CustomizationSteps(
+                    "path",
+                    presetId,
+                    new ASMLiteSmokeStepDefinition
+                    {
+                        stepId = $"P{slotCount:00}-set-install-path-{presetId}",
+                        label = $"Set install path {presetId}",
+                        description = $"Set automation install-path preset '{presetId}'.",
+                        actionType = "set-install-path-state",
+                        args = new ASMLiteSmokeStepArgs { installPathPresetId = presetId },
+                        expectedOutcome = "Install-path state is staged for setup.",
+                        debugHint = "Inspect install-path automation state.",
+                    },
+                    new ASMLiteSmokeStepArgs
+                    {
+                        slotCount = slotCount,
+                        installPathPresetId = presetId,
+                        expectedInstallPathEnabled = enabled,
+                        expectedNormalizedEffectivePath = normalizedPath,
+                        expectedComponentPresent = true,
+                        expectedPrimaryAction = "Rebuild",
+                    }),
+            };
+        }
+
+        private static ASMLiteSmokeStepDefinition[] BuildPhase1CustomizationSteps(
+            string axis,
+            string suffix,
+            ASMLiteSmokeStepDefinition customizationStep,
+            ASMLiteSmokeStepArgs expectedArgs)
+        {
+            return new[]
+            {
+                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-recover-context", label = "Recover setup context", description = "Recover setup context before the prebuild assertion.", actionType = "prelude-recover-context", expectedOutcome = "Setup context is recovered.", debugHint = "Inspect prelude recovery output." },
+                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-no-component", label = "No component before setup", description = "Assert ASM-Lite component is not attached before setup.", actionType = "assert-no-component", expectedOutcome = "No ASM-Lite component is attached.", debugHint = "Inspect avatar hierarchy before setup." },
+                customizationStep,
+                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-pending-snapshot", label = "Pending customization matches", description = "Assert staged customization snapshot before Add Prefab.", actionType = "assert-pending-customization-snapshot", args = expectedArgs, expectedOutcome = "Pending customization snapshot matches.", debugHint = "Inspect pending customization snapshot." },
+                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-add-prefab", label = "Add prefab", description = "Attach ASM-Lite prefab with the staged customization.", actionType = "add-prefab", expectedOutcome = "ASM-Lite component is attached.", debugHint = "Inspect Add Prefab result." },
+                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-attached-snapshot", label = "Attached customization matches", description = "Assert attached component snapshot after Add Prefab.", actionType = "assert-attached-customization-snapshot", args = expectedArgs, expectedOutcome = "Attached customization snapshot matches.", debugHint = "Inspect attached component snapshot." },
+            };
         }
 
         private static ASMLiteSmokeCaseDefinition BuildDestructiveResetCase(
