@@ -861,6 +861,8 @@ mod tests {
                 "generated-asset-recovery-signals",
                 "generated-reference-ownership",
                 "negative-diagnostics",
+                "setup-prebuild-slots-matrix",
+                "setup-prebuild-path-matrix",
             ]
         );
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
@@ -920,6 +922,8 @@ mod tests {
                 "generated-asset-recovery-signals",
                 "generated-reference-ownership",
                 "negative-diagnostics",
+                "setup-prebuild-slots-matrix",
+                "setup-prebuild-path-matrix",
                 "destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"

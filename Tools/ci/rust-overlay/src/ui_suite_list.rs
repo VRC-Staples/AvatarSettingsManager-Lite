@@ -450,6 +450,8 @@ mod tests {
                 "generated-asset-recovery-signals",
                 "generated-reference-ownership",
                 "negative-diagnostics",
+                "setup-prebuild-slots-matrix",
+                "setup-prebuild-path-matrix",
                 "destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"
@@ -772,7 +774,7 @@ mod tests {
             tag_filtered.visible_suite_ids(),
             vec!["negative-diagnostics"]
         );
-        assert_eq!(tag_filtered.hidden_by_filter_count, 10);
+        assert_eq!(tag_filtered.hidden_by_filter_count, 12);
         assert_eq!(model.selected_suite_ids(), before);
     }
 

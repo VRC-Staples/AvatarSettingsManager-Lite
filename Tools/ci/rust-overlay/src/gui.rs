@@ -3371,7 +3371,9 @@ mod tests {
                 "installed-state-recognition",
                 "generated-asset-recovery-signals",
                 "generated-reference-ownership",
-                "negative-diagnostics"
+                "negative-diagnostics",
+                "setup-prebuild-slots-matrix",
+                "setup-prebuild-path-matrix"
             ]
         );
     }

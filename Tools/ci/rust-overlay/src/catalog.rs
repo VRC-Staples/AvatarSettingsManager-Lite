@@ -437,7 +437,7 @@ mod tests {
             ]
         );
         assert_eq!(catalog.groups[0].suites[0].cases.len(), 6);
-        assert_eq!(catalog.groups[1].suites.len(), 8);
+        assert_eq!(catalog.groups[1].suites.len(), 10);
         assert_eq!(catalog.groups[2].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[2].suites[0].cases[0]
             .steps
