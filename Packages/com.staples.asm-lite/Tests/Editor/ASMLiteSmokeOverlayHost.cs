@@ -181,6 +181,15 @@ namespace ASMLite.Tests.Editor
             if (string.IsNullOrWhiteSpace(normalizedName))
                 return null;
 
+            GameObject selectedObject = GetSelectedGameObject();
+            if (selectedObject != null
+                && string.Equals(NormalizeUnityRuntimeName(selectedObject.name), normalizedName, StringComparison.Ordinal))
+            {
+                VRCAvatarDescriptor selectedAvatar = selectedObject.GetComponent<VRCAvatarDescriptor>();
+                if (selectedAvatar != null && IsLoadedSceneObject(selectedObject))
+                    return selectedAvatar;
+            }
+
             var avatars = Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>();
             VRCAvatarDescriptor fallback = null;
             VRCAvatarDescriptor activeSceneFallback = null;

@@ -287,6 +287,38 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_FindAvatarByName_PrefersMatchingSelectedAvatarOverComponentBiasedDuplicateLookup()
+        {
+            GameObject selectedAvatarObject = null;
+            GameObject duplicateWithComponentObject = null;
+            try
+            {
+                selectedAvatarObject = new GameObject("Oct25_Dress");
+                VRCAvatarDescriptor selectedAvatar = selectedAvatarObject.AddComponent<VRCAvatarDescriptor>();
+
+                duplicateWithComponentObject = new GameObject("Oct25_Dress (Clone)");
+                duplicateWithComponentObject.AddComponent<VRCAvatarDescriptor>();
+                var componentChild = new GameObject("ASM-Lite Component");
+                componentChild.transform.SetParent(duplicateWithComponentObject.transform);
+                componentChild.AddComponent<ASMLite.ASMLiteComponent>();
+
+                Selection.activeObject = selectedAvatarObject;
+
+                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("Oct25_Dress");
+
+                Assert.That(resolved, Is.SameAs(selectedAvatar));
+            }
+            finally
+            {
+                Selection.activeObject = null;
+                if (selectedAvatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(selectedAvatarObject);
+                if (duplicateWithComponentObject != null)
+                    UnityEngine.Object.DestroyImmediate(duplicateWithComponentObject);
+            }
+        }
+
+        [Test]
         public void UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringPlaymode()
         {
             GameObject avatarObject = null;
