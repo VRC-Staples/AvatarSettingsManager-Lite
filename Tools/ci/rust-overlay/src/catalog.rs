@@ -357,6 +357,7 @@ fn require_non_blank(value: &str, path: &str) -> Result<String, ContractError> {
 fn is_supported_action_type(action_type: &str) -> bool {
     matches!(action_type, |"open-scene"| "open-window"
         | "close-window"
+        | "prelude-recover-context"
         | "assert-window-focused"
         | "assert-package-resource-present"
         | "assert-catalog-loads"
@@ -567,8 +568,9 @@ mod tests {
     }
 
     #[test]
-    fn catalog_accepts_phase1_action_tokens() {
+    fn catalog_accepts_phase1_and_recover_context_action_tokens() {
         for action_type in [
+            "prelude-recover-context",
             "assert-no-component",
             "set-slot-count",
             "set-install-path-state",
