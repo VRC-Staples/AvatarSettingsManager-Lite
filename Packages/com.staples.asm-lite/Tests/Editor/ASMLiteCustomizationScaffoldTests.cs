@@ -96,6 +96,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void SelectingAvatar_UsesLiveInstallPathValueInVisibleCustomizationSnapshot()
         {
+            _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "Tools/Live";
 
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
