@@ -2717,7 +2717,7 @@ namespace ASMLite.Editor
 
         private void ApplyInstallPathSelection(ASMLiteComponent component, string selectedPath)
         {
-            string normalized = NormalizeOptionalString(selectedPath);
+            string normalized = NormalizeInstallPath(selectedPath);
             _pendingCustomInstallPath = normalized;
 
             if (component)
@@ -5952,6 +5952,11 @@ namespace ASMLite.Editor
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
 
+        private static string NormalizeInstallPath(string value)
+        {
+            return NormalizeSlashPath(value);
+        }
+
         private static string[] SanitizeExcludedParameterNames(string[] names)
         {
             if (names == null || names.Length == 0)
@@ -6963,7 +6968,7 @@ namespace ASMLite.Editor
 
         internal void SetInstallPathStateForAutomation(bool useCustomInstallPath, string customInstallPath)
         {
-            string normalized = NormalizeOptionalString(customInstallPath);
+            string normalized = useCustomInstallPath ? NormalizeInstallPath(customInstallPath) : string.Empty;
             var component = GetOrRefreshComponent();
             if (component)
             {

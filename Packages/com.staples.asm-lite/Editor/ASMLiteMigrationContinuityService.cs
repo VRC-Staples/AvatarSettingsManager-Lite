@@ -61,7 +61,7 @@ namespace ASMLite.Editor
                 CustomClearPresetLabel = customClearPresetLabel ?? string.Empty;
                 CustomConfirmLabel = customConfirmLabel ?? string.Empty;
                 UseCustomInstallPath = useCustomInstallPath;
-                CustomInstallPath = NormalizeOptionalString(customInstallPath);
+                CustomInstallPath = useCustomInstallPath ? NormalizeInstallPath(customInstallPath) : string.Empty;
                 UseParameterExclusions = useParameterExclusions;
                 ExcludedParameterNames = SanitizeExcludedParameterNames(excludedParameterNames);
                 UseVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
@@ -864,6 +864,11 @@ namespace ASMLite.Editor
         private static string NormalizeOptionalString(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string NormalizeInstallPath(string value)
+        {
+            return NormalizeSlashPath(value);
         }
 
         private static string NormalizeMenuPathSegment(string value)
