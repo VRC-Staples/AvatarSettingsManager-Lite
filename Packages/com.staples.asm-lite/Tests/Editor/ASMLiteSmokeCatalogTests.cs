@@ -475,6 +475,60 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadFromJson_allows_phase1_action_tokens_and_snapshot_step_args()
+        {
+            string[] phase1Actions =
+            {
+                "assert-no-component",
+                "set-slot-count",
+                "set-install-path-state",
+                "assert-pending-customization-snapshot",
+                "assert-attached-customization-snapshot",
+            };
+
+            foreach (string actionType in phase1Actions)
+            {
+                string argsJson = BuildPhase1ArgsJson(actionType);
+                ASMLiteSmokeCatalogDocument catalog = ASMLiteSmokeCatalog.LoadFromJson(BuildSingleStepCatalogJson(argsJson, actionType));
+                ASMLiteSmokeStepDefinition step = catalog.groups[0].suites[0].cases[0].steps[0];
+
+                Assert.AreEqual(actionType, step.actionType);
+                Assert.NotNull(step.args);
+                if (string.Equals(actionType, "set-slot-count", StringComparison.Ordinal))
+                    Assert.AreEqual(4, step.args.slotCount);
+                if (string.Equals(actionType, "set-install-path-state", StringComparison.Ordinal))
+                    Assert.AreEqual("nested", step.args.installPathPresetId);
+                if (actionType.Contains("customization-snapshot"))
+                {
+                    Assert.AreEqual(6, step.args.slotCount);
+                    Assert.AreEqual("simple", step.args.installPathPresetId);
+                    Assert.IsTrue(step.args.expectedInstallPathEnabled);
+                    Assert.AreEqual("ASM-Lite", step.args.expectedNormalizedEffectivePath);
+                    Assert.IsTrue(step.args.expectedComponentPresent);
+                    Assert.AreEqual("Rebuild", step.args.expectedPrimaryAction);
+                }
+            }
+        }
+
+        [Test]
+        public void LoadFromJson_rejects_malformed_phase1_args_with_field_specific_paths()
+        {
+            var slotCountException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson("\"args\": { \"slotCount\": 0 }\n", "set-slot-count")));
+            StringAssert.Contains("args.slotCount", slotCountException.Message);
+
+            var installPathException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson("\"args\": { \"installPathPresetId\": \"sideways\" }\n", "set-install-path-state")));
+            StringAssert.Contains("args.installPathPresetId", installPathException.Message);
+
+            var snapshotException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"slotCount\": 2, \"expectedComponentPresent\": true, \"expectedInstallPathEnabled\": false }\n",
+                    "assert-attached-customization-snapshot")));
+            StringAssert.Contains("args.expectedPrimaryAction", snapshotException.Message);
+        }
+
+        [Test]
         public void LoadFromJson_allows_omitted_step_args_as_empty_typed_args()
         {
             var catalog = ASMLiteSmokeCatalog.LoadFromJson(BuildSingleStepCatalogJson(argsJson: null));
@@ -606,7 +660,7 @@ namespace ASMLite.Tests.Editor
             Assert.That(step.args.requireCleanReset, Is.True);
         }
 
-        private static string BuildSingleStepCatalogJson(string argsJson)
+        private static string BuildSingleStepCatalogJson(string argsJson, string actionType = "assert-host-ready")
         {
             string argsLine = string.IsNullOrWhiteSpace(argsJson) ? string.Empty : "              " + argsJson.Trim() + ",\n";
             return "{\n"
@@ -644,7 +698,7 @@ namespace ASMLite.Tests.Editor
                 + "                  \"stepId\": \"assert-missing-scene\",\n"
                 + "                  \"label\": \"Assert Missing Scene\",\n"
                 + "                  \"description\": \"desc\",\n"
-                + "                  \"actionType\": \"assert-host-ready\",\n"
+                + "                  \"actionType\": \"" + actionType + "\",\n"
                 + argsLine
                 + "                  \"expectedOutcome\": \"diagnostic appears.\",\n"
                 + "                  \"debugHint\": \"hint\"\n"
@@ -657,6 +711,28 @@ namespace ASMLite.Tests.Editor
                 + "    }\n"
                 + "  ]\n"
                 + "}";
+        }
+
+        private static string BuildPhase1ArgsJson(string actionType)
+        {
+            switch (actionType)
+            {
+                case "set-slot-count":
+                    return "\"args\": { \"slotCount\": 4 }\n";
+                case "set-install-path-state":
+                    return "\"args\": { \"installPathPresetId\": \"nested\" }\n";
+                case "assert-pending-customization-snapshot":
+                case "assert-attached-customization-snapshot":
+                    return "\"args\": { "
+                        + "\"slotCount\": 6, "
+                        + "\"installPathPresetId\": \"simple\", "
+                        + "\"expectedInstallPathEnabled\": true, "
+                        + "\"expectedNormalizedEffectivePath\": \"ASM-Lite\", "
+                        + "\"expectedComponentPresent\": true, "
+                        + "\"expectedPrimaryAction\": \"Rebuild\" }\n";
+                default:
+                    return null;
+            }
         }
 
         private static string LoadCanonicalCatalogJson()

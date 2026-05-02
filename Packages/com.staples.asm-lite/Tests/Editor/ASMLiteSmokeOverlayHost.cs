@@ -146,6 +146,77 @@ namespace ASMLite.Tests.Editor
         void ExitEditorWithoutSaving(int exitCode);
     }
 
+    internal sealed class ASMLiteSmokeCustomizationSnapshot
+    {
+        internal int SlotCount;
+        internal bool InstallPathEnabled;
+        internal string NormalizedEffectivePath;
+        internal bool ComponentPresent;
+        internal string PrimaryAction;
+
+        internal static ASMLiteSmokeCustomizationSnapshot FromExpectedArgs(ASMLiteSmokeStepArgs args)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            return new ASMLiteSmokeCustomizationSnapshot
+            {
+                SlotCount = args.slotCount,
+                InstallPathEnabled = args.expectedInstallPathEnabled,
+                NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(args.expectedNormalizedEffectivePath),
+                ComponentPresent = args.expectedComponentPresent,
+                PrimaryAction = string.IsNullOrWhiteSpace(args.expectedPrimaryAction) ? string.Empty : args.expectedPrimaryAction.Trim(),
+            };
+        }
+
+        internal static ASMLiteSmokeCustomizationSnapshot FromAttachedComponent(ASMLiteComponent component)
+        {
+            bool componentPresent = component != null;
+            return new ASMLiteSmokeCustomizationSnapshot
+            {
+                SlotCount = componentPresent ? component.slotCount : 0,
+                InstallPathEnabled = componentPresent && component.useCustomInstallPath,
+                NormalizedEffectivePath = componentPresent && component.useCustomInstallPath
+                    ? ASMLiteSmokeStepArgs.NormalizeInstallPath(component.customInstallPath)
+                    : string.Empty,
+                ComponentPresent = componentPresent,
+                PrimaryAction = componentPresent ? "Rebuild" : "Add Prefab",
+            };
+        }
+
+        internal static bool TryBuildMismatchDetail(
+            string actionType,
+            ASMLiteSmokeCustomizationSnapshot expected,
+            ASMLiteSmokeCustomizationSnapshot actual,
+            out string detail)
+        {
+            expected = expected ?? new ASMLiteSmokeCustomizationSnapshot();
+            actual = actual ?? new ASMLiteSmokeCustomizationSnapshot();
+            var mismatches = new List<string>();
+
+            AddMismatch(mismatches, "slotCount", expected.SlotCount, actual.SlotCount);
+            AddMismatch(mismatches, "installPathEnabled", expected.InstallPathEnabled, actual.InstallPathEnabled);
+            AddMismatch(mismatches, "normalizedEffectivePath", expected.NormalizedEffectivePath, actual.NormalizedEffectivePath);
+            AddMismatch(mismatches, "componentPresent", expected.ComponentPresent, actual.ComponentPresent);
+            AddMismatch(mismatches, "primaryAction", expected.PrimaryAction, actual.PrimaryAction);
+
+            if (mismatches.Count == 0)
+            {
+                detail = string.Empty;
+                return false;
+            }
+
+            detail = $"{actionType} mismatch: " + string.Join("; ", mismatches.ToArray()) + ".";
+            return true;
+        }
+
+        private static void AddMismatch<T>(List<string> mismatches, string fieldName, T expected, T actual)
+        {
+            if (EqualityComparer<T>.Default.Equals(expected, actual))
+                return;
+
+            mismatches.Add($"{fieldName} expected <{expected}> but was <{actual}>");
+        }
+    }
+
     internal sealed class ASMLiteSmokeOverlayHostUnityRuntime : IASMLiteSmokeOverlayHostRuntime
     {
         internal static readonly ASMLiteSmokeOverlayHostUnityRuntime Instance = new ASMLiteSmokeOverlayHostUnityRuntime();
@@ -530,6 +601,22 @@ namespace ASMLite.Tests.Editor
                         detail = "Host readiness check passed.";
                         return true;
 
+                    case "assert-no-component":
+                        return AssertNoComponent(avatarName, out detail);
+
+                    case "set-slot-count":
+                        return SetSlotCount(avatarName, args, out detail);
+
+                    case "set-install-path-state":
+                        return SetInstallPathState(avatarName, args, out detail);
+
+                    case "assert-pending-customization-snapshot":
+                        detail = "Pending customization snapshot contract requires editor helper ASMLiteWindow.GetPendingCustomizationSnapshotForAutomation; integration is not available in this core host slice.";
+                        return false;
+
+                    case "assert-attached-customization-snapshot":
+                        return AssertAttachedCustomizationSnapshot(avatarName, args, out detail);
+
                     default:
                         detail = $"Unsupported smoke actionType '{normalizedAction}'.";
                         return false;
@@ -541,6 +628,151 @@ namespace ASMLite.Tests.Editor
                 stackTrace = string.IsNullOrWhiteSpace(ex.StackTrace) ? string.Empty : ex.StackTrace.Trim();
                 return false;
             }
+        }
+
+        private bool AssertNoComponent(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+            if (avatar == null)
+            {
+                detail = $"No-component assertion failed: avatar '{avatarName}' was not found in the loaded scene.";
+                return false;
+            }
+
+            ASMLiteComponent component = FindASMLiteComponent(avatar);
+            if (component != null)
+            {
+                detail = $"No-component assertion failed: ASM-Lite component was found under avatar '{avatar.gameObject.name}' at '{GetGameObjectPath(component.gameObject)}'.";
+                return false;
+            }
+
+            detail = $"No ASM-Lite component is attached under avatar '{avatar.gameObject.name}'.";
+            return true;
+        }
+
+        private bool SetSlotCount(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            if (!TryGetAttachedComponent(avatarName, out ASMLiteComponent component, out detail))
+                return false;
+
+            int slotCount = args == null ? 0 : args.slotCount;
+            if (slotCount < 1 || slotCount > 8)
+            {
+                detail = $"set-slot-count args.slotCount must be between 1 and 8 (got {slotCount}).";
+                return false;
+            }
+
+            component.slotCount = slotCount;
+            EditorUtility.SetDirty(component);
+            detail = $"ASM-Lite component slotCount set to {slotCount}.";
+            return true;
+        }
+
+        private bool SetInstallPathState(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            if (!TryGetAttachedComponent(avatarName, out ASMLiteComponent component, out detail))
+                return false;
+
+            string presetId = args == null || string.IsNullOrWhiteSpace(args.installPathPresetId)
+                ? string.Empty
+                : args.installPathPresetId.Trim();
+            switch (presetId)
+            {
+                case "disabled":
+                    component.useCustomInstallPath = false;
+                    component.customInstallPath = string.Empty;
+                    break;
+                case "root":
+                    component.useCustomInstallPath = true;
+                    component.customInstallPath = string.Empty;
+                    break;
+                case "simple":
+                    component.useCustomInstallPath = true;
+                    component.customInstallPath = "ASM-Lite";
+                    break;
+                case "nested":
+                    component.useCustomInstallPath = true;
+                    component.customInstallPath = "Avatars/ASM-Lite";
+                    break;
+                default:
+                    detail = $"set-install-path-state args.installPathPresetId '{presetId}' is not supported. Expected disabled, root, simple, or nested.";
+                    return false;
+            }
+
+            EditorUtility.SetDirty(component);
+            detail = $"ASM-Lite installPathPresetId '{presetId}' applied (enabled={component.useCustomInstallPath}, normalizedEffectivePath='{ResolveEffectiveInstallPath(component)}').";
+            return true;
+        }
+
+        private bool AssertAttachedCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
+            VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+            ASMLiteComponent component = avatar == null ? null : FindASMLiteComponent(avatar);
+            ASMLiteSmokeCustomizationSnapshot actual = ASMLiteSmokeCustomizationSnapshot.FromAttachedComponent(component);
+
+            if (!ASMLiteSmokeCustomizationSnapshot.TryBuildMismatchDetail(
+                "assert-attached-customization-snapshot",
+                expected,
+                actual,
+                out detail))
+            {
+                detail = "Attached customization snapshot matched expected fields.";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryGetAttachedComponent(string avatarName, out ASMLiteComponent component, out string detail)
+        {
+            component = null;
+            VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+            if (avatar == null)
+            {
+                detail = $"ASM-Lite component action failed: avatar '{avatarName}' was not found in the loaded scene.";
+                return false;
+            }
+
+            component = FindASMLiteComponent(avatar);
+            if (component == null)
+            {
+                detail = $"ASM-Lite component action failed: ASM-Lite component was not found under avatar '{avatar.gameObject.name}'.";
+                return false;
+            }
+
+            detail = string.Empty;
+            return true;
+        }
+
+        private static ASMLiteComponent FindASMLiteComponent(VRCAvatarDescriptor avatar)
+        {
+            return avatar == null ? null : avatar.GetComponentInChildren<ASMLiteComponent>(true);
+        }
+
+        private static string ResolveEffectiveInstallPath(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomInstallPath)
+                return string.Empty;
+
+            return ASMLiteSmokeStepArgs.NormalizeInstallPath(component.customInstallPath);
+        }
+
+        private static string GetGameObjectPath(GameObject gameObject)
+        {
+            if (gameObject == null)
+                return string.Empty;
+
+            var names = new List<string>();
+            Transform current = gameObject.transform;
+            while (current != null)
+            {
+                names.Add(current.name);
+                current = current.parent;
+            }
+
+            names.Reverse();
+            return string.Join("/", names.ToArray());
         }
 
         private static bool TryValidateScenePath(string scenePath, out string detail)

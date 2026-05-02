@@ -206,6 +206,11 @@ namespace ASMLite.Tests.Editor
         public string expectedDiagnosticCode;
         public string expectedDiagnosticContains;
         public string expectedState;
+        public int slotCount;
+        public string installPathPresetId;
+        public bool expectedInstallPathEnabled;
+        public string expectedNormalizedEffectivePath;
+        public bool expectedComponentPresent;
         public bool expectStepFailure;
         public bool preserveFailureEvidence;
         public bool requireCleanReset;
@@ -220,6 +225,17 @@ namespace ASMLite.Tests.Editor
             expectedDiagnosticCode = NormalizeOptional(expectedDiagnosticCode);
             expectedDiagnosticContains = NormalizeOptional(expectedDiagnosticContains);
             expectedState = NormalizeOptional(expectedState);
+            installPathPresetId = NormalizeOptional(installPathPresetId);
+            expectedNormalizedEffectivePath = NormalizeInstallPath(expectedNormalizedEffectivePath);
+        }
+
+        internal static string NormalizeInstallPath(string value)
+        {
+            string normalized = NormalizeOptional(value).Replace('\\', '/');
+            while (normalized.Contains("//"))
+                normalized = normalized.Replace("//", "/");
+            normalized = normalized.Trim('/');
+            return normalized;
         }
 
         private static string NormalizeOptional(string value)
@@ -251,6 +267,11 @@ namespace ASMLite.Tests.Editor
             "assert-window-focused",
             "close-window",
             "assert-host-ready",
+            "assert-no-component",
+            "set-slot-count",
+            "set-install-path-state",
+            "assert-pending-customization-snapshot",
+            "assert-attached-customization-snapshot",
         };
 
         internal static ASMLiteSmokeCatalogDocument LoadCanonical()
@@ -398,6 +419,7 @@ namespace ASMLite.Tests.Editor
                     step.args.expectedDiagnosticContains,
                     path + ".args.expectedDiagnosticContains");
             }
+            ValidatePhase1StepArgs(step.actionType, step.args, path + ".args");
             step.expectedOutcome = RequireNonBlank(step.expectedOutcome, path + ".expectedOutcome");
             step.debugHint = RequireNonBlank(step.debugHint, path + ".debugHint");
         }
@@ -408,6 +430,42 @@ namespace ASMLite.Tests.Editor
             if (!seenIds.Add(normalized))
                 throw new InvalidOperationException($"{path} '{normalized}' must be unique within its scope.");
             return normalized;
+        }
+
+        private static void ValidatePhase1StepArgs(string actionType, ASMLiteSmokeStepArgs args, string argsPath)
+        {
+            if (args == null)
+                return;
+
+            switch (actionType)
+            {
+                case "set-slot-count":
+                    RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
+                    return;
+                case "set-install-path-state":
+                    RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
+                    return;
+                case "assert-pending-customization-snapshot":
+                case "assert-attached-customization-snapshot":
+                    RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
+                    args.expectedPrimaryAction = RequireNonBlank(args.expectedPrimaryAction, argsPath + ".expectedPrimaryAction");
+                    if (!string.IsNullOrWhiteSpace(args.installPathPresetId))
+                        RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        private static void RequireSlotCountInRange(int slotCount, string path)
+        {
+            if (slotCount < 1 || slotCount > 8)
+                throw new InvalidOperationException(path + " must be between 1 and 8.");
+        }
+
+        private static string RequireInstallPathPreset(string value, string path)
+        {
+            return NormalizeEnumValue(value, path, new[] { "disabled", "root", "simple", "nested" });
         }
 
         private static string NormalizeEnumValue(string value, string path, string[] allowedValues)

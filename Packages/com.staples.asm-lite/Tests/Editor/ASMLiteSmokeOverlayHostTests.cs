@@ -208,6 +208,128 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnityRuntime_Phase1ActionsSetSlotAndInstallPathAndAssertNoComponent()
+        {
+            GameObject avatarWithoutComponent = null;
+            GameObject avatarWithComponent = null;
+            try
+            {
+                avatarWithoutComponent = new GameObject("Phase1_NoComponentAvatar");
+                avatarWithoutComponent.AddComponent<VRCAvatarDescriptor>();
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "assert-no-component",
+                        new ASMLiteSmokeStepArgs(),
+                        string.Empty,
+                        avatarWithoutComponent.name,
+                        out string noComponentDetail,
+                        out string noComponentStackTrace),
+                    Is.True);
+                StringAssert.Contains("No ASM-Lite component", noComponentDetail);
+                Assert.That(noComponentStackTrace, Is.Empty);
+
+                avatarWithComponent = new GameObject("Phase1_ComponentAvatar");
+                avatarWithComponent.AddComponent<VRCAvatarDescriptor>();
+                var component = avatarWithComponent.AddComponent<ASMLite.ASMLiteComponent>();
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "set-slot-count",
+                        new ASMLiteSmokeStepArgs { slotCount = 5 },
+                        string.Empty,
+                        avatarWithComponent.name,
+                        out string slotDetail,
+                        out string slotStackTrace),
+                    Is.True);
+                Assert.AreEqual(5, component.slotCount);
+                StringAssert.Contains("slotCount", slotDetail);
+                Assert.That(slotStackTrace, Is.Empty);
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "set-install-path-state",
+                        new ASMLiteSmokeStepArgs { installPathPresetId = "nested" },
+                        string.Empty,
+                        avatarWithComponent.name,
+                        out string pathDetail,
+                        out string pathStackTrace),
+                    Is.True);
+                Assert.That(component.useCustomInstallPath, Is.True);
+                Assert.AreEqual("Avatars/ASM-Lite", component.customInstallPath);
+                StringAssert.Contains("installPathPresetId 'nested'", pathDetail);
+                Assert.That(pathStackTrace, Is.Empty);
+            }
+            finally
+            {
+                if (avatarWithoutComponent != null)
+                    UnityEngine.Object.DestroyImmediate(avatarWithoutComponent);
+                if (avatarWithComponent != null)
+                    UnityEngine.Object.DestroyImmediate(avatarWithComponent);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AttachedCustomizationSnapshotReportsFieldSpecificDiffs()
+        {
+            GameObject avatarObject = null;
+            try
+            {
+                avatarObject = new GameObject("Phase1_SnapshotAvatar");
+                avatarObject.AddComponent<VRCAvatarDescriptor>();
+                var component = avatarObject.AddComponent<ASMLite.ASMLiteComponent>();
+                component.slotCount = 3;
+                component.useCustomInstallPath = true;
+                component.customInstallPath = "ASM-Lite";
+
+                bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-attached-customization-snapshot",
+                    new ASMLiteSmokeStepArgs
+                    {
+                        slotCount = 4,
+                        expectedInstallPathEnabled = true,
+                        expectedNormalizedEffectivePath = "Wardrobe/ASM-Lite",
+                        expectedComponentPresent = true,
+                        expectedPrimaryAction = "Rebuild",
+                    },
+                    string.Empty,
+                    avatarObject.name,
+                    out string detail,
+                    out string stackTrace);
+
+                Assert.That(success, Is.False);
+                StringAssert.Contains("slotCount expected <4> but was <3>", detail);
+                StringAssert.Contains("normalizedEffectivePath expected <Wardrobe/ASM-Lite> but was <ASM-Lite>", detail);
+                Assert.That(stackTrace, Is.Empty);
+            }
+            finally
+            {
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_PendingCustomizationSnapshotFailsWithMissingHelperContractMessage()
+        {
+            bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                "assert-pending-customization-snapshot",
+                new ASMLiteSmokeStepArgs
+                {
+                    slotCount = 4,
+                    expectedInstallPathEnabled = false,
+                    expectedNormalizedEffectivePath = string.Empty,
+                    expectedComponentPresent = false,
+                    expectedPrimaryAction = "Add Prefab",
+                },
+                string.Empty,
+                "Oct25_Dress",
+                out string detail,
+                out string stackTrace);
+
+            Assert.That(success, Is.False);
+            StringAssert.Contains("GetPendingCustomizationSnapshotForAutomation", detail);
+            Assert.That(stackTrace, Is.Empty);
+        }
+
+        [Test]
         public void UnityRuntime_ClosesOpensAndFocusesAutomationWindow()
         {
             bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
