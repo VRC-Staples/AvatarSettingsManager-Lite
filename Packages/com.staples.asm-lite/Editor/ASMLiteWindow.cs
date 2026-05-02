@@ -6925,6 +6925,7 @@ namespace ASMLite.Editor
             public bool UseCustomInstallPath { get; }
             public string CustomInstallPath { get; }
             public string NormalizedEffectivePath { get; }
+            public string EffectiveInstallPath => NormalizedEffectivePath;
             public bool HasAttachedComponent { get; }
             public bool HasComponent => HasAttachedComponent;
             public bool HasPrimaryAction { get; }
