@@ -137,6 +137,48 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [TestCase(1)]
+        [TestCase(5)]
+        [TestCase(8)]
+        public void SetSlotCountForAutomation_UpdatesPendingCustomizationSnapshot(int slotCount)
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetSlotCountForAutomation(slotCount);
+
+                var snapshot = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.AreEqual(slotCount, snapshot.SlotCount,
+                    "The automation slot-count seam should immediately surface min, max, and non-default middle values through the pending customization snapshot.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void PendingCustomizationSnapshotForAutomation_ReportsSelectedAvatarSlotCount()
+        {
+            _ctx.Comp.slotCount = 7;
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                var snapshot = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.AreEqual(7, snapshot.SlotCount,
+                    "Selecting an attached avatar should copy the component slot count into the pending automation snapshot contract.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
         [Test]
         public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
         {

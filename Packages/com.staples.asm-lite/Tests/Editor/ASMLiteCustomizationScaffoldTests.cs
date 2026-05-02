@@ -685,6 +685,41 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void AddPrefab_CopiesPendingSlotCountToAttachedSnapshotAndComponent()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                if (_ctx.Comp != null)
+                    UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+                _ctx.Comp = null;
+
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetSlotCountForAutomation(8);
+
+                var pendingBeforeAdd = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.AreEqual(8, pendingBeforeAdd.SlotCount,
+                    "The pending customization snapshot should report the automation-selected slot count before the prefab is attached.");
+
+                window.AddPrefabForAutomation();
+
+                var component = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(component,
+                    "AddPrefab should attach an ASMLiteComponent before attached snapshot assertions run.");
+                Assert.AreEqual(8, component.slotCount,
+                    "AddPrefab should copy the pending slot count into the newly attached component.");
+
+                var attachedAfterAdd = window.GetAttachedCustomizationSnapshotForAutomation();
+                Assert.AreEqual(8, attachedAfterAdd.SlotCount,
+                    "The attached customization snapshot should mirror the component slot count immediately after AddPrefab.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void RebuildMigration_PreservesCustomizationState_WhenStalePrmsDetected()
         {
             _ctx.Comp.slotCount = 6;

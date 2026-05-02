@@ -324,6 +324,91 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [Test]
+        public void SetInstallPathStateForAutomation_DisabledBranchIsDistinctFromRootSelection()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(ctx.AvDesc);
+
+                window.SetInstallPathStateForAutomation(false, "Tools/IgnoredWhenDisabled");
+                var disabled = window.GetPendingCustomizationSnapshotForAutomation();
+
+                window.SetInstallPathStateForAutomation(true, string.Empty);
+                var rootSelected = window.GetPendingCustomizationSnapshotForAutomation();
+
+                Assert.IsFalse(disabled.UseCustomInstallPath,
+                    "Disabled install-path state must remain an explicit branch, not collapse into root-selected custom mode.");
+                Assert.IsTrue(rootSelected.UseCustomInstallPath,
+                    "Selecting the avatar root should keep custom install-path mode enabled with an empty effective path.");
+                Assert.AreEqual(string.Empty, disabled.EffectiveInstallPath,
+                    "Disabled install-path state should fail closed to an empty effective prefix.");
+                Assert.AreEqual(string.Empty, rootSelected.EffectiveInstallPath,
+                    "Root-selected custom install path should also resolve to an empty effective prefix while preserving the enabled branch.");
+                Assert.AreNotEqual(disabled.UseCustomInstallPath, rootSelected.UseCustomInstallPath,
+                    "The automation snapshot contract must expose the branch distinction even when both states resolve to the same effective prefix.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
+        [TestCase("  Tools  ", "Tools")]
+        [TestCase(" /Tools//Nested/ ", "Tools/Nested")]
+        public void SetInstallPathStateForAutomation_NormalizesSimpleAndNestedEffectivePath(string rawPath, string expectedEffectivePath)
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(ctx.AvDesc);
+
+                window.SetInstallPathStateForAutomation(true, rawPath);
+
+                var snapshot = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.IsTrue(snapshot.UseCustomInstallPath,
+                    "Setting a custom install path through automation should leave custom install mode enabled.");
+                Assert.AreEqual(expectedEffectivePath, snapshot.EffectiveInstallPath,
+                    "The pending snapshot should report the normalized effective install path, not the raw editor text.");
+                Assert.AreNotEqual(rawPath, snapshot.EffectiveInstallPath,
+                    "EffectiveInstallPath must not leak untrimmed or uncollapsed raw text from the automation seam.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
+        [Test]
+        public void RebuildForAutomation_UsesNormalizedEffectiveInstallPath_NotRawText()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(ctx.AvDesc);
+                window.SetInstallPathStateForAutomation(true, " /Tools//Nested/ ");
+
+                window.RebuildForAutomation();
+
+                var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
+                Assert.IsNotNull(vf,
+                    "Rebuild should leave live FullController wiring available for install-path prefix assertions.");
+                Assert.AreEqual("Tools/Nested", ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf),
+                    "Rebuild should serialize the normalized effective install path into FullController wiring, never the raw automation text.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
         private static string RefreshLiveFullControllerPrefixAndRead(bool useCustomInstallPath, string customInstallPath)
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
