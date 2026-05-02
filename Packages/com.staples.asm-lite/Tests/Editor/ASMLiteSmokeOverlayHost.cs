@@ -182,6 +182,34 @@ namespace ASMLite.Tests.Editor
             };
         }
 
+        internal static ASMLiteSmokeCustomizationSnapshot FromAutomationSnapshot(
+            ASMLiteWindow.CustomizationAutomationSnapshot snapshot)
+        {
+            return new ASMLiteSmokeCustomizationSnapshot
+            {
+                SlotCount = snapshot.SlotCount,
+                InstallPathEnabled = snapshot.UseCustomInstallPath,
+                NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(snapshot.NormalizedEffectivePath),
+                ComponentPresent = snapshot.HasAttachedComponent,
+                PrimaryAction = FormatPrimaryAction(snapshot.PrimaryAction),
+            };
+        }
+
+        private static string FormatPrimaryAction(ASMLiteWindow.AsmLiteWindowAction action)
+        {
+            switch (action)
+            {
+                case ASMLiteWindow.AsmLiteWindowAction.AddPrefab:
+                    return "Add Prefab";
+                case ASMLiteWindow.AsmLiteWindowAction.Rebuild:
+                    return "Rebuild";
+                case ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged:
+                    return "Return to Package Managed";
+                default:
+                    return action.ToString();
+            }
+        }
+
         internal static bool TryBuildMismatchDetail(
             string actionType,
             ASMLiteSmokeCustomizationSnapshot expected,
@@ -601,6 +629,9 @@ namespace ASMLite.Tests.Editor
                         detail = "Host readiness check passed.";
                         return true;
 
+                    case "prelude-recover-context":
+                        return RecoverContextPrelude(scenePath, out detail, out stackTrace);
+
                     case "assert-no-component":
                         return AssertNoComponent(avatarName, out detail);
 
@@ -611,8 +642,7 @@ namespace ASMLite.Tests.Editor
                         return SetInstallPathState(avatarName, args, out detail);
 
                     case "assert-pending-customization-snapshot":
-                        detail = "Pending customization snapshot contract requires editor helper ASMLiteWindow.GetPendingCustomizationSnapshotForAutomation; integration is not available in this core host slice.";
-                        return false;
+                        return AssertPendingCustomizationSnapshot(avatarName, args, out detail);
 
                     case "assert-attached-customization-snapshot":
                         return AssertAttachedCustomizationSnapshot(avatarName, args, out detail);
@@ -628,6 +658,38 @@ namespace ASMLite.Tests.Editor
                 stackTrace = string.IsNullOrWhiteSpace(ex.StackTrace) ? string.Empty : ex.StackTrace.Trim();
                 return false;
             }
+        }
+
+        private bool RecoverContextPrelude(string scenePath, out string detail, out string stackTrace)
+        {
+            stackTrace = string.Empty;
+            var details = new List<string>();
+
+            CloseAutomationWindowIfOpen();
+            Selection.activeObject = null;
+            if (_fixtureService.Reset(out string resetDetail))
+                details.Add(resetDetail);
+            else
+            {
+                detail = resetDetail;
+                return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(scenePath))
+            {
+                string normalizedScenePath = scenePath.Trim();
+                if (!TryValidateScenePath(normalizedScenePath, out string sceneDetail))
+                {
+                    detail = sceneDetail;
+                    return false;
+                }
+
+                OpenScene(normalizedScenePath);
+                details.Add($"Recovered scene context by reopening '{normalizedScenePath}'.");
+            }
+
+            detail = "Prelude context recovery completed: " + string.Join(" ", details.ToArray());
+            return true;
         }
 
         private bool AssertNoComponent(string avatarName, out string detail)
@@ -652,9 +714,6 @@ namespace ASMLite.Tests.Editor
 
         private bool SetSlotCount(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
         {
-            if (!TryGetAttachedComponent(avatarName, out ASMLiteComponent component, out detail))
-                return false;
-
             int slotCount = args == null ? 0 : args.slotCount;
             if (slotCount < 1 || slotCount > 8)
             {
@@ -662,46 +721,94 @@ namespace ASMLite.Tests.Editor
                 return false;
             }
 
-            component.slotCount = slotCount;
-            EditorUtility.SetDirty(component);
-            detail = $"ASM-Lite component slotCount set to {slotCount}.";
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-slot-count failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetSlotCountForAutomation(slotCount);
+            detail = $"ASM-Lite automation slotCount set to {slotCount}.";
             return true;
         }
 
         private bool SetInstallPathState(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
         {
-            if (!TryGetAttachedComponent(avatarName, out ASMLiteComponent component, out detail))
-                return false;
-
             string presetId = args == null || string.IsNullOrWhiteSpace(args.installPathPresetId)
                 ? string.Empty
                 : args.installPathPresetId.Trim();
+            bool enabled;
+            string normalizedPath;
             switch (presetId)
             {
                 case "disabled":
-                    component.useCustomInstallPath = false;
-                    component.customInstallPath = string.Empty;
+                    enabled = false;
+                    normalizedPath = string.Empty;
                     break;
                 case "root":
-                    component.useCustomInstallPath = true;
-                    component.customInstallPath = string.Empty;
+                    enabled = true;
+                    normalizedPath = string.Empty;
                     break;
                 case "simple":
-                    component.useCustomInstallPath = true;
-                    component.customInstallPath = "ASM-Lite";
+                    enabled = true;
+                    normalizedPath = "ASM-Lite";
                     break;
                 case "nested":
-                    component.useCustomInstallPath = true;
-                    component.customInstallPath = "Avatars/ASM-Lite";
+                    enabled = true;
+                    normalizedPath = "Avatars/ASM-Lite";
                     break;
                 default:
                     detail = $"set-install-path-state args.installPathPresetId '{presetId}' is not supported. Expected disabled, root, simple, or nested.";
                     return false;
             }
 
-            EditorUtility.SetDirty(component);
-            detail = $"ASM-Lite installPathPresetId '{presetId}' applied (enabled={component.useCustomInstallPath}, normalizedEffectivePath='{ResolveEffectiveInstallPath(component)}').";
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-install-path-state failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetInstallPathStateForAutomation(enabled, normalizedPath);
+            detail = $"ASM-Lite installPathPresetId '{presetId}' applied (enabled={enabled}, normalizedEffectivePath='{normalizedPath}').";
             return true;
+        }
+
+        private bool AssertPendingCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "assert-pending-customization-snapshot failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            if (TryResolveAvatarForSelection(avatarName, out VRCAvatarDescriptor avatar, out string selectionDetail))
+                window.SelectAvatarForAutomation(avatar);
+            else
+            {
+                detail = selectionDetail;
+                return false;
+            }
+
+            ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
+            ASMLiteSmokeCustomizationSnapshot actual = ASMLiteSmokeCustomizationSnapshot.FromAutomationSnapshot(
+                window.GetPendingCustomizationSnapshotForAutomation());
+
+            if (!ASMLiteSmokeCustomizationSnapshot.TryBuildMismatchDetail(
+                "assert-pending-customization-snapshot",
+                expected,
+                actual,
+                out detail))
+            {
+                detail = "Pending customization snapshot matched expected fields.";
+                return true;
+            }
+
+            return false;
         }
 
         private bool AssertAttachedCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)

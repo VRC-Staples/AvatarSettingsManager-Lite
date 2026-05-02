@@ -267,6 +267,7 @@ namespace ASMLite.Tests.Editor
             "assert-window-focused",
             "close-window",
             "assert-host-ready",
+            "prelude-recover-context",
             "assert-no-component",
             "set-slot-count",
             "set-install-path-state",
@@ -439,21 +440,90 @@ namespace ASMLite.Tests.Editor
 
             switch (actionType)
             {
+                case "assert-no-component":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.installPathPresetId), argsPath + ".installPathPresetId");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedPrimaryAction), argsPath + ".expectedPrimaryAction");
+                    RejectPresentPhase1Arg(args.expectedComponentPresent, argsPath + ".expectedComponentPresent");
+                    RejectPresentPhase1Arg(args.expectedInstallPathEnabled, argsPath + ".expectedInstallPathEnabled");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedNormalizedEffectivePath), argsPath + ".expectedNormalizedEffectivePath");
+                    return;
                 case "set-slot-count":
                     RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.installPathPresetId), argsPath + ".installPathPresetId");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedPrimaryAction), argsPath + ".expectedPrimaryAction");
+                    RejectPresentPhase1Arg(args.expectedComponentPresent, argsPath + ".expectedComponentPresent");
+                    RejectPresentPhase1Arg(args.expectedInstallPathEnabled, argsPath + ".expectedInstallPathEnabled");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedNormalizedEffectivePath), argsPath + ".expectedNormalizedEffectivePath");
                     return;
                 case "set-install-path-state":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
                     RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedPrimaryAction), argsPath + ".expectedPrimaryAction");
+                    RejectPresentPhase1Arg(args.expectedComponentPresent, argsPath + ".expectedComponentPresent");
+                    RejectPresentPhase1Arg(args.expectedInstallPathEnabled, argsPath + ".expectedInstallPathEnabled");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedNormalizedEffectivePath), argsPath + ".expectedNormalizedEffectivePath");
                     return;
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
                     args.expectedPrimaryAction = RequireNonBlank(args.expectedPrimaryAction, argsPath + ".expectedPrimaryAction");
-                    if (!string.IsNullOrWhiteSpace(args.installPathPresetId))
-                        RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
+                    string presetId = RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
+                    ValidateExpectedInstallPathMatchesPreset(args, presetId, argsPath);
                     return;
                 default:
                     return;
+            }
+        }
+
+        private static void RejectPresentPhase1Arg(bool isPresent, string path)
+        {
+            if (isPresent)
+                throw new InvalidOperationException(path + " is not valid for this actionType.");
+        }
+
+        private static void ValidateExpectedInstallPathMatchesPreset(ASMLiteSmokeStepArgs args, string presetId, string argsPath)
+        {
+            bool expectedEnabled;
+            string expectedPath;
+            ResolveInstallPathPreset(presetId, out expectedEnabled, out expectedPath);
+
+            if (args.expectedInstallPathEnabled != expectedEnabled)
+            {
+                throw new InvalidOperationException(
+                    $"{argsPath}.expectedInstallPathEnabled must be {expectedEnabled.ToString().ToLowerInvariant()} for installPathPresetId '{presetId}'.");
+            }
+
+            string normalizedExpectedPath = ASMLiteSmokeStepArgs.NormalizeInstallPath(expectedPath);
+            if (!string.Equals(args.expectedNormalizedEffectivePath, normalizedExpectedPath, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{argsPath}.expectedNormalizedEffectivePath must be '{normalizedExpectedPath}' for installPathPresetId '{presetId}'.");
+            }
+        }
+
+        private static void ResolveInstallPathPreset(string presetId, out bool expectedEnabled, out string expectedNormalizedEffectivePath)
+        {
+            switch (presetId)
+            {
+                case "disabled":
+                    expectedEnabled = false;
+                    expectedNormalizedEffectivePath = string.Empty;
+                    return;
+                case "root":
+                    expectedEnabled = true;
+                    expectedNormalizedEffectivePath = string.Empty;
+                    return;
+                case "simple":
+                    expectedEnabled = true;
+                    expectedNormalizedEffectivePath = "ASM-Lite";
+                    return;
+                case "nested":
+                    expectedEnabled = true;
+                    expectedNormalizedEffectivePath = "Avatars/ASM-Lite";
+                    return;
+                default:
+                    throw new InvalidOperationException($"installPathPresetId '{presetId}' is not supported.");
             }
         }
 

@@ -307,26 +307,84 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void UnityRuntime_PendingCustomizationSnapshotFailsWithMissingHelperContractMessage()
+        public void UnityRuntime_PendingCustomizationSnapshotMatchesWindowAutomationState()
         {
-            bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                "assert-pending-customization-snapshot",
-                new ASMLiteSmokeStepArgs
-                {
-                    slotCount = 4,
-                    expectedInstallPathEnabled = false,
-                    expectedNormalizedEffectivePath = string.Empty,
-                    expectedComponentPresent = false,
-                    expectedPrimaryAction = "Add Prefab",
-                },
-                string.Empty,
-                "Oct25_Dress",
-                out string detail,
-                out string stackTrace);
+            GameObject avatarObject = null;
+            bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                avatarObject = new GameObject("Phase1_PendingSnapshotAvatar");
+                avatarObject.AddComponent<VRCAvatarDescriptor>();
+                Selection.activeObject = avatarObject;
 
-            Assert.That(success, Is.False);
-            StringAssert.Contains("GetPendingCustomizationSnapshotForAutomation", detail);
-            Assert.That(stackTrace, Is.Empty);
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "open-window",
+                        new ASMLiteSmokeStepArgs(),
+                        string.Empty,
+                        avatarObject.name,
+                        out _,
+                        out _),
+                    Is.True);
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "select-avatar",
+                        new ASMLiteSmokeStepArgs(),
+                        string.Empty,
+                        avatarObject.name,
+                        out _,
+                        out _),
+                    Is.True);
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "set-slot-count",
+                        new ASMLiteSmokeStepArgs { slotCount = 4 },
+                        string.Empty,
+                        avatarObject.name,
+                        out _,
+                        out _),
+                    Is.True);
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "set-install-path-state",
+                        new ASMLiteSmokeStepArgs { installPathPresetId = "root" },
+                        string.Empty,
+                        avatarObject.name,
+                        out _,
+                        out _),
+                    Is.True);
+
+                bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "assert-pending-customization-snapshot",
+                    new ASMLiteSmokeStepArgs
+                    {
+                        slotCount = 4,
+                        installPathPresetId = "root",
+                        expectedInstallPathEnabled = true,
+                        expectedNormalizedEffectivePath = string.Empty,
+                        expectedComponentPresent = false,
+                        expectedPrimaryAction = "Add Prefab",
+                    },
+                    string.Empty,
+                    avatarObject.name,
+                    out string detail,
+                    out string stackTrace);
+
+                Assert.That(success, Is.True, detail + "\n" + stackTrace);
+                StringAssert.Contains("Pending customization snapshot matched", detail);
+                Assert.That(stackTrace, Is.Empty);
+            }
+            finally
+            {
+                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "close-window",
+                    new ASMLiteSmokeStepArgs(),
+                    string.Empty,
+                    avatarObject == null ? string.Empty : avatarObject.name,
+                    out _,
+                    out _);
+                Selection.activeObject = null;
+                if (avatarObject != null)
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+                LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+            }
         }
 
         [Test]
@@ -826,6 +884,54 @@ namespace ASMLite.Tests.Editor
                     .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
                     .ToArray();
 
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+            }
+        }
+
+        [Test]
+        public void SetupPhase1SlotMatrixSuite_InvokesPrebuildSlotActions()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000017_run-suite";
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(17, commandId, "setup-prebuild-slots-matrix"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(8));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "set-slot-count", StringComparison.Ordinal)), Is.EqualTo(8));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-pending-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(8));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-attached-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(8));
+                CollectionAssert.Contains(context.Runtime.ExecutedActions, "assert-no-component");
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
+                Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
+            }
+        }
+
+        [Test]
+        public void SetupPhase1PathMatrixSuite_InvokesPrebuildPathActions()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000018_run-suite";
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(18, commandId, "setup-prebuild-path-matrix"));
+                AdvanceUntilIdleAfterRun(context);
+
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(4));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "set-install-path-state", StringComparison.Ordinal)), Is.EqualTo(4));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-pending-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(4));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-attached-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(4));
+                CollectionAssert.Contains(context.Runtime.ExecutedActions, "assert-no-component");
+
+                var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                    .ToArray();
                 Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.False);
                 Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
             }

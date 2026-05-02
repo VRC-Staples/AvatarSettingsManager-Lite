@@ -1256,6 +1256,1470 @@
           ]
         },
         {
+          "suiteId": "setup-prebuild-slots-matrix",
+          "label": "Setup Prebuild Slots Matrix",
+          "description": "Exhaustively verify slot-count customization before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All slot-count rows preserve normalized pending and attached customization snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect the field-specific snapshot mismatch and the row slotCount argument.",
+          "cases": [
+            {
+              "caseId": "S01-slot-count-1",
+              "label": "S01 slot count 1",
+              "description": "Exercise the setup flow with slot count 1 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 1, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S01-slot-count-1-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S01-slot-count-1-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S01-slot-count-1-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S01-slot-count-1-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S01-slot-count-1-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S01-slot-count-1-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S01-slot-count-1-set-slot-count",
+                  "label": "Set slot count 1",
+                  "description": "Apply slot count 1 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 1 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 1
+                  }
+                },
+                {
+                  "stepId": "S01-slot-count-1-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 1,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S01-slot-count-1-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S01-slot-count-1-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 1,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S01-slot-count-1-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S02-slot-count-2",
+              "label": "S02 slot count 2",
+              "description": "Exercise the setup flow with slot count 2 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 2, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S02-slot-count-2-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S02-slot-count-2-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S02-slot-count-2-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S02-slot-count-2-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S02-slot-count-2-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S02-slot-count-2-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S02-slot-count-2-set-slot-count",
+                  "label": "Set slot count 2",
+                  "description": "Apply slot count 2 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 2 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 2
+                  }
+                },
+                {
+                  "stepId": "S02-slot-count-2-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 2,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S02-slot-count-2-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S02-slot-count-2-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 2,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S02-slot-count-2-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S03-slot-count-3",
+              "label": "S03 slot count 3",
+              "description": "Exercise the setup flow with slot count 3 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 3, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S03-slot-count-3-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S03-slot-count-3-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S03-slot-count-3-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S03-slot-count-3-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S03-slot-count-3-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S03-slot-count-3-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S03-slot-count-3-set-slot-count",
+                  "label": "Set slot count 3",
+                  "description": "Apply slot count 3 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 3 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 3
+                  }
+                },
+                {
+                  "stepId": "S03-slot-count-3-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 3,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S03-slot-count-3-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S03-slot-count-3-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 3,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S03-slot-count-3-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S04-slot-count-4",
+              "label": "S04 slot count 4",
+              "description": "Exercise the setup flow with slot count 4 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 4, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S04-slot-count-4-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S04-slot-count-4-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S04-slot-count-4-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S04-slot-count-4-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S04-slot-count-4-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S04-slot-count-4-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S04-slot-count-4-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "S04-slot-count-4-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S04-slot-count-4-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S04-slot-count-4-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S04-slot-count-4-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S05-slot-count-5",
+              "label": "S05 slot count 5",
+              "description": "Exercise the setup flow with slot count 5 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 5, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S05-slot-count-5-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S05-slot-count-5-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S05-slot-count-5-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S05-slot-count-5-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S05-slot-count-5-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S05-slot-count-5-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S05-slot-count-5-set-slot-count",
+                  "label": "Set slot count 5",
+                  "description": "Apply slot count 5 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 5 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 5
+                  }
+                },
+                {
+                  "stepId": "S05-slot-count-5-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 5,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S05-slot-count-5-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S05-slot-count-5-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 5,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S05-slot-count-5-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S06-slot-count-6",
+              "label": "S06 slot count 6",
+              "description": "Exercise the setup flow with slot count 6 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 6, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S06-slot-count-6-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S06-slot-count-6-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S06-slot-count-6-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S06-slot-count-6-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S06-slot-count-6-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S06-slot-count-6-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S06-slot-count-6-set-slot-count",
+                  "label": "Set slot count 6",
+                  "description": "Apply slot count 6 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 6 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 6
+                  }
+                },
+                {
+                  "stepId": "S06-slot-count-6-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 6,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S06-slot-count-6-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S06-slot-count-6-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 6,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S06-slot-count-6-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S07-slot-count-7",
+              "label": "S07 slot count 7",
+              "description": "Exercise the setup flow with slot count 7 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 7, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S07-slot-count-7-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S07-slot-count-7-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S07-slot-count-7-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S07-slot-count-7-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S07-slot-count-7-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S07-slot-count-7-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S07-slot-count-7-set-slot-count",
+                  "label": "Set slot count 7",
+                  "description": "Apply slot count 7 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 7 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 7
+                  }
+                },
+                {
+                  "stepId": "S07-slot-count-7-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 7,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S07-slot-count-7-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S07-slot-count-7-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 7,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S07-slot-count-7-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "S08-slot-count-8",
+              "label": "S08 slot count 8",
+              "description": "Exercise the setup flow with slot count 8 and default install path state.",
+              "expectedOutcome": "Pending and attached snapshots both report slot count 8, disabled custom install path, and Rebuild after attach.",
+              "debugHint": "Inspect slot-count automation and snapshot field-specific mismatch output.",
+              "steps": [
+                {
+                  "stepId": "S08-slot-count-8-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "S08-slot-count-8-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "S08-slot-count-8-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "S08-slot-count-8-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "S08-slot-count-8-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "S08-slot-count-8-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "S08-slot-count-8-set-slot-count",
+                  "label": "Set slot count 8",
+                  "description": "Apply slot count 8 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 8 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 8
+                  }
+                },
+                {
+                  "stepId": "S08-slot-count-8-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "S08-slot-count-8-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "S08-slot-count-8-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "S08-slot-count-8-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "suiteId": "setup-prebuild-path-matrix",
+          "label": "Setup Prebuild Path Matrix",
+          "description": "Verify disabled, root-selected, simple, and nested install-path customization before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All install-path rows preserve normalized pending and attached customization snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect the field-specific normalizedEffectivePath and installPathEnabled mismatch output.",
+          "cases": [
+            {
+              "caseId": "P01-install-path-disabled",
+              "label": "P01 install path disabled",
+              "description": "Exercise the setup flow with install path preset disabled.",
+              "expectedOutcome": "Pending and attached snapshots both report install path enabled=false and normalized path ''.",
+              "debugHint": "Inspect install-path automation and normalized path mismatch output.",
+              "steps": [
+                {
+                  "stepId": "P01-install-path-disabled-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-set-install-path-state",
+                  "label": "Set install path install path disabled",
+                  "description": "Apply install path preset disabled.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Install path preset disabled is staged.",
+                  "debugHint": "If this fails, inspect install-path automation preset handling.",
+                  "args": {
+                    "installPathPresetId": "disabled"
+                  }
+                },
+                {
+                  "stepId": "P01-install-path-disabled-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "P01-install-path-disabled-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "P01-install-path-disabled-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "P01-install-path-disabled-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "P02-install-path-root-selected",
+              "label": "P02 install path root selected",
+              "description": "Exercise the setup flow with install path preset root.",
+              "expectedOutcome": "Pending and attached snapshots both report install path enabled=true and normalized path ''.",
+              "debugHint": "Inspect install-path automation and normalized path mismatch output.",
+              "steps": [
+                {
+                  "stepId": "P02-install-path-root-selected-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-set-install-path-state",
+                  "label": "Set install path install path root selected",
+                  "description": "Apply install path preset root.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Install path preset root is staged.",
+                  "debugHint": "If this fails, inspect install-path automation preset handling.",
+                  "args": {
+                    "installPathPresetId": "root"
+                  }
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "root",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "root",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "P03-install-path-simple",
+              "label": "P03 install path simple",
+              "description": "Exercise the setup flow with install path preset simple.",
+              "expectedOutcome": "Pending and attached snapshots both report install path enabled=true and normalized path 'ASM-Lite'.",
+              "debugHint": "Inspect install-path automation and normalized path mismatch output.",
+              "steps": [
+                {
+                  "stepId": "P03-install-path-simple-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "P03-install-path-simple-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "P03-install-path-simple-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "P03-install-path-simple-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "P03-install-path-simple-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "P03-install-path-simple-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P03-install-path-simple-set-install-path-state",
+                  "label": "Set install path install path simple",
+                  "description": "Apply install path preset simple.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Install path preset simple is staged.",
+                  "debugHint": "If this fails, inspect install-path automation preset handling.",
+                  "args": {
+                    "installPathPresetId": "simple"
+                  }
+                },
+                {
+                  "stepId": "P03-install-path-simple-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "simple",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "ASM-Lite",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "P03-install-path-simple-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "P03-install-path-simple-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "simple",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "ASM-Lite",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "P03-install-path-simple-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "P04-install-path-nested",
+              "label": "P04 install path nested",
+              "description": "Exercise the setup flow with install path preset nested.",
+              "expectedOutcome": "Pending and attached snapshots both report install path enabled=true and normalized path 'Avatars/ASM-Lite'.",
+              "debugHint": "Inspect install-path automation and normalized path mismatch output.",
+              "steps": [
+                {
+                  "stepId": "P04-install-path-nested-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "P04-install-path-nested-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "P04-install-path-nested-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "P04-install-path-nested-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "P04-install-path-nested-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "P04-install-path-nested-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P04-install-path-nested-set-install-path-state",
+                  "label": "Set install path install path nested",
+                  "description": "Apply install path preset nested.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Install path preset nested is staged.",
+                  "debugHint": "If this fails, inspect install-path automation preset handling.",
+                  "args": {
+                    "installPathPresetId": "nested"
+                  }
+                },
+                {
+                  "stepId": "P04-install-path-nested-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "P04-install-path-nested-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "P04-install-path-nested-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "P04-install-path-nested-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",

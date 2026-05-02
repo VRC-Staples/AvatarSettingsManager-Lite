@@ -67,6 +67,8 @@ namespace ASMLite.Tests.Editor
                     "generated-asset-recovery-signals",
                     "generated-reference-ownership",
                     "negative-diagnostics",
+                    "setup-prebuild-slots-matrix",
+                    "setup-prebuild-path-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -424,6 +426,74 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadCanonical_includes_phase1_prebuild_slot_and_path_matrices()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
+
+            Assert.That(suites.ContainsKey("setup-prebuild-slots-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("setup-prebuild-path-matrix"), Is.True);
+
+            ASMLiteSmokeSuiteDefinition slots = suites["setup-prebuild-slots-matrix"];
+            Assert.AreEqual("exhaustive", slots.speed);
+            Assert.AreEqual("safe", slots.risk);
+            CollectionAssert.Contains(slots.presetGroups, "all-setup");
+            Assert.That(slots.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "S01-slot-count-1",
+                "S02-slot-count-2",
+                "S03-slot-count-3",
+                "S04-slot-count-4",
+                "S05-slot-count-5",
+                "S06-slot-count-6",
+                "S07-slot-count-7",
+                "S08-slot-count-8",
+            }));
+            Assert.That(slots.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            AssertPhase1SlotCase(slots.cases[0], 1);
+            AssertPhase1SlotCase(slots.cases[7], 8);
+
+            ASMLiteSmokeSuiteDefinition paths = suites["setup-prebuild-path-matrix"];
+            Assert.AreEqual("exhaustive", paths.speed);
+            Assert.AreEqual("safe", paths.risk);
+            CollectionAssert.Contains(paths.presetGroups, "all-setup");
+            Assert.That(paths.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "P01-install-path-disabled",
+                "P02-install-path-root-selected",
+                "P03-install-path-simple",
+                "P04-install-path-nested",
+            }));
+            Assert.That(paths.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            AssertPhase1PathCase(paths.cases[0], "disabled", expectedEnabled: false, expectedNormalizedPath: string.Empty);
+            AssertPhase1PathCase(paths.cases[1], "root", expectedEnabled: true, expectedNormalizedPath: string.Empty);
+            AssertPhase1PathCase(paths.cases[2], "simple", expectedEnabled: true, expectedNormalizedPath: "ASM-Lite");
+            AssertPhase1PathCase(paths.cases[3], "nested", expectedEnabled: true, expectedNormalizedPath: "Avatars/ASM-Lite");
+        }
+
+        [Test]
+        public void LoadCanonical_exhaustive_suites_start_with_recover_context_prelude()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            var exhaustiveSuites = catalog.groups
+                .SelectMany(group => group.suites)
+                .Where(suite => string.Equals(suite.speed, "exhaustive", StringComparison.Ordinal))
+                .ToArray();
+
+            Assert.That(exhaustiveSuites.Select(suite => suite.suiteId), Is.Not.Empty);
+            foreach (ASMLiteSmokeSuiteDefinition suite in exhaustiveSuites)
+            {
+                foreach (ASMLiteSmokeCaseDefinition item in suite.cases)
+                {
+                    Assert.That(item.steps, Is.Not.Empty, suite.suiteId + ":" + item.caseId);
+                    Assert.AreEqual("prelude-recover-context", item.steps[0].actionType, suite.suiteId + ":" + item.caseId);
+                }
+            }
+        }
+
+        [Test]
         public void LoadFromJson_rejects_unknown_suite_metadata_values()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"risk\": \"safe\"", "\"risk\": \"maybe\"", StringComparison.Ordinal);
@@ -526,6 +596,24 @@ namespace ASMLite.Tests.Editor
                     "\"args\": { \"slotCount\": 2, \"expectedComponentPresent\": true, \"expectedInstallPathEnabled\": false }\n",
                     "assert-attached-customization-snapshot")));
             StringAssert.Contains("args.expectedPrimaryAction", snapshotException.Message);
+
+            var forbiddenSlotArgsException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"slotCount\": 2, \"installPathPresetId\": \"simple\" }\n",
+                    "set-slot-count")));
+            StringAssert.Contains("args.installPathPresetId", forbiddenSlotArgsException.Message);
+
+            var forbiddenPathArgsException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"slotCount\": 2, \"installPathPresetId\": \"simple\" }\n",
+                    "set-install-path-state")));
+            StringAssert.Contains("args.slotCount", forbiddenPathArgsException.Message);
+
+            var inconsistentPresetException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"slotCount\": 2, \"installPathPresetId\": \"root\", \"expectedInstallPathEnabled\": false, \"expectedNormalizedEffectivePath\": \"\", \"expectedPrimaryAction\": \"Add Prefab\" }\n",
+                    "assert-pending-customization-snapshot")));
+            StringAssert.Contains("args.expectedInstallPathEnabled", inconsistentPresetException.Message);
         }
 
         [Test]
@@ -658,6 +746,87 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedPrimaryAction, step.args.expectedPrimaryAction);
             Assert.That(step.args.preserveFailureEvidence, Is.True);
             Assert.That(step.args.requireCleanReset, Is.True);
+        }
+
+        private static void AssertPhase1SlotCase(ASMLiteSmokeCaseDefinition item, int expectedSlotCount)
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "prelude-recover-context",
+                    "open-scene",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "assert-no-component",
+                    "set-slot-count",
+                    "assert-pending-customization-snapshot",
+                    "add-prefab",
+                    "assert-attached-customization-snapshot",
+                    "assert-primary-action",
+                },
+                item.steps.Select(step => step.actionType).ToArray());
+
+            ASMLiteSmokeStepArgs setArgs = item.steps.Single(step => step.actionType == "set-slot-count").args;
+            Assert.AreEqual(expectedSlotCount, setArgs.slotCount);
+
+            foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))
+            {
+                Assert.AreEqual(expectedSlotCount, step.args.slotCount);
+                Assert.AreEqual("disabled", step.args.installPathPresetId);
+                Assert.That(step.args.expectedInstallPathEnabled, Is.False);
+                Assert.AreEqual(string.Empty, step.args.expectedNormalizedEffectivePath);
+            }
+
+            ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
+            Assert.That(pendingArgs.expectedComponentPresent, Is.False);
+            Assert.AreEqual("Add Prefab", pendingArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeStepArgs attachedArgs = item.steps.Single(step => step.actionType == "assert-attached-customization-snapshot").args;
+            Assert.That(attachedArgs.expectedComponentPresent, Is.True);
+            Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
+        }
+
+        private static void AssertPhase1PathCase(
+            ASMLiteSmokeCaseDefinition item,
+            string expectedPreset,
+            bool expectedEnabled,
+            string expectedNormalizedPath)
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "prelude-recover-context",
+                    "open-scene",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "assert-no-component",
+                    "set-install-path-state",
+                    "assert-pending-customization-snapshot",
+                    "add-prefab",
+                    "assert-attached-customization-snapshot",
+                    "assert-primary-action",
+                },
+                item.steps.Select(step => step.actionType).ToArray());
+
+            Assert.AreEqual(expectedPreset, item.steps.Single(step => step.actionType == "set-install-path-state").args.installPathPresetId);
+
+            foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))
+            {
+                Assert.AreEqual(4, step.args.slotCount);
+                Assert.AreEqual(expectedPreset, step.args.installPathPresetId);
+                Assert.AreEqual(expectedEnabled, step.args.expectedInstallPathEnabled);
+                Assert.AreEqual(expectedNormalizedPath, step.args.expectedNormalizedEffectivePath);
+            }
+
+            ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
+            Assert.That(pendingArgs.expectedComponentPresent, Is.False);
+            Assert.AreEqual("Add Prefab", pendingArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeStepArgs attachedArgs = item.steps.Single(step => step.actionType == "assert-attached-customization-snapshot").args;
+            Assert.That(attachedArgs.expectedComponentPresent, Is.True);
+            Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
         }
 
         private static string BuildSingleStepCatalogJson(string argsJson, string actionType = "assert-host-ready")
