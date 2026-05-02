@@ -6890,6 +6890,48 @@ namespace ASMLite.Editor
             public string VendorizedGeneratedAssetsPath { get; }
         }
 
+        internal readonly struct CustomizationAutomationSnapshot
+        {
+            internal CustomizationAutomationSnapshot(
+                VRCAvatarDescriptor selectedAvatar,
+                ASMLiteComponent component,
+                ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization,
+                AsmLiteToolState toolState,
+                AsmLiteActionHierarchy actionHierarchy)
+            {
+                SelectedAvatar = selectedAvatar;
+                Component = component;
+                Customization = customization;
+                ComponentCustomization = customization;
+                ToolState = toolState;
+                SlotCount = customization.SlotCount;
+                UseCustomInstallPath = customization.UseCustomInstallPath;
+                CustomInstallPath = customization.CustomInstallPath ?? string.Empty;
+                NormalizedEffectivePath = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(
+                    customization.UseCustomInstallPath,
+                    customization.CustomInstallPath);
+                HasAttachedComponent = component != null;
+                HasPrimaryAction = actionHierarchy.PrimaryActions.Length > 0;
+                PrimaryAction = HasPrimaryAction ? actionHierarchy.PrimaryActions[0] : default;
+                PrimaryActions = (AsmLiteWindowAction[])actionHierarchy.PrimaryActions.Clone();
+            }
+
+            public VRCAvatarDescriptor SelectedAvatar { get; }
+            public ASMLiteComponent Component { get; }
+            public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot Customization { get; }
+            public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot ComponentCustomization { get; }
+            public AsmLiteToolState ToolState { get; }
+            public int SlotCount { get; }
+            public bool UseCustomInstallPath { get; }
+            public string CustomInstallPath { get; }
+            public string NormalizedEffectivePath { get; }
+            public bool HasAttachedComponent { get; }
+            public bool HasComponent => HasAttachedComponent;
+            public bool HasPrimaryAction { get; }
+            public AsmLiteWindowAction PrimaryAction { get; }
+            public AsmLiteWindowAction[] PrimaryActions { get; }
+        }
+
         internal void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
         {
             _selectedAvatar = avatar;
@@ -6897,9 +6939,59 @@ namespace ASMLite.Editor
             SyncPendingSlotCountFromAvatar();
         }
 
+        internal void SetSlotCountForAutomation(int slotCount)
+        {
+            ValidateAutomationSlotCount(slotCount);
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                if (component.slotCount != slotCount)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Slot Count");
+                    component.slotCount = slotCount;
+                    EditorUtility.SetDirty(component);
+                }
+
+                _pendingSlotCount = slotCount;
+                return;
+            }
+
+            _pendingSlotCount = slotCount;
+        }
+
+        internal void SetInstallPathStateForAutomation(bool useCustomInstallPath, string customInstallPath)
+        {
+            string normalized = NormalizeOptionalString(customInstallPath);
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, useCustomInstallPath);
+                SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
+            }
+
+            _pendingUseCustomInstallPath = useCustomInstallPath;
+            _pendingCustomInstallPath = normalized;
+        }
+
         internal void SelectInstallPathForAutomation(string selectedPath)
         {
             ApplyInstallPathSelection(GetOrRefreshComponent(), selectedPath);
+        }
+
+        internal CustomizationAutomationSnapshot GetPendingCustomizationSnapshotForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            return CreateCustomizationAutomationSnapshot(component, CapturePendingCustomizationSnapshot());
+        }
+
+        internal CustomizationAutomationSnapshot GetAttachedCustomizationSnapshotForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            var customization = component
+                ? ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)
+                : default;
+            return CreateCustomizationAutomationSnapshot(component, customization);
         }
 
         internal PendingCustomizationSnapshot GetPendingCustomizationSnapshotForTesting()
@@ -6916,6 +7008,26 @@ namespace ASMLite.Editor
                 _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>(),
                 _pendingUseVendorizedGeneratedAssets,
                 _pendingVendorizedGeneratedAssetsPath);
+        }
+
+        private static void ValidateAutomationSlotCount(int slotCount)
+        {
+            if (slotCount < 1 || slotCount > 8)
+                throw new ArgumentOutOfRangeException(nameof(slotCount), slotCount, "ASM-Lite slot count must be between 1 and 8.");
+        }
+
+        private CustomizationAutomationSnapshot CreateCustomizationAutomationSnapshot(
+            ASMLiteComponent component,
+            ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization)
+        {
+            var toolState = GetOrRefreshToolState(component);
+            var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            return new CustomizationAutomationSnapshot(
+                _selectedAvatar,
+                component,
+                customization,
+                toolState,
+                actionHierarchy);
         }
 
         internal void AddPrefabForAutomation()
