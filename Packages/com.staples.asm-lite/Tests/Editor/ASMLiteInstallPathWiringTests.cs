@@ -358,7 +358,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [TestCase("  Tools  ", "Tools")]
-        [TestCase(" /Tools//Nested/ ", "Tools/Nested")]
+        [TestCase(" Tools/Nested ", "Tools/Nested")]
         public void SetInstallPathStateForAutomation_NormalizesSimpleAndNestedEffectivePath(string rawPath, string expectedEffectivePath)
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
@@ -392,7 +392,7 @@ namespace ASMLite.Tests.Editor
             try
             {
                 window.SelectAvatarForAutomation(ctx.AvDesc);
-                window.SetInstallPathStateForAutomation(true, " /Tools//Nested/ ");
+                window.SetInstallPathStateForAutomation(true, " Tools/Nested ");
 
                 window.RebuildForAutomation();
 

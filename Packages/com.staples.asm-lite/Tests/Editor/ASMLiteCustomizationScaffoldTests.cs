@@ -696,10 +696,23 @@ namespace ASMLite.Tests.Editor
 
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
                 window.SetSlotCountForAutomation(8);
+                window.SetInstallPathStateForAutomation(true, " Tools/Nested ");
 
                 var pendingBeforeAdd = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.AreSame(_ctx.AvDesc, pendingBeforeAdd.SelectedAvatar,
+                    "The pending customization snapshot should identify the selected avatar before the prefab is attached.");
+                Assert.IsFalse(pendingBeforeAdd.HasAttachedComponent,
+                    "The pending customization snapshot should explicitly report that no ASMLiteComponent is attached yet.");
+                Assert.IsNull(pendingBeforeAdd.Component,
+                    "The pending customization snapshot should not expose a component reference before AddPrefab attaches one.");
                 Assert.AreEqual(8, pendingBeforeAdd.SlotCount,
                     "The pending customization snapshot should report the automation-selected slot count before the prefab is attached.");
+                Assert.IsTrue(pendingBeforeAdd.UseCustomInstallPath,
+                    "The pending customization snapshot should preserve custom install-path enablement before the prefab is attached.");
+                Assert.AreEqual("Tools/Nested", pendingBeforeAdd.CustomInstallPath,
+                    "The pending customization snapshot should expose the trimmed custom install path before the prefab is attached.");
+                Assert.AreEqual("Tools/Nested", pendingBeforeAdd.EffectiveInstallPath,
+                    "The pending customization snapshot should expose the normalized effective install path before the prefab is attached.");
 
                 window.AddPrefabForAutomation();
 
@@ -708,10 +721,26 @@ namespace ASMLite.Tests.Editor
                     "AddPrefab should attach an ASMLiteComponent before attached snapshot assertions run.");
                 Assert.AreEqual(8, component.slotCount,
                     "AddPrefab should copy the pending slot count into the newly attached component.");
+                Assert.IsTrue(component.useCustomInstallPath,
+                    "AddPrefab should copy pending custom install-path enablement into the newly attached component.");
+                Assert.AreEqual("Tools/Nested", component.customInstallPath,
+                    "AddPrefab should copy the normalized pending install path into the newly attached component.");
 
                 var attachedAfterAdd = window.GetAttachedCustomizationSnapshotForAutomation();
+                Assert.AreSame(_ctx.AvDesc, attachedAfterAdd.SelectedAvatar,
+                    "The attached customization snapshot should identify the selected avatar after AddPrefab.");
+                Assert.AreSame(component, attachedAfterAdd.Component,
+                    "The attached customization snapshot should expose the live ASMLiteComponent after AddPrefab.");
+                Assert.IsTrue(attachedAfterAdd.HasAttachedComponent,
+                    "The attached customization snapshot should explicitly report that an ASMLiteComponent is attached after AddPrefab.");
                 Assert.AreEqual(8, attachedAfterAdd.SlotCount,
                     "The attached customization snapshot should mirror the component slot count immediately after AddPrefab.");
+                Assert.IsTrue(attachedAfterAdd.UseCustomInstallPath,
+                    "The attached customization snapshot should mirror component install-path enablement immediately after AddPrefab.");
+                Assert.AreEqual("Tools/Nested", attachedAfterAdd.CustomInstallPath,
+                    "The attached customization snapshot should mirror the component's normalized custom install path immediately after AddPrefab.");
+                Assert.AreEqual("Tools/Nested", attachedAfterAdd.EffectiveInstallPath,
+                    "The attached customization snapshot should expose the normalized effective install path immediately after AddPrefab.");
             }
             finally
             {
