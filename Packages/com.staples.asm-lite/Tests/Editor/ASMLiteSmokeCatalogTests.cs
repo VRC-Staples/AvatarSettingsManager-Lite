@@ -228,6 +228,14 @@ namespace ASMLite.Tests.Editor
                 .steps.Single(step => step.stepId == "add-prefab-second");
             Assert.That(string.IsNullOrEmpty(secondAddStep.args?.fixtureMutation), Is.True);
 
+            ASMLiteSmokeStepArgs noComponentPrimaryArgs = addPrefabIdempotency.cases.Single(item => item.caseId == "no-component-add-prefab-primary")
+                .steps.Single(step => step.stepId == "assert-primary-action-no-component").args;
+            Assert.AreEqual("clean-add-baseline", noComponentPrimaryArgs.fixtureMutation);
+
+            ASMLiteSmokeStepArgs firstAddArgs = addPrefabIdempotency.cases.Single(item => item.caseId == "add-prefab-twice-idempotency")
+                .steps.Single(step => step.stepId == "add-prefab-first").args;
+            Assert.AreEqual("clean-add-baseline", firstAddArgs.fixtureMutation);
+
             ASMLiteSmokeStepDefinition finalAssertStep = addPrefabIdempotency.cases.Single(item => item.caseId == "add-prefab-twice-idempotency")
                 .steps.Single(step => step.stepId == "assert-primary-action-twice");
             Assert.That(string.IsNullOrEmpty(finalAssertStep.args?.fixtureMutation), Is.True);
@@ -271,7 +279,7 @@ namespace ASMLite.Tests.Editor
 
             ASMLiteSmokeStepArgs cleanAddArgs = recovery.cases.Single(item => item.caseId == "clean-add-generation-ready-scaffold")
                 .steps.Single(step => step.stepId == "add-prefab-clean-readiness").args;
-            Assert.AreEqual("remove-component", cleanAddArgs.fixtureMutation);
+            Assert.AreEqual("clean-add-baseline", cleanAddArgs.fixtureMutation);
 
             ASMLiteSmokeStepArgs rebuildArgs = recovery.cases.Single(item => item.caseId == "rebuild-action-available-after-add")
                 .steps.Single(step => step.stepId == "assert-primary-action-after-readiness-add").args;
@@ -305,6 +313,10 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeStepDefinition packageManagedStep = ownership.cases.Single(item => item.caseId == "generated-references-package-managed-by-default")
                 .steps.Single(step => step.stepId == "assert-generated-references-package-managed");
             Assert.AreEqual("assert-generated-references-package-managed", packageManagedStep.actionType);
+
+            ASMLiteSmokeStepArgs packageManagedAddArgs = ownership.cases.Single(item => item.caseId == "generated-references-package-managed-by-default")
+                .steps.Single(step => step.stepId == "add-prefab-for-package-managed-references").args;
+            Assert.AreEqual("clean-add-baseline", packageManagedAddArgs.fixtureMutation);
         }
 
         [Test]

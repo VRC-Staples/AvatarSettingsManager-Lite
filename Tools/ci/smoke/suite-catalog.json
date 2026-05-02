@@ -529,7 +529,7 @@
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
           "expectedOutcome": "Add Prefab is offered from a clean baseline, and repeating the add leaves the avatar stable with Rebuild as the next action.",
-          "debugHint": "Inspect remove-component fixture setup, add-prefab automation output, and final action hierarchy state.",
+          "debugHint": "Inspect clean-add-baseline fixture setup, add-prefab automation output, and final action hierarchy state.",
           "cases": [
             {
               "caseId": "no-component-add-prefab-primary",
@@ -565,12 +565,12 @@
                 {
                   "stepId": "assert-primary-action-no-component",
                   "label": "Primary action is shown",
-                  "description": "Assert Add Prefab is the primary action after remove-component.",
+                  "description": "Assert Add Prefab is the primary action after the clean add baseline mutation.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Add Prefab is the primary action.",
                   "debugHint": "Inspect action hierarchy and fixture mutation state.",
                   "args": {
-                    "fixtureMutation": "remove-component",
+                    "fixtureMutation": "clean-add-baseline",
                     "expectedPrimaryAction": "Add Prefab"
                   }
                 }
@@ -610,12 +610,12 @@
                 {
                   "stepId": "add-prefab-first",
                   "label": "First scaffold add completes",
-                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "description": "Apply the clean add baseline mutation and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "First add succeeds from a clean baseline.",
                   "debugHint": "Inspect first prefab add output and component attach state.",
                   "args": {
-                    "fixtureMutation": "remove-component"
+                    "fixtureMutation": "clean-add-baseline"
                   }
                 },
                 {
@@ -815,7 +815,7 @@
               "label": "Clean add creates generation-ready scaffold",
               "description": "Remove any existing ASM-Lite component, add the prefab scaffold, and confirm setup can reach a generation-ready state.",
               "expectedOutcome": "Add Prefab attaches the ASM-Lite scaffold from a clean avatar baseline.",
-              "debugHint": "Inspect remove-component fixture setup and add-prefab automation output.",
+              "debugHint": "Inspect clean-add-baseline fixture setup and add-prefab automation output.",
               "steps": [
                 {
                   "stepId": "open-scene",
@@ -844,12 +844,12 @@
                 {
                   "stepId": "add-prefab-clean-readiness",
                   "label": "Clean baseline scaffold is added",
-                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "description": "Apply the clean add baseline mutation and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached from a clean baseline.",
                   "debugHint": "Inspect component attach state after add-prefab.",
                   "args": {
-                    "fixtureMutation": "remove-component"
+                    "fixtureMutation": "clean-add-baseline"
                   }
                 }
               ]
@@ -888,12 +888,12 @@
                 {
                   "stepId": "add-prefab-for-readiness-rebuild",
                   "label": "Scaffold is added before rebuild check",
-                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "description": "Apply the clean add baseline mutation and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached before the rebuild assertion.",
                   "debugHint": "Inspect component attach state before asserting primary action.",
                   "args": {
-                    "fixtureMutation": "remove-component"
+                    "fixtureMutation": "clean-add-baseline"
                   }
                 },
                 {
@@ -1096,12 +1096,12 @@
                 {
                   "stepId": "add-prefab-for-package-managed-references",
                   "label": "Scaffold is added before package-managed check",
-                  "description": "Apply remove-component and add the ASM-Lite prefab scaffold.",
+                  "description": "Apply the clean add baseline mutation and add the ASM-Lite prefab scaffold.",
                   "actionType": "add-prefab",
                   "expectedOutcome": "Prefab scaffold is attached before generated reference assertion.",
                   "debugHint": "Inspect component attach state before asserting generated references.",
                   "args": {
-                    "fixtureMutation": "remove-component"
+                    "fixtureMutation": "clean-add-baseline"
                   }
                 },
                 {

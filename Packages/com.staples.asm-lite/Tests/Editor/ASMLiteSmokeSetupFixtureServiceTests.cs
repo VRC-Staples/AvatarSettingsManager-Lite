@@ -122,6 +122,48 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void UnselectedInactiveAvatarMutation_PrefersActiveMatchWhenInactiveDuplicateExists()
+        {
+            GameObject activeDuplicate = null;
+            _ctx.AvatarGo.SetActive(false);
+            Selection.activeObject = null;
+            var args = new ASMLiteSmokeStepArgs
+            {
+                avatarName = "FixtureAvatar",
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar,
+            };
+
+            try
+            {
+                activeDuplicate = new GameObject("FixtureAvatar");
+                activeDuplicate.AddComponent<VRCAvatarDescriptor>();
+
+                bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+
+                Assert.That(applied, Is.True, detail);
+                Assert.That(_ctx.AvatarGo.activeSelf, Is.False,
+                    "The earlier inactive duplicate should stay inactive.");
+                Assert.That(activeDuplicate.activeSelf, Is.False,
+                    "The unselected inactive mutation must deactivate the active scene avatar match, not stop at an earlier inactive duplicate.");
+                Assert.That(Selection.activeObject, Is.Null);
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "FixtureAvatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string resolveDetail);
+
+                Assert.That(resolved, Is.False, resolveDetail);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_NOT_FOUND", resolveDetail);
+            }
+            finally
+            {
+                if (activeDuplicate != null)
+                    UnityEngine.Object.DestroyImmediate(activeDuplicate);
+            }
+        }
+
+        [Test]
         public void SameNameNonAvatarMutation_CreatesNonAvatarWithoutSelectingIt()
         {
             var args = new ASMLiteSmokeStepArgs
@@ -261,6 +303,54 @@ namespace ASMLite.Tests.Editor
 
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
             Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.False);
+        }
+
+        [Test]
+        public void CleanAddBaselineMutation_RemovesComponentAndDetachedRuntimeMarkers()
+        {
+            var existingParameters = _ctx.ParamsAsset.parameters ?? new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter[0];
+            _ctx.ParamsAsset.parameters = existingParameters
+                .Concat(new[]
+                {
+                    new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter
+                    {
+                        name = ASMLite.Editor.ASMLiteBuilder.CtrlParam,
+                        valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = false,
+                        networkSynced = false,
+                    },
+                })
+                .ToArray();
+            EditorUtility.SetDirty(_ctx.ParamsAsset);
+
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached,
+                ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                "Setup must model the real smoke failure shape: component-missing recovery markers should classify as Detached before the clean baseline mutation runs.");
+
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.AreEqual(
+                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                "Clean add baseline must remove detached ASM-Lite runtime markers so Add Prefab becomes the real primary action.");
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null,
+                "Reset must restore the original detached shape when the mutation started from a component-missing baseline.");
+            Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == ASMLite.Editor.ASMLiteBuilder.CtrlParam), Is.True,
+                "Reset must restore the original detached marker evidence after the clean baseline mutation is cleaned up.");
+            Assert.That(_service.HasCleanResetProof, Is.True);
         }
 
         [Test]

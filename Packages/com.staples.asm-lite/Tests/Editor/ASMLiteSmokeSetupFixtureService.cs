@@ -27,6 +27,7 @@ namespace ASMLite.Tests.Editor
         internal const string MissingAvatarByOverrideName = "missing-avatar-by-override-name";
         internal const string SameNameNonAvatar = "same-name-non-avatar";
         internal const string RemoveComponent = "remove-component";
+        internal const string CleanAddBaseline = "clean-add-baseline";
         internal const string ExistingComponentBaseline = "existing-component-baseline";
         internal const string StaleGeneratedFolder = "stale-generated-folder";
         internal const string MissingGeneratedFolder = "missing-generated-folder";
@@ -106,6 +107,8 @@ namespace ASMLite.Tests.Editor
                         return ApplySameNameNonAvatar(objectName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent:
                         return ApplyRemoveComponent(avatarName, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline:
+                        return ApplyCleanAddBaseline(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.ExistingComponentBaseline:
                         return ApplyExistingComponentBaseline(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder:
@@ -420,6 +423,105 @@ namespace ASMLite.Tests.Editor
             return true;
         }
 
+        private bool ApplyCleanAddBaseline(string avatarName, out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            if (avatar == null)
+            {
+                detail = $"SETUP_AVATAR_NOT_FOUND: avatar named '{avatarName}' was not found.";
+                return false;
+            }
+
+            UnityEngine.Object previousSelection = Selection.activeObject;
+            ASMLiteComponent existing = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+            bool hadComponent = existing != null;
+            Transform parent = existing != null && existing.transform.parent != null ? existing.transform.parent : avatar.transform;
+            int siblingIndex = existing != null ? existing.transform.GetSiblingIndex() : -1;
+            GameObject componentSnapshot = existing != null ? UnityEngine.Object.Instantiate(existing.gameObject) : null;
+            if (componentSnapshot != null)
+            {
+                componentSnapshot.hideFlags = HideFlags.HideAndDontSave;
+                componentSnapshot.SetActive(false);
+            }
+
+            string avatarJson = EditorJsonUtility.ToJson(avatar);
+            VRCExpressionParameters expressionParameters = avatar.expressionParameters;
+            string expressionParametersJson = expressionParameters != null ? EditorJsonUtility.ToJson(expressionParameters) : string.Empty;
+            VRCExpressionsMenu expressionsMenu = avatar.expressionsMenu;
+            string expressionsMenuJson = expressionsMenu != null ? EditorJsonUtility.ToJson(expressionsMenu) : string.Empty;
+            UnityEngine.Object fxController = null;
+            string fxControllerJson = string.Empty;
+            if (avatar.baseAnimationLayers != null)
+            {
+                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
+                {
+                    if (avatar.baseAnimationLayers[i].type != VRCAvatarDescriptor.AnimLayerType.FX)
+                        continue;
+
+                    fxController = avatar.baseAnimationLayers[i].animatorController;
+                    if (fxController != null)
+                        fxControllerJson = EditorJsonUtility.ToJson(fxController);
+                    break;
+                }
+            }
+
+            if (existing == null)
+            {
+                var temporaryComponentObject = new GameObject("ASMLite");
+                temporaryComponentObject.transform.SetParent(avatar.transform, false);
+                existing = temporaryComponentObject.AddComponent<ASMLiteComponent>();
+            }
+
+            UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            ASMLite.Editor.ASMLiteBuilder.CleanupReport cleanupReport = ASMLite.Editor.ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            _cleanupLedger.Push(new CleanupEntry("restore clean add baseline", () =>
+            {
+                Selection.activeObject = previousSelection;
+
+                if (avatar != null)
+                    EditorJsonUtility.FromJsonOverwrite(avatarJson, avatar);
+                if (expressionParameters != null)
+                    EditorJsonUtility.FromJsonOverwrite(expressionParametersJson, expressionParameters);
+                if (expressionsMenu != null)
+                    EditorJsonUtility.FromJsonOverwrite(expressionsMenuJson, expressionsMenu);
+                if (fxController != null && !string.IsNullOrEmpty(fxControllerJson))
+                    EditorJsonUtility.FromJsonOverwrite(fxControllerJson, fxController);
+
+                if (avatar != null)
+                {
+                    ASMLiteComponent restoredComponent = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
+                    if (hadComponent)
+                    {
+                        if (restoredComponent == null && componentSnapshot != null)
+                        {
+                            GameObject restoredObject = UnityEngine.Object.Instantiate(componentSnapshot);
+                            restoredObject.hideFlags = HideFlags.None;
+                            restoredObject.name = componentSnapshot.name;
+                            restoredObject.transform.SetParent(parent != null ? parent : avatar.transform, false);
+                            if (siblingIndex >= 0)
+                                restoredObject.transform.SetSiblingIndex(siblingIndex);
+                        }
+                    }
+                    else if (restoredComponent != null)
+                    {
+                        DestroyObject(restoredComponent.gameObject);
+                    }
+                }
+
+                if (componentSnapshot != null)
+                    DestroyObject(componentSnapshot);
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }));
+
+            detail = $"Clean add baseline prepared for avatar '{avatarName}'. cleanupFxLayers={cleanupReport.FxLayersRemoved}, cleanupFxParams={cleanupReport.FxParamsRemoved}, cleanupExprParams={cleanupReport.ExprParamsRemoved}, cleanupMenuControls={cleanupReport.MenuControlsRemoved}.";
+            return true;
+        }
+
         private bool ApplyExistingComponentBaseline(string avatarName, out string detail)
         {
             VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
@@ -707,14 +809,19 @@ namespace ASMLite.Tests.Editor
             if (string.IsNullOrEmpty(normalized))
                 return null;
 
-            return Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()
-                .FirstOrDefault(item => item != null
+            var matches = Resources.FindObjectsOfTypeAll<VRCAvatarDescriptor>()
+                .Where(item => item != null
                     && item.gameObject != null
                     && !EditorUtility.IsPersistent(item.gameObject)
                     && item.gameObject.scene.IsValid()
                     && item.gameObject.scene.isLoaded
-                    && (includeInactive || item.gameObject.activeInHierarchy)
                     && string.Equals(item.gameObject.name, normalized, StringComparison.Ordinal));
+
+            VRCAvatarDescriptor activeMatch = matches.FirstOrDefault(item => item.gameObject.activeInHierarchy);
+            if (activeMatch != null)
+                return activeMatch;
+
+            return includeInactive ? matches.FirstOrDefault() : null;
         }
 
         private static string ResolveAvatarName(ASMLiteSmokeStepArgs args, string defaultAvatarName)
