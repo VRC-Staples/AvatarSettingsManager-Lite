@@ -370,6 +370,11 @@ fn is_supported_action_type(action_type: &str) -> bool {
         | "enter-playmode"
         | "exit-playmode"
         | "assert-primary-action"
+        | "assert-no-component"
+        | "set-slot-count"
+        | "set-install-path-state"
+        | "assert-pending-customization-snapshot"
+        | "assert-attached-customization-snapshot"
         | "assert-generated-references-package-managed"
         | "assert-runtime-component-valid"
         | "assert-host-ready")
@@ -559,6 +564,72 @@ mod tests {
 
         let error = load_catalog_from_str(&raw).expect_err("duplicate suite id should fail");
         assert!(error.to_string().contains("suiteId"));
+    }
+
+    #[test]
+    fn catalog_accepts_phase1_action_tokens() {
+        for action_type in [
+            "assert-no-component",
+            "set-slot-count",
+            "set-install-path-state",
+            "assert-pending-customization-snapshot",
+            "assert-attached-customization-snapshot",
+        ] {
+            let raw = format!(
+                r#"{{
+  "catalogVersion": 1,
+  "protocolVersion": "1.0.0",
+  "fixture": {{ "scenePath": "Assets/Click ME.unity", "avatarName": "Oct25_Dress" }},
+  "groups": [
+    {{
+      "groupId": "phase1",
+      "label": "Phase 1",
+      "description": "desc",
+      "suites": [
+        {{
+          "suiteId": "phase1-suite",
+          "label": "Phase 1 suite",
+          "description": "desc",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": true,
+          "presetGroups": ["quick-default"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "ok",
+          "debugHint": "hint",
+          "cases": [
+            {{
+              "caseId": "phase1-case",
+              "label": "Case",
+              "description": "desc",
+              "expectedOutcome": "ok",
+              "debugHint": "hint",
+              "steps": [
+                {{
+                  "stepId": "phase1-step",
+                  "label": "Step",
+                  "description": "desc",
+                  "actionType": "{}",
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                }}
+              ]
+            }}
+          ]
+        }}
+      ]
+    }}
+  ]
+}}"#,
+                action_type
+            );
+
+            load_catalog_from_str(&raw).unwrap_or_else(|error| {
+                panic!("phase1 action token {action_type} should parse: {error}")
+            });
+        }
     }
 
     #[test]
