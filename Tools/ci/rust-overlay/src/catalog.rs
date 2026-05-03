@@ -143,6 +143,8 @@ pub struct SmokeStepArgs {
     pub parameter_backup_preset_ids: Option<Vec<String>>,
     #[serde(default, alias = "excludedParameterNames")]
     pub normalized_excluded_parameter_names: Option<Vec<String>>,
+    #[serde(default, alias = "useParameterExclusions")]
+    pub use_parameter_exclusions: Option<bool>,
     #[serde(default)]
     pub expected_component_present: bool,
     #[serde(default)]
@@ -826,6 +828,7 @@ fn validate_parameter_backup_args(
         .map(|ids| !ids.is_empty())
         .unwrap_or(false);
     let has_exclusion_list = args.normalized_excluded_parameter_names.is_some();
+    let explicitly_disables_exclusions = args.use_parameter_exclusions == Some(false);
 
     if require_preset_selector && !has_preset_id && !has_preset_ids {
         return Err(ContractError(format!(
@@ -833,9 +836,14 @@ fn validate_parameter_backup_args(
         )));
     }
 
-    if !require_preset_selector && !has_preset_id && !has_preset_ids && !has_exclusion_list {
+    if !require_preset_selector
+        && !explicitly_disables_exclusions
+        && !has_preset_id
+        && !has_preset_ids
+        && !has_exclusion_list
+    {
         return Err(ContractError(format!(
-            "{path} must include a parameter backup preset selector or normalizedExcludedParameterNames for actionType '{action_type}'."
+            "{path} must include useParameterExclusions=false, a parameter backup preset selector, or normalizedExcludedParameterNames for actionType '{action_type}'."
         )));
     }
 
@@ -1312,6 +1320,15 @@ mod tests {
                   },
                   "expectedOutcome": "ok",
                   "debugHint": "hint"
+                },
+                {
+                  "stepId": "disable-state",
+                  "label": "Disable state",
+                  "description": "desc",
+                  "actionType": "set-parameter-backup-state",
+                  "args": { "useParameterExclusions": false },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
                 }
               ]
             }
@@ -1366,6 +1383,9 @@ mod tests {
                 .expect("excludedParameterNames alias should deserialize"),
             &Vec::<String>::new()
         );
+
+        let disabled = &suite.cases[0].steps[3].args;
+        assert_eq!(disabled.use_parameter_exclusions, Some(false));
     }
 
     #[test]
