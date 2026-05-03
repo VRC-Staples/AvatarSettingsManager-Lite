@@ -72,6 +72,7 @@ namespace ASMLite.Tests.Editor
                     "setup-prebuild-names-matrix",
                     "setup-prebuild-icons-matrix",
                     "setup-prebuild-backup-matrix",
+                    "setup-prebuild-combo-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -543,6 +544,31 @@ namespace ASMLite.Tests.Editor
             AssertPhase1BackupCase(backup.cases[1], expectedEnabled: true, expectedPresetId: "none-excluded", expectedExcludedNames: Array.Empty<string>());
             AssertPhase1BackupCase(backup.cases[2], expectedEnabled: true, expectedPresetId: "single-arms", expectedExcludedNames: new[] { "AvatarLimbScaling_Arms" });
             AssertPhase1BackupCase(backup.cases[3], expectedEnabled: true, expectedPresetId: "nested-media", expectedExcludedNames: new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
+
+            ASMLiteSmokeSuiteDefinition combo = suites["setup-prebuild-combo-matrix"];
+            Assert.AreEqual("exhaustive", combo.speed);
+            Assert.AreEqual("safe", combo.risk);
+            CollectionAssert.Contains(combo.presetGroups, "all-setup");
+            Assert.That(combo.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "C01-combo-max-slots-full-naming",
+                "C02-combo-max-slots-full-slot-icons",
+                "C03-combo-nested-path-full-naming-one-exclusion",
+                "C04-combo-same-color-root-icon-root-name-one-exclusion",
+                "C05-combo-sparse-icons-simple-path-one-preset-rename",
+                "C06-combo-kitchen-sink-medium-density",
+            }));
+            Assert.That(combo.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            Assert.AreEqual(8, combo.cases[0].steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
+            Assert.AreEqual(8, combo.cases[1].steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
+            foreach (ASMLiteSmokeCaseDefinition item in combo.cases)
+            {
+                Assert.That(item.steps.Any(step => step.actionType == "assert-pending-customization-snapshot"), Is.True, item.caseId);
+                Assert.That(item.steps.Any(step => step.actionType == "add-prefab"), Is.True, item.caseId);
+                Assert.That(item.steps.Any(step => step.actionType == "assert-attached-customization-snapshot"), Is.True, item.caseId);
+                Assert.That(item.steps.Last().actionType, Is.EqualTo("assert-primary-action"), item.caseId);
+            }
         }
 
         [Test]

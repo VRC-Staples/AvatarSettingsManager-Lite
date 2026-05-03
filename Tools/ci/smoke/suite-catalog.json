@@ -5566,6 +5566,1379 @@
           ]
         },
         {
+          "suiteId": "setup-prebuild-combo-matrix",
+          "label": "Setup Prebuild Combo Matrix",
+          "description": "Verify representative combinations of slot, path, naming, icon, and parameter backup customization before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All combo rows preserve normalized pending and attached customization snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect the row combo fields and field-specific snapshot mismatch detail.",
+          "cases": [
+            {
+              "caseId": "C01-combo-max-slots-full-naming",
+              "label": "C01 combo max slots full naming",
+              "description": "Combine maximum slot count with full custom root, preset, and action-label naming.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-set-slot-count",
+                  "label": "Set slot count 8",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 8
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-set-root-name-state",
+                  "label": "Set root name state",
+                  "description": "Apply the row custom root naming state through automation.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools"
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply the row preset name mask through automation.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit",
+                      "Beach Fit",
+                      "Cozy Fit",
+                      "Stealth Fit",
+                      "Party Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-set-action-label-mask",
+                  "label": "Set action labels",
+                  "description": "Apply the row action labels through automation.",
+                  "actionType": "set-action-label-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit",
+                      "Beach Fit",
+                      "Cozy Fit",
+                      "Stealth Fit",
+                      "Party Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply"
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit",
+                      "Beach Fit",
+                      "Cozy Fit",
+                      "Stealth Fit",
+                      "Party Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply"
+                  }
+                },
+                {
+                  "stepId": "C01-combo-max-slots-full-naming-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "C02-combo-max-slots-full-slot-icons",
+              "label": "C02 combo max slots full slot icons",
+              "description": "Combine maximum slot count with a full eight-slot custom icon mask.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-set-slot-count",
+                  "label": "Set slot count 8",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 8
+                  }
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icon customization for this row.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-set-slot-icon-mask",
+                  "label": "Set slot icon mask",
+                  "description": "Apply the row slot icon mask through automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04",
+                      "asm-lite-icon/slot-05",
+                      "asm-lite-icon/slot-06",
+                      "asm-lite-icon/slot-07",
+                      "asm-lite-icon/slot-08"
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useCustomSlotIcons": true,
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04",
+                      "asm-lite-icon/slot-05",
+                      "asm-lite-icon/slot-06",
+                      "asm-lite-icon/slot-07",
+                      "asm-lite-icon/slot-08"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 8,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useCustomSlotIcons": true,
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04",
+                      "asm-lite-icon/slot-05",
+                      "asm-lite-icon/slot-06",
+                      "asm-lite-icon/slot-07",
+                      "asm-lite-icon/slot-08"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C02-combo-max-slots-full-slot-icons-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "C03-combo-nested-path-full-naming-one-exclusion",
+              "label": "C03 combo nested path full naming one exclusion",
+              "description": "Combine nested install path, full naming, and one stable parameter backup exclusion.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-install-path-state",
+                  "label": "Set install path nested",
+                  "description": "Apply the row install path state through automation.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "installPathPresetId": "nested"
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-root-name-state",
+                  "label": "Set root name state",
+                  "description": "Apply the row custom root naming state through automation.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools"
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply the row preset name mask through automation.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-action-label-mask",
+                  "label": "Set action labels",
+                  "description": "Apply the row action labels through automation.",
+                  "actionType": "set-action-label-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C03-combo-nested-path-full-naming-one-exclusion-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "C04-combo-same-color-root-icon-root-name-one-exclusion",
+              "label": "C04 combo same color root icon root name one exclusion",
+              "description": "Combine same-color gear selection, a custom root icon, a custom root name, and one backup exclusion.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-icon-mode",
+                  "label": "Set icon mode",
+                  "description": "Apply the row icon mode through automation.",
+                  "actionType": "set-icon-mode",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "iconMode": "sameColor"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-gear-color",
+                  "label": "Set gear color",
+                  "description": "Apply the row gear color through automation.",
+                  "actionType": "set-gear-color",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "gearColor": "blue"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icon customization for this row.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-root-icon-fixture",
+                  "label": "Set root icon",
+                  "description": "Apply the row root icon fixture through automation.",
+                  "actionType": "set-root-icon-fixture",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "rootIconFixtureId": "asm-lite-icon/root"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-root-name-state",
+                  "label": "Set root name state",
+                  "description": "Apply the row custom root naming state through automation.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "blue",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "blue",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C04-combo-same-color-root-icon-root-name-one-exclusion-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "C05-combo-sparse-icons-simple-path-one-preset-rename",
+              "label": "C05 combo sparse icons simple path one preset rename",
+              "description": "Combine simple install path, sparse slot icons, and a single preset rename.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-set-install-path-state",
+                  "label": "Set install path simple",
+                  "description": "Apply the row install path state through automation.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "installPathPresetId": "simple"
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icon customization for this row.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-set-slot-icon-mask",
+                  "label": "Set slot icon mask",
+                  "description": "Apply the row slot icon mask through automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      ""
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply the row preset name mask through automation.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "simple",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "ASM-Lite",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useCustomSlotIcons": true,
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      ""
+                    ],
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "simple",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "ASM-Lite",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useCustomSlotIcons": true,
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      ""
+                    ],
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C05-combo-sparse-icons-simple-path-one-preset-rename-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "C06-combo-kitchen-sink-medium-density",
+              "label": "C06 combo kitchen sink medium density",
+              "description": "Combine medium slot density across path, naming, icon, action-icon, and backup customization axes.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected combo customization and finish with Rebuild available.",
+              "debugHint": "Inspect the field-specific snapshot mismatch and row setup action output.",
+              "steps": [
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-slot-count",
+                  "label": "Set slot count 6",
+                  "description": "Apply the row slot count through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotCount": 6
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-install-path-state",
+                  "label": "Set install path nested",
+                  "description": "Apply the row install path state through automation.",
+                  "actionType": "set-install-path-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "installPathPresetId": "nested"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-root-name-state",
+                  "label": "Set root name state",
+                  "description": "Apply the row custom root naming state through automation.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply the row preset name mask through automation.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-action-label-mask",
+                  "label": "Set action labels",
+                  "description": "Apply the row action labels through automation.",
+                  "actionType": "set-action-label-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-icon-mode",
+                  "label": "Set icon mode",
+                  "description": "Apply the row icon mode through automation.",
+                  "actionType": "set-icon-mode",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "iconMode": "sameColor"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-gear-color",
+                  "label": "Set gear color",
+                  "description": "Apply the row gear color through automation.",
+                  "actionType": "set-gear-color",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "gearColor": "yellow"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icon customization for this row.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-root-icon-fixture",
+                  "label": "Set root icon",
+                  "description": "Apply the row root icon fixture through automation.",
+                  "actionType": "set-root-icon-fixture",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "rootIconFixtureId": "asm-lite-icon/root"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-slot-icon-mask",
+                  "label": "Set slot icon mask",
+                  "description": "Apply the row slot icon mask through automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      "",
+                      "asm-lite-icon/slot-05",
+                      ""
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-action-icon-mask",
+                  "label": "Set action icon mask",
+                  "description": "Apply the row action icon mask through automation.",
+                  "actionType": "set-action-icon-mask",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "parameterBackupPresetId": "nested-media"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Row customization state is staged.",
+                  "debugHint": "If this fails, inspect the row action arguments and automation state.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "nested-media"
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending combo customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 6,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 7,
+                    "gearColor": "yellow",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      "",
+                      "asm-lite-icon/slot-05",
+                      ""
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "VRCOSC/Media/Play",
+                      "VRCOSC/Media/Volume"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component combo customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached combo customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 6,
+                    "installPathPresetId": "nested",
+                    "expectedInstallPathEnabled": true,
+                    "expectedNormalizedEffectivePath": "Avatars/ASM-Lite",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 7,
+                    "gearColor": "yellow",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "asm-lite-icon/slot-03",
+                      "",
+                      "asm-lite-icon/slot-05",
+                      ""
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "VRCOSC/Media/Play",
+                      "VRCOSC/Media/Volume"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "C06-combo-kitchen-sink-medium-density-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",
