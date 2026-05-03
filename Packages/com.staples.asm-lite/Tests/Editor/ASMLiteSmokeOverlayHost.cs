@@ -153,6 +153,16 @@ namespace ASMLite.Tests.Editor
         internal string NormalizedEffectivePath;
         internal bool ComponentPresent;
         internal string PrimaryAction;
+        internal string IconMode;
+        internal int SelectedGearIndex;
+        internal string GearColor;
+        internal bool UseCustomSlotIcons;
+        internal string RootIconFixtureId;
+        internal string[] SlotIconFixtureIdsBySlot;
+        internal string ActionIconMode;
+        internal string SaveIconFixtureId;
+        internal string LoadIconFixtureId;
+        internal string ClearIconFixtureId;
         internal bool CustomRootNameEnabled;
         internal string CustomRootName;
         internal string[] CustomPresetNames;
@@ -171,6 +181,16 @@ namespace ASMLite.Tests.Editor
                 NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(args.expectedNormalizedEffectivePath),
                 ComponentPresent = args.expectedComponentPresent,
                 PrimaryAction = string.IsNullOrWhiteSpace(args.expectedPrimaryAction) ? string.Empty : args.expectedPrimaryAction.Trim(),
+                IconMode = NormalizeIconMode(args.iconMode),
+                SelectedGearIndex = ResolveExpectedGearIndex(args),
+                GearColor = ResolveExpectedGearColor(args),
+                UseCustomSlotIcons = args.useCustomSlotIcons,
+                RootIconFixtureId = NormalizeOptionalString(args.rootIconFixtureId),
+                SlotIconFixtureIdsBySlot = NormalizeIconFixtureIdsBySlot(GetSlotIconFixtureIdsBySlot(args), args.slotCount),
+                ActionIconMode = NormalizeActionIconMode(args.actionIconMode, HasAnyActionIconFixture(args)),
+                SaveIconFixtureId = NormalizeOptionalString(args.saveIconFixtureId),
+                LoadIconFixtureId = NormalizeOptionalString(args.loadIconFixtureId),
+                ClearIconFixtureId = NormalizeOptionalString(args.clearIconFixtureId),
                 CustomRootNameEnabled = args.customRootNameEnabled,
                 CustomRootName = NormalizeOptionalString(args.customRootName),
                 CustomPresetNames = NormalizePresetNamesBySlot(args.customPresetNames, args.slotCount),
@@ -193,6 +213,20 @@ namespace ASMLite.Tests.Editor
                     : string.Empty,
                 ComponentPresent = componentPresent,
                 PrimaryAction = componentPresent ? "Rebuild" : "Add Prefab",
+                IconMode = componentPresent ? NormalizeIconMode(component.iconMode.ToString()) : NormalizeIconMode(string.Empty),
+                SelectedGearIndex = componentPresent ? component.selectedGearIndex : 0,
+                GearColor = componentPresent ? ResolveGearColorForMode(component.iconMode.ToString(), component.selectedGearIndex) : string.Empty,
+                UseCustomSlotIcons = componentPresent && component.useCustomSlotIcons,
+                RootIconFixtureId = componentPresent && component.useCustomSlotIcons && component.useCustomRootIcon
+                    ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customRootIcon)
+                    : string.Empty,
+                SlotIconFixtureIdsBySlot = NormalizeIconFixtureIdsBySlot(
+                    componentPresent && component.useCustomSlotIcons ? ASMLiteIconFixtureRegistry.GetFixtureIdsOrEmpty(component.customIcons) : null,
+                    componentPresent ? component.slotCount : 0),
+                ActionIconMode = componentPresent && component.useCustomSlotIcons ? NormalizeActionIconMode(component.actionIconMode.ToString(), hasActionIconFixture: false) : NormalizeActionIconMode(string.Empty, hasActionIconFixture: false),
+                SaveIconFixtureId = componentPresent && component.useCustomSlotIcons && component.actionIconMode == global::ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customSaveIcon) : string.Empty,
+                LoadIconFixtureId = componentPresent && component.useCustomSlotIcons && component.actionIconMode == global::ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customLoadIcon) : string.Empty,
+                ClearIconFixtureId = componentPresent && component.useCustomSlotIcons && component.actionIconMode == global::ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customClearIcon) : string.Empty,
                 CustomRootNameEnabled = componentPresent && component.useCustomRootName,
                 CustomRootName = componentPresent ? NormalizeOptionalString(component.customRootName) : string.Empty,
                 CustomPresetNames = NormalizePresetNamesBySlot(componentPresent ? component.customPresetNames : null, componentPresent ? component.slotCount : 0),
@@ -213,6 +247,16 @@ namespace ASMLite.Tests.Editor
                 NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(snapshot.NormalizedEffectivePath),
                 ComponentPresent = snapshot.HasAttachedComponent,
                 PrimaryAction = FormatPrimaryAction(snapshot.PrimaryAction),
+                IconMode = NormalizeIconMode(snapshot.IconMode),
+                SelectedGearIndex = snapshot.SelectedGearIndex,
+                GearColor = ResolveGearColorForMode(snapshot.IconMode, snapshot.SelectedGearIndex),
+                UseCustomSlotIcons = snapshot.UseCustomSlotIcons,
+                RootIconFixtureId = NormalizeOptionalString(snapshot.CustomRootIconFixtureId),
+                SlotIconFixtureIdsBySlot = NormalizeIconFixtureIdsBySlot(snapshot.CustomSlotIconFixtureIds, snapshot.SlotCount),
+                ActionIconMode = NormalizeActionIconMode(snapshot.ActionIconMode, HasAny(snapshot.CustomSaveIconFixtureId, snapshot.CustomLoadIconFixtureId, snapshot.CustomClearIconFixtureId)),
+                SaveIconFixtureId = NormalizeOptionalString(snapshot.CustomSaveIconFixtureId),
+                LoadIconFixtureId = NormalizeOptionalString(snapshot.CustomLoadIconFixtureId),
+                ClearIconFixtureId = NormalizeOptionalString(snapshot.CustomClearIconFixtureId),
                 CustomRootNameEnabled = snapshot.UseCustomRootName,
                 CustomRootName = NormalizeOptionalString(snapshot.CustomRootName),
                 CustomPresetNames = NormalizePresetNamesBySlot(snapshot.PresetNamesBySlot, snapshot.SlotCount),
@@ -253,6 +297,16 @@ namespace ASMLite.Tests.Editor
             AddMismatch(mismatches, "normalizedEffectivePath", expected.NormalizedEffectivePath, actual.NormalizedEffectivePath);
             AddMismatch(mismatches, "componentPresent", expected.ComponentPresent, actual.ComponentPresent);
             AddMismatch(mismatches, "primaryAction", expected.PrimaryAction, actual.PrimaryAction);
+            AddMismatch(mismatches, "iconMode", expected.IconMode, actual.IconMode);
+            AddMismatch(mismatches, "selectedGearIndex", expected.SelectedGearIndex, actual.SelectedGearIndex);
+            AddMismatch(mismatches, "gearColor", expected.GearColor, actual.GearColor);
+            AddMismatch(mismatches, "useCustomSlotIcons", expected.UseCustomSlotIcons, actual.UseCustomSlotIcons);
+            AddMismatch(mismatches, "rootIconFixtureId", expected.RootIconFixtureId, actual.RootIconFixtureId);
+            AddArrayMismatch(mismatches, "slotIconFixtureIdsBySlot", expected.SlotIconFixtureIdsBySlot, actual.SlotIconFixtureIdsBySlot);
+            AddMismatch(mismatches, "actionIconMode", expected.ActionIconMode, actual.ActionIconMode);
+            AddMismatch(mismatches, "saveIconFixtureId", expected.SaveIconFixtureId, actual.SaveIconFixtureId);
+            AddMismatch(mismatches, "loadIconFixtureId", expected.LoadIconFixtureId, actual.LoadIconFixtureId);
+            AddMismatch(mismatches, "clearIconFixtureId", expected.ClearIconFixtureId, actual.ClearIconFixtureId);
             AddMismatch(mismatches, "customRootNameEnabled", expected.CustomRootNameEnabled, actual.CustomRootNameEnabled);
             AddMismatch(mismatches, "customRootName", expected.CustomRootName, actual.CustomRootName);
             AddArrayMismatch(mismatches, "customPresetNames", expected.CustomPresetNames, actual.CustomPresetNames);
@@ -303,6 +357,128 @@ namespace ASMLite.Tests.Editor
             for (int index = 0; index < copyCount; index++)
                 normalized[index] = NormalizeOptionalString(values[index]);
             return normalized;
+        }
+
+        private static string[] GetSlotIconFixtureIdsBySlot(ASMLiteSmokeStepArgs args)
+        {
+            if (args == null)
+                return Array.Empty<string>();
+
+            return args.slotIconFixtureIdsBySlot != null && args.slotIconFixtureIdsBySlot.Length > 0
+                ? args.slotIconFixtureIdsBySlot
+                : args.slotIconFixtureIds ?? Array.Empty<string>();
+        }
+
+        private static string[] NormalizeIconFixtureIdsBySlot(string[] values, int slotCount)
+        {
+            int normalizedSlotCount = Math.Max(0, slotCount);
+            var normalized = new string[normalizedSlotCount];
+            for (int index = 0; index < normalizedSlotCount; index++)
+                normalized[index] = string.Empty;
+
+            if (values == null)
+                return normalized;
+
+            int copyCount = Math.Min(values.Length, normalizedSlotCount);
+            for (int index = 0; index < copyCount; index++)
+                normalized[index] = NormalizeOptionalString(values[index]);
+            return normalized;
+        }
+
+        private static bool HasAny(params string[] values)
+        {
+            return values != null && values.Any(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        private static bool HasAnyActionIconFixture(ASMLiteSmokeStepArgs args)
+        {
+            return args != null
+                && HasAny(args.saveIconFixtureId, args.loadIconFixtureId, args.clearIconFixtureId);
+        }
+
+        private static string NormalizeIconMode(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "multiColor";
+
+            string normalized = value.Trim().Replace("-", string.Empty).Replace("_", string.Empty);
+            if (string.Equals(normalized, "multicolor", StringComparison.OrdinalIgnoreCase))
+                return "multiColor";
+            if (string.Equals(normalized, "samecolor", StringComparison.OrdinalIgnoreCase))
+                return "sameColor";
+
+            return value.Trim();
+        }
+
+        private static string NormalizeActionIconMode(string value, bool hasActionIconFixture)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return hasActionIconFixture ? "custom" : "default";
+
+            string normalized = value.Trim().Replace("-", string.Empty).Replace("_", string.Empty);
+            if (string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase))
+                return "default";
+            if (string.Equals(normalized, "custom", StringComparison.OrdinalIgnoreCase))
+                return "custom";
+
+            return value.Trim();
+        }
+
+        private static int ResolveExpectedGearIndex(ASMLiteSmokeStepArgs args)
+        {
+            if (args != null && args.selectedGearIndex >= 0)
+                return args.selectedGearIndex;
+
+            if (args != null && !string.IsNullOrWhiteSpace(args.gearColor))
+                return ResolveGearColorIndex(args.gearColor);
+
+            return 0;
+        }
+
+        private static string ResolveExpectedGearColor(ASMLiteSmokeStepArgs args)
+        {
+            return string.Equals(NormalizeIconMode(args?.iconMode), "sameColor", StringComparison.Ordinal)
+                ? ResolveGearColorName(ResolveExpectedGearIndex(args)).ToLowerInvariant()
+                : string.Empty;
+        }
+
+        private static string ResolveGearColorForMode(string iconMode, int selectedGearIndex)
+        {
+            return string.Equals(NormalizeIconMode(iconMode), "sameColor", StringComparison.Ordinal)
+                ? ResolveGearColorName(selectedGearIndex).ToLowerInvariant()
+                : string.Empty;
+        }
+
+        private static int ResolveGearColorIndex(string value)
+        {
+            switch (NormalizeOptionalString(value).ToLowerInvariant())
+            {
+                case "blue": return 0;
+                case "red": return 1;
+                case "green": return 2;
+                case "purple": return 3;
+                case "cyan": return 4;
+                case "orange": return 5;
+                case "pink": return 6;
+                case "yellow": return 7;
+                default: return 0;
+            }
+        }
+
+        private static string ResolveGearColorName(int gearIndex)
+        {
+            switch (gearIndex)
+            {
+                case 0: return "Blue";
+                case 1: return "Red";
+                case 2: return "Green";
+                case 3: return "Purple";
+                case 4: return "Cyan";
+                case 5: return "Orange";
+                case 6: return "Pink";
+                case 7: return "Yellow";
+                default: return string.Empty;
+            }
         }
 
         private static string NormalizeOptionalString(string value)
@@ -716,6 +892,24 @@ namespace ASMLite.Tests.Editor
                     case "set-action-label-mask":
                         return SetActionLabelMask(avatarName, args, out detail);
 
+                    case "set-icon-mode":
+                        return SetIconMode(avatarName, args, out detail);
+
+                    case "set-gear-color":
+                        return SetGearColor(avatarName, args, out detail);
+
+                    case "set-custom-icons-enabled":
+                        return SetCustomIconsEnabled(avatarName, args, out detail);
+
+                    case "set-root-icon-fixture":
+                        return SetRootIconFixture(avatarName, args, out detail);
+
+                    case "set-slot-icon-mask":
+                        return SetSlotIconMask(avatarName, args, out detail);
+
+                    case "set-action-icon-mask":
+                        return SetActionIconMask(avatarName, args, out detail);
+
                     case "assert-pending-customization-snapshot":
                         return AssertPendingCustomizationSnapshot(avatarName, args, out detail);
 
@@ -928,6 +1122,144 @@ namespace ASMLite.Tests.Editor
             return true;
         }
 
+        private bool SetIconMode(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (!TryResolveIconMode(args.iconMode, out global::ASMLite.IconMode iconMode, out detail))
+                return false;
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-icon-mode failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetIconModeForAutomation(iconMode);
+            detail = $"ASM-Lite icon mode set to {iconMode}.";
+            return true;
+        }
+
+        private bool SetGearColor(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (!TryResolveGearIndex(args, out int gearIndex, out detail))
+                return false;
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-gear-color failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetGearColorForAutomation(gearIndex);
+            detail = $"ASM-Lite gear color set to {ResolveGearColorName(gearIndex)} ({gearIndex}).";
+            return true;
+        }
+
+        private bool SetCustomIconsEnabled(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-custom-icons-enabled failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetCustomIconsEnabledForAutomation(args.useCustomSlotIcons);
+            detail = $"ASM-Lite custom slot icons enabled set to {args.useCustomSlotIcons}.";
+            return true;
+        }
+
+        private bool SetRootIconFixture(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (string.IsNullOrWhiteSpace(args.rootIconFixtureId))
+            {
+                detail = "set-root-icon-fixture args.rootIconFixtureId is required.";
+                return false;
+            }
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-root-icon-fixture failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetRootIconFixtureForAutomation(args.rootIconFixtureId);
+            detail = $"ASM-Lite root icon fixture set to '{args.rootIconFixtureId}'.";
+            return true;
+        }
+
+        private bool SetSlotIconMask(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            string[] slotIconFixtureIds = GetSlotIconFixtureIdsBySlot(args);
+            if (!HasAny(slotIconFixtureIds))
+            {
+                detail = "set-slot-icon-mask args.slotIconFixtureIdsBySlot must include at least one icon fixture ID.";
+                return false;
+            }
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-slot-icon-mask failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            int slotCount = window.GetPendingCustomizationSnapshotForAutomation().SlotCount;
+            string[] normalizedSlotIconFixtureIds = NormalizeMaskToSlotCount(slotIconFixtureIds, slotCount);
+            window.SetSlotIconMaskForAutomation(normalizedSlotIconFixtureIds);
+            detail = $"ASM-Lite slot icon mask applied ({normalizedSlotIconFixtureIds.Length} value(s), clearExisting={args.clearExistingIconMask}).";
+            return true;
+        }
+
+        private bool SetActionIconMask(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            bool hasActionFixture = !string.IsNullOrWhiteSpace(args.saveIconFixtureId)
+                || !string.IsNullOrWhiteSpace(args.loadIconFixtureId)
+                || !string.IsNullOrWhiteSpace(args.clearIconFixtureId);
+            if (!hasActionFixture && string.IsNullOrWhiteSpace(args.actionIconMode))
+            {
+                detail = "set-action-icon-mask args.actionIconMode or an action icon fixture ID is required.";
+                return false;
+            }
+
+            global::ASMLite.ActionIconMode actionIconMode;
+            if (string.IsNullOrWhiteSpace(args.actionIconMode) && hasActionFixture)
+                actionIconMode = global::ASMLite.ActionIconMode.Custom;
+            else if (!TryResolveActionIconMode(args.actionIconMode, out actionIconMode, out detail))
+                return false;
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-action-icon-mask failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            string saveIconFixtureId = actionIconMode == global::ASMLite.ActionIconMode.Custom ? args.saveIconFixtureId : string.Empty;
+            string loadIconFixtureId = actionIconMode == global::ASMLite.ActionIconMode.Custom ? args.loadIconFixtureId : string.Empty;
+            string clearIconFixtureId = actionIconMode == global::ASMLite.ActionIconMode.Custom ? args.clearIconFixtureId : string.Empty;
+            window.SetActionIconMaskForAutomation(
+                saveIconFixtureId,
+                loadIconFixtureId,
+                clearIconFixtureId);
+            detail = $"ASM-Lite action icon mask applied (mode={actionIconMode}).";
+            return true;
+        }
+
         private bool AssertPendingCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
         {
             ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
@@ -1075,6 +1407,168 @@ namespace ASMLite.Tests.Editor
             int suiteCount = catalog.groups.Sum(group => group.suites.Length);
             detail = $"Loaded canonical smoke catalog with {catalog.groups.Length} groups and {suiteCount} suites.";
             return true;
+        }
+
+        private static string[] GetSlotIconFixtureIdsBySlot(ASMLiteSmokeStepArgs args)
+        {
+            if (args == null)
+                return Array.Empty<string>();
+
+            return args.slotIconFixtureIdsBySlot != null && args.slotIconFixtureIdsBySlot.Length > 0
+                ? args.slotIconFixtureIdsBySlot
+                : args.slotIconFixtureIds ?? Array.Empty<string>();
+        }
+
+        private static bool HasAny(string[] values)
+        {
+            return values != null && values.Any(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        private static string[] NormalizeMaskToSlotCount(string[] values, int slotCount)
+        {
+            int normalizedSlotCount = Math.Max(0, slotCount);
+            var normalized = new string[normalizedSlotCount];
+            if (values == null)
+                return normalized;
+
+            int copyCount = Math.Min(values.Length, normalizedSlotCount);
+            for (int index = 0; index < copyCount; index++)
+                normalized[index] = string.IsNullOrWhiteSpace(values[index]) ? string.Empty : values[index].Trim();
+            return normalized;
+        }
+
+        private static bool TryResolveIconMode(
+            string value,
+            out global::ASMLite.IconMode iconMode,
+            out string detail)
+        {
+            string normalized = string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().Replace("-", string.Empty).Replace("_", string.Empty);
+            if (string.Equals(normalized, "multicolor", StringComparison.OrdinalIgnoreCase))
+            {
+                iconMode = global::ASMLite.IconMode.MultiColor;
+                detail = string.Empty;
+                return true;
+            }
+
+            if (string.Equals(normalized, "samecolor", StringComparison.OrdinalIgnoreCase))
+            {
+                iconMode = global::ASMLite.IconMode.SameColor;
+                detail = string.Empty;
+                return true;
+            }
+
+            if (string.Equals(normalized, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                iconMode = global::ASMLite.IconMode.Custom;
+                detail = string.Empty;
+                return true;
+            }
+
+            iconMode = global::ASMLite.IconMode.MultiColor;
+            detail = $"set-icon-mode args.iconMode '{value}' is not supported. Expected MultiColor, SameColor, or Custom.";
+            return false;
+        }
+
+        private static bool TryResolveActionIconMode(
+            string value,
+            out global::ASMLite.ActionIconMode actionIconMode,
+            out string detail)
+        {
+            string normalized = string.IsNullOrWhiteSpace(value)
+                ? string.Empty
+                : value.Trim().Replace("-", string.Empty).Replace("_", string.Empty);
+            if (string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase))
+            {
+                actionIconMode = global::ASMLite.ActionIconMode.Default;
+                detail = string.Empty;
+                return true;
+            }
+
+            if (string.Equals(normalized, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                actionIconMode = global::ASMLite.ActionIconMode.Custom;
+                detail = string.Empty;
+                return true;
+            }
+
+            actionIconMode = global::ASMLite.ActionIconMode.Default;
+            detail = $"set-action-icon-mask args.actionIconMode '{value}' is not supported. Expected Default or Custom.";
+            return false;
+        }
+
+        private static bool TryResolveGearIndex(ASMLiteSmokeStepArgs args, out int gearIndex, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            bool hasIndex = args.selectedGearIndex >= 0;
+            bool hasColor = !string.IsNullOrWhiteSpace(args.gearColor);
+            if (!hasIndex && !hasColor)
+            {
+                gearIndex = 0;
+                detail = "set-gear-color args.gearColor or args.selectedGearIndex is required.";
+                return false;
+            }
+
+            if (hasIndex && (args.selectedGearIndex < 0 || args.selectedGearIndex > 7))
+            {
+                gearIndex = 0;
+                detail = $"set-gear-color args.selectedGearIndex must be between 0 and 7 (got {args.selectedGearIndex}).";
+                return false;
+            }
+
+            gearIndex = hasIndex ? args.selectedGearIndex : ResolveGearColorIndex(args.gearColor);
+            if (gearIndex < 0)
+            {
+                detail = $"set-gear-color args.gearColor '{args.gearColor}' is not supported. Expected Blue, Red, Green, Purple, Cyan, Orange, Pink, or Yellow.";
+                gearIndex = 0;
+                return false;
+            }
+
+            if (hasIndex && hasColor)
+            {
+                int colorIndex = ResolveGearColorIndex(args.gearColor);
+                if (colorIndex != gearIndex)
+                {
+                    detail = $"set-gear-color args.gearColor '{args.gearColor}' does not match selectedGearIndex {gearIndex}.";
+                    return false;
+                }
+            }
+
+            detail = string.Empty;
+            return true;
+        }
+
+        private static int ResolveGearColorIndex(string value)
+        {
+            switch ((value ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "blue": return 0;
+                case "red": return 1;
+                case "green": return 2;
+                case "purple": return 3;
+                case "cyan": return 4;
+                case "orange": return 5;
+                case "pink": return 6;
+                case "yellow": return 7;
+                default: return -1;
+            }
+        }
+
+        private static string ResolveGearColorName(int gearIndex)
+        {
+            switch (gearIndex)
+            {
+                case 0: return "Blue";
+                case 1: return "Red";
+                case 2: return "Green";
+                case 3: return "Purple";
+                case 4: return "Cyan";
+                case 5: return "Orange";
+                case 6: return "Pink";
+                case 7: return "Yellow";
+                default: return string.Empty;
+            }
         }
 
         private static ASMLiteWindow.AsmLiteWindowAction ResolveExpectedPrimaryAction(ASMLiteSmokeStepArgs args)

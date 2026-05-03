@@ -209,8 +209,15 @@ namespace ASMLite.Tests.Editor
         public string expectedState;
         public int slotCount;
         public string installPathPresetId;
+        public string iconMode;
+        public int selectedGearIndex = -1;
+        public string gearColor;
+        public bool useCustomSlotIcons;
         public string rootIconFixtureId;
         public string[] slotIconFixtureIds = Array.Empty<string>();
+        public string[] slotIconFixtureIdsBySlot = Array.Empty<string>();
+        public bool clearExistingIconMask;
+        public string actionIconMode;
         public string saveIconFixtureId;
         public string loadIconFixtureId;
         public string clearIconFixtureId;
@@ -240,8 +247,12 @@ namespace ASMLite.Tests.Editor
             expectedDiagnosticContains = NormalizeOptional(expectedDiagnosticContains);
             expectedState = NormalizeOptional(expectedState);
             installPathPresetId = NormalizeOptional(installPathPresetId);
+            iconMode = NormalizeOptional(iconMode);
+            gearColor = NormalizeOptional(gearColor);
             rootIconFixtureId = NormalizeOptional(rootIconFixtureId);
             slotIconFixtureIds = NormalizeOptionalArray(slotIconFixtureIds);
+            slotIconFixtureIdsBySlot = NormalizeOptionalArray(slotIconFixtureIdsBySlot);
+            actionIconMode = NormalizeOptional(actionIconMode);
             saveIconFixtureId = NormalizeOptional(saveIconFixtureId);
             loadIconFixtureId = NormalizeOptional(loadIconFixtureId);
             clearIconFixtureId = NormalizeOptional(clearIconFixtureId);
@@ -311,6 +322,12 @@ namespace ASMLite.Tests.Editor
             "set-root-name-state",
             "set-preset-name-mask",
             "set-action-label-mask",
+            "set-icon-mode",
+            "set-gear-color",
+            "set-custom-icons-enabled",
+            "set-root-icon-fixture",
+            "set-slot-icon-mask",
+            "set-action-icon-mask",
             "assert-pending-customization-snapshot",
             "assert-attached-customization-snapshot",
         };
@@ -487,6 +504,10 @@ namespace ASMLite.Tests.Editor
             string[] slotIconFixtureIds = args.slotIconFixtureIds ?? Array.Empty<string>();
             for (int index = 0; index < slotIconFixtureIds.Length; index++)
                 ValidateOptionalIconFixtureId(slotIconFixtureIds[index], $"{argsPath}.slotIconFixtureIds[{index}]");
+
+            string[] slotIconFixtureIdsBySlot = args.slotIconFixtureIdsBySlot ?? Array.Empty<string>();
+            for (int index = 0; index < slotIconFixtureIdsBySlot.Length; index++)
+                ValidateOptionalIconFixtureId(slotIconFixtureIdsBySlot[index], $"{argsPath}.slotIconFixtureIdsBySlot[{index}]");
         }
 
         private static void ValidateOptionalIconFixtureId(string fixtureId, string path)
@@ -557,6 +578,37 @@ namespace ASMLite.Tests.Editor
                     if (!HasAnyActionLabel(args))
                         throw new InvalidOperationException(argsPath + ".customSaveLabel/customLoadLabel/customClearLabel/customConfirmLabel must include at least one label value.");
                     return;
+                case "set-icon-mode":
+                    RequireIconMode(args.iconMode, argsPath + ".iconMode");
+                    RejectPresentPhase1Arg(args.selectedGearIndex >= 0, argsPath + ".selectedGearIndex");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.gearColor), argsPath + ".gearColor");
+                    return;
+                case "set-gear-color":
+                    RequireGearColorSelection(args, argsPath);
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.iconMode), argsPath + ".iconMode");
+                    return;
+                case "set-custom-icons-enabled":
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.iconMode), argsPath + ".iconMode");
+                    RejectPresentPhase1Arg(HasAnyIconFixture(args), argsPath + ".rootIconFixtureId/slotIconFixtureIdsBySlot/saveIconFixtureId/loadIconFixtureId/clearIconFixtureId");
+                    return;
+                case "set-root-icon-fixture":
+                    RejectPresentPhase1Arg(string.IsNullOrWhiteSpace(args.rootIconFixtureId), argsPath + ".rootIconFixtureId");
+                    RejectPresentPhase1Arg(HasAny(args.slotIconFixtureIds) || HasAny(args.slotIconFixtureIdsBySlot), argsPath + ".slotIconFixtureIdsBySlot");
+                    RejectPresentPhase1Arg(HasAnyActionIconFixture(args), argsPath + ".saveIconFixtureId/loadIconFixtureId/clearIconFixtureId");
+                    return;
+                case "set-slot-icon-mask":
+                    ValidateSlotIconMask(GetSlotIconFixtureIdsBySlot(args), 8, argsPath + ".slotIconFixtureIdsBySlot", requireAnyValue: true);
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.rootIconFixtureId), argsPath + ".rootIconFixtureId");
+                    RejectPresentPhase1Arg(HasAnyActionIconFixture(args), argsPath + ".saveIconFixtureId/loadIconFixtureId/clearIconFixtureId");
+                    return;
+                case "set-action-icon-mask":
+                    if (!string.IsNullOrWhiteSpace(args.actionIconMode))
+                        RequireActionIconMode(args.actionIconMode, argsPath + ".actionIconMode");
+                    if (!HasAnyActionIconFixture(args) && string.IsNullOrWhiteSpace(args.actionIconMode))
+                        throw new InvalidOperationException(argsPath + ".actionIconMode or saveIconFixtureId/loadIconFixtureId/clearIconFixtureId must include a value.");
+                    RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.rootIconFixtureId), argsPath + ".rootIconFixtureId");
+                    RejectPresentPhase1Arg(HasAny(args.slotIconFixtureIds) || HasAny(args.slotIconFixtureIdsBySlot), argsPath + ".slotIconFixtureIdsBySlot");
+                    return;
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
@@ -568,10 +620,27 @@ namespace ASMLite.Tests.Editor
                     else
                         RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.customRootName), argsPath + ".customRootName");
                     ValidatePresetNameMask(args.customPresetNames, args.slotCount, argsPath + ".customPresetNames", requireAnyValue: false);
+                    if (!string.IsNullOrWhiteSpace(args.iconMode))
+                        RequireIconMode(args.iconMode, argsPath + ".iconMode");
+                    if (!string.IsNullOrWhiteSpace(args.actionIconMode))
+                        RequireActionIconMode(args.actionIconMode, argsPath + ".actionIconMode");
+                    if (args.selectedGearIndex >= 0 || !string.IsNullOrWhiteSpace(args.gearColor))
+                        RequireGearColorSelection(args, argsPath);
+                    ValidateSlotIconMask(GetSlotIconFixtureIdsBySlot(args), args.slotCount, argsPath + ".slotIconFixtureIdsBySlot", requireAnyValue: false);
                     return;
                 default:
                     return;
             }
+        }
+
+        private static string[] GetSlotIconFixtureIdsBySlot(ASMLiteSmokeStepArgs args)
+        {
+            if (args == null)
+                return Array.Empty<string>();
+
+            return args.slotIconFixtureIdsBySlot != null && args.slotIconFixtureIdsBySlot.Length > 0
+                ? args.slotIconFixtureIdsBySlot
+                : args.slotIconFixtureIds ?? Array.Empty<string>();
         }
 
         private static bool HasAny(string[] values)
@@ -588,6 +657,23 @@ namespace ASMLite.Tests.Editor
                     || !string.IsNullOrWhiteSpace(args.customConfirmLabel));
         }
 
+        private static bool HasAnyIconFixture(ASMLiteSmokeStepArgs args)
+        {
+            return args != null
+                && (!string.IsNullOrWhiteSpace(args.rootIconFixtureId)
+                    || HasAny(args.slotIconFixtureIds)
+                    || HasAny(args.slotIconFixtureIdsBySlot)
+                    || HasAnyActionIconFixture(args));
+        }
+
+        private static bool HasAnyActionIconFixture(ASMLiteSmokeStepArgs args)
+        {
+            return args != null
+                && (!string.IsNullOrWhiteSpace(args.saveIconFixtureId)
+                    || !string.IsNullOrWhiteSpace(args.loadIconFixtureId)
+                    || !string.IsNullOrWhiteSpace(args.clearIconFixtureId));
+        }
+
         private static void ValidatePresetNameMask(string[] values, int slotCount, string path, bool requireAnyValue)
         {
             values = values ?? Array.Empty<string>();
@@ -596,6 +682,68 @@ namespace ASMLite.Tests.Editor
 
             if (requireAnyValue && !HasAny(values))
                 throw new InvalidOperationException(path + " must include at least one preset name value.");
+        }
+
+        private static void ValidateSlotIconMask(string[] values, int slotCount, string path, bool requireAnyValue)
+        {
+            values = values ?? Array.Empty<string>();
+            if (values.Length > slotCount)
+                throw new InvalidOperationException($"{path} cannot contain more than {slotCount} value(s).");
+
+            if (requireAnyValue && !HasAny(values))
+                throw new InvalidOperationException(path + " must include at least one icon fixture ID.");
+        }
+
+        private static string RequireIconMode(string value, string path)
+        {
+            return NormalizeEnumValue(value, path, new[] { "multiColor", "sameColor" });
+        }
+
+        private static string RequireActionIconMode(string value, string path)
+        {
+            return NormalizeEnumValue(value, path, new[] { "default", "custom" });
+        }
+
+        private static int RequireGearColorSelection(ASMLiteSmokeStepArgs args, string argsPath)
+        {
+            bool hasIndex = args != null && args.selectedGearIndex >= 0;
+            bool hasColor = args != null && !string.IsNullOrWhiteSpace(args.gearColor);
+            if (!hasIndex && !hasColor)
+                throw new InvalidOperationException(argsPath + ".gearColor or .selectedGearIndex is required.");
+
+            int index = hasIndex ? RequireGearIndex(args.selectedGearIndex, argsPath + ".selectedGearIndex") : ResolveGearColorIndex(args.gearColor, argsPath + ".gearColor");
+            if (hasColor)
+            {
+                int colorIndex = ResolveGearColorIndex(args.gearColor, argsPath + ".gearColor");
+                if (hasIndex && colorIndex != index)
+                    throw new InvalidOperationException($"{argsPath}.gearColor does not match selectedGearIndex {index}.");
+            }
+
+            return index;
+        }
+
+        private static int RequireGearIndex(int value, string path)
+        {
+            if (value < 0 || value > 7)
+                throw new InvalidOperationException(path + " must be between 0 and 7.");
+            return value;
+        }
+
+        private static int ResolveGearColorIndex(string value, string path)
+        {
+            switch (RequireNonBlank(value, path).ToLowerInvariant())
+            {
+                case "blue": return 0;
+                case "red": return 1;
+                case "green": return 2;
+                case "purple": return 3;
+                case "cyan": return 4;
+                case "orange": return 5;
+                case "pink": return 6;
+                case "yellow": return 7;
+                default:
+                    throw new InvalidOperationException(path + " must be one of Blue, Red, Green, Purple, Cyan, Orange, Pink, or Yellow.");
+            }
         }
 
         private static void RejectPresentPhase1Arg(bool isPresent, string path)

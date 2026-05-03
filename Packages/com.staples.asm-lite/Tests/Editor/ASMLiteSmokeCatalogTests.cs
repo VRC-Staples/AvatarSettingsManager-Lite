@@ -70,6 +70,7 @@ namespace ASMLite.Tests.Editor
                     "setup-prebuild-slots-matrix",
                     "setup-prebuild-path-matrix",
                     "setup-prebuild-names-matrix",
+                    "setup-prebuild-icons-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -435,6 +436,7 @@ namespace ASMLite.Tests.Editor
             Assert.That(suites.ContainsKey("setup-prebuild-slots-matrix"), Is.True);
             Assert.That(suites.ContainsKey("setup-prebuild-path-matrix"), Is.True);
             Assert.That(suites.ContainsKey("setup-prebuild-names-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("setup-prebuild-icons-matrix"), Is.True);
 
             ASMLiteSmokeSuiteDefinition slots = suites["setup-prebuild-slots-matrix"];
             Assert.AreEqual("exhaustive", slots.speed);
@@ -495,6 +497,32 @@ namespace ASMLite.Tests.Editor
             AssertPhase1NameCase(names.cases[3], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedPresetNames: new[] { "Travel Fit", "Dance Fit", "Formal Fit", "Comfy Fit" });
             AssertPhase1NameCase(names.cases[4], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedSaveLabel: "Store");
             AssertPhase1NameCase(names.cases[5], expectedRootEnabled: true, expectedRootName: "Wardrobe Tools", expectedPresetNames: new[] { "Travel Fit", "Dance Fit", "Formal Fit", "Comfy Fit" }, expectedSaveLabel: "Store", expectedLoadLabel: "Wear", expectedClearLabel: "Clear Fit", expectedConfirmLabel: "Apply");
+
+            ASMLiteSmokeSuiteDefinition icons = suites["setup-prebuild-icons-matrix"];
+            Assert.AreEqual("exhaustive", icons.speed);
+            Assert.AreEqual("safe", icons.risk);
+            CollectionAssert.Contains(icons.presetGroups, "all-setup");
+            Assert.That(icons.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "I01-icon-multicolor-default",
+                "I02-icon-same-color-blue",
+                "I03-icon-same-color-yellow",
+                "I04-icon-root-only",
+                "I05-icon-slot-first-only",
+                "I06-icon-slot-all-custom",
+                "I07-icon-action-save-only",
+                "I08-icon-full-pack",
+            }));
+            Assert.That(icons.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            AssertPhase1IconCase(icons.cases[0], "multiColor", expectedGearColor: string.Empty);
+            AssertPhase1IconCase(icons.cases[1], "sameColor", expectedGearColor: "blue", expectedGearIndex: 0);
+            AssertPhase1IconCase(icons.cases[2], "sameColor", expectedGearColor: "yellow", expectedGearIndex: 7);
+            AssertPhase1IconCase(icons.cases[3], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedRootIconFixtureId: "asm-lite-icon/root");
+            AssertPhase1IconCase(icons.cases[4], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "", "", "" });
+            AssertPhase1IconCase(icons.cases[5], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04" });
+            AssertPhase1IconCase(icons.cases[6], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save");
+            AssertPhase1IconCase(icons.cases[7], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedRootIconFixtureId: "asm-lite-icon/root", expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04" }, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save", expectedLoadIconFixtureId: "asm-lite-icon/action-load", expectedClearIconFixtureId: "asm-lite-icon/action-clear");
         }
 
         [Test]
@@ -977,6 +1005,116 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(expectedLoadLabel, step.args.customLoadLabel);
                 Assert.AreEqual(expectedClearLabel, step.args.customClearLabel);
                 Assert.AreEqual(expectedConfirmLabel, step.args.customConfirmLabel);
+            }
+
+            ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
+            Assert.That(pendingArgs.expectedComponentPresent, Is.False);
+            Assert.AreEqual("Add Prefab", pendingArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeStepArgs attachedArgs = item.steps.Single(step => step.actionType == "assert-attached-customization-snapshot").args;
+            Assert.That(attachedArgs.expectedComponentPresent, Is.True);
+            Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
+        }
+
+        private static void AssertPhase1IconCase(
+            ASMLiteSmokeCaseDefinition item,
+            string expectedIconMode,
+            string expectedGearColor,
+            int expectedGearIndex = 0,
+            bool expectedUseCustomIcons = false,
+            string expectedRootIconFixtureId = "",
+            string[] expectedSlotIconFixtureIdsBySlot = null,
+            string expectedActionIconMode = "default",
+            string expectedSaveIconFixtureId = "",
+            string expectedLoadIconFixtureId = "",
+            string expectedClearIconFixtureId = "")
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "prelude-recover-context",
+                    "open-scene",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "assert-no-component",
+                    "set-slot-count",
+                },
+                item.steps.Take(7).Select(step => step.actionType).ToArray());
+            Assert.AreEqual("assert-pending-customization-snapshot", item.steps[item.steps.Length - 4].actionType);
+            Assert.AreEqual("add-prefab", item.steps[item.steps.Length - 3].actionType);
+            Assert.AreEqual("assert-attached-customization-snapshot", item.steps[item.steps.Length - 2].actionType);
+            Assert.AreEqual("assert-primary-action", item.steps[item.steps.Length - 1].actionType);
+
+            Assert.AreEqual(4, item.steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
+            expectedSlotIconFixtureIdsBySlot = expectedSlotIconFixtureIdsBySlot ?? new[] { "", "", "", "" };
+
+            ASMLiteSmokeStepDefinition setIconModeStep = item.steps.SingleOrDefault(step => step.actionType == "set-icon-mode");
+            if (string.Equals(expectedIconMode, "sameColor", StringComparison.Ordinal))
+            {
+                Assert.NotNull(setIconModeStep);
+                Assert.AreEqual("sameColor", setIconModeStep.args.iconMode);
+                ASMLiteSmokeStepDefinition gearStep = item.steps.Single(step => step.actionType == "set-gear-color");
+                Assert.AreEqual(expectedGearColor, gearStep.args.gearColor);
+            }
+            else if (setIconModeStep != null)
+            {
+                Assert.AreEqual(expectedIconMode, setIconModeStep.args.iconMode);
+            }
+
+            ASMLiteSmokeStepDefinition customEnabledStep = item.steps.SingleOrDefault(step => step.actionType == "set-custom-icons-enabled");
+            Assert.That(customEnabledStep != null, Is.EqualTo(expectedUseCustomIcons));
+            if (customEnabledStep != null)
+                Assert.AreEqual(expectedUseCustomIcons, customEnabledStep.args.useCustomSlotIcons);
+
+            ASMLiteSmokeStepDefinition rootStep = item.steps.SingleOrDefault(step => step.actionType == "set-root-icon-fixture");
+            if (string.IsNullOrEmpty(expectedRootIconFixtureId))
+                Assert.IsNull(rootStep);
+            else
+                Assert.AreEqual(expectedRootIconFixtureId, rootStep.args.rootIconFixtureId);
+
+            ASMLiteSmokeStepDefinition slotStep = item.steps.SingleOrDefault(step => step.actionType == "set-slot-icon-mask");
+            if (expectedSlotIconFixtureIdsBySlot.All(string.IsNullOrEmpty))
+                Assert.IsNull(slotStep);
+            else
+            {
+                Assert.NotNull(slotStep);
+                CollectionAssert.AreEqual(
+                    expectedSlotIconFixtureIdsBySlot.TakeWhile(value => !string.IsNullOrEmpty(value)).ToArray(),
+                    slotStep.args.slotIconFixtureIdsBySlot);
+                Assert.IsTrue(slotStep.args.clearExistingIconMask);
+            }
+
+            ASMLiteSmokeStepDefinition actionStep = item.steps.SingleOrDefault(step => step.actionType == "set-action-icon-mask");
+            bool expectsActionIcon = !string.Equals(expectedActionIconMode, "default", StringComparison.Ordinal)
+                || !string.IsNullOrEmpty(expectedSaveIconFixtureId)
+                || !string.IsNullOrEmpty(expectedLoadIconFixtureId)
+                || !string.IsNullOrEmpty(expectedClearIconFixtureId);
+            Assert.That(actionStep != null, Is.EqualTo(expectsActionIcon));
+            if (actionStep != null)
+            {
+                Assert.AreEqual(expectedActionIconMode, actionStep.args.actionIconMode);
+                Assert.AreEqual(expectedSaveIconFixtureId, actionStep.args.saveIconFixtureId);
+                Assert.AreEqual(expectedLoadIconFixtureId, actionStep.args.loadIconFixtureId);
+                Assert.AreEqual(expectedClearIconFixtureId, actionStep.args.clearIconFixtureId);
+            }
+
+            foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))
+            {
+                Assert.AreEqual(4, step.args.slotCount);
+                Assert.AreEqual("disabled", step.args.installPathPresetId);
+                Assert.That(step.args.expectedInstallPathEnabled, Is.False);
+                Assert.AreEqual(string.Empty, step.args.expectedNormalizedEffectivePath);
+                Assert.AreEqual(expectedIconMode, step.args.iconMode);
+                Assert.AreEqual(expectedGearIndex, step.args.selectedGearIndex);
+                Assert.AreEqual(expectedGearColor, step.args.gearColor);
+                Assert.AreEqual(expectedUseCustomIcons, step.args.useCustomSlotIcons);
+                Assert.AreEqual(expectedRootIconFixtureId, step.args.rootIconFixtureId);
+                CollectionAssert.AreEqual(expectedSlotIconFixtureIdsBySlot, step.args.slotIconFixtureIdsBySlot);
+                Assert.AreEqual(expectedActionIconMode, step.args.actionIconMode);
+                Assert.AreEqual(expectedSaveIconFixtureId, step.args.saveIconFixtureId);
+                Assert.AreEqual(expectedLoadIconFixtureId, step.args.loadIconFixtureId);
+                Assert.AreEqual(expectedClearIconFixtureId, step.args.clearIconFixtureId);
             }
 
             ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;

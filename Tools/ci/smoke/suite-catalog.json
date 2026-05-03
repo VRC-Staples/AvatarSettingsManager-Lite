@@ -3592,6 +3592,1411 @@
           ]
         },
         {
+          "suiteId": "setup-prebuild-icons-matrix",
+          "label": "Setup Prebuild Icons Matrix",
+          "description": "Verify icon-mode, gear-color, custom root, slot, and action icon customization before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All icon customization rows preserve normalized pending and attached snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect fixture IDs, icon-mode strings, and field-specific snapshot mismatch details.",
+          "cases": [
+            {
+              "caseId": "I01-icon-multicolor-default",
+              "label": "I01 icon multicolor default",
+              "description": "Verify default multiColor icon configuration with bundled action icons.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I01-icon-multicolor-default-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I01-icon-multicolor-default-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I02-icon-same-color-blue",
+              "label": "I02 icon same color blue",
+              "description": "Verify sameColor blue gear selection before attach.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I02-icon-same-color-blue-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-set-icon-mode",
+                  "label": "Set sameColor icon mode",
+                  "description": "Set sameColor icon mode through smoke automation.",
+                  "actionType": "set-icon-mode",
+                  "expectedOutcome": "The icon mode is staged.",
+                  "debugHint": "If this fails, inspect icon-mode automation parsing.",
+                  "args": {
+                    "iconMode": "sameColor"
+                  }
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-set-gear-color",
+                  "label": "Set blue gear color",
+                  "description": "Set blue gear color through smoke automation.",
+                  "actionType": "set-gear-color",
+                  "expectedOutcome": "The same-color gear color is staged.",
+                  "debugHint": "If this fails, inspect same-color gear selection automation.",
+                  "args": {
+                    "gearColor": "blue"
+                  }
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "blue",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "blue",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I02-icon-same-color-blue-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I03-icon-same-color-yellow",
+              "label": "I03 icon same color yellow",
+              "description": "Verify sameColor yellow gear selection before attach.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I03-icon-same-color-yellow-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-set-icon-mode",
+                  "label": "Set sameColor icon mode",
+                  "description": "Set sameColor icon mode through smoke automation.",
+                  "actionType": "set-icon-mode",
+                  "expectedOutcome": "The icon mode is staged.",
+                  "debugHint": "If this fails, inspect icon-mode automation parsing.",
+                  "args": {
+                    "iconMode": "sameColor"
+                  }
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-set-gear-color",
+                  "label": "Set yellow gear color",
+                  "description": "Set yellow gear color through smoke automation.",
+                  "actionType": "set-gear-color",
+                  "expectedOutcome": "The same-color gear color is staged.",
+                  "debugHint": "If this fails, inspect same-color gear selection automation.",
+                  "args": {
+                    "gearColor": "yellow"
+                  }
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 7,
+                    "gearColor": "yellow",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "sameColor",
+                    "selectedGearIndex": 7,
+                    "gearColor": "yellow",
+                    "useCustomSlotIcons": false,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I03-icon-same-color-yellow-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I04-icon-root-only",
+              "label": "I04 icon root only",
+              "description": "Verify enabling custom icons and overriding only the root icon.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I04-icon-root-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I04-icon-root-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I04-icon-root-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I04-icon-root-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I04-icon-root-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I04-icon-root-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I04-icon-root-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I04-icon-root-only-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icons through smoke automation.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Custom slot icons are enabled.",
+                  "debugHint": "If this fails, inspect custom slot icon toggle automation.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "I04-icon-root-only-set-root-icon-fixture",
+                  "label": "Set root icon fixture",
+                  "description": "Set root icon fixture through smoke automation.",
+                  "actionType": "set-root-icon-fixture",
+                  "expectedOutcome": "The custom root icon fixture is staged.",
+                  "debugHint": "If this fails, inspect root icon fixture resolution.",
+                  "args": {
+                    "rootIconFixtureId": "asm-lite-icon/root"
+                  }
+                },
+                {
+                  "stepId": "I04-icon-root-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I04-icon-root-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I04-icon-root-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I04-icon-root-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I05-icon-slot-first-only",
+              "label": "I05 icon slot first only",
+              "description": "Verify slot icon mask with only slot 1 customized.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I05-icon-slot-first-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icons through smoke automation.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Custom slot icons are enabled.",
+                  "debugHint": "If this fails, inspect custom slot icon toggle automation.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-set-slot-icon-mask",
+                  "label": "Set first slot icon fixture",
+                  "description": "Set first slot icon fixture through smoke automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "The slot icon fixture mask is staged.",
+                  "debugHint": "If this fails, inspect slot icon fixture IDs and slot count padding.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01"
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I05-icon-slot-first-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I06-icon-slot-all-custom",
+              "label": "I06 icon slot all custom",
+              "description": "Verify slot icon mask with every baseline slot customized.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I06-icon-slot-all-custom-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icons through smoke automation.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Custom slot icons are enabled.",
+                  "debugHint": "If this fails, inspect custom slot icon toggle automation.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-set-slot-icon-mask",
+                  "label": "Set all slot icon fixtures",
+                  "description": "Set all slot icon fixtures through smoke automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "The slot icon fixture mask is staged.",
+                  "debugHint": "If this fails, inspect slot icon fixture IDs and slot count padding.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "actionIconMode": "default",
+                    "saveIconFixtureId": "",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I06-icon-slot-all-custom-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I07-icon-action-save-only",
+              "label": "I07 icon action save only",
+              "description": "Verify custom action icon mode with only Save overridden.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I07-icon-action-save-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icons through smoke automation.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Custom slot icons are enabled.",
+                  "debugHint": "If this fails, inspect custom slot icon toggle automation.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-set-action-icon-mask",
+                  "label": "Set save action icon fixture",
+                  "description": "Set save action icon fixture through smoke automation.",
+                  "actionType": "set-action-icon-mask",
+                  "expectedOutcome": "The action icon fixture mask is staged.",
+                  "debugHint": "If this fails, inspect action icon fixture IDs and action-mode automation.",
+                  "args": {
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save"
+                  }
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "",
+                    "slotIconFixtureIdsBySlot": [
+                      "",
+                      "",
+                      "",
+                      ""
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "",
+                    "clearIconFixtureId": ""
+                  }
+                },
+                {
+                  "stepId": "I07-icon-action-save-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "I08-icon-full-pack",
+              "label": "I08 icon full pack",
+              "description": "Verify root, all baseline slots, and all action icon fixtures together.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected icon customization fields and finish with Rebuild available.",
+              "debugHint": "Inspect icon automation fixture IDs and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "I08-icon-full-pack-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply slot count 4 through automation.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-set-custom-icons-enabled",
+                  "label": "Enable custom icons",
+                  "description": "Enable custom icons through smoke automation.",
+                  "actionType": "set-custom-icons-enabled",
+                  "expectedOutcome": "Custom slot icons are enabled.",
+                  "debugHint": "If this fails, inspect custom slot icon toggle automation.",
+                  "args": {
+                    "useCustomSlotIcons": true
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-set-root-icon-fixture",
+                  "label": "Set root icon fixture",
+                  "description": "Set root icon fixture through smoke automation.",
+                  "actionType": "set-root-icon-fixture",
+                  "expectedOutcome": "The custom root icon fixture is staged.",
+                  "debugHint": "If this fails, inspect root icon fixture resolution.",
+                  "args": {
+                    "rootIconFixtureId": "asm-lite-icon/root"
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-set-slot-icon-mask",
+                  "label": "Set all slot icon fixtures",
+                  "description": "Set all slot icon fixtures through smoke automation.",
+                  "actionType": "set-slot-icon-mask",
+                  "expectedOutcome": "The slot icon fixture mask is staged.",
+                  "debugHint": "If this fails, inspect slot icon fixture IDs and slot count padding.",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "clearExistingIconMask": true
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-set-action-icon-mask",
+                  "label": "Set all action icon fixtures",
+                  "description": "Set all action icon fixtures through smoke automation.",
+                  "actionType": "set-action-icon-mask",
+                  "expectedOutcome": "The action icon fixture mask is staged.",
+                  "debugHint": "If this fails, inspect action icon fixture IDs and action-mode automation.",
+                  "args": {
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear"
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending icon customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear"
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "I08-icon-full-pack-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component icon customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached icon customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "iconMode": "multiColor",
+                    "selectedGearIndex": 0,
+                    "gearColor": "",
+                    "useCustomSlotIcons": true,
+                    "rootIconFixtureId": "asm-lite-icon/root",
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01",
+                      "asm-lite-icon/slot-02",
+                      "asm-lite-icon/slot-03",
+                      "asm-lite-icon/slot-04"
+                    ],
+                    "actionIconMode": "custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear"
+                  }
+                },
+                {
+                  "stepId": "I08-icon-full-pack-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",
