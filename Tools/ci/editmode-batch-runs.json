@@ -7,7 +7,6 @@
         {
           "groupNames": [
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteAssetPathsTests(?:\\.|$)",
-            "^ASMLite\\.Tests\\.Editor\\.ASMLiteBatchTestRunnerTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationScaffoldTests(?:\\.|$)",

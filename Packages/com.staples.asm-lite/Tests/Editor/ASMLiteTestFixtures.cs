@@ -3315,6 +3315,20 @@ namespace ASMLite.Tests.Editor
             Assert.IsEmpty(filters[0].assemblyNames);
         }
 
+        [Test]
+        public void CanonicalBatchPlan_ExcludesBatchRunnerSelfTests()
+        {
+            string batchRunsPath = Path.Combine(
+                ASMLiteSmokeContractPaths.GetRepositoryRootPath(),
+                "Tools",
+                "ci",
+                "editmode-batch-runs.json");
+            string json = File.ReadAllText(batchRunsPath, Encoding.UTF8);
+
+            StringAssert.DoesNotContain("ASMLiteBatchTestRunnerTests", json,
+                "The canonical single-instance batch run must not run the batch runner's own static-state tests inside the active batch runner callback session.");
+        }
+
         public void WrapResultDocumentWithResultMetrics_WrapsSuiteXml_WithAdaptorCounts()
         {
             var rawDocument = new XmlDocument();
