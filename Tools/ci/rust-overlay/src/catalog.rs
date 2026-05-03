@@ -656,19 +656,54 @@ fn require_install_path_preset(value: &str, path: &str) -> Result<String, Contra
 }
 
 fn require_icon_mode(value: &str, path: &str) -> Result<String, ContractError> {
-    normalize_enum_value(value, path, &["MultiColor", "SameColor", "Custom"])
-}
-
-fn require_action_icon_mode(value: &str, path: &str) -> Result<String, ContractError> {
-    normalize_enum_value(value, path, &["Default", "Custom"])
-}
-
-fn require_gear_color(value: &str, path: &str) -> Result<String, ContractError> {
-    normalize_enum_value(
+    normalize_enum_alias(
         value,
         path,
         &[
-            "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow",
+            ("multiColor", "multiColor"),
+            ("MultiColor", "multiColor"),
+            ("sameColor", "sameColor"),
+            ("SameColor", "sameColor"),
+            ("custom", "custom"),
+            ("Custom", "custom"),
+        ],
+    )
+}
+
+fn require_action_icon_mode(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_alias(
+        value,
+        path,
+        &[
+            ("default", "default"),
+            ("Default", "default"),
+            ("custom", "custom"),
+            ("Custom", "custom"),
+        ],
+    )
+}
+
+fn require_gear_color(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_alias(
+        value,
+        path,
+        &[
+            ("blue", "blue"),
+            ("Blue", "blue"),
+            ("red", "red"),
+            ("Red", "red"),
+            ("green", "green"),
+            ("Green", "green"),
+            ("purple", "purple"),
+            ("Purple", "purple"),
+            ("cyan", "cyan"),
+            ("Cyan", "cyan"),
+            ("orange", "orange"),
+            ("Orange", "orange"),
+            ("pink", "pink"),
+            ("Pink", "pink"),
+            ("yellow", "yellow"),
+            ("Yellow", "yellow"),
         ],
     )
 }
@@ -803,6 +838,23 @@ fn normalize_enum_value(
         )));
     }
     Ok(normalized)
+}
+
+fn normalize_enum_alias(
+    value: &str,
+    path: &str,
+    allowed_values: &[(&str, &str)],
+) -> Result<String, ContractError> {
+    let normalized = require_non_blank(value, path)?;
+    for (allowed, canonical) in allowed_values {
+        if *allowed == normalized {
+            return Ok((*canonical).to_string());
+        }
+    }
+
+    Err(ContractError(format!(
+        "{path} '{normalized}' is not supported."
+    )))
 }
 
 fn normalize_preset_groups(values: &[String], path: &str) -> Result<Vec<String>, ContractError> {
