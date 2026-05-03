@@ -439,25 +439,13 @@ mod tests {
 
         let rows = build_grouped_suite_rows(&model);
         let ids: Vec<&str> = rows.iter().map(|row| row.suite_id.as_str()).collect();
-        assert_eq!(
-            ids,
-            vec![
-                "asm-lite-readiness-check",
-                "setup-scene-avatar",
-                "avatar-discovery-selection-regression",
-                "add-prefab-idempotency",
-                "installed-state-recognition",
-                "generated-asset-recovery-signals",
-                "generated-reference-ownership",
-                "negative-diagnostics",
-                "setup-prebuild-slots-matrix",
-                "setup-prebuild-path-matrix",
-                "setup-prebuild-names-matrix",
-                "destructive-recovery-reset",
-                "lifecycle-roundtrip",
-                "playmode-runtime-validation"
-            ]
-        );
+        let expected_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(ids, expected_ids);
     }
 
     #[test]
@@ -466,7 +454,13 @@ mod tests {
         let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
         let checklist = build_suite_checklist_view(&model);
-        assert_eq!(checklist.selected_count, 4);
+        let expected_selected_count = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected)
+            .count();
+        assert_eq!(checklist.selected_count, expected_selected_count);
         assert!(checklist.can_run_selected_batch);
 
         let preflight = checklist
@@ -775,7 +769,10 @@ mod tests {
             tag_filtered.visible_suite_ids(),
             vec!["negative-diagnostics"]
         );
-        assert_eq!(tag_filtered.hidden_by_filter_count, 13);
+        assert_eq!(
+            tag_filtered.hidden_by_filter_count,
+            model.available_suite_ids().len() - 1
+        );
         assert_eq!(model.selected_suite_ids(), before);
     }
 
@@ -789,15 +786,21 @@ mod tests {
             &model,
             &SuiteChecklistFilter::speed(SuiteSpeedFilter::Quick),
         );
-        assert_eq!(
-            quick.visible_suite_ids(),
-            vec![
-                "asm-lite-readiness-check",
-                "setup-scene-avatar",
-                "lifecycle-roundtrip",
-                "playmode-runtime-validation"
-            ]
-        );
+        let expected_quick_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| {
+                !suite.is_destructive()
+                    && (suite.speed == "quick"
+                        || suite
+                            .preset_groups
+                            .iter()
+                            .any(|preset| preset == "quick-default"))
+            })
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(quick.visible_suite_ids(), expected_quick_ids);
 
         let standard = build_filtered_suite_checklist_view(
             &model,

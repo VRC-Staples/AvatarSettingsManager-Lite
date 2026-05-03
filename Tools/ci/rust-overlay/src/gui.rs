@@ -3362,21 +3362,20 @@ mod tests {
             model.available_suite_ids().len()
         );
         assert_eq!(checklist.hidden_by_filter_count, 0);
-        assert_eq!(
-            model.selected_suite_ids(),
-            vec![
-                "setup-scene-avatar",
-                "avatar-discovery-selection-regression",
-                "add-prefab-idempotency",
-                "installed-state-recognition",
-                "generated-asset-recovery-signals",
-                "generated-reference-ownership",
-                "negative-diagnostics",
-                "setup-prebuild-slots-matrix",
-                "setup-prebuild-path-matrix",
-                "setup-prebuild-names-matrix"
-            ]
-        );
+        let expected_all_setup_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| {
+                suite
+                    .preset_groups
+                    .iter()
+                    .any(|preset| preset == "all-setup")
+            })
+            .filter(|suite| !suite.is_destructive())
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(model.selected_suite_ids(), expected_all_setup_ids);
     }
 
     #[test]

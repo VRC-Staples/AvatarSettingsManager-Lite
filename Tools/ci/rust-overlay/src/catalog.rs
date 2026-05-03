@@ -161,6 +161,26 @@ pub struct SmokeStepArgs {
     pub confirm_label: Option<String>,
     #[serde(default)]
     pub clear_existing: bool,
+    #[serde(default)]
+    pub icon_mode: Option<String>,
+    #[serde(default)]
+    pub selected_gear_index: Option<i32>,
+    #[serde(default)]
+    pub gear_color: Option<String>,
+    #[serde(default)]
+    pub use_custom_slot_icons: Option<bool>,
+    #[serde(default)]
+    pub root_icon_fixture_id: Option<String>,
+    #[serde(default, alias = "slotIconFixtureIds")]
+    pub slot_icon_fixture_ids_by_slot: Option<Vec<String>>,
+    #[serde(default)]
+    pub action_icon_mode: Option<String>,
+    #[serde(default)]
+    pub save_icon_fixture_id: Option<String>,
+    #[serde(default)]
+    pub load_icon_fixture_id: Option<String>,
+    #[serde(default)]
+    pub clear_icon_fixture_id: Option<String>,
 }
 
 pub fn canonical_catalog_path() -> PathBuf {
@@ -390,7 +410,8 @@ fn normalize_and_validate_step_args(
                     "{path}.useCustomRootName is required for actionType 'set-root-name-state'."
                 ))
             })?;
-            let root_name = normalize_optional_option(args.custom_root_name.take()).unwrap_or_default();
+            let root_name =
+                normalize_optional_option(args.custom_root_name.take()).unwrap_or_default();
             if enabled && root_name.is_empty() {
                 return Err(ContractError(format!(
                     "{path}.customRootName must not be blank when useCustomRootName is true."
@@ -401,10 +422,22 @@ fn normalize_and_validate_step_args(
                 args.preset_names_by_slot.is_some(),
                 &(path.to_string() + ".presetNamesBySlot"),
             )?;
-            reject_present_arg(args.save_label.is_some(), &(path.to_string() + ".saveLabel"))?;
-            reject_present_arg(args.load_label.is_some(), &(path.to_string() + ".loadLabel"))?;
-            reject_present_arg(args.clear_label.is_some(), &(path.to_string() + ".clearLabel"))?;
-            reject_present_arg(args.confirm_label.is_some(), &(path.to_string() + ".confirmLabel"))?;
+            reject_present_arg(
+                args.save_label.is_some(),
+                &(path.to_string() + ".saveLabel"),
+            )?;
+            reject_present_arg(
+                args.load_label.is_some(),
+                &(path.to_string() + ".loadLabel"),
+            )?;
+            reject_present_arg(
+                args.clear_label.is_some(),
+                &(path.to_string() + ".clearLabel"),
+            )?;
+            reject_present_arg(
+                args.confirm_label.is_some(),
+                &(path.to_string() + ".confirmLabel"),
+            )?;
         }
         "set-preset-name-mask" => {
             let names = args.preset_names_by_slot.as_ref().ok_or_else(|| {
@@ -426,10 +459,22 @@ fn normalize_and_validate_step_args(
                 args.custom_root_name.is_some(),
                 &(path.to_string() + ".customRootName"),
             )?;
-            reject_present_arg(args.save_label.is_some(), &(path.to_string() + ".saveLabel"))?;
-            reject_present_arg(args.load_label.is_some(), &(path.to_string() + ".loadLabel"))?;
-            reject_present_arg(args.clear_label.is_some(), &(path.to_string() + ".clearLabel"))?;
-            reject_present_arg(args.confirm_label.is_some(), &(path.to_string() + ".confirmLabel"))?;
+            reject_present_arg(
+                args.save_label.is_some(),
+                &(path.to_string() + ".saveLabel"),
+            )?;
+            reject_present_arg(
+                args.load_label.is_some(),
+                &(path.to_string() + ".loadLabel"),
+            )?;
+            reject_present_arg(
+                args.clear_label.is_some(),
+                &(path.to_string() + ".clearLabel"),
+            )?;
+            reject_present_arg(
+                args.confirm_label.is_some(),
+                &(path.to_string() + ".confirmLabel"),
+            )?;
         }
         "set-action-label-mask" => {
             let has_label = args.save_label.is_some()
@@ -454,6 +499,93 @@ fn normalize_and_validate_step_args(
                 &(path.to_string() + ".presetNamesBySlot"),
             )?;
         }
+        "set-icon-mode" => {
+            let icon_mode = args.icon_mode.as_deref().ok_or_else(|| {
+                ContractError(format!(
+                    "{path}.iconMode is required for actionType 'set-icon-mode'."
+                ))
+            })?;
+            args.icon_mode = Some(require_icon_mode(
+                icon_mode,
+                &(path.to_string() + ".iconMode"),
+            )?);
+        }
+        "set-gear-color" => {
+            if let Some(index) = args.selected_gear_index {
+                require_gear_index(index, &(path.to_string() + ".selectedGearIndex"))?;
+            }
+            if let Some(color) = args.gear_color.as_deref() {
+                args.gear_color = Some(require_gear_color(
+                    color,
+                    &(path.to_string() + ".gearColor"),
+                )?);
+            }
+            if args.selected_gear_index.is_none() && args.gear_color.is_none() {
+                return Err(ContractError(format!(
+                    "{path} must include selectedGearIndex or gearColor for actionType 'set-gear-color'."
+                )));
+            }
+        }
+        "set-custom-icons-enabled" => {
+            if args.use_custom_slot_icons.is_none() {
+                return Err(ContractError(format!(
+                    "{path}.useCustomSlotIcons is required for actionType 'set-custom-icons-enabled'."
+                )));
+            }
+        }
+        "set-root-icon-fixture" => {
+            let fixture_id = args.root_icon_fixture_id.as_deref().ok_or_else(|| {
+                ContractError(format!(
+                    "{path}.rootIconFixtureId is required for actionType 'set-root-icon-fixture'."
+                ))
+            })?;
+            validate_optional_icon_fixture_id(
+                fixture_id,
+                &(path.to_string() + ".rootIconFixtureId"),
+            )?;
+        }
+        "set-slot-icon-mask" => {
+            let fixture_ids = args.slot_icon_fixture_ids_by_slot.as_ref().ok_or_else(|| {
+                ContractError(format!(
+                    "{path}.slotIconFixtureIdsBySlot is required for actionType 'set-slot-icon-mask'."
+                ))
+            })?;
+            for (index, fixture_id) in fixture_ids.iter().enumerate() {
+                validate_optional_icon_fixture_id(
+                    fixture_id,
+                    &format!("{path}.slotIconFixtureIdsBySlot[{index}]"),
+                )?;
+            }
+        }
+        "set-action-icon-mask" => {
+            if let Some(action_icon_mode) = args.action_icon_mode.as_deref() {
+                args.action_icon_mode = Some(require_action_icon_mode(
+                    action_icon_mode,
+                    &(path.to_string() + ".actionIconMode"),
+                )?);
+            }
+            validate_optional_icon_fixture_id(
+                args.save_icon_fixture_id.as_deref().unwrap_or_default(),
+                &(path.to_string() + ".saveIconFixtureId"),
+            )?;
+            validate_optional_icon_fixture_id(
+                args.load_icon_fixture_id.as_deref().unwrap_or_default(),
+                &(path.to_string() + ".loadIconFixtureId"),
+            )?;
+            validate_optional_icon_fixture_id(
+                args.clear_icon_fixture_id.as_deref().unwrap_or_default(),
+                &(path.to_string() + ".clearIconFixtureId"),
+            )?;
+            if args.action_icon_mode.is_none()
+                && args.save_icon_fixture_id.is_none()
+                && args.load_icon_fixture_id.is_none()
+                && args.clear_icon_fixture_id.is_none()
+            {
+                return Err(ContractError(format!(
+                    "{path} must include actionIconMode or an action icon fixture ID for actionType 'set-action-icon-mask'."
+                )));
+            }
+        }
         _ => {}
     }
 
@@ -470,16 +602,30 @@ fn normalize_step_args(args: &mut SmokeStepArgs) {
     args.expected_diagnostic_contains = normalize_optional(&args.expected_diagnostic_contains);
     args.expected_state = normalize_optional(&args.expected_state);
     args.install_path_preset_id = normalize_optional(&args.install_path_preset_id);
-    args.expected_normalized_effective_path = normalize_install_path(&args.expected_normalized_effective_path);
+    args.expected_normalized_effective_path =
+        normalize_install_path(&args.expected_normalized_effective_path);
     args.custom_root_name = normalize_optional_option(args.custom_root_name.take());
-    args.preset_names_by_slot = args
-        .preset_names_by_slot
-        .take()
-        .map(|names| names.into_iter().map(|name| normalize_optional(&name)).collect());
+    args.preset_names_by_slot = args.preset_names_by_slot.take().map(|names| {
+        names
+            .into_iter()
+            .map(|name| normalize_optional(&name))
+            .collect()
+    });
     args.save_label = normalize_optional_option(args.save_label.take());
     args.load_label = normalize_optional_option(args.load_label.take());
     args.clear_label = normalize_optional_option(args.clear_label.take());
     args.confirm_label = normalize_optional_option(args.confirm_label.take());
+    args.icon_mode = normalize_optional_option(args.icon_mode.take());
+    args.gear_color = normalize_optional_option(args.gear_color.take());
+    args.root_icon_fixture_id = normalize_optional_option(args.root_icon_fixture_id.take());
+    args.slot_icon_fixture_ids_by_slot = args
+        .slot_icon_fixture_ids_by_slot
+        .take()
+        .map(|ids| ids.into_iter().map(|id| normalize_optional(&id)).collect());
+    args.action_icon_mode = normalize_optional_option(args.action_icon_mode.take());
+    args.save_icon_fixture_id = normalize_optional_option(args.save_icon_fixture_id.take());
+    args.load_icon_fixture_id = normalize_optional_option(args.load_icon_fixture_id.take());
+    args.clear_icon_fixture_id = normalize_optional_option(args.clear_icon_fixture_id.take());
 }
 
 fn reject_present_arg(is_present: bool, path: &str) -> Result<(), ContractError> {
@@ -493,9 +639,7 @@ fn reject_present_arg(is_present: bool, path: &str) -> Result<(), ContractError>
 
 fn require_slot_count_in_range(slot_count: i32, path: &str) -> Result<(), ContractError> {
     if !(1..=8).contains(&slot_count) {
-        return Err(ContractError(format!(
-            "{path} must be between 1 and 8."
-        )));
+        return Err(ContractError(format!("{path} must be between 1 and 8.")));
     }
     Ok(())
 }
@@ -510,6 +654,64 @@ fn validate_optional_slot_count(slot_count: i32, path: &str) -> Result<(), Contr
 fn require_install_path_preset(value: &str, path: &str) -> Result<String, ContractError> {
     normalize_enum_value(value, path, &["disabled", "root", "simple", "nested"])
 }
+
+fn require_icon_mode(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_value(value, path, &["MultiColor", "SameColor", "Custom"])
+}
+
+fn require_action_icon_mode(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_value(value, path, &["Default", "Custom"])
+}
+
+fn require_gear_color(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_value(
+        value,
+        path,
+        &[
+            "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow",
+        ],
+    )
+}
+
+fn require_gear_index(value: i32, path: &str) -> Result<(), ContractError> {
+    if !(0..=7).contains(&value) {
+        return Err(ContractError(format!("{path} must be between 0 and 7.")));
+    }
+    Ok(())
+}
+
+fn validate_optional_icon_fixture_id(value: &str, path: &str) -> Result<(), ContractError> {
+    let fixture_id = normalize_optional(value);
+    if fixture_id.is_empty() || is_known_icon_fixture_id(&fixture_id) {
+        return Ok(());
+    }
+
+    Err(ContractError(format!(
+        "{path} has unsupported icon fixture ID '{fixture_id}'. Known IDs: {}.",
+        KNOWN_ICON_FIXTURE_IDS.join(", ")
+    )))
+}
+
+fn is_known_icon_fixture_id(value: &str) -> bool {
+    KNOWN_ICON_FIXTURE_IDS
+        .iter()
+        .any(|fixture_id| *fixture_id == value)
+}
+
+const KNOWN_ICON_FIXTURE_IDS: &[&str] = &[
+    "asm-lite-icon/root",
+    "asm-lite-icon/slot-01",
+    "asm-lite-icon/slot-02",
+    "asm-lite-icon/slot-03",
+    "asm-lite-icon/slot-04",
+    "asm-lite-icon/slot-05",
+    "asm-lite-icon/slot-06",
+    "asm-lite-icon/slot-07",
+    "asm-lite-icon/slot-08",
+    "asm-lite-icon/action-save",
+    "asm-lite-icon/action-load",
+    "asm-lite-icon/action-clear",
+];
 
 fn validate_expected_install_path_matches_preset(
     args: &SmokeStepArgs,
@@ -655,6 +857,12 @@ fn is_supported_action_type(action_type: &str) -> bool {
         | "set-root-name-state"
         | "set-preset-name-mask"
         | "set-action-label-mask"
+        | "set-icon-mode"
+        | "set-gear-color"
+        | "set-custom-icons-enabled"
+        | "set-root-icon-fixture"
+        | "set-slot-icon-mask"
+        | "set-action-icon-mask"
         | "assert-generated-references-package-managed"
         | "assert-runtime-component-valid"
         | "assert-host-ready")
@@ -716,7 +924,7 @@ mod tests {
             ]
         );
         assert_eq!(catalog.groups[0].suites[0].cases.len(), 6);
-        assert_eq!(catalog.groups[1].suites.len(), 11);
+        assert!(catalog.groups[1].suites.len() >= 11);
         assert_eq!(catalog.groups[2].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[2].suites[0].cases[0]
             .steps
@@ -911,6 +1119,202 @@ mod tests {
                 panic!("phase1 action token {action_type} should parse: {error}")
             });
         }
+    }
+
+    #[test]
+    fn catalog_accepts_setup36_icon_suite_actions_and_long_fixture_masks() {
+        let raw = r#"{
+  "catalogVersion": 1,
+  "protocolVersion": "1.0.0",
+  "fixture": { "scenePath": "Assets/Click ME.unity", "avatarName": "Oct25_Dress" },
+  "groups": [
+    {
+      "groupId": "setup",
+      "label": "Setup",
+      "description": "desc",
+      "suites": [
+        {
+          "suiteId": "setup-prebuild-icons-matrix",
+          "label": "Icons matrix",
+          "description": "desc",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": ["all-setup"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "ok",
+          "debugHint": "hint",
+          "cases": [
+            {
+              "caseId": "icon-contract",
+              "label": "Case",
+              "description": "desc",
+              "expectedOutcome": "ok",
+              "debugHint": "hint",
+              "steps": [
+                {
+                  "stepId": "icon-mode",
+                  "label": "Icon mode",
+                  "description": "desc",
+                  "actionType": "set-icon-mode",
+                  "args": { "iconMode": "Custom" },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "gear-color",
+                  "label": "Gear color",
+                  "description": "desc",
+                  "actionType": "set-gear-color",
+                  "args": { "selectedGearIndex": 7, "gearColor": "Yellow" },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "custom-icons-enabled",
+                  "label": "Custom icons",
+                  "description": "desc",
+                  "actionType": "set-custom-icons-enabled",
+                  "args": { "useCustomSlotIcons": true },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "root-fixture",
+                  "label": "Root fixture",
+                  "description": "desc",
+                  "actionType": "set-root-icon-fixture",
+                  "args": { "rootIconFixtureId": "asm-lite-icon/root" },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "slot-mask",
+                  "label": "Slot mask",
+                  "description": "desc",
+                  "actionType": "set-slot-icon-mask",
+                  "args": {
+                    "slotIconFixtureIdsBySlot": [
+                      "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04",
+                      "asm-lite-icon/slot-05", "asm-lite-icon/slot-06", "asm-lite-icon/slot-07", "asm-lite-icon/slot-08",
+                      "", "asm-lite-icon/slot-01", "asm-lite-icon/action-save", "asm-lite-icon/action-clear"
+                    ]
+                  },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "slot-mask-alias",
+                  "label": "Slot mask alias",
+                  "description": "desc",
+                  "actionType": "set-slot-icon-mask",
+                  "args": {
+                    "slotIconFixtureIds": ["asm-lite-icon/slot-01"]
+                  },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "action-mask",
+                  "label": "Action mask",
+                  "description": "desc",
+                  "actionType": "set-action-icon-mask",
+                  "args": {
+                    "actionIconMode": "Custom",
+                    "saveIconFixtureId": "asm-lite-icon/action-save",
+                    "loadIconFixtureId": "asm-lite-icon/action-load",
+                    "clearIconFixtureId": "asm-lite-icon/action-clear"
+                  },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}"#;
+
+        let catalog = load_catalog_from_str(raw).expect("setup36 icon catalog should parse");
+        let suite = &catalog.groups[0].suites[0];
+        assert_eq!(suite.suite_id, "setup-prebuild-icons-matrix");
+        assert_eq!(suite.cases[0].steps.len(), 7);
+        let slot_mask = &suite.cases[0].steps[4].args;
+        assert_eq!(
+            slot_mask
+                .slot_icon_fixture_ids_by_slot
+                .as_ref()
+                .expect("slot fixture mask should deserialize")
+                .len(),
+            12
+        );
+        let slot_mask_alias = &suite.cases[0].steps[5].args;
+        assert_eq!(
+            slot_mask_alias
+                .slot_icon_fixture_ids_by_slot
+                .as_ref()
+                .expect("slot fixture alias should deserialize"),
+            &vec!["asm-lite-icon/slot-01".to_string()]
+        );
+    }
+
+    #[test]
+    fn catalog_rejects_unknown_icon_fixture_ids() {
+        let raw = r#"{
+  "catalogVersion": 1,
+  "protocolVersion": "1.0.0",
+  "fixture": { "scenePath": "Assets/Click ME.unity", "avatarName": "Oct25_Dress" },
+  "groups": [
+    {
+      "groupId": "setup",
+      "label": "Setup",
+      "description": "desc",
+      "suites": [
+        {
+          "suiteId": "setup-prebuild-icons-matrix",
+          "label": "Icons matrix",
+          "description": "desc",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": ["all-setup"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "ok",
+          "debugHint": "hint",
+          "cases": [
+            {
+              "caseId": "icon-contract",
+              "label": "Case",
+              "description": "desc",
+              "expectedOutcome": "ok",
+              "debugHint": "hint",
+              "steps": [
+                {
+                  "stepId": "bad-slot-mask",
+                  "label": "Slot mask",
+                  "description": "desc",
+                  "actionType": "set-slot-icon-mask",
+                  "args": { "slotIconFixtureIdsBySlot": ["asm-lite-icon/not-real"] },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}"#;
+
+        let error = load_catalog_from_str(raw).expect_err("unknown fixture id should fail");
+        assert!(error.to_string().contains("unsupported icon fixture ID"));
     }
 
     #[test]

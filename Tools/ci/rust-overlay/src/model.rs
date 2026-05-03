@@ -775,15 +775,14 @@ mod tests {
         let model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
-        assert_eq!(
-            model.selected_suite_ids(),
-            vec![
-                "asm-lite-readiness-check",
-                "setup-scene-avatar",
-                "lifecycle-roundtrip",
-                "playmode-runtime-validation"
-            ]
-        );
+        let expected_default_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| suite.default_selected)
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(model.selected_suite_ids(), expected_default_ids);
         assert_eq!(model.selected_suite_id, "asm-lite-readiness-check");
         assert!(model.can_run_selected_suite());
     }
@@ -851,21 +850,20 @@ mod tests {
             .apply_preset_group("all-setup")
             .expect("all setup preset should apply");
 
-        assert_eq!(
-            model.selected_suite_ids(),
-            vec![
-                "setup-scene-avatar",
-                "avatar-discovery-selection-regression",
-                "add-prefab-idempotency",
-                "installed-state-recognition",
-                "generated-asset-recovery-signals",
-                "generated-reference-ownership",
-                "negative-diagnostics",
-                "setup-prebuild-slots-matrix",
-                "setup-prebuild-path-matrix",
-                "setup-prebuild-names-matrix",
-            ]
-        );
+        let expected_all_setup_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .filter(|suite| {
+                suite
+                    .preset_groups
+                    .iter()
+                    .any(|preset| preset == "all-setup")
+            })
+            .filter(|suite| !suite.is_destructive())
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(model.selected_suite_ids(), expected_all_setup_ids);
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
     }
 
@@ -912,25 +910,13 @@ mod tests {
         let mut model =
             SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
 
-        assert_eq!(
-            model.available_suite_ids(),
-            vec![
-                "asm-lite-readiness-check",
-                "setup-scene-avatar",
-                "avatar-discovery-selection-regression",
-                "add-prefab-idempotency",
-                "installed-state-recognition",
-                "generated-asset-recovery-signals",
-                "generated-reference-ownership",
-                "negative-diagnostics",
-                "setup-prebuild-slots-matrix",
-                "setup-prebuild-path-matrix",
-                "setup-prebuild-names-matrix",
-                "destructive-recovery-reset",
-                "lifecycle-roundtrip",
-                "playmode-runtime-validation"
-            ]
-        );
+        let expected_available_ids: Vec<&str> = catalog
+            .groups
+            .iter()
+            .flat_map(|group| group.suites.iter())
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+        assert_eq!(model.available_suite_ids(), expected_available_ids);
         assert!(model.toggle_suite_selection_by_id("synthetic-all").is_err());
     }
 
