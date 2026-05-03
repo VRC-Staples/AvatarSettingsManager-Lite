@@ -180,6 +180,269 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void NamingAutomation_DefaultGateOff_LeavesEffectiveNamesAtDefaults()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(false, "  Ignored Root  ");
+
+                AssertNamingSnapshotFields(
+                    "default gate-off row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    useCustomRootName: false,
+                    expectedRootName: string.Empty,
+                    expectedPresetNames: EmptyStrings(3),
+                    expectedSaveLabel: string.Empty,
+                    expectedLoadLabel: string.Empty,
+                    expectedClearLabel: string.Empty,
+                    expectedConfirmLabel: string.Empty);
+                AssertEffectiveNaming(
+                    "default gate-off row",
+                    _ctx.Comp,
+                    3,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    DefaultPresetLabels(3),
+                    ASMLite.Editor.ASMLiteBuilder.DefaultSaveLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultLoadLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultClearPresetLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultConfirmLabel);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void NamingAutomation_RootOnly_UpdatesRootAcrossPendingAndAttachedSnapshots()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(true, "  Creator Settings  ");
+
+                AssertNamingSnapshotFields(
+                    "root-only row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    useCustomRootName: true,
+                    expectedRootName: "Creator Settings",
+                    expectedPresetNames: EmptyStrings(3),
+                    expectedSaveLabel: string.Empty,
+                    expectedLoadLabel: string.Empty,
+                    expectedClearLabel: string.Empty,
+                    expectedConfirmLabel: string.Empty);
+                AssertEffectiveNaming(
+                    "root-only row",
+                    _ctx.Comp,
+                    3,
+                    "Creator Settings",
+                    DefaultPresetLabels(3),
+                    ASMLite.Editor.ASMLiteBuilder.DefaultSaveLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultLoadLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultClearPresetLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultConfirmLabel);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void NamingAutomation_FirstPresetOnly_UpdatesOnlyFirstPresetName()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(true, ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName);
+                window.SetPresetNameMaskForAutomation(new Dictionary<int, string>
+                {
+                    { 1, "  Casual Fit  " },
+                }, clearExisting: true);
+
+                AssertNamingSnapshotFields(
+                    "first-preset-only row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    useCustomRootName: true,
+                    expectedRootName: ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    expectedPresetNames: new[] { "Casual Fit", string.Empty, string.Empty },
+                    expectedSaveLabel: string.Empty,
+                    expectedLoadLabel: string.Empty,
+                    expectedClearLabel: string.Empty,
+                    expectedConfirmLabel: string.Empty);
+                AssertEffectiveNaming(
+                    "first-preset-only row",
+                    _ctx.Comp,
+                    3,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    new[] { "Casual Fit", "Preset 2", "Preset 3" },
+                    ASMLite.Editor.ASMLiteBuilder.DefaultSaveLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultLoadLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultClearPresetLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultConfirmLabel);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void NamingAutomation_AllPresets_UpdatesEveryPresetName()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 4;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(true, ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName);
+                window.SetPresetNameMaskForAutomation(new[]
+                {
+                    "  Day  ",
+                    "Night",
+                    " Party ",
+                    "Quest",
+                }, clearExisting: true);
+
+                var expectedPresets = new[] { "Day", "Night", "Party", "Quest" };
+                AssertNamingSnapshotFields(
+                    "all-presets row",
+                    window,
+                    _ctx.Comp,
+                    4,
+                    useCustomRootName: true,
+                    expectedRootName: ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    expectedPresetNames: expectedPresets,
+                    expectedSaveLabel: string.Empty,
+                    expectedLoadLabel: string.Empty,
+                    expectedClearLabel: string.Empty,
+                    expectedConfirmLabel: string.Empty);
+                AssertEffectiveNaming(
+                    "all-presets row",
+                    _ctx.Comp,
+                    4,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    expectedPresets,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultSaveLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultLoadLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultClearPresetLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultConfirmLabel);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void NamingAutomation_SaveOnlyActionLabel_UpdatesOnlySaveLabel()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(true, ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName);
+                window.SetActionLabelMaskForAutomation(new Dictionary<string, string>
+                {
+                    { "save", "  Store  " },
+                }, clearExisting: true);
+
+                AssertNamingSnapshotFields(
+                    "save-only action-label row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    useCustomRootName: true,
+                    expectedRootName: ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    expectedPresetNames: EmptyStrings(3),
+                    expectedSaveLabel: "Store",
+                    expectedLoadLabel: string.Empty,
+                    expectedClearLabel: string.Empty,
+                    expectedConfirmLabel: string.Empty);
+                AssertEffectiveNaming(
+                    "save-only action-label row",
+                    _ctx.Comp,
+                    3,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultRootControlName,
+                    DefaultPresetLabels(3),
+                    "Store",
+                    ASMLite.Editor.ASMLiteBuilder.DefaultLoadLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultClearPresetLabel,
+                    ASMLite.Editor.ASMLiteBuilder.DefaultConfirmLabel);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void NamingAutomation_FullPack_UpdatesRootPresetAndActionLabels()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetRootNameStateForAutomation(true, "  Creator Controls  ");
+                window.SetPresetNameMaskForAutomation(new[]
+                {
+                    " Work ",
+                    "Play",
+                    " Sleep ",
+                }, clearExisting: true);
+                window.SetActionLabelMaskForAutomation(
+                    saveLabel: " Commit ",
+                    loadLabel: " Recall ",
+                    clearLabel: " Reset Slot ",
+                    confirmLabel: " Apply It ",
+                    clearExisting: true);
+
+                var expectedPresets = new[] { "Work", "Play", "Sleep" };
+                AssertNamingSnapshotFields(
+                    "full-pack row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    useCustomRootName: true,
+                    expectedRootName: "Creator Controls",
+                    expectedPresetNames: expectedPresets,
+                    expectedSaveLabel: "Commit",
+                    expectedLoadLabel: "Recall",
+                    expectedClearLabel: "Reset Slot",
+                    expectedConfirmLabel: "Apply It");
+                AssertEffectiveNaming(
+                    "full-pack row",
+                    _ctx.Comp,
+                    3,
+                    "Creator Controls",
+                    expectedPresets,
+                    "Commit",
+                    "Recall",
+                    "Reset Slot",
+                    "Apply It");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
         {
             var limbRoot = new GameObject("AvatarLimbScaling");
@@ -533,6 +796,171 @@ namespace ASMLite.Tests.Editor
             {
                 Object.DestroyImmediate(window);
             }
+        }
+
+        private static void AssertNamingSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow window,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            bool useCustomRootName,
+            string expectedRootName,
+            string[] expectedPresetNames,
+            string expectedSaveLabel,
+            string expectedLoadLabel,
+            string expectedClearLabel,
+            string expectedConfirmLabel)
+        {
+            Assert.IsNotNull(window, $"{scenario}: expected an automation window.");
+            Assert.IsNotNull(component, $"{scenario}: expected an attached ASM-Lite component.");
+
+            AssertNamingSnapshotFields(
+                scenario + " pending testing snapshot",
+                window.GetPendingCustomizationSnapshotForTesting(),
+                component,
+                expectedSlotCount,
+                useCustomRootName,
+                expectedRootName,
+                expectedPresetNames,
+                expectedSaveLabel,
+                expectedLoadLabel,
+                expectedClearLabel,
+                expectedConfirmLabel);
+            AssertNamingSnapshotFields(
+                scenario + " pending automation snapshot",
+                window.GetPendingCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                useCustomRootName,
+                expectedRootName,
+                expectedPresetNames,
+                expectedSaveLabel,
+                expectedLoadLabel,
+                expectedClearLabel,
+                expectedConfirmLabel);
+            AssertNamingSnapshotFields(
+                scenario + " attached automation snapshot",
+                window.GetAttachedCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                useCustomRootName,
+                expectedRootName,
+                expectedPresetNames,
+                expectedSaveLabel,
+                expectedLoadLabel,
+                expectedClearLabel,
+                expectedConfirmLabel);
+        }
+
+        private static void AssertNamingSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow.PendingCustomizationSnapshot snapshot,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            bool useCustomRootName,
+            string expectedRootName,
+            string[] expectedPresetNames,
+            string expectedSaveLabel,
+            string expectedLoadLabel,
+            string expectedClearLabel,
+            string expectedConfirmLabel)
+        {
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), snapshot.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the pending testing snapshot.");
+            Assert.AreEqual(useCustomRootName, snapshot.UseCustomRootName,
+                $"{scenario}: UseCustomRootName should expose the root naming gate.");
+            Assert.AreEqual(expectedRootName, snapshot.CustomRootName,
+                $"{scenario}: CustomRootName should expose the normalized root-name text.");
+            Assert.AreEqual(expectedSlotCount, snapshot.PresetNamesBySlot.Length,
+                $"{scenario}: preset-name snapshot length should follow the selected slot count.");
+            CollectionAssert.AreEqual(expectedPresetNames, snapshot.PresetNamesBySlot,
+                $"{scenario}: PresetNamesBySlot should expose field-specific normalized preset names.");
+            Assert.AreEqual(expectedSaveLabel, snapshot.SaveLabel,
+                $"{scenario}: SaveLabel should expose the normalized Save action label field.");
+            Assert.AreEqual(expectedLoadLabel, snapshot.LoadLabel,
+                $"{scenario}: LoadLabel should expose the normalized Load action label field.");
+            Assert.AreEqual(expectedClearLabel, snapshot.ClearLabel,
+                $"{scenario}: ClearLabel should expose the normalized Clear action label field.");
+            Assert.AreEqual(expectedConfirmLabel, snapshot.ConfirmLabel,
+                $"{scenario}: ConfirmLabel should expose the normalized Confirm action label field.");
+        }
+
+        private static void AssertNamingSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow.CustomizationAutomationSnapshot snapshot,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            bool useCustomRootName,
+            string expectedRootName,
+            string[] expectedPresetNames,
+            string expectedSaveLabel,
+            string expectedLoadLabel,
+            string expectedClearLabel,
+            string expectedConfirmLabel)
+        {
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), snapshot.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the automation snapshot.");
+            Assert.AreSame(component, snapshot.Component,
+                $"{scenario}: automation snapshot should expose the attached ASMLiteComponent.");
+            Assert.IsTrue(snapshot.HasAttachedComponent,
+                $"{scenario}: automation snapshot should identify the attached component branch.");
+            Assert.AreEqual(expectedSlotCount, snapshot.SlotCount,
+                $"{scenario}: SlotCount should stay aligned with naming array normalization.");
+            Assert.AreEqual(useCustomRootName, snapshot.UseCustomRootName,
+                $"{scenario}: UseCustomRootName should expose the root naming gate.");
+            Assert.AreEqual(expectedRootName, snapshot.CustomRootName,
+                $"{scenario}: CustomRootName should expose the normalized root-name text.");
+            CollectionAssert.AreEqual(expectedPresetNames, snapshot.PresetNamesBySlot,
+                $"{scenario}: PresetNamesBySlot should expose field-specific normalized preset names.");
+            Assert.AreEqual(expectedSaveLabel, snapshot.SaveLabel,
+                $"{scenario}: SaveLabel should expose the normalized Save action label field.");
+            Assert.AreEqual(expectedLoadLabel, snapshot.LoadLabel,
+                $"{scenario}: LoadLabel should expose the normalized Load action label field.");
+            Assert.AreEqual(expectedClearLabel, snapshot.ClearLabel,
+                $"{scenario}: ClearLabel should expose the normalized Clear action label field.");
+            Assert.AreEqual(expectedConfirmLabel, snapshot.ConfirmLabel,
+                $"{scenario}: ConfirmLabel should expose the normalized Confirm action label field.");
+        }
+
+        private static void AssertEffectiveNaming(
+            string scenario,
+            ASMLite.ASMLiteComponent component,
+            int slotCount,
+            string expectedRootName,
+            string[] expectedPresetLabels,
+            string expectedSaveLabel,
+            string expectedLoadLabel,
+            string expectedClearLabel,
+            string expectedConfirmLabel)
+        {
+            Assert.AreEqual(expectedRootName, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveRootControlName(component),
+                $"{scenario}: effective root name should reflect the root naming gate and normalized root text.");
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                Assert.AreEqual(expectedPresetLabels[slot - 1], ASMLite.Editor.ASMLiteBuilder.ResolveEffectivePresetControlName(component, slot),
+                    $"{scenario}: effective preset label mismatch for slot {slot}.");
+            }
+
+            Assert.AreEqual(expectedSaveLabel, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveSaveLabel(component),
+                $"{scenario}: effective Save action label mismatch.");
+            Assert.AreEqual(expectedLoadLabel, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveLoadLabel(component),
+                $"{scenario}: effective Load action label mismatch.");
+            Assert.AreEqual(expectedClearLabel, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveClearPresetLabel(component),
+                $"{scenario}: effective Clear action label mismatch.");
+            Assert.AreEqual(expectedConfirmLabel, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveConfirmLabel(component),
+                $"{scenario}: effective Confirm action label mismatch.");
+        }
+
+        private static string[] EmptyStrings(int count)
+        {
+            return Enumerable.Repeat(string.Empty, count).ToArray();
+        }
+
+        private static string[] DefaultPresetLabels(int count)
+        {
+            return Enumerable.Range(1, count)
+                .Select(slot => ASMLite.Editor.ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase))
+                .ToArray();
         }
 
         private static VRCExpressionsMenu CreateTempMenuAsset(string name)
