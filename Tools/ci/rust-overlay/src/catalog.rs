@@ -137,6 +137,12 @@ pub struct SmokeStepArgs {
     pub expected_install_path_enabled: bool,
     #[serde(default)]
     pub expected_normalized_effective_path: String,
+    #[serde(default, alias = "backupPresetId")]
+    pub parameter_backup_preset_id: String,
+    #[serde(default, alias = "backupPresetIds")]
+    pub parameter_backup_preset_ids: Option<Vec<String>>,
+    #[serde(default, alias = "excludedParameterNames")]
+    pub normalized_excluded_parameter_names: Option<Vec<String>>,
     #[serde(default)]
     pub expected_component_present: bool,
     #[serde(default)]
@@ -499,6 +505,12 @@ fn normalize_and_validate_step_args(
                 &(path.to_string() + ".presetNamesBySlot"),
             )?;
         }
+        "assert-parameter-backup-option-present" => {
+            validate_parameter_backup_args(args, path, action_type, true)?;
+        }
+        "set-parameter-backup-state" => {
+            validate_parameter_backup_args(args, path, action_type, false)?;
+        }
         "set-icon-mode" => {
             let icon_mode = args.icon_mode.as_deref().ok_or_else(|| {
                 ContractError(format!(
@@ -604,6 +616,11 @@ fn normalize_step_args(args: &mut SmokeStepArgs) {
     args.install_path_preset_id = normalize_optional(&args.install_path_preset_id);
     args.expected_normalized_effective_path =
         normalize_install_path(&args.expected_normalized_effective_path);
+    args.parameter_backup_preset_id = normalize_optional(&args.parameter_backup_preset_id);
+    args.parameter_backup_preset_ids =
+        normalize_string_list_option(args.parameter_backup_preset_ids.take());
+    args.normalized_excluded_parameter_names =
+        normalize_string_list_option(args.normalized_excluded_parameter_names.take());
     args.custom_root_name = normalize_optional_option(args.custom_root_name.take());
     args.preset_names_by_slot = args.preset_names_by_slot.take().map(|names| {
         names
@@ -796,12 +813,67 @@ fn validate_optional_preset_names_by_slot(
     Ok(())
 }
 
+fn validate_parameter_backup_args(
+    args: &SmokeStepArgs,
+    path: &str,
+    action_type: &str,
+    require_preset_selector: bool,
+) -> Result<(), ContractError> {
+    let has_preset_id = !args.parameter_backup_preset_id.is_empty();
+    let has_preset_ids = args
+        .parameter_backup_preset_ids
+        .as_ref()
+        .map(|ids| !ids.is_empty())
+        .unwrap_or(false);
+    let has_exclusion_list = args.normalized_excluded_parameter_names.is_some();
+
+    if require_preset_selector && !has_preset_id && !has_preset_ids {
+        return Err(ContractError(format!(
+            "{path} must include parameterBackupPresetId or parameterBackupPresetIds for actionType '{action_type}'."
+        )));
+    }
+
+    if !require_preset_selector && !has_preset_id && !has_preset_ids && !has_exclusion_list {
+        return Err(ContractError(format!(
+            "{path} must include a parameter backup preset selector or normalizedExcludedParameterNames for actionType '{action_type}'."
+        )));
+    }
+
+    if let Some(ids) = &args.parameter_backup_preset_ids {
+        validate_non_blank_string_list(ids, &(path.to_string() + ".parameterBackupPresetIds"))?;
+    }
+    if let Some(names) = &args.normalized_excluded_parameter_names {
+        validate_non_blank_string_list(
+            names,
+            &(path.to_string() + ".normalizedExcludedParameterNames"),
+        )?;
+    }
+
+    Ok(())
+}
+
+fn validate_non_blank_string_list(values: &[String], path: &str) -> Result<(), ContractError> {
+    for (index, value) in values.iter().enumerate() {
+        require_non_blank(value, &format!("{path}[{index}]"))?;
+    }
+    Ok(())
+}
+
 fn normalize_optional(value: &str) -> String {
     value.trim().to_string()
 }
 
 fn normalize_optional_option(value: Option<String>) -> Option<String> {
     value.map(|item| normalize_optional(&item))
+}
+
+fn normalize_string_list_option(values: Option<Vec<String>>) -> Option<Vec<String>> {
+    values.map(|items| {
+        items
+            .into_iter()
+            .map(|item| normalize_optional(&item))
+            .collect()
+    })
 }
 
 fn normalize_install_path(value: &str) -> String {
@@ -909,6 +981,8 @@ fn is_supported_action_type(action_type: &str) -> bool {
         | "set-root-name-state"
         | "set-preset-name-mask"
         | "set-action-label-mask"
+        | "assert-parameter-backup-option-present"
+        | "set-parameter-backup-state"
         | "set-icon-mode"
         | "set-gear-color"
         | "set-custom-icons-enabled"
@@ -1171,6 +1245,127 @@ mod tests {
                 panic!("phase1 action token {action_type} should parse: {error}")
             });
         }
+    }
+
+    #[test]
+    fn catalog_accepts_setup36_backup_suite_actions_and_args() {
+        let raw = r#"{
+  "catalogVersion": 1,
+  "protocolVersion": "1.0.0",
+  "fixture": { "scenePath": "Assets/Click ME.unity", "avatarName": "Oct25_Dress" },
+  "groups": [
+    {
+      "groupId": "setup",
+      "label": "Setup",
+      "description": "desc",
+      "suites": [
+        {
+          "suiteId": "setup-prebuild-backup-matrix",
+          "label": "Backup matrix",
+          "description": "desc",
+          "resetOverride": "Inherit",
+          "speed": "quick",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": ["all-setup"],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "ok",
+          "debugHint": "hint",
+          "cases": [
+            {
+              "caseId": "backup-contract",
+              "label": "Case",
+              "description": "desc",
+              "expectedOutcome": "ok",
+              "debugHint": "hint",
+              "steps": [
+                {
+                  "stepId": "option-present",
+                  "label": "Option present",
+                  "description": "desc",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "args": { "parameterBackupPresetId": "  expression-parameters  " },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "set-state",
+                  "label": "Set state",
+                  "description": "desc",
+                  "actionType": "set-parameter-backup-state",
+                  "args": {
+                    "parameterBackupPresetIds": ["  expression-parameters  ", "animator-parameters"],
+                    "normalizedExcludedParameterNames": ["  ASM_Lite/MenuOpen  ", "FX/Toggle"]
+                  },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                },
+                {
+                  "stepId": "set-state-aliases",
+                  "label": "Set state aliases",
+                  "description": "desc",
+                  "actionType": "set-parameter-backup-state",
+                  "args": {
+                    "backupPresetIds": ["alias-preset"],
+                    "excludedParameterNames": []
+                  },
+                  "expectedOutcome": "ok",
+                  "debugHint": "hint"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}"#;
+
+        let catalog = load_catalog_from_str(raw).expect("setup36 backup catalog should parse");
+        let suite = &catalog.groups[0].suites[0];
+        assert_eq!(suite.suite_id, "setup-prebuild-backup-matrix");
+
+        let option_present = &suite.cases[0].steps[0].args;
+        assert_eq!(
+            option_present.parameter_backup_preset_id,
+            "expression-parameters"
+        );
+
+        let set_state = &suite.cases[0].steps[1].args;
+        assert_eq!(
+            set_state
+                .parameter_backup_preset_ids
+                .as_ref()
+                .expect("preset list should deserialize"),
+            &vec![
+                "expression-parameters".to_string(),
+                "animator-parameters".to_string()
+            ]
+        );
+        assert_eq!(
+            set_state
+                .normalized_excluded_parameter_names
+                .as_ref()
+                .expect("exclusion list should deserialize"),
+            &vec!["ASM_Lite/MenuOpen".to_string(), "FX/Toggle".to_string()]
+        );
+
+        let aliases = &suite.cases[0].steps[2].args;
+        assert_eq!(
+            aliases
+                .parameter_backup_preset_ids
+                .as_ref()
+                .expect("backupPresetIds alias should deserialize"),
+            &vec!["alias-preset".to_string()]
+        );
+        assert_eq!(
+            aliases
+                .normalized_excluded_parameter_names
+                .as_ref()
+                .expect("excludedParameterNames alias should deserialize"),
+            &Vec::<String>::new()
+        );
     }
 
     #[test]
