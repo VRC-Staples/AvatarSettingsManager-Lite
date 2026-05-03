@@ -6957,6 +6957,11 @@ namespace ASMLite.Editor
                 NormalizedEffectivePath = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(
                     customization.UseCustomInstallPath,
                     customization.CustomInstallPath);
+                CustomRootIconFixtureId = ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomRootIcon);
+                CustomSlotIconFixtureIds = ASMLiteIconFixtureRegistry.GetFixtureIdsOrEmpty(customization.CustomIcons);
+                CustomSaveIconFixtureId = ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomSaveIcon);
+                CustomLoadIconFixtureId = ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomLoadIcon);
+                CustomClearIconFixtureId = ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomClearIcon);
                 HasAttachedComponent = component != null;
                 HasPrimaryAction = actionHierarchy.PrimaryActions.Length > 0;
                 PrimaryAction = HasPrimaryAction ? actionHierarchy.PrimaryActions[0] : default;
@@ -6980,6 +6985,11 @@ namespace ASMLite.Editor
             public string CustomInstallPath { get; }
             public string NormalizedEffectivePath { get; }
             public string EffectiveInstallPath => NormalizedEffectivePath;
+            public string CustomRootIconFixtureId { get; }
+            public string[] CustomSlotIconFixtureIds { get; }
+            public string CustomSaveIconFixtureId { get; }
+            public string CustomLoadIconFixtureId { get; }
+            public string CustomClearIconFixtureId { get; }
             public bool HasAttachedComponent { get; }
             public bool HasComponent => HasAttachedComponent;
             public bool HasPrimaryAction { get; }
@@ -7135,6 +7145,62 @@ namespace ASMLite.Editor
                 confirm = NormalizeOptionalString(confirmLabel);
 
             ApplyActionLabelMaskForAutomation(save, load, clear, confirm);
+        }
+
+        internal void SetIconFixturesForAutomation(
+            string rootIconFixtureId,
+            string[] slotIconFixtureIds,
+            string saveIconFixtureId,
+            string loadIconFixtureId,
+            string clearIconFixtureId)
+        {
+            Texture2D rootIcon = ResolveOptionalIconFixtureForAutomation(rootIconFixtureId);
+            Texture2D[] slotIcons = ResolveIconFixturesForAutomation(slotIconFixtureIds);
+            Texture2D saveIcon = ResolveOptionalIconFixtureForAutomation(saveIconFixtureId);
+            Texture2D loadIcon = ResolveOptionalIconFixtureForAutomation(loadIconFixtureId);
+            Texture2D clearIcon = ResolveOptionalIconFixtureForAutomation(clearIconFixtureId);
+
+            _pendingUseCustomSlotIcons = true;
+            _pendingIconMode = IconMode.Custom;
+            _pendingCustomIcons = slotIcons;
+            _pendingUseCustomRootIcon = rootIcon != null;
+            _pendingCustomRootIcon = rootIcon;
+            _pendingActionIconMode = ActionIconMode.Custom;
+            _pendingCustomSaveIcon = saveIcon;
+            _pendingCustomLoadIcon = loadIcon;
+            _pendingCustomClearIcon = clearIcon;
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            Undo.RecordObject(component, "Set ASM-Lite Icon Fixtures");
+            component.useCustomSlotIcons = true;
+            component.iconMode = IconMode.Custom;
+            component.customIcons = (Texture2D[])slotIcons.Clone();
+            component.useCustomRootIcon = rootIcon != null;
+            component.customRootIcon = rootIcon;
+            component.actionIconMode = ActionIconMode.Custom;
+            component.customSaveIcon = saveIcon;
+            component.customLoadIcon = loadIcon;
+            component.customClearIcon = clearIcon;
+            EditorUtility.SetDirty(component);
+        }
+
+        private static Texture2D ResolveOptionalIconFixtureForAutomation(string fixtureId)
+        {
+            return string.IsNullOrWhiteSpace(fixtureId)
+                ? null
+                : ASMLiteIconFixtureRegistry.ResolveTexture(fixtureId);
+        }
+
+        private static Texture2D[] ResolveIconFixturesForAutomation(string[] fixtureIds)
+        {
+            fixtureIds = fixtureIds ?? Array.Empty<string>();
+            var icons = new Texture2D[fixtureIds.Length];
+            for (int index = 0; index < fixtureIds.Length; index++)
+                icons[index] = ResolveOptionalIconFixtureForAutomation(fixtureIds[index]);
+            return icons;
         }
 
         internal void SelectInstallPathForAutomation(string selectedPath)

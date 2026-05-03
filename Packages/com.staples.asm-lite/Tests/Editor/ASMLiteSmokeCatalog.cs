@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using ASMLite.Editor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
@@ -208,6 +209,11 @@ namespace ASMLite.Tests.Editor
         public string expectedState;
         public int slotCount;
         public string installPathPresetId;
+        public string rootIconFixtureId;
+        public string[] slotIconFixtureIds = Array.Empty<string>();
+        public string saveIconFixtureId;
+        public string loadIconFixtureId;
+        public string clearIconFixtureId;
         public bool expectedInstallPathEnabled;
         public string expectedNormalizedEffectivePath;
         public bool expectedComponentPresent;
@@ -234,6 +240,11 @@ namespace ASMLite.Tests.Editor
             expectedDiagnosticContains = NormalizeOptional(expectedDiagnosticContains);
             expectedState = NormalizeOptional(expectedState);
             installPathPresetId = NormalizeOptional(installPathPresetId);
+            rootIconFixtureId = NormalizeOptional(rootIconFixtureId);
+            slotIconFixtureIds = NormalizeOptionalArray(slotIconFixtureIds);
+            saveIconFixtureId = NormalizeOptional(saveIconFixtureId);
+            loadIconFixtureId = NormalizeOptional(loadIconFixtureId);
+            clearIconFixtureId = NormalizeOptional(clearIconFixtureId);
             expectedNormalizedEffectivePath = NormalizeInstallPath(expectedNormalizedEffectivePath);
             customRootName = NormalizeOptional(customRootName);
             customPresetNames = NormalizeOptionalArray(customPresetNames);
@@ -261,6 +272,7 @@ namespace ASMLite.Tests.Editor
         {
             if (values == null || values.Length == 0)
                 return Array.Empty<string>();
+
 
             var normalized = new string[values.Length];
             for (int index = 0; index < values.Length; index++)
@@ -448,6 +460,7 @@ namespace ASMLite.Tests.Editor
                     step.args.expectedDiagnosticContains,
                     path + ".args.expectedDiagnosticContains");
             }
+            ValidateIconFixtureIds(step.args, path + ".args");
             ValidatePhase1StepArgs(step.actionType, step.args, path + ".args");
             step.expectedOutcome = RequireNonBlank(step.expectedOutcome, path + ".expectedOutcome");
             step.debugHint = RequireNonBlank(step.debugHint, path + ".debugHint");
@@ -459,6 +472,36 @@ namespace ASMLite.Tests.Editor
             if (!seenIds.Add(normalized))
                 throw new InvalidOperationException($"{path} '{normalized}' must be unique within its scope.");
             return normalized;
+        }
+
+        private static void ValidateIconFixtureIds(ASMLiteSmokeStepArgs args, string argsPath)
+        {
+            if (args == null)
+                return;
+
+            ValidateOptionalIconFixtureId(args.rootIconFixtureId, argsPath + ".rootIconFixtureId");
+            ValidateOptionalIconFixtureId(args.saveIconFixtureId, argsPath + ".saveIconFixtureId");
+            ValidateOptionalIconFixtureId(args.loadIconFixtureId, argsPath + ".loadIconFixtureId");
+            ValidateOptionalIconFixtureId(args.clearIconFixtureId, argsPath + ".clearIconFixtureId");
+
+            string[] slotIconFixtureIds = args.slotIconFixtureIds ?? Array.Empty<string>();
+            for (int index = 0; index < slotIconFixtureIds.Length; index++)
+                ValidateOptionalIconFixtureId(slotIconFixtureIds[index], $"{argsPath}.slotIconFixtureIds[{index}]");
+        }
+
+        private static void ValidateOptionalIconFixtureId(string fixtureId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(fixtureId))
+                return;
+
+            try
+            {
+                ASMLiteIconFixtureRegistry.ResolveAssetPath(fixtureId);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"{path} has unsupported icon fixture ID '{fixtureId}'. {ex.Message}", ex);
+            }
         }
 
         private static void ValidatePhase1StepArgs(string actionType, ASMLiteSmokeStepArgs args, string argsPath)
