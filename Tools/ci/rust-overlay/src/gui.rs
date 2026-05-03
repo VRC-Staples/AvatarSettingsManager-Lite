@@ -414,6 +414,7 @@ pub enum CurrentSuiteStepStatus {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrentSuiteStepModel {
+    pub case_id: String,
     pub step_id: String,
     pub label: String,
     pub status: CurrentSuiteStepStatus,
@@ -551,10 +552,16 @@ pub fn build_current_suite_briefing_model_for_poll(
     let steps = suite
         .cases
         .iter()
-        .flat_map(|case_item| case_item.steps.iter())
-        .map(|step| {
-            let status = current_suite_step_status(&suite.suite_id, &step.step_id, poll);
+        .flat_map(|case_item| {
+            case_item
+                .steps
+                .iter()
+                .map(move |step| (case_item.case_id.as_str(), step))
+        })
+        .map(|(case_id, step)| {
+            let status = current_suite_step_status(&suite.suite_id, case_id, &step.step_id, poll);
             CurrentSuiteStepModel {
+                case_id: case_id.to_string(),
                 step_id: step.step_id.clone(),
                 label: step.label.clone(),
                 status,
@@ -677,6 +684,7 @@ pub fn current_suite_badge_text(suite_id: &str) -> &'static str {
 
 fn current_suite_step_status(
     suite_id: &str,
+    case_id: &str,
     step_id: &str,
     poll: Option<&StartupPollResult>,
 ) -> CurrentSuiteStepStatus {
@@ -701,9 +709,15 @@ fn current_suite_step_status(
         }
         match event.event_type.as_str() {
             "suite-passed" => suite_passed = true,
-            "step-started" if event.step_id == step_id => status = CurrentSuiteStepStatus::Running,
-            "step-passed" if event.step_id == step_id => status = CurrentSuiteStepStatus::Passed,
-            "step-failed" if event.step_id == step_id => status = CurrentSuiteStepStatus::Failed,
+            "step-started" if current_suite_event_matches_step(event, case_id, step_id) => {
+                status = CurrentSuiteStepStatus::Running
+            }
+            "step-passed" if current_suite_event_matches_step(event, case_id, step_id) => {
+                status = CurrentSuiteStepStatus::Passed
+            }
+            "step-failed" if current_suite_event_matches_step(event, case_id, step_id) => {
+                status = CurrentSuiteStepStatus::Failed
+            }
             _ => {}
         }
     }
@@ -712,6 +726,19 @@ fn current_suite_step_status(
     } else {
         status
     }
+}
+
+fn current_suite_event_matches_step(
+    event: &crate::protocol::SmokeProtocolEvent,
+    case_id: &str,
+    step_id: &str,
+) -> bool {
+    if event.step_id != step_id {
+        return false;
+    }
+
+    let event_case_id = event.case_id.trim();
+    event_case_id.is_empty() || event_case_id == case_id
 }
 
 pub fn current_suite_step_icon(status: CurrentSuiteStepStatus) -> &'static str {
@@ -4139,6 +4166,50 @@ mod tests {
         assert!(
             current_suite_step_label(&briefing.steps[0]).contains("ASM-Lite assets are rebuilt")
         );
+    }
+
+    #[test]
+    fn current_suite_steps_match_duplicate_step_ids_by_case_id() {
+        let catalog = crate::catalog::load_canonical_catalog().expect("catalog should load");
+        let mut model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        model
+            .select_suite_by_id("avatar-discovery-selection-regression")
+            .expect("avatar picking suite should be selectable");
+
+        let mut selected_case_passed = step_event(
+            1,
+            "avatar-discovery-selection-regression",
+            "select-avatar",
+            "step-passed",
+        );
+        selected_case_passed.case_id = "selected-canonical-avatar".to_string();
+        let mut next_case_running = step_event(
+            2,
+            "avatar-discovery-selection-regression",
+            "select-avatar",
+            "step-started",
+        );
+        next_case_running.case_id = "find-by-fixture-name".to_string();
+        let poll = StartupPollResult {
+            status: UnityHostSupervisorStatus::Ready,
+            host_state: Some(host_state(
+                HOST_STATE_RUNNING,
+                "run-0001-avatar-discovery-selection-regression",
+            )),
+            events: vec![selected_case_passed, next_case_running],
+            warnings: Vec::new(),
+        };
+
+        let briefing = build_current_suite_briefing_model_for_poll(&model, Some(&poll))
+            .expect("briefing should exist");
+
+        assert_eq!(briefing.steps[0].label, "Selected avatar is used");
+        assert_eq!(briefing.steps[0].status, CurrentSuiteStepStatus::Passed);
+        assert_eq!(briefing.steps[1].label, "Avatar is found by name");
+        assert_eq!(briefing.steps[1].status, CurrentSuiteStepStatus::Running);
+        assert_eq!(briefing.steps[2].label, "Non-avatar selection is reported");
+        assert_eq!(briefing.steps[2].status, CurrentSuiteStepStatus::Pending);
     }
 
     #[test]
