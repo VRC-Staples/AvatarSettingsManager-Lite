@@ -54,12 +54,12 @@ namespace ASMLite.Editor
                 CustomRootIcon = customRootIcon;
                 UseCustomRootName = useCustomRootName;
                 CustomRootName = NormalizeOptionalString(customRootName);
-                CustomPresetNames = CloneStrings(customPresetNames);
+                CustomPresetNames = NormalizePresetNamesBySlot(customPresetNames, slotCount);
                 CustomPresetNameFormat = NormalizeOptionalString(customPresetNameFormat);
-                CustomSaveLabel = customSaveLabel ?? string.Empty;
-                CustomLoadLabel = customLoadLabel ?? string.Empty;
-                CustomClearPresetLabel = customClearPresetLabel ?? string.Empty;
-                CustomConfirmLabel = customConfirmLabel ?? string.Empty;
+                CustomSaveLabel = NormalizeOptionalString(customSaveLabel);
+                CustomLoadLabel = NormalizeOptionalString(customLoadLabel);
+                CustomClearPresetLabel = NormalizeOptionalString(customClearPresetLabel);
+                CustomConfirmLabel = NormalizeOptionalString(customConfirmLabel);
                 UseCustomInstallPath = useCustomInstallPath;
                 CustomInstallPath = useCustomInstallPath ? NormalizeInstallPath(customInstallPath) : string.Empty;
                 UseParameterExclusions = useParameterExclusions;
@@ -859,6 +859,21 @@ namespace ASMLite.Editor
             var clone = new string[source.Length];
             Array.Copy(source, clone, source.Length);
             return clone;
+        }
+
+        private static string[] NormalizePresetNamesBySlot(string[] source, int slotCount)
+        {
+            if (slotCount <= 0)
+                return Array.Empty<string>();
+
+            var normalized = new string[slotCount];
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                string candidate = source != null && i < source.Length ? source[i] : string.Empty;
+                normalized[i] = NormalizeOptionalString(candidate);
+            }
+
+            return normalized;
         }
 
         private static string NormalizeOptionalString(string value)

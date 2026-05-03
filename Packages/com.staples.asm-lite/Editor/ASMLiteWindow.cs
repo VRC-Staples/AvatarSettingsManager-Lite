@@ -5947,6 +5947,26 @@ namespace ASMLite.Editor
             return resized;
         }
 
+        private static string[] NormalizePresetNamesBySlot(string[] source, int slotCount)
+        {
+            if (slotCount <= 0)
+                return Array.Empty<string>();
+
+            var normalized = new string[slotCount];
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                string candidate = source != null && i < source.Length ? source[i] : string.Empty;
+                normalized[i] = NormalizeOptionalString(candidate);
+            }
+
+            return normalized;
+        }
+
+        private static int ResolveSnapshotSlotCount(string[] presetNamesBySlot)
+        {
+            return presetNamesBySlot == null || presetNamesBySlot.Length == 0 ? 0 : presetNamesBySlot.Length;
+        }
+
         private static string NormalizeOptionalString(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
@@ -6861,6 +6881,11 @@ namespace ASMLite.Editor
                 bool useCustomRootIcon,
                 bool useCustomRootName,
                 string customRootName,
+                string[] presetNamesBySlot,
+                string saveLabel,
+                string loadLabel,
+                string clearLabel,
+                string confirmLabel,
                 bool useCustomInstallPath,
                 string customInstallPath,
                 bool useParameterExclusions,
@@ -6872,7 +6897,12 @@ namespace ASMLite.Editor
                 SelectedAvatar = selectedAvatar;
                 UseCustomRootIcon = useCustomRootIcon;
                 UseCustomRootName = useCustomRootName;
-                CustomRootName = customRootName ?? string.Empty;
+                CustomRootName = NormalizeOptionalString(customRootName);
+                PresetNamesBySlot = NormalizePresetNamesBySlot(presetNamesBySlot, ResolveSnapshotSlotCount(presetNamesBySlot));
+                SaveLabel = NormalizeOptionalString(saveLabel);
+                LoadLabel = NormalizeOptionalString(loadLabel);
+                ClearLabel = NormalizeOptionalString(clearLabel);
+                ConfirmLabel = NormalizeOptionalString(confirmLabel);
                 UseCustomInstallPath = useCustomInstallPath;
                 CustomInstallPath = customInstallPath ?? string.Empty;
                 UseParameterExclusions = useParameterExclusions;
@@ -6886,6 +6916,11 @@ namespace ASMLite.Editor
             public bool UseCustomRootIcon { get; }
             public bool UseCustomRootName { get; }
             public string CustomRootName { get; }
+            public string[] PresetNamesBySlot { get; }
+            public string SaveLabel { get; }
+            public string LoadLabel { get; }
+            public string ClearLabel { get; }
+            public string ConfirmLabel { get; }
             public bool UseCustomInstallPath { get; }
             public string CustomInstallPath { get; }
             public bool UseParameterExclusions { get; }
@@ -6910,6 +6945,13 @@ namespace ASMLite.Editor
                 ComponentCustomization = customization;
                 ToolState = toolState;
                 SlotCount = customization.SlotCount;
+                UseCustomRootName = customization.UseCustomRootName;
+                CustomRootName = NormalizeOptionalString(customization.CustomRootName);
+                PresetNamesBySlot = NormalizePresetNamesBySlot(customization.CustomPresetNames, customization.SlotCount);
+                SaveLabel = NormalizeOptionalString(customization.CustomSaveLabel);
+                LoadLabel = NormalizeOptionalString(customization.CustomLoadLabel);
+                ClearLabel = NormalizeOptionalString(customization.CustomClearPresetLabel);
+                ConfirmLabel = NormalizeOptionalString(customization.CustomConfirmLabel);
                 UseCustomInstallPath = customization.UseCustomInstallPath;
                 CustomInstallPath = customization.CustomInstallPath ?? string.Empty;
                 NormalizedEffectivePath = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(
@@ -6927,6 +6969,13 @@ namespace ASMLite.Editor
             public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot ComponentCustomization { get; }
             public AsmLiteToolState ToolState { get; }
             public int SlotCount { get; }
+            public bool UseCustomRootName { get; }
+            public string CustomRootName { get; }
+            public string[] PresetNamesBySlot { get; }
+            public string SaveLabel { get; }
+            public string LoadLabel { get; }
+            public string ClearLabel { get; }
+            public string ConfirmLabel { get; }
             public bool UseCustomInstallPath { get; }
             public string CustomInstallPath { get; }
             public string NormalizedEffectivePath { get; }
@@ -6980,6 +7029,114 @@ namespace ASMLite.Editor
             _pendingCustomInstallPath = normalized;
         }
 
+        internal void SetRootNameStateForAutomation(bool enabled, string value)
+        {
+            string normalized = enabled ? NormalizeOptionalString(value) : string.Empty;
+            if (enabled && string.IsNullOrWhiteSpace(normalized))
+                throw new ArgumentException("ASM-Lite custom root name cannot be blank when custom menu naming is enabled.", nameof(value));
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, enabled);
+                SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, normalized);
+            }
+
+            _pendingUseCustomRootName = enabled;
+            _pendingCustomRootName = normalized;
+        }
+
+        internal void SetPresetNameMaskForAutomation(IReadOnlyDictionary<int, string> presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            string[] current = clearExisting
+                ? new string[slotCount]
+                : ResolveCurrentPresetNamesBySlot(slotCount);
+
+            if (presetNamesBySlot != null)
+            {
+                foreach (var kvp in presetNamesBySlot)
+                {
+                    ValidateAutomationPresetSlot(kvp.Key, slotCount);
+                    current[kvp.Key - 1] = NormalizeOptionalString(kvp.Value);
+                }
+            }
+
+            ApplyPresetNameMaskForAutomation(current, clearExisting);
+        }
+
+        internal void SetPresetNameMaskForAutomation(string[] presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            if (presetNamesBySlot != null && presetNamesBySlot.Length > slotCount)
+                throw new ArgumentOutOfRangeException(nameof(presetNamesBySlot), presetNamesBySlot.Length, $"ASM-Lite preset name mask cannot contain more than {slotCount} slot value(s) for the current avatar.");
+
+            string[] current = clearExisting
+                ? new string[slotCount]
+                : ResolveCurrentPresetNamesBySlot(slotCount);
+
+            if (presetNamesBySlot != null)
+            {
+                for (int i = 0; i < presetNamesBySlot.Length; i++)
+                    current[i] = NormalizeOptionalString(presetNamesBySlot[i]);
+            }
+
+            ApplyPresetNameMaskForAutomation(current, clearExisting);
+        }
+
+        internal void SetActionLabelMaskForAutomation(IReadOnlyDictionary<string, string> actionLabelsByKey, bool clearExisting)
+        {
+            var component = GetOrRefreshComponent();
+            string save = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customSaveLabel : _pendingCustomSaveLabel);
+            string load = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customLoadLabel : _pendingCustomLoadLabel);
+            string clear = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customClearPresetLabel : _pendingCustomClearPresetLabel);
+            string confirm = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customConfirmLabel : _pendingCustomConfirmLabel);
+
+            if (actionLabelsByKey != null)
+            {
+                foreach (var kvp in actionLabelsByKey)
+                {
+                    switch (NormalizeActionLabelKey(kvp.Key))
+                    {
+                        case "save":
+                            save = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "load":
+                            load = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "clear":
+                            clear = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "confirm":
+                            confirm = NormalizeOptionalString(kvp.Value);
+                            break;
+                    }
+                }
+            }
+
+            ApplyActionLabelMaskForAutomation(save, load, clear, confirm);
+        }
+
+        internal void SetActionLabelMaskForAutomation(string saveLabel, string loadLabel, string clearLabel, string confirmLabel, bool clearExisting)
+        {
+            var component = GetOrRefreshComponent();
+            string save = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customSaveLabel : _pendingCustomSaveLabel);
+            string load = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customLoadLabel : _pendingCustomLoadLabel);
+            string clear = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customClearPresetLabel : _pendingCustomClearPresetLabel);
+            string confirm = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customConfirmLabel : _pendingCustomConfirmLabel);
+
+            if (saveLabel != null)
+                save = NormalizeOptionalString(saveLabel);
+            if (loadLabel != null)
+                load = NormalizeOptionalString(loadLabel);
+            if (clearLabel != null)
+                clear = NormalizeOptionalString(clearLabel);
+            if (confirmLabel != null)
+                confirm = NormalizeOptionalString(confirmLabel);
+
+            ApplyActionLabelMaskForAutomation(save, load, clear, confirm);
+        }
+
         internal void SelectInstallPathForAutomation(string selectedPath)
         {
             ApplyInstallPathSelection(GetOrRefreshComponent(), selectedPath);
@@ -7007,6 +7164,11 @@ namespace ASMLite.Editor
                 _pendingUseCustomRootIcon,
                 _pendingUseCustomRootName,
                 _pendingCustomRootName,
+                NormalizePresetNamesBySlot(_pendingCustomPresetNames, _pendingSlotCount),
+                _pendingCustomSaveLabel,
+                _pendingCustomLoadLabel,
+                _pendingCustomClearPresetLabel,
+                _pendingCustomConfirmLabel,
                 _pendingUseCustomInstallPath,
                 _pendingCustomInstallPath,
                 _pendingUseParameterExclusions,
@@ -7020,6 +7182,84 @@ namespace ASMLite.Editor
         {
             if (slotCount < 1 || slotCount > 8)
                 throw new ArgumentOutOfRangeException(nameof(slotCount), slotCount, "ASM-Lite slot count must be between 1 and 8.");
+        }
+
+        private int GetCurrentSlotCountForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            int slotCount = component ? component.slotCount : _pendingSlotCount;
+            ValidateAutomationSlotCount(slotCount);
+            return slotCount;
+        }
+
+        private void ValidateAutomationPresetSlot(int slot, int slotCount)
+        {
+            if (slot < 1 || slot > slotCount)
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, $"ASM-Lite preset name slot must be between 1 and the current slot count ({slotCount}).");
+        }
+
+        private string[] ResolveCurrentPresetNamesBySlot(int slotCount)
+        {
+            var component = GetOrRefreshComponent();
+            return NormalizePresetNamesBySlot(component ? component.customPresetNames : _pendingCustomPresetNames, slotCount);
+        }
+
+        private void ApplyPresetNameMaskForAutomation(string[] presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            string[] normalized = NormalizePresetNamesBySlot(presetNamesBySlot, slotCount);
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentStringArray(component, "Change ASM-Lite Preset Names", ref component.customPresetNames, normalized);
+                if (clearExisting)
+                    SetComponentRawString(component, "Clear ASM-Lite Legacy Preset Name Format", ref component.customPresetNameFormat, string.Empty);
+            }
+
+            _pendingCustomPresetNames = CloneStrings(normalized);
+            if (clearExisting)
+                _pendingCustomPresetNameFormat = string.Empty;
+        }
+
+        private static string NormalizeActionLabelKey(string key)
+        {
+            string normalized = NormalizeOptionalString(key).Replace("-", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            switch (normalized)
+            {
+                case "save":
+                    return "save";
+                case "load":
+                    return "load";
+                case "clear":
+                case "clearpreset":
+                    return "clear";
+                case "confirm":
+                    return "confirm";
+                default:
+                    throw new ArgumentException($"Unsupported ASM-Lite action label key '{key}'. Expected one of: save, load, clear, confirm.", nameof(key));
+            }
+        }
+
+        private void ApplyActionLabelMaskForAutomation(string saveLabel, string loadLabel, string clearLabel, string confirmLabel)
+        {
+            string save = NormalizeOptionalString(saveLabel);
+            string load = NormalizeOptionalString(loadLabel);
+            string clear = NormalizeOptionalString(clearLabel);
+            string confirm = NormalizeOptionalString(confirmLabel);
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, save);
+                SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, load);
+                SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, clear);
+                SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, confirm);
+            }
+
+            _pendingCustomSaveLabel = save;
+            _pendingCustomLoadLabel = load;
+            _pendingCustomClearPresetLabel = clear;
+            _pendingCustomConfirmLabel = confirm;
         }
 
         private CustomizationAutomationSnapshot CreateCustomizationAutomationSnapshot(
