@@ -737,6 +737,125 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void ParameterBackupAutomation_PresetId_EnablesExclusionsAndSurfacesNormalizedSnapshotFields()
+        {
+            var limbRoot = new GameObject("AvatarLimbScaling");
+            limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var arms = new GameObject("Arms");
+            arms.transform.SetParent(limbRoot.transform, false);
+
+            var vf = arms.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "AvatarLimbScaling_Arms",
+                name = "Avatar Limb Scaling/Arms",
+                menuPath = string.Empty,
+            };
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                string[] visibleOptions = window.GetVisibleParameterBackupOptionsForAutomation();
+                CollectionAssert.Contains(visibleOptions, "AvatarLimbScaling_Arms",
+                    "The automation seam should expose the same normalized visible backup options as the checklist/testing surface.");
+
+                CollectionAssert.Contains(
+                    window.GetParameterBackupPresetIdsForAutomation(),
+                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId,
+                    "Automation should expose stable preset IDs from the shared parameter-backup preset resolver.");
+
+                window.SetParameterBackupStateForAutomation(
+                    true,
+                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId);
+
+                Assert.IsTrue(_ctx.Comp.useParameterExclusions,
+                    "Preset application should enable parameter backup customization on the attached component.");
+                CollectionAssert.AreEqual(new[] { "AvatarLimbScaling_Arms" }, _ctx.Comp.excludedParameterNames,
+                    "Preset application should resolve to exact visible option names before writing component exclusions.");
+
+                var pending = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(pending.UseParameterExclusions,
+                    "The pending testing snapshot should expose parameter backup enablement.");
+                CollectionAssert.AreEqual(new[] { "AvatarLimbScaling_Arms" }, pending.ExcludedParameterNames,
+                    "The pending testing snapshot should expose sorted, normalized excluded parameter names.");
+
+                var automation = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.IsTrue(automation.UseParameterExclusions,
+                    "The normalized automation snapshot should expose parameter backup enablement.");
+                CollectionAssert.AreEqual(new[] { "AvatarLimbScaling_Arms" }, automation.ExcludedParameterNames,
+                    "The normalized automation snapshot should expose sorted, normalized excluded parameter names.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void ParameterBackupAutomation_ExactNames_NormalizesSortsAndCanDisableDeterministically()
+        {
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "Zed/Param",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "Alpha/Param",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetParameterBackupExclusionsForAutomation(new[]
+                {
+                    " Zed / Param ",
+                    "Alpha/Param",
+                    "Alpha/Param",
+                });
+
+                string[] expectedExcluded = { "Alpha/Param", "Zed/Param" };
+                Assert.IsTrue(_ctx.Comp.useParameterExclusions,
+                    "Exact-name application should enable parameter backup customization on the attached component.");
+                CollectionAssert.AreEqual(expectedExcluded, _ctx.Comp.excludedParameterNames,
+                    "Exact-name application should normalize, de-duplicate, and sort excluded parameter names before persistence.");
+                CollectionAssert.AreEqual(expectedExcluded, window.GetPendingCustomizationSnapshotForAutomation().ExcludedParameterNames,
+                    "Automation snapshots should keep excluded parameter names sorted for deterministic comparisons.");
+
+                window.SetParameterBackupStateForAutomation(false);
+
+                Assert.IsFalse(_ctx.Comp.useParameterExclusions,
+                    "Disabling through automation should deterministically clear the component gate.");
+                CollectionAssert.IsEmpty(_ctx.Comp.excludedParameterNames,
+                    "Disabling through automation should clear stale excluded names for deterministic reruns.");
+
+                var disabledSnapshot = window.GetPendingCustomizationSnapshotForAutomation();
+                Assert.IsFalse(disabledSnapshot.UseParameterExclusions,
+                    "Disabled automation snapshots should expose the parameter backup gate as false.");
+                CollectionAssert.IsEmpty(disabledSnapshot.ExcludedParameterNames,
+                    "Disabled automation snapshots should not retain stale excluded-name entries.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void VisibleParameterBackupOptions_PreferDeterministicToggleAlias_OverLegacySourceName()
         {
             const string legacySource = "VF300_Clothing/Rezz";

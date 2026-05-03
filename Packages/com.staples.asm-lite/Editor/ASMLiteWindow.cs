@@ -2939,7 +2939,7 @@ namespace ASMLite.Editor
 
         internal static string[] GetVisibleParameterBackupOptionsForTesting(VRCAvatarDescriptor avatar)
         {
-            return GetBackableParameterNames(avatar);
+            return ASMLiteParameterBackupPresetResolver.NormalizeVisibleNames(GetBackableParameterNames(avatar));
         }
 
         private static MenuTreeNode EnsureTreeNodeExists(
@@ -5983,9 +5983,10 @@ namespace ASMLite.Editor
                 return Array.Empty<string>();
 
             return names
-                .Where(n => !string.IsNullOrWhiteSpace(n))
-                .Select(n => n.Trim())
+                .Select(ASMLiteParameterBackupPresetResolver.NormalizeVisibleName)
+                .Where(n => !string.IsNullOrEmpty(n))
                 .Distinct(StringComparer.Ordinal)
+                .OrderBy(n => n, StringComparer.Ordinal)
                 .ToArray();
         }
 
@@ -6906,7 +6907,7 @@ namespace ASMLite.Editor
                 UseCustomInstallPath = useCustomInstallPath;
                 CustomInstallPath = customInstallPath ?? string.Empty;
                 UseParameterExclusions = useParameterExclusions;
-                ExcludedParameterNames = excludedParameterNames ?? Array.Empty<string>();
+                ExcludedParameterNames = SanitizeExcludedParameterNames(excludedParameterNames);
                 CustomIcons = customIcons ?? Array.Empty<Texture2D>();
                 UseVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
                 VendorizedGeneratedAssetsPath = vendorizedGeneratedAssetsPath ?? string.Empty;
@@ -7010,6 +7011,8 @@ namespace ASMLite.Editor
                 NormalizedEffectivePath = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(
                     customization.UseCustomInstallPath,
                     customization.CustomInstallPath);
+                UseParameterExclusions = customization.UseParameterExclusions;
+                ExcludedParameterNames = SanitizeExcludedParameterNames(customization.ExcludedParameterNames);
                 ActionIconMode = FormatActionIconModeForAutomationSnapshot(customization.UseCustomSlotIcons ? customization.ActionIconMode : ASMLite.ActionIconMode.Default);
                 RootIconFixtureId = customization.UseCustomSlotIcons ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomRootIcon) : string.Empty;
                 SlotIconFixtureIdsBySlot = customization.UseCustomSlotIcons
@@ -7054,6 +7057,10 @@ namespace ASMLite.Editor
             public string CustomInstallPath { get; }
             public string NormalizedEffectivePath { get; }
             public string EffectiveInstallPath => NormalizedEffectivePath;
+            public bool UseParameterExclusions { get; }
+            public string[] ExcludedParameterNames { get; }
+            public bool useParameterExclusions => UseParameterExclusions;
+            public string[] excludedParameterNames => ExcludedParameterNames;
             public string ActionIconMode { get; }
             public string RootIconFixtureId { get; }
             public string[] SlotIconFixtureIdsBySlot { get; }
@@ -7705,6 +7712,101 @@ namespace ASMLite.Editor
         internal void SelectInstallPathForAutomation(string selectedPath)
         {
             ApplyInstallPathSelection(GetOrRefreshComponent(), selectedPath);
+        }
+
+        internal string[] GetVisibleParameterBackupOptionsForAutomation()
+        {
+            return GetVisibleParameterBackupOptionsForTesting(_selectedAvatar);
+        }
+
+        internal static string[] NormalizeParameterBackupOptionNamesForAutomation(IEnumerable<string> names)
+        {
+            return ASMLiteParameterBackupPresetResolver.NormalizeVisibleNames(names);
+        }
+
+        internal string[] GetParameterBackupPresetIdsForAutomation()
+        {
+            return ASMLiteParameterBackupPresetResolver.StablePresetIds;
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions)
+        {
+            ApplyParameterBackupStateForAutomation(
+                useParameterExclusions,
+                ResolveCurrentExcludedParameterNamesForAutomation(useParameterExclusions));
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions, string presetId)
+        {
+            if (!useParameterExclusions)
+            {
+                ApplyParameterBackupStateForAutomation(false, Array.Empty<string>());
+                return;
+            }
+
+            SetParameterBackupPresetForAutomation(presetId);
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions, IEnumerable<string> exactExcludedParameterNames)
+        {
+            if (!useParameterExclusions)
+            {
+                ApplyParameterBackupStateForAutomation(false, Array.Empty<string>());
+                return;
+            }
+
+            SetParameterBackupExclusionsForAutomation(exactExcludedParameterNames);
+        }
+
+        internal void SetParameterBackupPresetForAutomation(string presetId)
+        {
+            string[] excluded = ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
+                presetId,
+                GetVisibleParameterBackupOptionsForAutomation());
+            ApplyParameterBackupStateForAutomation(true, excluded);
+        }
+
+        internal void SetParameterBackupExclusionsForAutomation(IEnumerable<string> exactExcludedParameterNames)
+        {
+            string[] excluded = ASMLiteParameterBackupPresetResolver.ResolveExactExcludedNames(
+                exactExcludedParameterNames,
+                GetVisibleParameterBackupOptionsForAutomation());
+            ApplyParameterBackupStateForAutomation(true, excluded);
+        }
+
+        private string[] ResolveCurrentExcludedParameterNamesForAutomation(bool useParameterExclusions)
+        {
+            if (!useParameterExclusions)
+                return Array.Empty<string>();
+
+            var component = GetOrRefreshComponent();
+            return SanitizeExcludedParameterNames(component ? component.excludedParameterNames : _pendingExcludedParameterNames);
+        }
+
+        private void ApplyParameterBackupStateForAutomation(bool useParameterExclusions, string[] excludedParameterNames)
+        {
+            string[] normalizedExcluded = useParameterExclusions
+                ? SanitizeExcludedParameterNames(excludedParameterNames)
+                : Array.Empty<string>();
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(
+                    component,
+                    "Toggle ASM-Lite Parameter Backup Customization",
+                    ref component.useParameterExclusions,
+                    useParameterExclusions);
+                SetComponentExcludedNames(
+                    component,
+                    "Change ASM-Lite Parameter Backup",
+                    normalizedExcluded);
+            }
+
+            _pendingUseParameterExclusions = useParameterExclusions;
+            _pendingExcludedParameterNames = CloneStrings(normalizedExcluded);
+            _cachedParamList = null;
+            _cachedParamTree = null;
         }
 
         internal CustomizationAutomationSnapshot GetPendingCustomizationSnapshotForAutomation()
