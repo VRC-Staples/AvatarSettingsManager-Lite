@@ -666,7 +666,9 @@ const CURRENT_SUITE_PLAYMODE_ICON: &str = icons::MONITOR_PLAY;
 
 pub fn current_suite_badge_text(suite_id: &str) -> &'static str {
     match suite_id {
-        value if value.starts_with("setup-") => CURRENT_SUITE_SETUP_ICON,
+        value if value.starts_with("setup-") || value.starts_with("prebuild-") => {
+            CURRENT_SUITE_SETUP_ICON
+        }
         "lifecycle-roundtrip" => CURRENT_SUITE_LIFECYCLE_ICON,
         "playmode-runtime-validation" => CURRENT_SUITE_PLAYMODE_ICON,
         _ => icons::DIAMOND,
@@ -4071,7 +4073,7 @@ mod tests {
 
         assert_eq!(current_suite_badge_text("setup-scene-avatar"), icons::CUBE);
         assert_eq!(
-            current_suite_badge_text("setup-prebuild-backup-matrix"),
+            current_suite_badge_text("prebuild-backup-matrix"),
             icons::CUBE
         );
         assert_eq!(

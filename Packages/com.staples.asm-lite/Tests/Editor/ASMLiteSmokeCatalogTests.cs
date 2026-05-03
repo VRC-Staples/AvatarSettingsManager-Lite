@@ -67,12 +67,12 @@ namespace ASMLite.Tests.Editor
                     "generated-asset-recovery-signals",
                     "generated-reference-ownership",
                     "negative-diagnostics",
-                    "setup-prebuild-slots-matrix",
-                    "setup-prebuild-path-matrix",
-                    "setup-prebuild-names-matrix",
-                    "setup-prebuild-icons-matrix",
-                    "setup-prebuild-backup-matrix",
-                    "setup-prebuild-combo-matrix",
+                    "prebuild-slots-matrix",
+                    "prebuild-path-matrix",
+                    "prebuild-names-matrix",
+                    "prebuild-icons-matrix",
+                    "prebuild-backup-matrix",
+                    "prebuild-combo-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -435,13 +435,13 @@ namespace ASMLite.Tests.Editor
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
-            Assert.That(suites.ContainsKey("setup-prebuild-slots-matrix"), Is.True);
-            Assert.That(suites.ContainsKey("setup-prebuild-path-matrix"), Is.True);
-            Assert.That(suites.ContainsKey("setup-prebuild-names-matrix"), Is.True);
-            Assert.That(suites.ContainsKey("setup-prebuild-icons-matrix"), Is.True);
-            Assert.That(suites.ContainsKey("setup-prebuild-backup-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("prebuild-slots-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("prebuild-path-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("prebuild-names-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("prebuild-icons-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("prebuild-backup-matrix"), Is.True);
 
-            ASMLiteSmokeSuiteDefinition slots = suites["setup-prebuild-slots-matrix"];
+            ASMLiteSmokeSuiteDefinition slots = suites["prebuild-slots-matrix"];
             Assert.AreEqual("exhaustive", slots.speed);
             Assert.AreEqual("safe", slots.risk);
             CollectionAssert.Contains(slots.presetGroups, "all-setup");
@@ -461,7 +461,7 @@ namespace ASMLite.Tests.Editor
             AssertPhase1SlotCase(slots.cases[0], 1);
             AssertPhase1SlotCase(slots.cases[7], 8);
 
-            ASMLiteSmokeSuiteDefinition paths = suites["setup-prebuild-path-matrix"];
+            ASMLiteSmokeSuiteDefinition paths = suites["prebuild-path-matrix"];
             Assert.AreEqual("exhaustive", paths.speed);
             Assert.AreEqual("safe", paths.risk);
             CollectionAssert.Contains(paths.presetGroups, "all-setup");
@@ -479,7 +479,7 @@ namespace ASMLite.Tests.Editor
             AssertPhase1PathCase(paths.cases[2], "simple", expectedEnabled: true, expectedNormalizedPath: "ASM-Lite");
             AssertPhase1PathCase(paths.cases[3], "nested", expectedEnabled: true, expectedNormalizedPath: "Avatars/ASM-Lite");
 
-            ASMLiteSmokeSuiteDefinition names = suites["setup-prebuild-names-matrix"];
+            ASMLiteSmokeSuiteDefinition names = suites["prebuild-names-matrix"];
             Assert.AreEqual("exhaustive", names.speed);
             Assert.AreEqual("safe", names.risk);
             CollectionAssert.Contains(names.presetGroups, "all-setup");
@@ -501,7 +501,7 @@ namespace ASMLite.Tests.Editor
             AssertPhase1NameCase(names.cases[4], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedSaveLabel: "Store");
             AssertPhase1NameCase(names.cases[5], expectedRootEnabled: true, expectedRootName: "Wardrobe Tools", expectedPresetNames: new[] { "Travel Fit", "Dance Fit", "Formal Fit", "Comfy Fit" }, expectedSaveLabel: "Store", expectedLoadLabel: "Wear", expectedClearLabel: "Clear Fit", expectedConfirmLabel: "Apply");
 
-            ASMLiteSmokeSuiteDefinition icons = suites["setup-prebuild-icons-matrix"];
+            ASMLiteSmokeSuiteDefinition icons = suites["prebuild-icons-matrix"];
             Assert.AreEqual("exhaustive", icons.speed);
             Assert.AreEqual("safe", icons.risk);
             CollectionAssert.Contains(icons.presetGroups, "all-setup");
@@ -527,7 +527,7 @@ namespace ASMLite.Tests.Editor
             AssertPhase1IconCase(icons.cases[6], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save");
             AssertPhase1IconCase(icons.cases[7], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedRootIconFixtureId: "asm-lite-icon/root", expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04" }, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save", expectedLoadIconFixtureId: "asm-lite-icon/action-load", expectedClearIconFixtureId: "asm-lite-icon/action-clear");
 
-            ASMLiteSmokeSuiteDefinition backup = suites["setup-prebuild-backup-matrix"];
+            ASMLiteSmokeSuiteDefinition backup = suites["prebuild-backup-matrix"];
             Assert.AreEqual("exhaustive", backup.speed);
             Assert.AreEqual("safe", backup.risk);
             CollectionAssert.Contains(backup.presetGroups, "all-setup");
@@ -545,7 +545,7 @@ namespace ASMLite.Tests.Editor
             AssertPhase1BackupCase(backup.cases[2], expectedEnabled: true, expectedPresetId: "single-arms", expectedExcludedNames: new[] { "AvatarLimbScaling_Arms" });
             AssertPhase1BackupCase(backup.cases[3], expectedEnabled: true, expectedPresetId: "nested-media", expectedExcludedNames: new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
 
-            ASMLiteSmokeSuiteDefinition combo = suites["setup-prebuild-combo-matrix"];
+            ASMLiteSmokeSuiteDefinition combo = suites["prebuild-combo-matrix"];
             Assert.AreEqual("exhaustive", combo.speed);
             Assert.AreEqual("safe", combo.risk);
             CollectionAssert.Contains(combo.presetGroups, "all-setup");

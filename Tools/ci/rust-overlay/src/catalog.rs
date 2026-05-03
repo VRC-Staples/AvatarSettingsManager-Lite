@@ -1084,6 +1084,57 @@ mod tests {
     }
 
     #[test]
+    fn catalog_uses_prebuild_suite_ids_without_setup_prefix() {
+        let catalog = load_canonical_catalog().expect("canonical catalog should parse");
+        let setup_group = catalog
+            .groups
+            .iter()
+            .find(|group| group.group_id == "editor-window")
+            .expect("setup group exists");
+        let prebuild_suite_ids: Vec<&str> = setup_group
+            .suites
+            .iter()
+            .map(|suite| suite.suite_id.as_str())
+            .filter(|suite_id| suite_id.contains("prebuild"))
+            .collect();
+
+        assert_eq!(
+            prebuild_suite_ids,
+            vec![
+                "prebuild-slots-matrix",
+                "prebuild-path-matrix",
+                "prebuild-names-matrix",
+                "prebuild-icons-matrix",
+                "prebuild-backup-matrix",
+                "prebuild-combo-matrix"
+            ]
+        );
+    }
+
+    #[test]
+    fn catalog_orders_setup_diagnostics_before_destructive_recovery_reset() {
+        let catalog = load_canonical_catalog().expect("canonical catalog should parse");
+        let setup_group = catalog
+            .groups
+            .iter()
+            .find(|group| group.group_id == "editor-window")
+            .expect("setup group exists");
+        let setup_suite_ids: Vec<&str> = setup_group
+            .suites
+            .iter()
+            .map(|suite| suite.suite_id.as_str())
+            .collect();
+
+        assert_eq!(
+            setup_suite_ids
+                .windows(2)
+                .last()
+                .expect("setup group has at least two suites"),
+            ["negative-diagnostics", "destructive-recovery-reset"]
+        );
+    }
+
+    #[test]
     fn catalog_parses_suite_metadata_for_default_presets_and_risk() {
         let catalog = load_canonical_catalog().expect("canonical catalog should parse");
         let suites: Vec<&SmokeSuiteDefinition> = catalog
@@ -1268,7 +1319,7 @@ mod tests {
       "description": "desc",
       "suites": [
         {
-          "suiteId": "setup-prebuild-backup-matrix",
+          "suiteId": "prebuild-backup-matrix",
           "label": "Backup matrix",
           "description": "desc",
           "resetOverride": "Inherit",
@@ -1341,7 +1392,7 @@ mod tests {
 
         let catalog = load_catalog_from_str(raw).expect("setup36 backup catalog should parse");
         let suite = &catalog.groups[0].suites[0];
-        assert_eq!(suite.suite_id, "setup-prebuild-backup-matrix");
+        assert_eq!(suite.suite_id, "prebuild-backup-matrix");
 
         let option_present = &suite.cases[0].steps[0].args;
         assert_eq!(
@@ -1401,7 +1452,7 @@ mod tests {
       "description": "desc",
       "suites": [
         {
-          "suiteId": "setup-prebuild-icons-matrix",
+          "suiteId": "prebuild-icons-matrix",
           "label": "Icons matrix",
           "description": "desc",
           "resetOverride": "Inherit",
@@ -1508,7 +1559,7 @@ mod tests {
 
         let catalog = load_catalog_from_str(raw).expect("setup36 icon catalog should parse");
         let suite = &catalog.groups[0].suites[0];
-        assert_eq!(suite.suite_id, "setup-prebuild-icons-matrix");
+        assert_eq!(suite.suite_id, "prebuild-icons-matrix");
         assert_eq!(suite.cases[0].steps.len(), 7);
         let slot_mask = &suite.cases[0].steps[4].args;
         assert_eq!(
@@ -1542,7 +1593,7 @@ mod tests {
       "description": "desc",
       "suites": [
         {
-          "suiteId": "setup-prebuild-icons-matrix",
+          "suiteId": "prebuild-icons-matrix",
           "label": "Icons matrix",
           "description": "desc",
           "resetOverride": "Inherit",

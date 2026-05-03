@@ -899,7 +899,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000017_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(17, commandId, "setup-prebuild-slots-matrix"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(17, commandId, "prebuild-slots-matrix"));
                 AdvanceUntilIdleAfterRun(context, maxTicks: 128);
 
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(8));
@@ -923,7 +923,7 @@ namespace ASMLite.Tests.Editor
             {
                 const string commandId = "cmd_000018_run-suite";
 
-                WriteCommand(context.Paths, BuildRunSuiteCommand(18, commandId, "setup-prebuild-path-matrix"));
+                WriteCommand(context.Paths, BuildRunSuiteCommand(18, commandId, "prebuild-path-matrix"));
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(4));
@@ -2507,8 +2507,8 @@ namespace ASMLite.Tests.Editor
         {
             return new ASMLiteSmokeSuiteDefinition
             {
-                suiteId = "setup-prebuild-slots-matrix",
-                label = "Setup Prebuild Slot Matrix",
+                suiteId = "prebuild-slots-matrix",
+                label = "Prebuild Slot Matrix",
                 description = "Local host test catalog suite for Phase 1 slot-count prebuild coverage.",
                 resetOverride = "Inherit",
                 speed = "standard",
@@ -2528,8 +2528,8 @@ namespace ASMLite.Tests.Editor
         {
             return new ASMLiteSmokeSuiteDefinition
             {
-                suiteId = "setup-prebuild-path-matrix",
-                label = "Setup Prebuild Install Path Matrix",
+                suiteId = "prebuild-path-matrix",
+                label = "Prebuild Install Path Matrix",
                 description = "Local host test catalog suite for Phase 1 install-path prebuild coverage.",
                 resetOverride = "Inherit",
                 speed = "standard",
