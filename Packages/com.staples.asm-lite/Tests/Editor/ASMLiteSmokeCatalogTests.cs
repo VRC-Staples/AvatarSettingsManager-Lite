@@ -71,6 +71,7 @@ namespace ASMLite.Tests.Editor
                     "setup-prebuild-path-matrix",
                     "setup-prebuild-names-matrix",
                     "setup-prebuild-icons-matrix",
+                    "setup-prebuild-backup-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -437,6 +438,7 @@ namespace ASMLite.Tests.Editor
             Assert.That(suites.ContainsKey("setup-prebuild-path-matrix"), Is.True);
             Assert.That(suites.ContainsKey("setup-prebuild-names-matrix"), Is.True);
             Assert.That(suites.ContainsKey("setup-prebuild-icons-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("setup-prebuild-backup-matrix"), Is.True);
 
             ASMLiteSmokeSuiteDefinition slots = suites["setup-prebuild-slots-matrix"];
             Assert.AreEqual("exhaustive", slots.speed);
@@ -523,6 +525,24 @@ namespace ASMLite.Tests.Editor
             AssertPhase1IconCase(icons.cases[5], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04" });
             AssertPhase1IconCase(icons.cases[6], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save");
             AssertPhase1IconCase(icons.cases[7], "multiColor", expectedGearColor: string.Empty, expectedUseCustomIcons: true, expectedRootIconFixtureId: "asm-lite-icon/root", expectedSlotIconFixtureIdsBySlot: new[] { "asm-lite-icon/slot-01", "asm-lite-icon/slot-02", "asm-lite-icon/slot-03", "asm-lite-icon/slot-04" }, expectedActionIconMode: "custom", expectedSaveIconFixtureId: "asm-lite-icon/action-save", expectedLoadIconFixtureId: "asm-lite-icon/action-load", expectedClearIconFixtureId: "asm-lite-icon/action-clear");
+
+            ASMLiteSmokeSuiteDefinition backup = suites["setup-prebuild-backup-matrix"];
+            Assert.AreEqual("exhaustive", backup.speed);
+            Assert.AreEqual("safe", backup.risk);
+            CollectionAssert.Contains(backup.presetGroups, "all-setup");
+            Assert.That(backup.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "B01-parameter-backup-default",
+                "B02-parameter-backup-enabled-none-excluded",
+                "B03-parameter-backup-single-exclusion",
+                "B04-parameter-backup-nested-subset",
+            }));
+            Assert.That(backup.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            AssertPhase1BackupCase(backup.cases[0], expectedEnabled: false, expectedPresetId: null, expectedExcludedNames: Array.Empty<string>());
+            AssertPhase1BackupCase(backup.cases[1], expectedEnabled: true, expectedPresetId: "none-excluded", expectedExcludedNames: Array.Empty<string>());
+            AssertPhase1BackupCase(backup.cases[2], expectedEnabled: true, expectedPresetId: "single-arms", expectedExcludedNames: new[] { "AvatarLimbScaling_Arms" });
+            AssertPhase1BackupCase(backup.cases[3], expectedEnabled: true, expectedPresetId: "nested-media", expectedExcludedNames: new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
         }
 
         [Test]
@@ -607,6 +627,8 @@ namespace ASMLite.Tests.Editor
                 "set-root-name-state",
                 "set-preset-name-mask",
                 "set-action-label-mask",
+                "assert-parameter-backup-option-present",
+                "set-parameter-backup-state",
                 "assert-pending-customization-snapshot",
                 "assert-attached-customization-snapshot",
             };
@@ -640,6 +662,13 @@ namespace ASMLite.Tests.Editor
                     Assert.AreEqual("Clear Fit", step.args.customClearLabel);
                     Assert.AreEqual("Apply", step.args.customConfirmLabel);
                     Assert.IsTrue(step.args.clearExistingNameMask);
+                }
+                if (string.Equals(actionType, "assert-parameter-backup-option-present", StringComparison.Ordinal))
+                    Assert.AreEqual("single-arms", step.args.parameterBackupPresetId);
+                if (string.Equals(actionType, "set-parameter-backup-state", StringComparison.Ordinal))
+                {
+                    Assert.IsTrue(step.args.useParameterExclusions);
+                    Assert.AreEqual("single-arms", step.args.parameterBackupPresetId);
                 }
                 if (actionType.Contains("customization-snapshot"))
                 {
@@ -1126,6 +1155,56 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
         }
 
+        private static void AssertPhase1BackupCase(
+            ASMLiteSmokeCaseDefinition item,
+            bool expectedEnabled,
+            string expectedPresetId,
+            string[] expectedExcludedNames)
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "prelude-recover-context",
+                    "open-scene",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "assert-no-component",
+                    "assert-parameter-backup-option-present",
+                    "set-parameter-backup-state",
+                    "assert-pending-customization-snapshot",
+                    "add-prefab",
+                    "assert-attached-customization-snapshot",
+                    "assert-primary-action",
+                },
+                item.steps.Select(step => step.actionType).ToArray());
+
+            ASMLiteSmokeStepDefinition assertStep = item.steps.Single(step => step.actionType == "assert-parameter-backup-option-present");
+            Assert.AreEqual(expectedPresetId ?? "single-arms", assertStep.args.parameterBackupPresetId);
+
+            ASMLiteSmokeStepDefinition setStep = item.steps.Single(step => step.actionType == "set-parameter-backup-state");
+            Assert.AreEqual(expectedEnabled, setStep.args.useParameterExclusions);
+            Assert.AreEqual(expectedEnabled ? expectedPresetId : string.Empty, setStep.args.parameterBackupPresetId);
+
+            foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))
+            {
+                Assert.AreEqual(4, step.args.slotCount);
+                Assert.AreEqual("disabled", step.args.installPathPresetId);
+                Assert.That(step.args.expectedInstallPathEnabled, Is.False);
+                Assert.AreEqual(string.Empty, step.args.expectedNormalizedEffectivePath);
+                Assert.AreEqual(expectedEnabled, step.args.useParameterExclusions);
+                CollectionAssert.AreEqual(expectedExcludedNames, step.args.excludedParameterNames);
+            }
+
+            ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
+            Assert.That(pendingArgs.expectedComponentPresent, Is.False);
+            Assert.AreEqual("Add Prefab", pendingArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeStepArgs attachedArgs = item.steps.Single(step => step.actionType == "assert-attached-customization-snapshot").args;
+            Assert.That(attachedArgs.expectedComponentPresent, Is.True);
+            Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
+        }
+
         private static string BuildSingleStepCatalogJson(string argsJson, string actionType = "assert-host-ready")
         {
             string argsLine = string.IsNullOrWhiteSpace(argsJson) ? string.Empty : "              " + argsJson.Trim() + ",\n";
@@ -1193,6 +1272,10 @@ namespace ASMLite.Tests.Editor
                     return "\"args\": { \"customPresetNames\": [\"One\", \"Two\"], \"clearExistingNameMask\": true }\n";
                 case "set-action-label-mask":
                     return "\"args\": { \"customSaveLabel\": \"Store\", \"customLoadLabel\": \"Wear\", \"customClearLabel\": \"Clear Fit\", \"customConfirmLabel\": \"Apply\", \"clearExistingNameMask\": true }\n";
+                case "assert-parameter-backup-option-present":
+                    return "\"args\": { \"parameterBackupPresetId\": \"single-arms\" }\n";
+                case "set-parameter-backup-state":
+                    return "\"args\": { \"useParameterExclusions\": true, \"parameterBackupPresetId\": \"single-arms\" }\n";
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     return "\"args\": { "

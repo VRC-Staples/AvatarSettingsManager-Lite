@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Security;
 using System.Text;
 using ASMLite.Editor;
@@ -170,6 +171,8 @@ namespace ASMLite.Tests.Editor
         internal string CustomLoadLabel;
         internal string CustomClearLabel;
         internal string CustomConfirmLabel;
+        internal bool UseParameterExclusions;
+        internal string[] ExcludedParameterNames;
 
         internal static ASMLiteSmokeCustomizationSnapshot FromExpectedArgs(ASMLiteSmokeStepArgs args)
         {
@@ -198,6 +201,8 @@ namespace ASMLite.Tests.Editor
                 CustomLoadLabel = NormalizeOptionalString(args.customLoadLabel),
                 CustomClearLabel = NormalizeOptionalString(args.customClearLabel),
                 CustomConfirmLabel = NormalizeOptionalString(args.customConfirmLabel),
+                UseParameterExclusions = args.useParameterExclusions,
+                ExcludedParameterNames = NormalizeExcludedParameterNames(args.excludedParameterNames),
             };
         }
 
@@ -234,6 +239,8 @@ namespace ASMLite.Tests.Editor
                 CustomLoadLabel = componentPresent ? NormalizeOptionalString(component.customLoadLabel) : string.Empty,
                 CustomClearLabel = componentPresent ? NormalizeOptionalString(component.customClearPresetLabel) : string.Empty,
                 CustomConfirmLabel = componentPresent ? NormalizeOptionalString(component.customConfirmLabel) : string.Empty,
+                UseParameterExclusions = componentPresent && component.useParameterExclusions,
+                ExcludedParameterNames = NormalizeExcludedParameterNames(componentPresent ? component.excludedParameterNames : null),
             };
         }
 
@@ -264,6 +271,8 @@ namespace ASMLite.Tests.Editor
                 CustomLoadLabel = NormalizeOptionalString(snapshot.LoadLabel),
                 CustomClearLabel = NormalizeOptionalString(snapshot.ClearLabel),
                 CustomConfirmLabel = NormalizeOptionalString(snapshot.ConfirmLabel),
+                UseParameterExclusions = snapshot.ComponentCustomization.UseParameterExclusions,
+                ExcludedParameterNames = NormalizeExcludedParameterNames(snapshot.ComponentCustomization.ExcludedParameterNames),
             };
         }
 
@@ -314,6 +323,8 @@ namespace ASMLite.Tests.Editor
             AddMismatch(mismatches, "customLoadLabel", expected.CustomLoadLabel, actual.CustomLoadLabel);
             AddMismatch(mismatches, "customClearLabel", expected.CustomClearLabel, actual.CustomClearLabel);
             AddMismatch(mismatches, "customConfirmLabel", expected.CustomConfirmLabel, actual.CustomConfirmLabel);
+            AddMismatch(mismatches, "useParameterExclusions", expected.UseParameterExclusions, actual.UseParameterExclusions);
+            AddArrayMismatch(mismatches, "excludedParameterNames", expected.ExcludedParameterNames, actual.ExcludedParameterNames);
 
             if (mismatches.Count == 0)
             {
@@ -484,6 +495,19 @@ namespace ASMLite.Tests.Editor
         private static string NormalizeOptionalString(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string[] NormalizeExcludedParameterNames(string[] values)
+        {
+            if (values == null || values.Length == 0)
+                return Array.Empty<string>();
+
+            return values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
         }
     }
 
@@ -910,6 +934,12 @@ namespace ASMLite.Tests.Editor
                     case "set-action-icon-mask":
                         return SetActionIconMask(avatarName, args, out detail);
 
+                    case "assert-parameter-backup-option-present":
+                        return AssertParameterBackupOptionPresent(avatarName, args, out detail);
+
+                    case "set-parameter-backup-state":
+                        return SetParameterBackupState(avatarName, args, out detail);
+
                     case "assert-pending-customization-snapshot":
                         return AssertPendingCustomizationSnapshot(avatarName, args, out detail);
 
@@ -1258,6 +1288,116 @@ namespace ASMLite.Tests.Editor
                 clearIconFixtureId);
             detail = $"ASM-Lite action icon mask applied (mode={actionIconMode}).";
             return true;
+        }
+
+        private bool AssertParameterBackupOptionPresent(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (!TryResolveAvatarForSelection(avatarName, out VRCAvatarDescriptor avatar, out detail))
+                return false;
+
+            string[] visibleOptions = ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(avatar);
+            if (!TryResolveParameterBackupExcludedNames(args, visibleOptions, out string[] excludedNames, out detail))
+                return false;
+
+            detail = excludedNames.Length == 0
+                ? "Parameter backup option assertion passed: preset resolves to no exclusions."
+                : $"Parameter backup option assertion passed for {excludedNames.Length} option(s): {string.Join(", ", excludedNames)}.";
+            return true;
+        }
+
+        private bool SetParameterBackupState(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-parameter-backup-state failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            if (!TryResolveAvatarForSelection(avatarName, out VRCAvatarDescriptor avatar, out detail))
+                return false;
+            window.SelectAvatarForAutomation(avatar);
+
+            string[] visibleOptions = ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(avatar);
+            string[] excludedNames;
+            if (args.useParameterExclusions)
+            {
+                if (!TryResolveParameterBackupExcludedNames(args, visibleOptions, out excludedNames, out detail))
+                    return false;
+            }
+            else
+                excludedNames = Array.Empty<string>();
+
+            ASMLiteComponent component = FindASMLiteComponent(avatar);
+            if (component != null)
+            {
+                Undo.RecordObject(component, "Set ASM-Lite Parameter Backup State");
+                component.useParameterExclusions = args.useParameterExclusions;
+                component.excludedParameterNames = excludedNames;
+                EditorUtility.SetDirty(component);
+            }
+            else
+            {
+                SetPrivateWindowField(window, "_pendingUseParameterExclusions", args.useParameterExclusions);
+                SetPrivateWindowField(window, "_pendingExcludedParameterNames", excludedNames);
+                window.Repaint();
+            }
+
+            detail = $"ASM-Lite parameter backup state applied (enabled={args.useParameterExclusions}, excluded=[{string.Join(", ", excludedNames)}]).";
+            return true;
+        }
+
+        private static bool TryResolveParameterBackupExcludedNames(
+            ASMLiteSmokeStepArgs args,
+            string[] visibleOptions,
+            out string[] excludedNames,
+            out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            visibleOptions = visibleOptions ?? Array.Empty<string>();
+            if (!string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
+            {
+                bool ok = ASMLiteParameterBackupPresetResolver.TryResolvePresetExcludedNames(
+                    args.parameterBackupPresetId,
+                    visibleOptions,
+                    out excludedNames,
+                    out detail);
+                if (ok)
+                    excludedNames = SortExcludedParameterNames(excludedNames);
+                return ok;
+            }
+
+            bool exactOk = ASMLiteParameterBackupPresetResolver.TryResolveExactExcludedNames(
+                args.excludedParameterNames,
+                visibleOptions,
+                out excludedNames,
+                out detail);
+            if (exactOk)
+                excludedNames = SortExcludedParameterNames(excludedNames);
+            return exactOk;
+        }
+
+        private static string[] SortExcludedParameterNames(string[] names)
+        {
+            if (names == null || names.Length == 0)
+                return Array.Empty<string>();
+
+            return names
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static void SetPrivateWindowField(ASMLiteWindow window, string fieldName, object value)
+        {
+            FieldInfo field = typeof(ASMLiteWindow).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (field == null)
+                throw new MissingFieldException(typeof(ASMLiteWindow).FullName, fieldName);
+            field.SetValue(window, value);
         }
 
         private bool AssertPendingCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)

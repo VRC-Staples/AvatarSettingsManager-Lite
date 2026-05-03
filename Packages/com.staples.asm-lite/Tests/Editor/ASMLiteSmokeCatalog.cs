@@ -224,6 +224,9 @@ namespace ASMLite.Tests.Editor
         public bool expectedInstallPathEnabled;
         public string expectedNormalizedEffectivePath;
         public bool expectedComponentPresent;
+        public bool useParameterExclusions;
+        public string parameterBackupPresetId;
+        public string[] excludedParameterNames = Array.Empty<string>();
         public bool customRootNameEnabled;
         public string customRootName;
         public string[] customPresetNames;
@@ -257,6 +260,10 @@ namespace ASMLite.Tests.Editor
             loadIconFixtureId = NormalizeOptional(loadIconFixtureId);
             clearIconFixtureId = NormalizeOptional(clearIconFixtureId);
             expectedNormalizedEffectivePath = NormalizeInstallPath(expectedNormalizedEffectivePath);
+            parameterBackupPresetId = NormalizeOptional(parameterBackupPresetId);
+            excludedParameterNames = NormalizeOptionalArray(excludedParameterNames)
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
             customRootName = NormalizeOptional(customRootName);
             customPresetNames = NormalizeOptionalArray(customPresetNames);
             customSaveLabel = NormalizeOptional(customSaveLabel);
@@ -328,6 +335,8 @@ namespace ASMLite.Tests.Editor
             "set-root-icon-fixture",
             "set-slot-icon-mask",
             "set-action-icon-mask",
+            "assert-parameter-backup-option-present",
+            "set-parameter-backup-state",
             "assert-pending-customization-snapshot",
             "assert-attached-customization-snapshot",
         };
@@ -609,6 +618,17 @@ namespace ASMLite.Tests.Editor
                     RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.rootIconFixtureId), argsPath + ".rootIconFixtureId");
                     RejectPresentPhase1Arg(HasAny(args.slotIconFixtureIds) || HasAny(args.slotIconFixtureIdsBySlot), argsPath + ".slotIconFixtureIdsBySlot");
                     return;
+                case "assert-parameter-backup-option-present":
+                    RejectPresentPhase1Arg(args.useParameterExclusions, argsPath + ".useParameterExclusions");
+                    RequireParameterBackupSelector(args, argsPath, requireAnyValue: true);
+                    return;
+                case "set-parameter-backup-state":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
+                    if (args.useParameterExclusions)
+                        RequireParameterBackupSelector(args, argsPath, requireAnyValue: false);
+                    else
+                        RejectPresentPhase1Arg(HasParameterBackupSelector(args), argsPath + ".parameterBackupPresetId/excludedParameterNames");
+                    return;
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
@@ -627,6 +647,9 @@ namespace ASMLite.Tests.Editor
                     if (args.selectedGearIndex >= 0 || !string.IsNullOrWhiteSpace(args.gearColor))
                         RequireGearColorSelection(args, argsPath);
                     ValidateSlotIconMask(GetSlotIconFixtureIdsBySlot(args), args.slotCount, argsPath + ".slotIconFixtureIdsBySlot", requireAnyValue: false);
+                    ValidateExcludedParameterNames(args.excludedParameterNames, argsPath + ".excludedParameterNames", requireAnyValue: args.useParameterExclusions && string.IsNullOrWhiteSpace(args.parameterBackupPresetId));
+                    if (!string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
+                        RequireParameterBackupPreset(args.parameterBackupPresetId, argsPath + ".parameterBackupPresetId");
                     return;
                 default:
                     return;
@@ -672,6 +695,43 @@ namespace ASMLite.Tests.Editor
                 && (!string.IsNullOrWhiteSpace(args.saveIconFixtureId)
                     || !string.IsNullOrWhiteSpace(args.loadIconFixtureId)
                     || !string.IsNullOrWhiteSpace(args.clearIconFixtureId));
+        }
+
+        private static bool HasParameterBackupSelector(ASMLiteSmokeStepArgs args)
+        {
+            return args != null
+                && (!string.IsNullOrWhiteSpace(args.parameterBackupPresetId)
+                    || HasAny(args.excludedParameterNames));
+        }
+
+        private static void RequireParameterBackupSelector(ASMLiteSmokeStepArgs args, string argsPath, bool requireAnyValue)
+        {
+            bool hasPreset = args != null && !string.IsNullOrWhiteSpace(args.parameterBackupPresetId);
+            bool hasNames = args != null && HasAny(args.excludedParameterNames);
+            if (!hasPreset && !hasNames && requireAnyValue)
+                throw new InvalidOperationException(argsPath + ".parameterBackupPresetId or .excludedParameterNames is required.");
+            if (hasPreset && hasNames)
+                throw new InvalidOperationException(argsPath + ".parameterBackupPresetId and .excludedParameterNames cannot both be set.");
+            if (hasPreset)
+                RequireParameterBackupPreset(args.parameterBackupPresetId, argsPath + ".parameterBackupPresetId");
+            ValidateExcludedParameterNames(args?.excludedParameterNames, argsPath + ".excludedParameterNames", requireAnyValue: false);
+        }
+
+        private static void ValidateExcludedParameterNames(string[] values, string path, bool requireAnyValue)
+        {
+            values = values ?? Array.Empty<string>();
+            if (requireAnyValue && !HasAny(values))
+                throw new InvalidOperationException(path + " must include at least one parameter name.");
+            if (values.Any(string.IsNullOrWhiteSpace))
+                throw new InvalidOperationException(path + " cannot contain blank parameter names.");
+        }
+
+        private static string RequireParameterBackupPreset(string value, string path)
+        {
+            return NormalizeEnumValue(
+                value,
+                path,
+                ASMLite.Editor.ASMLiteParameterBackupPresetResolver.StablePresetIds.ToArray());
         }
 
         private static void ValidatePresetNameMask(string[] values, int slotCount, string path, bool requireAnyValue)

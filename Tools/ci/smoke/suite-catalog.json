@@ -4997,6 +4997,575 @@
           ]
         },
         {
+          "suiteId": "setup-prebuild-backup-matrix",
+          "label": "Setup Prebuild Backup Matrix",
+          "description": "Verify parameter backup exclusion customization before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All parameter backup rows preserve normalized pending and attached snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect visible parameter names, preset IDs, and sorted exclusion snapshot mismatches.",
+          "cases": [
+            {
+              "caseId": "B01-parameter-backup-default",
+              "label": "B01 parameter backup default",
+              "description": "Verify the default parameter backup state stays disabled.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected parameter backup state and finish with Rebuild available.",
+              "debugHint": "Inspect visible backup option names, preset IDs, and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "B01-parameter-backup-default-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "The required visible backup option is available.",
+                  "debugHint": "If this fails, inspect parameter option discovery and preset resolver output.",
+                  "args": {
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Parameter backup state is staged.",
+                  "debugHint": "If this fails, inspect preset ID resolution and visible option names.",
+                  "args": {
+                    "useParameterExclusions": false
+                  }
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending parameter backup customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useParameterExclusions": false,
+                    "excludedParameterNames": []
+                  }
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component parameter backup customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useParameterExclusions": false,
+                    "excludedParameterNames": []
+                  }
+                },
+                {
+                  "stepId": "B01-parameter-backup-default-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "B02-parameter-backup-enabled-none-excluded",
+              "label": "B02 parameter backup enabled none excluded",
+              "description": "Verify parameter backup can be enabled while excluding no visible options.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected parameter backup state and finish with Rebuild available.",
+              "debugHint": "Inspect visible backup option names, preset IDs, and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "The required visible backup option is available.",
+                  "debugHint": "If this fails, inspect parameter option discovery and preset resolver output.",
+                  "args": {
+                    "parameterBackupPresetId": "none-excluded"
+                  }
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Parameter backup state is staged.",
+                  "debugHint": "If this fails, inspect preset ID resolution and visible option names.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "none-excluded"
+                  }
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending parameter backup customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "none-excluded",
+                    "excludedParameterNames": []
+                  }
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component parameter backup customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "none-excluded",
+                    "excludedParameterNames": []
+                  }
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "B03-parameter-backup-single-exclusion",
+              "label": "B03 parameter backup single exclusion",
+              "description": "Verify one stable visible option can be excluded.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected parameter backup state and finish with Rebuild available.",
+              "debugHint": "Inspect visible backup option names, preset IDs, and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "The required visible backup option is available.",
+                  "debugHint": "If this fails, inspect parameter option discovery and preset resolver output.",
+                  "args": {
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Parameter backup state is staged.",
+                  "debugHint": "If this fails, inspect preset ID resolution and visible option names.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "single-arms"
+                  }
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending parameter backup customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component parameter backup customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "AvatarLimbScaling_Arms"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "B03-parameter-backup-single-exclusion-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "B04-parameter-backup-nested-subset",
+              "label": "B04 parameter backup nested subset",
+              "description": "Verify the nested media preset excludes only the stable nested subset.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected parameter backup state and finish with Rebuild available.",
+              "debugHint": "Inspect visible backup option names, preset IDs, and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this exhaustive row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-parameter-backup-option-present",
+                  "label": "Required backup option is visible",
+                  "description": "Verify the row-required parameter backup option can be resolved from visible options.",
+                  "actionType": "assert-parameter-backup-option-present",
+                  "expectedOutcome": "The required visible backup option is available.",
+                  "debugHint": "If this fails, inspect parameter option discovery and preset resolver output.",
+                  "args": {
+                    "parameterBackupPresetId": "nested-media"
+                  }
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-set-parameter-backup-state",
+                  "label": "Set parameter backup state",
+                  "description": "Apply the row parameter backup state through smoke automation.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Parameter backup state is staged.",
+                  "debugHint": "If this fails, inspect preset ID resolution and visible option names.",
+                  "args": {
+                    "useParameterExclusions": true,
+                    "parameterBackupPresetId": "nested-media"
+                  }
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending parameter backup customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "VRCOSC/Media/Play",
+                      "VRCOSC/Media/Volume"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component parameter backup customization snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached backup customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "useParameterExclusions": true,
+                    "excludedParameterNames": [
+                      "VRCOSC/Media/Play",
+                      "VRCOSC/Media/Volume"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",
