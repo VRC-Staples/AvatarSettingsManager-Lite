@@ -443,6 +443,276 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void IconAutomation_MultiColorDefault_ReportsBuiltInModeWithNoCustomFixtures()
+        {
+            _ctx.Comp.slotCount = 4;
+            _ctx.Comp.iconMode = IconMode.MultiColor;
+            _ctx.Comp.selectedGearIndex = 0;
+            _ctx.Comp.useCustomSlotIcons = false;
+            _ctx.Comp.customIcons = Array.Empty<Texture2D>();
+            _ctx.Comp.actionIconMode = ActionIconMode.Default;
+            _ctx.Comp.useCustomRootIcon = false;
+            _ctx.Comp.customRootIcon = null;
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                AssertBuiltinIconSnapshotFields(
+                    "multicolor default row",
+                    window,
+                    _ctx.Comp,
+                    4,
+                    IconMode.MultiColor,
+                    expectedGearIndex: 0);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [TestCase(0, "same-color blue row")]
+        [TestCase(7, "same-color yellow row")]
+        public void IconAutomation_SameColor_ReportsSelectedGearIndexWithoutCustomFixtures(int gearIndex, string scenario)
+        {
+            _ctx.Comp.slotCount = 4;
+            _ctx.Comp.iconMode = IconMode.SameColor;
+            _ctx.Comp.selectedGearIndex = gearIndex;
+            _ctx.Comp.useCustomSlotIcons = false;
+            _ctx.Comp.customIcons = Array.Empty<Texture2D>();
+            _ctx.Comp.actionIconMode = ActionIconMode.Default;
+
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                AssertBuiltinIconSnapshotFields(
+                    scenario,
+                    window,
+                    _ctx.Comp,
+                    4,
+                    IconMode.SameColor,
+                    gearIndex);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_RootOnly_UpdatesOnlyRootIconFixture()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.SetIconFixturesForAutomation(
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
+                    EmptyFixtureIds(3),
+                    saveIconFixtureId: null,
+                    loadIconFixtureId: null,
+                    clearIconFixtureId: null);
+
+                AssertCustomIconSnapshotFields(
+                    "root-only icon row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    expectedRootIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
+                    expectedSlotIconFixtureIds: EmptyFixtureIds(3),
+                    expectedSaveIconFixtureId: string.Empty,
+                    expectedLoadIconFixtureId: string.Empty,
+                    expectedClearIconFixtureId: string.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_FirstSlotOnly_UpdatesOnlyFirstSlotIconFixture()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var expectedSlots = new[]
+                {
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.Slot01IconId,
+                    string.Empty,
+                    string.Empty,
+                };
+
+                window.SetIconFixturesForAutomation(
+                    rootIconFixtureId: null,
+                    slotIconFixtureIds: expectedSlots,
+                    saveIconFixtureId: null,
+                    loadIconFixtureId: null,
+                    clearIconFixtureId: null);
+
+                AssertCustomIconSnapshotFields(
+                    "first-slot-only icon row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    expectedRootIconFixtureId: string.Empty,
+                    expectedSlotIconFixtureIds: expectedSlots,
+                    expectedSaveIconFixtureId: string.Empty,
+                    expectedLoadIconFixtureId: string.Empty,
+                    expectedClearIconFixtureId: string.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_AllSlots_UpdatesEverySlotIconFixture()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 4;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var expectedSlots = SlotFixtureIds(4);
+
+                window.SetIconFixturesForAutomation(
+                    rootIconFixtureId: null,
+                    slotIconFixtureIds: expectedSlots,
+                    saveIconFixtureId: null,
+                    loadIconFixtureId: null,
+                    clearIconFixtureId: null);
+
+                AssertCustomIconSnapshotFields(
+                    "all-slot-icons row",
+                    window,
+                    _ctx.Comp,
+                    4,
+                    expectedRootIconFixtureId: string.Empty,
+                    expectedSlotIconFixtureIds: expectedSlots,
+                    expectedSaveIconFixtureId: string.Empty,
+                    expectedLoadIconFixtureId: string.Empty,
+                    expectedClearIconFixtureId: string.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_SaveOnlyAction_UpdatesOnlySaveActionIconFixture()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetIconFixturesForAutomation(
+                    rootIconFixtureId: null,
+                    slotIconFixtureIds: EmptyFixtureIds(3),
+                    saveIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.SaveActionIconId,
+                    loadIconFixtureId: null,
+                    clearIconFixtureId: null);
+
+                AssertCustomIconSnapshotFields(
+                    "save-only action-icon row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    expectedRootIconFixtureId: string.Empty,
+                    expectedSlotIconFixtureIds: EmptyFixtureIds(3),
+                    expectedSaveIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.SaveActionIconId,
+                    expectedLoadIconFixtureId: string.Empty,
+                    expectedClearIconFixtureId: string.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_FullPack_UpdatesRootSlotAndActionIconFixtures()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                var expectedSlots = SlotFixtureIds(3);
+
+                window.SetIconFixturesForAutomation(
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
+                    expectedSlots,
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.SaveActionIconId,
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.LoadActionIconId,
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.ClearActionIconId);
+
+                AssertCustomIconSnapshotFields(
+                    "full-icon-pack row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    expectedRootIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
+                    expectedSlotIconFixtureIds: expectedSlots,
+                    expectedSaveIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.SaveActionIconId,
+                    expectedLoadIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.LoadActionIconId,
+                    expectedClearIconFixtureId: ASMLite.Editor.ASMLiteIconFixtureRegistry.ClearActionIconId);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void IconAutomation_UnknownFixtureId_ThrowsBeforeChangingAttachedIconState()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                _ctx.Comp.slotCount = 3;
+                _ctx.Comp.iconMode = IconMode.MultiColor;
+                _ctx.Comp.selectedGearIndex = 0;
+                _ctx.Comp.useCustomSlotIcons = false;
+                _ctx.Comp.customIcons = Array.Empty<Texture2D>();
+                _ctx.Comp.actionIconMode = ActionIconMode.Default;
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                var ex = Assert.Throws<ArgumentException>(() => window.SetIconFixturesForAutomation(
+                    ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
+                    new[] { "asm-lite-icon/not-real" },
+                    saveIconFixtureId: null,
+                    loadIconFixtureId: null,
+                    clearIconFixtureId: null));
+
+                StringAssert.Contains("asm-lite-icon/not-real", ex.Message,
+                    "The icon automation seam should report the unknown fixture ID without exposing raw asset-path dependencies.");
+                AssertBuiltinIconSnapshotFields(
+                    "unknown-fixture failure row",
+                    window,
+                    _ctx.Comp,
+                    3,
+                    IconMode.MultiColor,
+                    expectedGearIndex: 0);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
         {
             var limbRoot = new GameObject("AvatarLimbScaling");
@@ -949,6 +1219,208 @@ namespace ASMLite.Tests.Editor
                 $"{scenario}: effective Clear action label mismatch.");
             Assert.AreEqual(expectedConfirmLabel, ASMLite.Editor.ASMLiteBuilder.ResolveEffectiveConfirmLabel(component),
                 $"{scenario}: effective Confirm action label mismatch.");
+        }
+
+        private static void AssertBuiltinIconSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow window,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            IconMode expectedIconMode,
+            int expectedGearIndex)
+        {
+            Assert.IsNotNull(window, $"{scenario}: expected an automation window.");
+            Assert.IsNotNull(component, $"{scenario}: expected an attached ASM-Lite component.");
+
+            Assert.AreEqual(expectedIconMode, component.iconMode,
+                $"{scenario}: attached component icon mode should remain the selected built-in mode.");
+            Assert.AreEqual(expectedGearIndex, component.selectedGearIndex,
+                $"{scenario}: attached component selected gear index should expose the chosen built-in color.");
+            Assert.IsFalse(component.useCustomSlotIcons,
+                $"{scenario}: built-in icon rows should not enable per-slot custom icon overrides.");
+            Assert.AreEqual(ActionIconMode.Default, component.actionIconMode,
+                $"{scenario}: built-in icon rows should keep default action icons.");
+            Assert.IsFalse(component.useCustomRootIcon,
+                $"{scenario}: built-in icon rows should keep the root icon gate off.");
+            Assert.IsNull(component.customRootIcon,
+                $"{scenario}: built-in icon rows should not assign a custom root icon.");
+            CollectionAssert.AreEqual(Array.Empty<string>(), FixtureIdsFromTextures(component.customIcons),
+                $"{scenario}: attached component should not carry custom slot icon fixture references.");
+
+            var pendingTesting = window.GetPendingCustomizationSnapshotForTesting();
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), pendingTesting.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the pending testing snapshot.");
+            Assert.IsFalse(pendingTesting.UseCustomRootIcon,
+                $"{scenario}: pending testing snapshot should keep the root icon gate off.");
+            CollectionAssert.AreEqual(Array.Empty<string>(), FixtureIdsFromTextures(pendingTesting.CustomIcons),
+                $"{scenario}: pending testing snapshot should not carry custom slot icon fixture references.");
+
+            AssertIconAutomationSnapshotFields(
+                scenario + " pending automation snapshot",
+                window.GetPendingCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                expectedIconMode,
+                expectedGearIndex,
+                useCustomSlotIcons: false,
+                expectedRootIconFixtureId: string.Empty,
+                expectedSlotIconFixtureIds: Array.Empty<string>(),
+                expectedActionIconMode: ActionIconMode.Default,
+                expectedSaveIconFixtureId: string.Empty,
+                expectedLoadIconFixtureId: string.Empty,
+                expectedClearIconFixtureId: string.Empty);
+            AssertIconAutomationSnapshotFields(
+                scenario + " attached automation snapshot",
+                window.GetAttachedCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                expectedIconMode,
+                expectedGearIndex,
+                useCustomSlotIcons: false,
+                expectedRootIconFixtureId: string.Empty,
+                expectedSlotIconFixtureIds: Array.Empty<string>(),
+                expectedActionIconMode: ActionIconMode.Default,
+                expectedSaveIconFixtureId: string.Empty,
+                expectedLoadIconFixtureId: string.Empty,
+                expectedClearIconFixtureId: string.Empty);
+        }
+
+        private static void AssertCustomIconSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow window,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            string expectedRootIconFixtureId,
+            string[] expectedSlotIconFixtureIds,
+            string expectedSaveIconFixtureId,
+            string expectedLoadIconFixtureId,
+            string expectedClearIconFixtureId)
+        {
+            Assert.IsNotNull(window, $"{scenario}: expected an automation window.");
+            Assert.IsNotNull(component, $"{scenario}: expected an attached ASM-Lite component.");
+            expectedRootIconFixtureId = expectedRootIconFixtureId ?? string.Empty;
+            expectedSlotIconFixtureIds = expectedSlotIconFixtureIds ?? Array.Empty<string>();
+            expectedSaveIconFixtureId = expectedSaveIconFixtureId ?? string.Empty;
+            expectedLoadIconFixtureId = expectedLoadIconFixtureId ?? string.Empty;
+            expectedClearIconFixtureId = expectedClearIconFixtureId ?? string.Empty;
+
+            Assert.AreEqual(IconMode.Custom, component.iconMode,
+                $"{scenario}: applying icon fixtures should switch the attached component to custom slot-icon mode.");
+            Assert.IsTrue(component.useCustomSlotIcons,
+                $"{scenario}: applying icon fixtures should enable per-slot custom icon overrides.");
+            Assert.AreEqual(ActionIconMode.Custom, component.actionIconMode,
+                $"{scenario}: applying icon fixtures should switch the attached component to custom action-icon mode.");
+            Assert.AreEqual(!string.IsNullOrEmpty(expectedRootIconFixtureId), component.useCustomRootIcon,
+                $"{scenario}: root icon gate should follow whether a root fixture was supplied.");
+            Assert.AreEqual(expectedRootIconFixtureId, ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customRootIcon),
+                $"{scenario}: attached component customRootIcon should round-trip to the expected fixture ID.");
+            CollectionAssert.AreEqual(expectedSlotIconFixtureIds, FixtureIdsFromTextures(component.customIcons),
+                $"{scenario}: attached component customIcons should preserve field-specific slot fixture IDs.");
+            Assert.AreEqual(expectedSaveIconFixtureId, ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customSaveIcon),
+                $"{scenario}: attached component customSaveIcon should round-trip to the expected fixture ID.");
+            Assert.AreEqual(expectedLoadIconFixtureId, ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customLoadIcon),
+                $"{scenario}: attached component customLoadIcon should round-trip to the expected fixture ID.");
+            Assert.AreEqual(expectedClearIconFixtureId, ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customClearIcon),
+                $"{scenario}: attached component customClearIcon should round-trip to the expected fixture ID.");
+
+            var pendingTesting = window.GetPendingCustomizationSnapshotForTesting();
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), pendingTesting.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the pending testing snapshot.");
+            Assert.AreEqual(!string.IsNullOrEmpty(expectedRootIconFixtureId), pendingTesting.UseCustomRootIcon,
+                $"{scenario}: pending testing snapshot root icon gate should follow whether a root fixture was supplied.");
+            CollectionAssert.AreEqual(expectedSlotIconFixtureIds, FixtureIdsFromTextures(pendingTesting.CustomIcons),
+                $"{scenario}: pending testing snapshot should expose field-specific slot fixture IDs.");
+
+            AssertIconAutomationSnapshotFields(
+                scenario + " pending automation snapshot",
+                window.GetPendingCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                IconMode.Custom,
+                expectedGearIndex: 0,
+                useCustomSlotIcons: true,
+                expectedRootIconFixtureId: expectedRootIconFixtureId,
+                expectedSlotIconFixtureIds: expectedSlotIconFixtureIds,
+                expectedActionIconMode: ActionIconMode.Custom,
+                expectedSaveIconFixtureId: expectedSaveIconFixtureId,
+                expectedLoadIconFixtureId: expectedLoadIconFixtureId,
+                expectedClearIconFixtureId: expectedClearIconFixtureId);
+            AssertIconAutomationSnapshotFields(
+                scenario + " attached automation snapshot",
+                window.GetAttachedCustomizationSnapshotForAutomation(),
+                component,
+                expectedSlotCount,
+                IconMode.Custom,
+                expectedGearIndex: 0,
+                useCustomSlotIcons: true,
+                expectedRootIconFixtureId: expectedRootIconFixtureId,
+                expectedSlotIconFixtureIds: expectedSlotIconFixtureIds,
+                expectedActionIconMode: ActionIconMode.Custom,
+                expectedSaveIconFixtureId: expectedSaveIconFixtureId,
+                expectedLoadIconFixtureId: expectedLoadIconFixtureId,
+                expectedClearIconFixtureId: expectedClearIconFixtureId);
+        }
+
+        private static void AssertIconAutomationSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow.CustomizationAutomationSnapshot snapshot,
+            ASMLite.ASMLiteComponent component,
+            int expectedSlotCount,
+            IconMode expectedIconMode,
+            int expectedGearIndex,
+            bool useCustomSlotIcons,
+            string expectedRootIconFixtureId,
+            string[] expectedSlotIconFixtureIds,
+            ActionIconMode expectedActionIconMode,
+            string expectedSaveIconFixtureId,
+            string expectedLoadIconFixtureId,
+            string expectedClearIconFixtureId)
+        {
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), snapshot.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the automation snapshot.");
+            Assert.AreSame(component, snapshot.Component,
+                $"{scenario}: automation snapshot should expose the attached ASMLiteComponent.");
+            Assert.IsTrue(snapshot.HasAttachedComponent,
+                $"{scenario}: automation snapshot should identify the attached component branch.");
+            Assert.AreEqual(expectedSlotCount, snapshot.SlotCount,
+                $"{scenario}: SlotCount should stay aligned with icon fixture arrays.");
+            Assert.AreEqual(expectedIconMode, snapshot.Customization.IconMode,
+                $"{scenario}: IconMode should expose the selected built-in/custom icon mode.");
+            Assert.AreEqual(expectedGearIndex, snapshot.Customization.SelectedGearIndex,
+                $"{scenario}: SelectedGearIndex should expose the selected gear color index.");
+            Assert.AreEqual(useCustomSlotIcons, snapshot.Customization.UseCustomSlotIcons,
+                $"{scenario}: UseCustomSlotIcons should expose the per-slot custom icon gate.");
+            Assert.AreEqual(!string.IsNullOrEmpty(expectedRootIconFixtureId), snapshot.Customization.UseCustomRootIcon,
+                $"{scenario}: UseCustomRootIcon should expose whether a root fixture was supplied.");
+            Assert.AreEqual(expectedRootIconFixtureId, snapshot.CustomRootIconFixtureId,
+                $"{scenario}: CustomRootIconFixtureId should expose the root fixture ID.");
+            CollectionAssert.AreEqual(expectedSlotIconFixtureIds, snapshot.CustomSlotIconFixtureIds,
+                $"{scenario}: CustomSlotIconFixtureIds should expose field-specific slot fixture IDs.");
+            Assert.AreEqual(expectedActionIconMode, snapshot.Customization.ActionIconMode,
+                $"{scenario}: ActionIconMode should expose the action-icon fixture gate.");
+            Assert.AreEqual(expectedSaveIconFixtureId, snapshot.CustomSaveIconFixtureId,
+                $"{scenario}: CustomSaveIconFixtureId should expose the Save action fixture ID.");
+            Assert.AreEqual(expectedLoadIconFixtureId, snapshot.CustomLoadIconFixtureId,
+                $"{scenario}: CustomLoadIconFixtureId should expose the Load action fixture ID.");
+            Assert.AreEqual(expectedClearIconFixtureId, snapshot.CustomClearIconFixtureId,
+                $"{scenario}: CustomClearIconFixtureId should expose the Clear action fixture ID.");
+        }
+
+        private static string[] FixtureIdsFromTextures(Texture2D[] textures)
+        {
+            return ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdsOrEmpty(textures);
+        }
+
+        private static string[] EmptyFixtureIds(int count)
+        {
+            return Enumerable.Repeat(string.Empty, count).ToArray();
+        }
+
+        private static string[] SlotFixtureIds(int count)
+        {
+            return Enumerable.Range(1, count)
+                .Select(ASMLite.Editor.ASMLiteIconFixtureRegistry.ResolveSlotIconId)
+                .ToArray();
         }
 
         private static string[] EmptyStrings(int count)
