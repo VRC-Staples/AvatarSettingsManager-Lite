@@ -6961,7 +6961,11 @@ namespace ASMLite.Editor
 
         private static string[] EmptyFixtureIdsBySlot(int slotCount)
         {
-            return new string[Mathf.Max(0, slotCount)];
+            int normalizedSlotCount = Mathf.Max(0, slotCount);
+            var fixtureIds = new string[normalizedSlotCount];
+            for (int index = 0; index < normalizedSlotCount; index++)
+                fixtureIds[index] = string.Empty;
+            return fixtureIds;
         }
 
         private static string[] NormalizeSlotIconFixtureIdsForAutomationSnapshot(Texture2D[] textures, int slotCount)
@@ -7438,10 +7442,50 @@ namespace ASMLite.Editor
             string loadIconFixtureId,
             string clearIconFixtureId)
         {
-            SetCustomIconsEnabledForAutomation(true);
-            SetRootIconFixtureForAutomation(rootIconFixtureId);
-            SetSlotIconMaskForAutomation(slotIconFixtureIds);
-            SetActionIconMaskForAutomation(saveIconFixtureId, loadIconFixtureId, clearIconFixtureId);
+            int slotCount = GetCurrentSlotCountForAutomation();
+            if (slotIconFixtureIds != null && slotIconFixtureIds.Length != slotCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(slotIconFixtureIds),
+                    slotIconFixtureIds.Length,
+                    $"ASM-Lite slot icon fixture mask must contain exactly {slotCount} slot value(s) for the current avatar.");
+            }
+
+            Texture2D rootIcon = ResolveOptionalIconFixtureForAutomation(
+                rootIconFixtureId,
+                ASMLiteIconFixtureKind.Root,
+                nameof(rootIconFixtureId));
+            Texture2D[] slotIcons = ResolveSlotIconFixturesForAutomation(slotIconFixtureIds ?? new string[slotCount], slotCount);
+            Texture2D saveIcon = ResolveOptionalActionIconFixtureForAutomation(saveIconFixtureId, "save", nameof(saveIconFixtureId));
+            Texture2D loadIcon = ResolveOptionalActionIconFixtureForAutomation(loadIconFixtureId, "load", nameof(loadIconFixtureId));
+            Texture2D clearIcon = ResolveOptionalActionIconFixtureForAutomation(clearIconFixtureId, "clear", nameof(clearIconFixtureId));
+            ActionIconMode actionIconMode = saveIcon != null || loadIcon != null || clearIcon != null
+                ? ActionIconMode.Custom
+                : ActionIconMode.Default;
+
+            _pendingUseCustomSlotIcons = true;
+            _pendingCustomIcons = CloneTextures(slotIcons);
+            _pendingUseCustomRootIcon = rootIcon != null;
+            _pendingCustomRootIcon = rootIcon;
+            _pendingActionIconMode = actionIconMode;
+            _pendingCustomSaveIcon = saveIcon;
+            _pendingCustomLoadIcon = loadIcon;
+            _pendingCustomClearIcon = clearIcon;
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            Undo.RecordObject(component, "Set ASM-Lite Icon Fixtures");
+            component.useCustomSlotIcons = true;
+            component.customIcons = CloneTextures(slotIcons);
+            component.useCustomRootIcon = rootIcon != null;
+            component.customRootIcon = rootIcon;
+            component.actionIconMode = actionIconMode;
+            component.customSaveIcon = saveIcon;
+            component.customLoadIcon = loadIcon;
+            component.customClearIcon = clearIcon;
+            EditorUtility.SetDirty(component);
         }
 
         private static IconMode ParseIconModeForAutomation(string iconMode, string fieldName)

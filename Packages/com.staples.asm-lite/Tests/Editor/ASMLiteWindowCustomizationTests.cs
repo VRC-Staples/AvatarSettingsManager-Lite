@@ -691,7 +691,7 @@ namespace ASMLite.Tests.Editor
 
                 var ex = Assert.Throws<ArgumentException>(() => window.SetIconFixturesForAutomation(
                     ASMLite.Editor.ASMLiteIconFixtureRegistry.RootIconId,
-                    new[] { "asm-lite-icon/not-real" },
+                    new[] { "asm-lite-icon/not-real", string.Empty, string.Empty },
                     saveIconFixtureId: null,
                     loadIconFixtureId: null,
                     clearIconFixtureId: null));
@@ -1264,7 +1264,7 @@ namespace ASMLite.Tests.Editor
                 expectedGearIndex,
                 useCustomSlotIcons: false,
                 expectedRootIconFixtureId: string.Empty,
-                expectedSlotIconFixtureIds: Array.Empty<string>(),
+                expectedSlotIconFixtureIds: EmptyFixtureIds(expectedSlotCount),
                 expectedActionIconMode: ActionIconMode.Default,
                 expectedSaveIconFixtureId: string.Empty,
                 expectedLoadIconFixtureId: string.Empty,
@@ -1278,7 +1278,7 @@ namespace ASMLite.Tests.Editor
                 expectedGearIndex,
                 useCustomSlotIcons: false,
                 expectedRootIconFixtureId: string.Empty,
-                expectedSlotIconFixtureIds: Array.Empty<string>(),
+                expectedSlotIconFixtureIds: EmptyFixtureIds(expectedSlotCount),
                 expectedActionIconMode: ActionIconMode.Default,
                 expectedSaveIconFixtureId: string.Empty,
                 expectedLoadIconFixtureId: string.Empty,
@@ -1304,12 +1304,18 @@ namespace ASMLite.Tests.Editor
             expectedLoadIconFixtureId = expectedLoadIconFixtureId ?? string.Empty;
             expectedClearIconFixtureId = expectedClearIconFixtureId ?? string.Empty;
 
-            Assert.AreEqual(IconMode.Custom, component.iconMode,
-                $"{scenario}: applying icon fixtures should switch the attached component to custom slot-icon mode.");
+            var expectedActionIconMode = string.IsNullOrEmpty(expectedSaveIconFixtureId)
+                && string.IsNullOrEmpty(expectedLoadIconFixtureId)
+                && string.IsNullOrEmpty(expectedClearIconFixtureId)
+                    ? ActionIconMode.Default
+                    : ActionIconMode.Custom;
+
+            Assert.AreEqual(IconMode.MultiColor, component.iconMode,
+                $"{scenario}: applying icon fixtures should preserve the selected built-in slot icon mode.");
             Assert.IsTrue(component.useCustomSlotIcons,
                 $"{scenario}: applying icon fixtures should enable per-slot custom icon overrides.");
-            Assert.AreEqual(ActionIconMode.Custom, component.actionIconMode,
-                $"{scenario}: applying icon fixtures should switch the attached component to custom action-icon mode.");
+            Assert.AreEqual(expectedActionIconMode, component.actionIconMode,
+                $"{scenario}: action icon mode should follow whether action icon fixtures were supplied.");
             Assert.AreEqual(!string.IsNullOrEmpty(expectedRootIconFixtureId), component.useCustomRootIcon,
                 $"{scenario}: root icon gate should follow whether a root fixture was supplied.");
             Assert.AreEqual(expectedRootIconFixtureId, ASMLite.Editor.ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component.customRootIcon),
@@ -1336,12 +1342,12 @@ namespace ASMLite.Tests.Editor
                 window.GetPendingCustomizationSnapshotForAutomation(),
                 component,
                 expectedSlotCount,
-                IconMode.Custom,
+                IconMode.MultiColor,
                 expectedGearIndex: 0,
                 useCustomSlotIcons: true,
                 expectedRootIconFixtureId: expectedRootIconFixtureId,
                 expectedSlotIconFixtureIds: expectedSlotIconFixtureIds,
-                expectedActionIconMode: ActionIconMode.Custom,
+                expectedActionIconMode: expectedActionIconMode,
                 expectedSaveIconFixtureId: expectedSaveIconFixtureId,
                 expectedLoadIconFixtureId: expectedLoadIconFixtureId,
                 expectedClearIconFixtureId: expectedClearIconFixtureId);
@@ -1350,12 +1356,12 @@ namespace ASMLite.Tests.Editor
                 window.GetAttachedCustomizationSnapshotForAutomation(),
                 component,
                 expectedSlotCount,
-                IconMode.Custom,
+                IconMode.MultiColor,
                 expectedGearIndex: 0,
                 useCustomSlotIcons: true,
                 expectedRootIconFixtureId: expectedRootIconFixtureId,
                 expectedSlotIconFixtureIds: expectedSlotIconFixtureIds,
-                expectedActionIconMode: ActionIconMode.Custom,
+                expectedActionIconMode: expectedActionIconMode,
                 expectedSaveIconFixtureId: expectedSaveIconFixtureId,
                 expectedLoadIconFixtureId: expectedLoadIconFixtureId,
                 expectedClearIconFixtureId: expectedClearIconFixtureId);
