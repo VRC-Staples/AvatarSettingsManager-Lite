@@ -104,8 +104,63 @@ pub struct SmokeStepDefinition {
     pub label: String,
     pub description: String,
     pub action_type: String,
+    #[serde(default)]
+    pub args: SmokeStepArgs,
     pub expected_outcome: String,
     pub debug_hint: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SmokeStepArgs {
+    #[serde(default)]
+    pub scene_path: String,
+    #[serde(default)]
+    pub avatar_name: String,
+    #[serde(default)]
+    pub object_name: String,
+    #[serde(default)]
+    pub fixture_mutation: String,
+    #[serde(default)]
+    pub expected_primary_action: String,
+    #[serde(default)]
+    pub expected_diagnostic_code: String,
+    #[serde(default)]
+    pub expected_diagnostic_contains: String,
+    #[serde(default)]
+    pub expected_state: String,
+    #[serde(default)]
+    pub slot_count: i32,
+    #[serde(default)]
+    pub install_path_preset_id: String,
+    #[serde(default)]
+    pub expected_install_path_enabled: bool,
+    #[serde(default)]
+    pub expected_normalized_effective_path: String,
+    #[serde(default)]
+    pub expected_component_present: bool,
+    #[serde(default)]
+    pub expect_step_failure: bool,
+    #[serde(default)]
+    pub preserve_failure_evidence: bool,
+    #[serde(default)]
+    pub require_clean_reset: bool,
+    #[serde(default)]
+    pub use_custom_root_name: Option<bool>,
+    #[serde(default)]
+    pub custom_root_name: Option<String>,
+    #[serde(default)]
+    pub preset_names_by_slot: Option<Vec<String>>,
+    #[serde(default)]
+    pub save_label: Option<String>,
+    #[serde(default)]
+    pub load_label: Option<String>,
+    #[serde(default)]
+    pub clear_label: Option<String>,
+    #[serde(default)]
+    pub confirm_label: Option<String>,
+    #[serde(default)]
+    pub clear_existing: bool,
 }
 
 pub fn canonical_catalog_path() -> PathBuf {
@@ -293,10 +348,231 @@ fn normalize_and_validate_step(
             step.action_type
         )));
     }
+    normalize_and_validate_step_args(&step.action_type, &mut step.args, &(path.clone() + ".args"))?;
     step.expected_outcome =
         require_non_blank(&step.expected_outcome, &(path.clone() + ".expectedOutcome"))?;
     step.debug_hint = require_non_blank(&step.debug_hint, &(path.clone() + ".debugHint"))?;
     Ok(())
+}
+
+fn normalize_and_validate_step_args(
+    action_type: &str,
+    args: &mut SmokeStepArgs,
+    path: &str,
+) -> Result<(), ContractError> {
+    normalize_step_args(args);
+    if args.expect_step_failure {
+        args.expected_diagnostic_code = require_non_blank(
+            &args.expected_diagnostic_code,
+            &(path.to_string() + ".expectedDiagnosticCode"),
+        )?;
+        args.expected_diagnostic_contains = require_non_blank(
+            &args.expected_diagnostic_contains,
+            &(path.to_string() + ".expectedDiagnosticContains"),
+        )?;
+    }
+
+    match action_type {
+        "assert-pending-customization-snapshot" | "assert-attached-customization-snapshot" => {
+            validate_optional_slot_count(args.slot_count, &(path.to_string() + ".slotCount"))?;
+            if !args.install_path_preset_id.is_empty() {
+                let preset_id = require_install_path_preset(
+                    &args.install_path_preset_id,
+                    &(path.to_string() + ".installPathPresetId"),
+                )?;
+                args.install_path_preset_id = preset_id;
+            }
+            validate_optional_preset_names_by_slot(args, path)?;
+        }
+        "set-root-name-state" => {
+            let enabled = args.use_custom_root_name.ok_or_else(|| {
+                ContractError(format!(
+                    "{path}.useCustomRootName is required for actionType 'set-root-name-state'."
+                ))
+            })?;
+            let root_name = normalize_optional_option(args.custom_root_name.take()).unwrap_or_default();
+            if enabled && root_name.is_empty() {
+                return Err(ContractError(format!(
+                    "{path}.customRootName must not be blank when useCustomRootName is true."
+                )));
+            }
+            args.custom_root_name = Some(if enabled { root_name } else { String::new() });
+            reject_present_arg(
+                args.preset_names_by_slot.is_some(),
+                &(path.to_string() + ".presetNamesBySlot"),
+            )?;
+            reject_present_arg(args.save_label.is_some(), &(path.to_string() + ".saveLabel"))?;
+            reject_present_arg(args.load_label.is_some(), &(path.to_string() + ".loadLabel"))?;
+            reject_present_arg(args.clear_label.is_some(), &(path.to_string() + ".clearLabel"))?;
+            reject_present_arg(args.confirm_label.is_some(), &(path.to_string() + ".confirmLabel"))?;
+        }
+        "set-preset-name-mask" => {
+            let names = args.preset_names_by_slot.as_ref().ok_or_else(|| {
+                ContractError(format!(
+                    "{path}.presetNamesBySlot is required for actionType 'set-preset-name-mask'."
+                ))
+            })?;
+            if names.is_empty() {
+                return Err(ContractError(format!(
+                    "{path}.presetNamesBySlot must include at least one slot label."
+                )));
+            }
+            validate_optional_preset_names_by_slot(args, path)?;
+            reject_present_arg(
+                args.use_custom_root_name.is_some(),
+                &(path.to_string() + ".useCustomRootName"),
+            )?;
+            reject_present_arg(
+                args.custom_root_name.is_some(),
+                &(path.to_string() + ".customRootName"),
+            )?;
+            reject_present_arg(args.save_label.is_some(), &(path.to_string() + ".saveLabel"))?;
+            reject_present_arg(args.load_label.is_some(), &(path.to_string() + ".loadLabel"))?;
+            reject_present_arg(args.clear_label.is_some(), &(path.to_string() + ".clearLabel"))?;
+            reject_present_arg(args.confirm_label.is_some(), &(path.to_string() + ".confirmLabel"))?;
+        }
+        "set-action-label-mask" => {
+            let has_label = args.save_label.is_some()
+                || args.load_label.is_some()
+                || args.clear_label.is_some()
+                || args.confirm_label.is_some();
+            if !has_label {
+                return Err(ContractError(format!(
+                    "{path} must include at least one of saveLabel, loadLabel, clearLabel, or confirmLabel for actionType 'set-action-label-mask'."
+                )));
+            }
+            reject_present_arg(
+                args.use_custom_root_name.is_some(),
+                &(path.to_string() + ".useCustomRootName"),
+            )?;
+            reject_present_arg(
+                args.custom_root_name.is_some(),
+                &(path.to_string() + ".customRootName"),
+            )?;
+            reject_present_arg(
+                args.preset_names_by_slot.is_some(),
+                &(path.to_string() + ".presetNamesBySlot"),
+            )?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn normalize_step_args(args: &mut SmokeStepArgs) {
+    args.scene_path = normalize_optional(&args.scene_path);
+    args.avatar_name = normalize_optional(&args.avatar_name);
+    args.object_name = normalize_optional(&args.object_name);
+    args.fixture_mutation = normalize_optional(&args.fixture_mutation);
+    args.expected_primary_action = normalize_optional(&args.expected_primary_action);
+    args.expected_diagnostic_code = normalize_optional(&args.expected_diagnostic_code);
+    args.expected_diagnostic_contains = normalize_optional(&args.expected_diagnostic_contains);
+    args.expected_state = normalize_optional(&args.expected_state);
+    args.install_path_preset_id = normalize_optional(&args.install_path_preset_id);
+    args.expected_normalized_effective_path = normalize_install_path(&args.expected_normalized_effective_path);
+    args.custom_root_name = normalize_optional_option(args.custom_root_name.take());
+    args.preset_names_by_slot = args
+        .preset_names_by_slot
+        .take()
+        .map(|names| names.into_iter().map(|name| normalize_optional(&name)).collect());
+    args.save_label = normalize_optional_option(args.save_label.take());
+    args.load_label = normalize_optional_option(args.load_label.take());
+    args.clear_label = normalize_optional_option(args.clear_label.take());
+    args.confirm_label = normalize_optional_option(args.confirm_label.take());
+}
+
+fn reject_present_arg(is_present: bool, path: &str) -> Result<(), ContractError> {
+    if is_present {
+        return Err(ContractError(format!(
+            "{path} is not valid for this actionType."
+        )));
+    }
+    Ok(())
+}
+
+fn require_slot_count_in_range(slot_count: i32, path: &str) -> Result<(), ContractError> {
+    if !(1..=8).contains(&slot_count) {
+        return Err(ContractError(format!(
+            "{path} must be between 1 and 8."
+        )));
+    }
+    Ok(())
+}
+
+fn validate_optional_slot_count(slot_count: i32, path: &str) -> Result<(), ContractError> {
+    if slot_count != 0 {
+        require_slot_count_in_range(slot_count, path)?;
+    }
+    Ok(())
+}
+
+fn require_install_path_preset(value: &str, path: &str) -> Result<String, ContractError> {
+    normalize_enum_value(value, path, &["disabled", "root", "simple", "nested"])
+}
+
+fn validate_expected_install_path_matches_preset(
+    args: &SmokeStepArgs,
+    preset_id: &str,
+    args_path: &str,
+) -> Result<(), ContractError> {
+    let (expected_enabled, expected_path) = resolve_install_path_preset(preset_id)?;
+    if args.expected_install_path_enabled != expected_enabled {
+        return Err(ContractError(format!(
+            "{args_path}.expectedInstallPathEnabled must be {} for installPathPresetId '{preset_id}'.",
+            expected_enabled.to_string().to_lowercase()
+        )));
+    }
+
+    let normalized_expected_path = normalize_install_path(expected_path);
+    if args.expected_normalized_effective_path != normalized_expected_path {
+        return Err(ContractError(format!(
+            "{args_path}.expectedNormalizedEffectivePath must be '{normalized_expected_path}' for installPathPresetId '{preset_id}'."
+        )));
+    }
+    Ok(())
+}
+
+fn resolve_install_path_preset(preset_id: &str) -> Result<(bool, &'static str), ContractError> {
+    match preset_id {
+        "disabled" => Ok((false, "")),
+        "root" => Ok((true, "")),
+        "simple" => Ok((true, "ASM-Lite")),
+        "nested" => Ok((true, "Avatars/ASM-Lite")),
+        _ => Err(ContractError(format!(
+            "installPathPresetId '{preset_id}' is not supported."
+        ))),
+    }
+}
+
+fn validate_optional_preset_names_by_slot(
+    args: &SmokeStepArgs,
+    path: &str,
+) -> Result<(), ContractError> {
+    if let Some(names) = &args.preset_names_by_slot {
+        if names.len() > 8 {
+            return Err(ContractError(format!(
+                "{path}.presetNamesBySlot must not contain more than 8 slot labels."
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn normalize_optional(value: &str) -> String {
+    value.trim().to_string()
+}
+
+fn normalize_optional_option(value: Option<String>) -> Option<String> {
+    value.map(|item| normalize_optional(&item))
+}
+
+fn normalize_install_path(value: &str) -> String {
+    let mut normalized = normalize_optional(value).replace('\\', "/");
+    while normalized.contains("//") {
+        normalized = normalized.replace("//", "/");
+    }
+    normalized.trim_matches('/').to_string()
 }
 
 fn normalize_unique_id(
@@ -376,6 +652,9 @@ fn is_supported_action_type(action_type: &str) -> bool {
         | "set-install-path-state"
         | "assert-pending-customization-snapshot"
         | "assert-attached-customization-snapshot"
+        | "set-root-name-state"
+        | "set-preset-name-mask"
+        | "set-action-label-mask"
         | "assert-generated-references-package-managed"
         | "assert-runtime-component-valid"
         | "assert-host-ready")
