@@ -211,6 +211,14 @@ namespace ASMLite.Tests.Editor
         public bool expectedInstallPathEnabled;
         public string expectedNormalizedEffectivePath;
         public bool expectedComponentPresent;
+        public bool customRootNameEnabled;
+        public string customRootName;
+        public string[] customPresetNames;
+        public bool clearExistingNameMask;
+        public string customSaveLabel;
+        public string customLoadLabel;
+        public string customClearLabel;
+        public string customConfirmLabel;
         public bool expectStepFailure;
         public bool preserveFailureEvidence;
         public bool requireCleanReset;
@@ -227,6 +235,12 @@ namespace ASMLite.Tests.Editor
             expectedState = NormalizeOptional(expectedState);
             installPathPresetId = NormalizeOptional(installPathPresetId);
             expectedNormalizedEffectivePath = NormalizeInstallPath(expectedNormalizedEffectivePath);
+            customRootName = NormalizeOptional(customRootName);
+            customPresetNames = NormalizeOptionalArray(customPresetNames);
+            customSaveLabel = NormalizeOptional(customSaveLabel);
+            customLoadLabel = NormalizeOptional(customLoadLabel);
+            customClearLabel = NormalizeOptional(customClearLabel);
+            customConfirmLabel = NormalizeOptional(customConfirmLabel);
         }
 
         internal static string NormalizeInstallPath(string value)
@@ -241,6 +255,17 @@ namespace ASMLite.Tests.Editor
         private static string NormalizeOptional(string value)
         {
             return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string[] NormalizeOptionalArray(string[] values)
+        {
+            if (values == null || values.Length == 0)
+                return Array.Empty<string>();
+
+            var normalized = new string[values.Length];
+            for (int index = 0; index < values.Length; index++)
+                normalized[index] = NormalizeOptional(values[index]);
+            return normalized;
         }
     }
 
@@ -271,6 +296,9 @@ namespace ASMLite.Tests.Editor
             "assert-no-component",
             "set-slot-count",
             "set-install-path-state",
+            "set-root-name-state",
+            "set-preset-name-mask",
+            "set-action-label-mask",
             "assert-pending-customization-snapshot",
             "assert-attached-customization-snapshot",
         };
@@ -464,16 +492,67 @@ namespace ASMLite.Tests.Editor
                     RejectPresentPhase1Arg(args.expectedInstallPathEnabled, argsPath + ".expectedInstallPathEnabled");
                     RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.expectedNormalizedEffectivePath), argsPath + ".expectedNormalizedEffectivePath");
                     return;
+                case "set-root-name-state":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
+                    if (args.customRootNameEnabled)
+                        args.customRootName = RequireNonBlank(args.customRootName, argsPath + ".customRootName");
+                    else
+                        RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.customRootName), argsPath + ".customRootName");
+                    RejectPresentPhase1Arg(HasAny(args.customPresetNames), argsPath + ".customPresetNames");
+                    RejectPresentPhase1Arg(HasAnyActionLabel(args), argsPath + ".customSaveLabel/customLoadLabel/customClearLabel/customConfirmLabel");
+                    return;
+                case "set-preset-name-mask":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
+                    RejectPresentPhase1Arg(!args.customRootNameEnabled && !string.IsNullOrWhiteSpace(args.customRootName), argsPath + ".customRootName");
+                    ValidatePresetNameMask(args.customPresetNames, 8, argsPath + ".customPresetNames", requireAnyValue: true);
+                    RejectPresentPhase1Arg(HasAnyActionLabel(args), argsPath + ".customSaveLabel/customLoadLabel/customClearLabel/customConfirmLabel");
+                    return;
+                case "set-action-label-mask":
+                    RejectPresentPhase1Arg(args.slotCount != 0, argsPath + ".slotCount");
+                    RejectPresentPhase1Arg(!args.customRootNameEnabled && !string.IsNullOrWhiteSpace(args.customRootName), argsPath + ".customRootName");
+                    RejectPresentPhase1Arg(HasAny(args.customPresetNames), argsPath + ".customPresetNames");
+                    if (!HasAnyActionLabel(args))
+                        throw new InvalidOperationException(argsPath + ".customSaveLabel/customLoadLabel/customClearLabel/customConfirmLabel must include at least one label value.");
+                    return;
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     RequireSlotCountInRange(args.slotCount, argsPath + ".slotCount");
                     args.expectedPrimaryAction = RequireNonBlank(args.expectedPrimaryAction, argsPath + ".expectedPrimaryAction");
                     string presetId = RequireInstallPathPreset(args.installPathPresetId, argsPath + ".installPathPresetId");
                     ValidateExpectedInstallPathMatchesPreset(args, presetId, argsPath);
+                    if (args.customRootNameEnabled)
+                        args.customRootName = RequireNonBlank(args.customRootName, argsPath + ".customRootName");
+                    else
+                        RejectPresentPhase1Arg(!string.IsNullOrWhiteSpace(args.customRootName), argsPath + ".customRootName");
+                    ValidatePresetNameMask(args.customPresetNames, args.slotCount, argsPath + ".customPresetNames", requireAnyValue: false);
                     return;
                 default:
                     return;
             }
+        }
+
+        private static bool HasAny(string[] values)
+        {
+            return values != null && values.Any(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        private static bool HasAnyActionLabel(ASMLiteSmokeStepArgs args)
+        {
+            return args != null
+                && (!string.IsNullOrWhiteSpace(args.customSaveLabel)
+                    || !string.IsNullOrWhiteSpace(args.customLoadLabel)
+                    || !string.IsNullOrWhiteSpace(args.customClearLabel)
+                    || !string.IsNullOrWhiteSpace(args.customConfirmLabel));
+        }
+
+        private static void ValidatePresetNameMask(string[] values, int slotCount, string path, bool requireAnyValue)
+        {
+            values = values ?? Array.Empty<string>();
+            if (values.Length > slotCount)
+                throw new InvalidOperationException($"{path} cannot contain more than {slotCount} value(s).");
+
+            if (requireAnyValue && !HasAny(values))
+                throw new InvalidOperationException(path + " must include at least one preset name value.");
         }
 
         private static void RejectPresentPhase1Arg(bool isPresent, string path)

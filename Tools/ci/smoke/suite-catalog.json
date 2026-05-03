@@ -2720,6 +2720,878 @@
           ]
         },
         {
+          "suiteId": "setup-prebuild-names-matrix",
+          "label": "Setup Prebuild Names Matrix",
+          "description": "Exhaustively verify custom root, preset, and action-label naming before and after adding the ASM-Lite prefab.",
+          "resetOverride": "Inherit",
+          "speed": "exhaustive",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "all-setup"
+          ],
+          "requiresPlayMode": false,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "All naming rows preserve normalized pending and attached customization snapshots and finish with Rebuild available.",
+          "debugHint": "If this suite fails, inspect the field-specific naming snapshot mismatch and the row naming arguments.",
+          "cases": [
+            {
+              "caseId": "N01-naming-default",
+              "label": "N01 naming-default",
+              "description": "Exercise setup naming flow for naming-default.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N01-naming-default-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N01-naming-default-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N01-naming-default-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N01-naming-default-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N01-naming-default-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N01-naming-default-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N01-naming-default-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": false
+                  }
+                },
+                {
+                  "stepId": "N01-naming-default-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab"
+                  }
+                },
+                {
+                  "stepId": "N01-naming-default-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N01-naming-default-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                },
+                {
+                  "stepId": "N01-naming-default-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "N02-naming-root-only",
+              "label": "N02 naming-root-only",
+              "description": "Exercise setup naming flow for naming-root-only.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N02-naming-root-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N02-naming-root-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N02-naming-root-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N02-naming-root-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N02-naming-root-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N02-naming-root-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N02-naming-root-only-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N02-naming-root-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N02-naming-root-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N02-naming-root-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N02-naming-root-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "N03-naming-preset-first-only",
+              "label": "N03 naming-preset-first-only",
+              "description": "Exercise setup naming flow for naming-preset-first-only.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N03-naming-preset-first-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply row-specific preset display names.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "The preset name mask is staged.",
+                  "debugHint": "If this fails, inspect preset naming automation arguments.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customPresetNames": [
+                      "Travel Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "N04-naming-preset-all",
+              "label": "N04 naming-preset-all",
+              "description": "Exercise setup naming flow for naming-preset-all.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N04-naming-preset-all-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N04-naming-preset-all-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply row-specific preset display names.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "The preset name mask is staged.",
+                  "debugHint": "If this fails, inspect preset naming automation arguments.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "N04-naming-preset-all-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "N04-naming-preset-all-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ]
+                  }
+                },
+                {
+                  "stepId": "N04-naming-preset-all-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "N05-naming-save-only",
+              "label": "N05 naming-save-only",
+              "description": "Exercise setup naming flow for naming-save-only.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N05-naming-save-only-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N05-naming-save-only-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N05-naming-save-only-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N05-naming-save-only-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N05-naming-save-only-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N05-naming-save-only-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N05-naming-save-only-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings"
+                  }
+                },
+                {
+                  "stepId": "N05-naming-save-only-set-action-label-mask",
+                  "label": "Set action label mask",
+                  "description": "Apply row-specific action labels.",
+                  "actionType": "set-action-label-mask",
+                  "expectedOutcome": "The action label mask is staged.",
+                  "debugHint": "If this fails, inspect action label automation arguments.",
+                  "args": {
+                    "customSaveLabel": "Store",
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "N05-naming-save-only-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customSaveLabel": "Store"
+                  }
+                },
+                {
+                  "stepId": "N05-naming-save-only-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N05-naming-save-only-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Settings",
+                    "customSaveLabel": "Store"
+                  }
+                },
+                {
+                  "stepId": "N05-naming-save-only-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            },
+            {
+              "caseId": "N06-naming-full-pack",
+              "label": "N06 naming-full-pack",
+              "description": "Exercise setup naming flow for naming-full-pack.",
+              "expectedOutcome": "Pending and attached snapshots both report the expected naming fields and Rebuild after attach.",
+              "debugHint": "Inspect naming automation steps and field-specific snapshot mismatch output.",
+              "steps": [
+                {
+                  "stepId": "N06-naming-full-pack-prelude-recover-context",
+                  "label": "Recover context",
+                  "description": "Reset known setup state and reopen the canonical scene before this naming row.",
+                  "actionType": "prelude-recover-context",
+                  "expectedOutcome": "The canonical setup context is clean and ready.",
+                  "debugHint": "If recovery fails, inspect fixture reset and scene reopen diagnostics."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-open-scene",
+                  "label": "Open canonical scene",
+                  "description": "Open the canonical setup scene.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "Assets/Click ME.unity is active.",
+                  "debugHint": "If this fails, confirm the canonical scene exists and imports cleanly."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-open-window",
+                  "label": "Open ASM-Lite",
+                  "description": "Open the ASM-Lite editor window for automation.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "ASM-Lite is open.",
+                  "debugHint": "If this fails, inspect editor window startup logs."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-assert-window-focused",
+                  "label": "ASM-Lite is focused",
+                  "description": "Confirm the ASM-Lite window has focus before applying row setup.",
+                  "actionType": "assert-window-focused",
+                  "expectedOutcome": "The ASM-Lite window is focused.",
+                  "debugHint": "If this fails, inspect dock/tab focus state."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-select-avatar",
+                  "label": "Select avatar",
+                  "description": "Select the canonical avatar for this naming row.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is selected.",
+                  "debugHint": "If this fails, confirm the fixture avatar name and scene state."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-assert-no-component",
+                  "label": "No component is attached",
+                  "description": "Confirm this row starts before ASM-Lite is attached.",
+                  "actionType": "assert-no-component",
+                  "expectedOutcome": "The avatar has no ASM-Lite component.",
+                  "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-set-root-name-state",
+                  "label": "Set naming gate state",
+                  "description": "Apply the explicit custom menu naming gate state for this row.",
+                  "actionType": "set-root-name-state",
+                  "expectedOutcome": "The custom menu naming gate state is staged.",
+                  "debugHint": "If this fails, inspect root naming automation arguments.",
+                  "args": {
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools"
+                  }
+                },
+                {
+                  "stepId": "N06-naming-full-pack-set-preset-name-mask",
+                  "label": "Set preset name mask",
+                  "description": "Apply row-specific preset display names.",
+                  "actionType": "set-preset-name-mask",
+                  "expectedOutcome": "The preset name mask is staged.",
+                  "debugHint": "If this fails, inspect preset naming automation arguments.",
+                  "args": {
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "N06-naming-full-pack-set-action-label-mask",
+                  "label": "Set action label mask",
+                  "description": "Apply row-specific action labels.",
+                  "actionType": "set-action-label-mask",
+                  "expectedOutcome": "The action label mask is staged.",
+                  "debugHint": "If this fails, inspect action label automation arguments.",
+                  "args": {
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply",
+                    "clearExistingNameMask": true
+                  }
+                },
+                {
+                  "stepId": "N06-naming-full-pack-assert-pending-customization-snapshot",
+                  "label": "Pending customization matches",
+                  "description": "Compare the pending customization snapshot before adding the prefab.",
+                  "actionType": "assert-pending-customization-snapshot",
+                  "expectedOutcome": "Pending slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific pending snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": false,
+                    "expectedPrimaryAction": "Add Prefab",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply"
+                  }
+                },
+                {
+                  "stepId": "N06-naming-full-pack-add-prefab",
+                  "label": "Add prefab",
+                  "description": "Attach the ASM-Lite prefab using the configured pending customization.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "ASM-Lite is attached to the avatar.",
+                  "debugHint": "If this fails, inspect add-prefab diagnostics and Unity console output."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-assert-attached-customization-snapshot",
+                  "label": "Attached customization matches",
+                  "description": "Compare the attached component snapshot after adding the prefab.",
+                  "actionType": "assert-attached-customization-snapshot",
+                  "expectedOutcome": "Attached slot/path/naming customization matches the row expectation.",
+                  "debugHint": "If this fails, inspect field-specific attached snapshot mismatch detail.",
+                  "args": {
+                    "slotCount": 4,
+                    "installPathPresetId": "disabled",
+                    "expectedInstallPathEnabled": false,
+                    "expectedNormalizedEffectivePath": "",
+                    "expectedComponentPresent": true,
+                    "expectedPrimaryAction": "Rebuild",
+                    "customRootNameEnabled": true,
+                    "customRootName": "Wardrobe Tools",
+                    "customPresetNames": [
+                      "Travel Fit",
+                      "Dance Fit",
+                      "Formal Fit",
+                      "Comfy Fit"
+                    ],
+                    "customSaveLabel": "Store",
+                    "customLoadLabel": "Wear",
+                    "customClearLabel": "Clear Fit",
+                    "customConfirmLabel": "Apply"
+                  }
+                },
+                {
+                  "stepId": "N06-naming-full-pack-assert-primary-action",
+                  "label": "Rebuild is available",
+                  "description": "Confirm Rebuild is the primary action after setup.",
+                  "actionType": "assert-primary-action",
+                  "expectedOutcome": "Rebuild is available.",
+                  "debugHint": "If this fails, inspect primary action hierarchy state.",
+                  "args": {
+                    "expectedPrimaryAction": "Rebuild"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "suiteId": "destructive-recovery-reset",
           "label": "Destructive Recovery Reset",
           "description": "Exercise destructive setup fixture states and prove clean reset before continuing to the next case.",

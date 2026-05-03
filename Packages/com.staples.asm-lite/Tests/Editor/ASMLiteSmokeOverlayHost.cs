@@ -153,6 +153,13 @@ namespace ASMLite.Tests.Editor
         internal string NormalizedEffectivePath;
         internal bool ComponentPresent;
         internal string PrimaryAction;
+        internal bool CustomRootNameEnabled;
+        internal string CustomRootName;
+        internal string[] CustomPresetNames;
+        internal string CustomSaveLabel;
+        internal string CustomLoadLabel;
+        internal string CustomClearLabel;
+        internal string CustomConfirmLabel;
 
         internal static ASMLiteSmokeCustomizationSnapshot FromExpectedArgs(ASMLiteSmokeStepArgs args)
         {
@@ -164,6 +171,13 @@ namespace ASMLite.Tests.Editor
                 NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(args.expectedNormalizedEffectivePath),
                 ComponentPresent = args.expectedComponentPresent,
                 PrimaryAction = string.IsNullOrWhiteSpace(args.expectedPrimaryAction) ? string.Empty : args.expectedPrimaryAction.Trim(),
+                CustomRootNameEnabled = args.customRootNameEnabled,
+                CustomRootName = NormalizeOptionalString(args.customRootName),
+                CustomPresetNames = NormalizePresetNamesBySlot(args.customPresetNames, args.slotCount),
+                CustomSaveLabel = NormalizeOptionalString(args.customSaveLabel),
+                CustomLoadLabel = NormalizeOptionalString(args.customLoadLabel),
+                CustomClearLabel = NormalizeOptionalString(args.customClearLabel),
+                CustomConfirmLabel = NormalizeOptionalString(args.customConfirmLabel),
             };
         }
 
@@ -179,6 +193,13 @@ namespace ASMLite.Tests.Editor
                     : string.Empty,
                 ComponentPresent = componentPresent,
                 PrimaryAction = componentPresent ? "Rebuild" : "Add Prefab",
+                CustomRootNameEnabled = componentPresent && component.useCustomRootName,
+                CustomRootName = componentPresent ? NormalizeOptionalString(component.customRootName) : string.Empty,
+                CustomPresetNames = NormalizePresetNamesBySlot(componentPresent ? component.customPresetNames : null, componentPresent ? component.slotCount : 0),
+                CustomSaveLabel = componentPresent ? NormalizeOptionalString(component.customSaveLabel) : string.Empty,
+                CustomLoadLabel = componentPresent ? NormalizeOptionalString(component.customLoadLabel) : string.Empty,
+                CustomClearLabel = componentPresent ? NormalizeOptionalString(component.customClearPresetLabel) : string.Empty,
+                CustomConfirmLabel = componentPresent ? NormalizeOptionalString(component.customConfirmLabel) : string.Empty,
             };
         }
 
@@ -192,6 +213,13 @@ namespace ASMLite.Tests.Editor
                 NormalizedEffectivePath = ASMLiteSmokeStepArgs.NormalizeInstallPath(snapshot.NormalizedEffectivePath),
                 ComponentPresent = snapshot.HasAttachedComponent,
                 PrimaryAction = FormatPrimaryAction(snapshot.PrimaryAction),
+                CustomRootNameEnabled = snapshot.UseCustomRootName,
+                CustomRootName = NormalizeOptionalString(snapshot.CustomRootName),
+                CustomPresetNames = NormalizePresetNamesBySlot(snapshot.PresetNamesBySlot, snapshot.SlotCount),
+                CustomSaveLabel = NormalizeOptionalString(snapshot.SaveLabel),
+                CustomLoadLabel = NormalizeOptionalString(snapshot.LoadLabel),
+                CustomClearLabel = NormalizeOptionalString(snapshot.ClearLabel),
+                CustomConfirmLabel = NormalizeOptionalString(snapshot.ConfirmLabel),
             };
         }
 
@@ -225,6 +253,13 @@ namespace ASMLite.Tests.Editor
             AddMismatch(mismatches, "normalizedEffectivePath", expected.NormalizedEffectivePath, actual.NormalizedEffectivePath);
             AddMismatch(mismatches, "componentPresent", expected.ComponentPresent, actual.ComponentPresent);
             AddMismatch(mismatches, "primaryAction", expected.PrimaryAction, actual.PrimaryAction);
+            AddMismatch(mismatches, "customRootNameEnabled", expected.CustomRootNameEnabled, actual.CustomRootNameEnabled);
+            AddMismatch(mismatches, "customRootName", expected.CustomRootName, actual.CustomRootName);
+            AddArrayMismatch(mismatches, "customPresetNames", expected.CustomPresetNames, actual.CustomPresetNames);
+            AddMismatch(mismatches, "customSaveLabel", expected.CustomSaveLabel, actual.CustomSaveLabel);
+            AddMismatch(mismatches, "customLoadLabel", expected.CustomLoadLabel, actual.CustomLoadLabel);
+            AddMismatch(mismatches, "customClearLabel", expected.CustomClearLabel, actual.CustomClearLabel);
+            AddMismatch(mismatches, "customConfirmLabel", expected.CustomConfirmLabel, actual.CustomConfirmLabel);
 
             if (mismatches.Count == 0)
             {
@@ -242,6 +277,37 @@ namespace ASMLite.Tests.Editor
                 return;
 
             mismatches.Add($"{fieldName} expected <{expected}> but was <{actual}>");
+        }
+
+        private static void AddArrayMismatch(List<string> mismatches, string fieldName, string[] expected, string[] actual)
+        {
+            expected = expected ?? Array.Empty<string>();
+            actual = actual ?? Array.Empty<string>();
+            if (expected.SequenceEqual(actual, StringComparer.Ordinal))
+                return;
+
+            mismatches.Add($"{fieldName} expected <[{string.Join(", ", expected)}]> but was <[{string.Join(", ", actual)}]>");
+        }
+
+        private static string[] NormalizePresetNamesBySlot(string[] values, int slotCount)
+        {
+            int normalizedSlotCount = Math.Max(0, slotCount);
+            var normalized = new string[normalizedSlotCount];
+            for (int index = 0; index < normalizedSlotCount; index++)
+                normalized[index] = string.Empty;
+
+            if (values == null)
+                return normalized;
+
+            int copyCount = Math.Min(values.Length, normalizedSlotCount);
+            for (int index = 0; index < copyCount; index++)
+                normalized[index] = NormalizeOptionalString(values[index]);
+            return normalized;
+        }
+
+        private static string NormalizeOptionalString(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
         }
     }
 
@@ -641,6 +707,15 @@ namespace ASMLite.Tests.Editor
                     case "set-install-path-state":
                         return SetInstallPathState(avatarName, args, out detail);
 
+                    case "set-root-name-state":
+                        return SetRootNameState(avatarName, args, out detail);
+
+                    case "set-preset-name-mask":
+                        return SetPresetNameMask(avatarName, args, out detail);
+
+                    case "set-action-label-mask":
+                        return SetActionLabelMask(avatarName, args, out detail);
+
                     case "assert-pending-customization-snapshot":
                         return AssertPendingCustomizationSnapshot(avatarName, args, out detail);
 
@@ -774,6 +849,82 @@ namespace ASMLite.Tests.Editor
             SelectAvatarIfFound(window, avatarName);
             window.SetInstallPathStateForAutomation(enabled, normalizedPath);
             detail = $"ASM-Lite installPathPresetId '{presetId}' applied (enabled={enabled}, normalizedEffectivePath='{normalizedPath}').";
+            return true;
+        }
+
+        private bool SetRootNameState(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (args.customRootNameEnabled && string.IsNullOrWhiteSpace(args.customRootName))
+            {
+                detail = "set-root-name-state args.customRootName must not be blank when customRootNameEnabled is true.";
+                return false;
+            }
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-root-name-state failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetRootNameStateForAutomation(args.customRootNameEnabled, args.customRootName);
+            string normalizedRootName = string.IsNullOrWhiteSpace(args.customRootName) ? string.Empty : args.customRootName.Trim();
+            detail = $"ASM-Lite custom root naming set to enabled={args.customRootNameEnabled}, value='{normalizedRootName}'.";
+            return true;
+        }
+
+        private bool SetPresetNameMask(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            string[] names = args.customPresetNames ?? Array.Empty<string>();
+            if (names.Length == 0 || !names.Any(name => !string.IsNullOrWhiteSpace(name)))
+            {
+                detail = "set-preset-name-mask args.customPresetNames must include at least one preset name value.";
+                return false;
+            }
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-preset-name-mask failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetPresetNameMaskForAutomation(names, args.clearExistingNameMask);
+            detail = $"ASM-Lite preset name mask applied ({names.Length} value(s), clearExisting={args.clearExistingNameMask}).";
+            return true;
+        }
+
+        private bool SetActionLabelMask(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
+        {
+            args = args ?? new ASMLiteSmokeStepArgs();
+            if (string.IsNullOrWhiteSpace(args.customSaveLabel)
+                && string.IsNullOrWhiteSpace(args.customLoadLabel)
+                && string.IsNullOrWhiteSpace(args.customClearLabel)
+                && string.IsNullOrWhiteSpace(args.customConfirmLabel))
+            {
+                detail = "set-action-label-mask args must include at least one action label value.";
+                return false;
+            }
+
+            ASMLiteWindow window = ASMLiteWindow.OpenForAutomation();
+            if (window == null)
+            {
+                detail = "set-action-label-mask failed: ASM-Lite window could not be opened for automation.";
+                return false;
+            }
+
+            SelectAvatarIfFound(window, avatarName);
+            window.SetActionLabelMaskForAutomation(
+                args.customSaveLabel,
+                args.customLoadLabel,
+                args.customClearLabel,
+                args.customConfirmLabel,
+                args.clearExistingNameMask);
+            detail = $"ASM-Lite action label mask applied (clearExisting={args.clearExistingNameMask}).";
             return true;
         }
 

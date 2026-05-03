@@ -69,6 +69,7 @@ namespace ASMLite.Tests.Editor
                     "negative-diagnostics",
                     "setup-prebuild-slots-matrix",
                     "setup-prebuild-path-matrix",
+                    "setup-prebuild-names-matrix",
                     "destructive-recovery-reset",
                 },
                 suites.Where(suite => suite.presetGroups.Contains("all-setup")).Select(suite => suite.suiteId).ToArray());
@@ -426,13 +427,14 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase1_prebuild_slot_and_path_matrices()
+        public void LoadCanonical_includes_phase1_prebuild_slot_path_and_name_matrices()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
 
             Assert.That(suites.ContainsKey("setup-prebuild-slots-matrix"), Is.True);
             Assert.That(suites.ContainsKey("setup-prebuild-path-matrix"), Is.True);
+            Assert.That(suites.ContainsKey("setup-prebuild-names-matrix"), Is.True);
 
             ASMLiteSmokeSuiteDefinition slots = suites["setup-prebuild-slots-matrix"];
             Assert.AreEqual("exhaustive", slots.speed);
@@ -471,6 +473,28 @@ namespace ASMLite.Tests.Editor
             AssertPhase1PathCase(paths.cases[1], "root", expectedEnabled: true, expectedNormalizedPath: string.Empty);
             AssertPhase1PathCase(paths.cases[2], "simple", expectedEnabled: true, expectedNormalizedPath: "ASM-Lite");
             AssertPhase1PathCase(paths.cases[3], "nested", expectedEnabled: true, expectedNormalizedPath: "Avatars/ASM-Lite");
+
+            ASMLiteSmokeSuiteDefinition names = suites["setup-prebuild-names-matrix"];
+            Assert.AreEqual("exhaustive", names.speed);
+            Assert.AreEqual("safe", names.risk);
+            CollectionAssert.Contains(names.presetGroups, "all-setup");
+            Assert.That(names.cases.Select(item => item.caseId), Is.EqualTo(new[]
+            {
+                "N01-naming-default",
+                "N02-naming-root-only",
+                "N03-naming-preset-first-only",
+                "N04-naming-preset-all",
+                "N05-naming-save-only",
+                "N06-naming-full-pack",
+            }));
+            Assert.That(names.cases.Select(item => item.steps[0].actionType).ToArray(),
+                Is.All.EqualTo("prelude-recover-context"));
+            AssertPhase1NameCase(names.cases[0], expectedRootEnabled: false, expectedRootName: string.Empty);
+            AssertPhase1NameCase(names.cases[1], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings");
+            AssertPhase1NameCase(names.cases[2], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedPresetNames: new[] { "Travel Fit" });
+            AssertPhase1NameCase(names.cases[3], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedPresetNames: new[] { "Travel Fit", "Dance Fit", "Formal Fit", "Comfy Fit" });
+            AssertPhase1NameCase(names.cases[4], expectedRootEnabled: true, expectedRootName: "Wardrobe Settings", expectedSaveLabel: "Store");
+            AssertPhase1NameCase(names.cases[5], expectedRootEnabled: true, expectedRootName: "Wardrobe Tools", expectedPresetNames: new[] { "Travel Fit", "Dance Fit", "Formal Fit", "Comfy Fit" }, expectedSaveLabel: "Store", expectedLoadLabel: "Wear", expectedClearLabel: "Clear Fit", expectedConfirmLabel: "Apply");
         }
 
         [Test]
@@ -552,6 +576,9 @@ namespace ASMLite.Tests.Editor
                 "assert-no-component",
                 "set-slot-count",
                 "set-install-path-state",
+                "set-root-name-state",
+                "set-preset-name-mask",
+                "set-action-label-mask",
                 "assert-pending-customization-snapshot",
                 "assert-attached-customization-snapshot",
             };
@@ -568,6 +595,24 @@ namespace ASMLite.Tests.Editor
                     Assert.AreEqual(4, step.args.slotCount);
                 if (string.Equals(actionType, "set-install-path-state", StringComparison.Ordinal))
                     Assert.AreEqual("nested", step.args.installPathPresetId);
+                if (string.Equals(actionType, "set-root-name-state", StringComparison.Ordinal))
+                {
+                    Assert.IsTrue(step.args.customRootNameEnabled);
+                    Assert.AreEqual("Smoke Root", step.args.customRootName);
+                }
+                if (string.Equals(actionType, "set-preset-name-mask", StringComparison.Ordinal))
+                {
+                    Assert.That(step.args.customPresetNames, Is.EqualTo(new[] { "One", "Two" }));
+                    Assert.IsTrue(step.args.clearExistingNameMask);
+                }
+                if (string.Equals(actionType, "set-action-label-mask", StringComparison.Ordinal))
+                {
+                    Assert.AreEqual("Store", step.args.customSaveLabel);
+                    Assert.AreEqual("Wear", step.args.customLoadLabel);
+                    Assert.AreEqual("Clear Fit", step.args.customClearLabel);
+                    Assert.AreEqual("Apply", step.args.customConfirmLabel);
+                    Assert.IsTrue(step.args.clearExistingNameMask);
+                }
                 if (actionType.Contains("customization-snapshot"))
                 {
                     Assert.AreEqual(6, step.args.slotCount);
@@ -576,6 +621,13 @@ namespace ASMLite.Tests.Editor
                     Assert.AreEqual("ASM-Lite", step.args.expectedNormalizedEffectivePath);
                     Assert.IsTrue(step.args.expectedComponentPresent);
                     Assert.AreEqual("Rebuild", step.args.expectedPrimaryAction);
+                    Assert.IsTrue(step.args.customRootNameEnabled);
+                    Assert.AreEqual("Smoke Root", step.args.customRootName);
+                    Assert.That(step.args.customPresetNames, Is.EqualTo(new[] { "One", "Two" }));
+                    Assert.AreEqual("Store", step.args.customSaveLabel);
+                    Assert.AreEqual("Wear", step.args.customLoadLabel);
+                    Assert.AreEqual("Clear Fit", step.args.customClearLabel);
+                    Assert.AreEqual("Apply", step.args.customConfirmLabel);
                 }
             }
         }
@@ -614,6 +666,30 @@ namespace ASMLite.Tests.Editor
                     "\"args\": { \"slotCount\": 2, \"installPathPresetId\": \"root\", \"expectedInstallPathEnabled\": false, \"expectedNormalizedEffectivePath\": \"\", \"expectedPrimaryAction\": \"Add Prefab\" }\n",
                     "assert-pending-customization-snapshot")));
             StringAssert.Contains("args.expectedInstallPathEnabled", inconsistentPresetException.Message);
+
+            var blankRootNameException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"customRootNameEnabled\": true, \"customRootName\": \"   \" }\n",
+                    "set-root-name-state")));
+            StringAssert.Contains("args.customRootName", blankRootNameException.Message);
+
+            var emptyPresetMaskException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"customPresetNames\": [\"\"] }\n",
+                    "set-preset-name-mask")));
+            StringAssert.Contains("args.customPresetNames", emptyPresetMaskException.Message);
+
+            var emptyActionLabelException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"customSaveLabel\": \"\" }\n",
+                    "set-action-label-mask")));
+            StringAssert.Contains("args.customSaveLabel", emptyActionLabelException.Message);
+
+            var tooManyPresetNamesException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
+                BuildSingleStepCatalogJson(
+                    "\"args\": { \"slotCount\": 2, \"installPathPresetId\": \"disabled\", \"expectedInstallPathEnabled\": false, \"expectedNormalizedEffectivePath\": \"\", \"expectedPrimaryAction\": \"Add Prefab\", \"customPresetNames\": [\"One\", \"Two\", \"Three\"] }\n",
+                    "assert-pending-customization-snapshot")));
+            StringAssert.Contains("args.customPresetNames", tooManyPresetNamesException.Message);
         }
 
         [Test]
@@ -829,6 +905,89 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
         }
 
+        private static void AssertPhase1NameCase(
+            ASMLiteSmokeCaseDefinition item,
+            bool expectedRootEnabled,
+            string expectedRootName,
+            string[] expectedPresetNames = null,
+            string expectedSaveLabel = "",
+            string expectedLoadLabel = "",
+            string expectedClearLabel = "",
+            string expectedConfirmLabel = "")
+        {
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "prelude-recover-context",
+                    "open-scene",
+                    "open-window",
+                    "assert-window-focused",
+                    "select-avatar",
+                    "assert-no-component",
+                    "set-root-name-state",
+                },
+                item.steps.Take(7).Select(step => step.actionType).ToArray());
+            Assert.AreEqual("assert-pending-customization-snapshot", item.steps[item.steps.Length - 4].actionType);
+            Assert.AreEqual("add-prefab", item.steps[item.steps.Length - 3].actionType);
+            Assert.AreEqual("assert-attached-customization-snapshot", item.steps[item.steps.Length - 2].actionType);
+            Assert.AreEqual("assert-primary-action", item.steps[item.steps.Length - 1].actionType);
+
+            ASMLiteSmokeStepArgs rootArgs = item.steps.Single(step => step.actionType == "set-root-name-state").args;
+            Assert.AreEqual(expectedRootEnabled, rootArgs.customRootNameEnabled);
+            Assert.AreEqual(expectedRootName, rootArgs.customRootName);
+
+            expectedPresetNames = expectedPresetNames ?? Array.Empty<string>();
+            ASMLiteSmokeStepDefinition presetStep = item.steps.SingleOrDefault(step => step.actionType == "set-preset-name-mask");
+            if (expectedPresetNames.Length == 0)
+                Assert.IsNull(presetStep);
+            else
+            {
+                Assert.NotNull(presetStep);
+                Assert.That(presetStep.args.customPresetNames, Is.EqualTo(expectedPresetNames));
+                Assert.IsTrue(presetStep.args.clearExistingNameMask);
+            }
+
+            ASMLiteSmokeStepDefinition labelsStep = item.steps.SingleOrDefault(step => step.actionType == "set-action-label-mask");
+            bool expectsAnyLabel = !string.IsNullOrEmpty(expectedSaveLabel)
+                || !string.IsNullOrEmpty(expectedLoadLabel)
+                || !string.IsNullOrEmpty(expectedClearLabel)
+                || !string.IsNullOrEmpty(expectedConfirmLabel);
+            if (!expectsAnyLabel)
+                Assert.IsNull(labelsStep);
+            else
+            {
+                Assert.NotNull(labelsStep);
+                Assert.AreEqual(expectedSaveLabel, labelsStep.args.customSaveLabel);
+                Assert.AreEqual(expectedLoadLabel, labelsStep.args.customLoadLabel);
+                Assert.AreEqual(expectedClearLabel, labelsStep.args.customClearLabel);
+                Assert.AreEqual(expectedConfirmLabel, labelsStep.args.customConfirmLabel);
+                Assert.IsTrue(labelsStep.args.clearExistingNameMask);
+            }
+
+            foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))
+            {
+                Assert.AreEqual(4, step.args.slotCount);
+                Assert.AreEqual("disabled", step.args.installPathPresetId);
+                Assert.That(step.args.expectedInstallPathEnabled, Is.False);
+                Assert.AreEqual(string.Empty, step.args.expectedNormalizedEffectivePath);
+                Assert.AreEqual(expectedRootEnabled, step.args.customRootNameEnabled);
+                Assert.AreEqual(expectedRootName, step.args.customRootName);
+                Assert.That(step.args.customPresetNames, Is.EqualTo(expectedPresetNames));
+                Assert.AreEqual(expectedSaveLabel, step.args.customSaveLabel);
+                Assert.AreEqual(expectedLoadLabel, step.args.customLoadLabel);
+                Assert.AreEqual(expectedClearLabel, step.args.customClearLabel);
+                Assert.AreEqual(expectedConfirmLabel, step.args.customConfirmLabel);
+            }
+
+            ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
+            Assert.That(pendingArgs.expectedComponentPresent, Is.False);
+            Assert.AreEqual("Add Prefab", pendingArgs.expectedPrimaryAction);
+
+            ASMLiteSmokeStepArgs attachedArgs = item.steps.Single(step => step.actionType == "assert-attached-customization-snapshot").args;
+            Assert.That(attachedArgs.expectedComponentPresent, Is.True);
+            Assert.AreEqual("Rebuild", attachedArgs.expectedPrimaryAction);
+        }
+
         private static string BuildSingleStepCatalogJson(string argsJson, string actionType = "assert-host-ready")
         {
             string argsLine = string.IsNullOrWhiteSpace(argsJson) ? string.Empty : "              " + argsJson.Trim() + ",\n";
@@ -890,6 +1049,12 @@ namespace ASMLite.Tests.Editor
                     return "\"args\": { \"slotCount\": 4 }\n";
                 case "set-install-path-state":
                     return "\"args\": { \"installPathPresetId\": \"nested\" }\n";
+                case "set-root-name-state":
+                    return "\"args\": { \"customRootNameEnabled\": true, \"customRootName\": \"Smoke Root\" }\n";
+                case "set-preset-name-mask":
+                    return "\"args\": { \"customPresetNames\": [\"One\", \"Two\"], \"clearExistingNameMask\": true }\n";
+                case "set-action-label-mask":
+                    return "\"args\": { \"customSaveLabel\": \"Store\", \"customLoadLabel\": \"Wear\", \"customClearLabel\": \"Clear Fit\", \"customConfirmLabel\": \"Apply\", \"clearExistingNameMask\": true }\n";
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     return "\"args\": { "
@@ -898,7 +1063,14 @@ namespace ASMLite.Tests.Editor
                         + "\"expectedInstallPathEnabled\": true, "
                         + "\"expectedNormalizedEffectivePath\": \"ASM-Lite\", "
                         + "\"expectedComponentPresent\": true, "
-                        + "\"expectedPrimaryAction\": \"Rebuild\" }\n";
+                        + "\"expectedPrimaryAction\": \"Rebuild\", "
+                        + "\"customRootNameEnabled\": true, "
+                        + "\"customRootName\": \"Smoke Root\", "
+                        + "\"customPresetNames\": [\"One\", \"Two\"], "
+                        + "\"customSaveLabel\": \"Store\", "
+                        + "\"customLoadLabel\": \"Wear\", "
+                        + "\"customClearLabel\": \"Clear Fit\", "
+                        + "\"customConfirmLabel\": \"Apply\" }\n";
                 default:
                     return null;
             }
