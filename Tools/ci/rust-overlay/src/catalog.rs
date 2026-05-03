@@ -145,19 +145,19 @@ pub struct SmokeStepArgs {
     pub preserve_failure_evidence: bool,
     #[serde(default)]
     pub require_clean_reset: bool,
-    #[serde(default)]
+    #[serde(default, alias = "customRootNameEnabled")]
     pub use_custom_root_name: Option<bool>,
     #[serde(default)]
     pub custom_root_name: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "customPresetNames")]
     pub preset_names_by_slot: Option<Vec<String>>,
-    #[serde(default)]
+    #[serde(default, alias = "customSaveLabel")]
     pub save_label: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "customLoadLabel")]
     pub load_label: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "customClearLabel")]
     pub clear_label: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "customConfirmLabel")]
     pub confirm_label: Option<String>,
     #[serde(default)]
     pub clear_existing: bool,
@@ -716,7 +716,7 @@ mod tests {
             ]
         );
         assert_eq!(catalog.groups[0].suites[0].cases.len(), 6);
-        assert_eq!(catalog.groups[1].suites.len(), 10);
+        assert_eq!(catalog.groups[1].suites.len(), 11);
         assert_eq!(catalog.groups[2].suites[0].suite_id, "lifecycle-roundtrip");
         let lifecycle_steps: Vec<&str> = catalog.groups[2].suites[0].cases[0]
             .steps

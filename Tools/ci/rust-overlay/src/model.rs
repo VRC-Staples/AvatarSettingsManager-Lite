@@ -863,6 +863,7 @@ mod tests {
                 "negative-diagnostics",
                 "setup-prebuild-slots-matrix",
                 "setup-prebuild-path-matrix",
+                "setup-prebuild-names-matrix",
             ]
         );
         assert_eq!(model.selected_suite_id, "setup-scene-avatar");
@@ -924,6 +925,7 @@ mod tests {
                 "negative-diagnostics",
                 "setup-prebuild-slots-matrix",
                 "setup-prebuild-path-matrix",
+                "setup-prebuild-names-matrix",
                 "destructive-recovery-reset",
                 "lifecycle-roundtrip",
                 "playmode-runtime-validation"

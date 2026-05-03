@@ -3373,7 +3373,8 @@ mod tests {
                 "generated-reference-ownership",
                 "negative-diagnostics",
                 "setup-prebuild-slots-matrix",
-                "setup-prebuild-path-matrix"
+                "setup-prebuild-path-matrix",
+                "setup-prebuild-names-matrix"
             ]
         );
     }
