@@ -1,6 +1,17 @@
 {
   "runs": [
     {
+      "name": "editmode-contract",
+      "resultFile": "editmode-contract-results.xml",
+      "filters": [
+        {
+          "testNames": [
+            "ASMLite.Tests.Editor.ASMLitePrefabContractTests.T02_Prefab_UsesGeneratedAssetReferences_ForFullController"
+          ]
+        }
+      ]
+    },
+    {
       "name": "editmode-core",
       "resultFile": "editmode-core-results.xml",
       "filters": [

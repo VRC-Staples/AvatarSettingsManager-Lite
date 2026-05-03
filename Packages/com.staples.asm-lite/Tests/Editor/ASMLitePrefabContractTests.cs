@@ -8,7 +8,7 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     public class ASMLitePrefabContractTests
     {
-        [Test, Category("Integration")]
+        [Test]
         public void T02_Prefab_UsesGeneratedAssetReferences_ForFullController()
         {
             var prefabPath = ASMLiteAssetPaths.Prefab;

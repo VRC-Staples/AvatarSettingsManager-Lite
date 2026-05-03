@@ -82,8 +82,8 @@ namespace ASMLite.Tests.Editor
 
                 Assert.AreEqual("Root Menu", snapshot.CustomRootName, "Selection sync should trim root name values.");
                 Assert.AreEqual(string.Empty, snapshot.CustomInstallPath, "Blank install paths should normalize to empty.");
-                CollectionAssert.AreEqual(new[] { "HatVisible", "BodyHue" }, snapshot.ExcludedParameterNames,
-                    "Selection sync should trim, de-dup, and drop blank exclusions.");
+                CollectionAssert.AreEqual(new[] { "BodyHue", "HatVisible" }, snapshot.ExcludedParameterNames,
+                    "Selection sync should trim, sort, de-dup, and drop blank exclusions.");
                 Assert.IsNotNull(snapshot.CustomIcons, "Selection sync should normalize null icon arrays to a safe empty array.");
                 Assert.AreEqual(0, snapshot.CustomIcons.Length, "Selection sync should clear stale icon arrays when component has null icons.");
             }
