@@ -13,7 +13,7 @@ use crate::session::{
     load_result_from_str, update_session_global_reset_default_atomically,
     write_command_document_atomically, write_initial_session_documents, InitialSessionMetadata,
     SmokeFailureDocument, SmokeHostStateDocument, SmokeRunResultDocument, SmokeSessionPaths,
-    HOST_STATE_IDLE, HOST_STATE_READY, HOST_STATE_REVIEW_REQUIRED,
+    HOST_STATE_IDLE, HOST_STATE_READY, HOST_STATE_REVIEW_REQUIRED, HOST_STATE_RUNNING,
 };
 use crate::ui_suite_list::{render_pre_run_surface, render_review_surface};
 use crate::unity_launcher::{spawn_unity_host, UnityHostLaunchConfig, UnityHostSupervisorStatus};
@@ -735,6 +735,19 @@ pub fn dispatch_suite_run_command(
         return Err(format!("unknown suite_id '{normalized_suite_id}'"));
     }
 
+    let normalized_host_state = host_state.state.trim();
+    if normalized_host_state == HOST_STATE_RUNNING || !host_state.active_run_id.trim().is_empty() {
+        return Err(
+            "run-suite dispatch rejected because the Unity host is already running a suite"
+                .to_string(),
+        );
+    }
+    if normalized_host_state != HOST_STATE_READY && normalized_host_state != HOST_STATE_IDLE {
+        return Err(format!(
+            "run-suite dispatch requires an idle/ready Unity host, got '{normalized_host_state}'"
+        ));
+    }
+
     let (command_seq, command_id) =
         allocate_next_command_identity(host_state.last_command_seq, "run-suite")
             .map_err(|error| format!("failed to allocate run-suite command identity: {error}"))?;
@@ -1052,6 +1065,35 @@ mod tests {
         assert!(raw.contains("\"suiteId\": \"asm-lite-readiness-check\""));
         assert!(raw.contains("\"requestedResetDefault\": \"SceneReload\""));
         assert!(!raw.contains("stepSleepSeconds"));
+    }
+
+    #[test]
+    fn dispatch_run_suite_command_rejects_when_host_is_already_running() {
+        let catalog = load_canonical_catalog().expect("catalog should load");
+        let suite_model =
+            SuiteSelectionModel::new_from_catalog(&catalog).expect("model should initialize");
+        let session_paths = SmokeSessionPaths::new(make_temp_session_root())
+            .expect("session root should initialize");
+        session_paths
+            .ensure_layout()
+            .expect("layout should initialize");
+        let mut host_state = ready_host_state(4);
+        host_state.state = "running".to_string();
+        host_state.active_run_id = "run-0004-asm-lite-readiness-check".to_string();
+
+        let result = dispatch_selected_suite_run_command(&session_paths, &host_state, &suite_model);
+
+        assert!(result.is_err());
+        assert!(result
+            .expect_err("running host should reject another run-suite command")
+            .contains("host is already running"));
+        let command_path = session_paths
+            .command_path(5, "run-suite", "cmd_000005_run-suite")
+            .expect("command path should build");
+        assert!(
+            !command_path.exists(),
+            "rejected dispatch must not write a second run-suite command"
+        );
     }
 
     #[test]
