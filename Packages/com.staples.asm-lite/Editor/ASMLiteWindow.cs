@@ -7127,6 +7127,52 @@ namespace ASMLite.Editor
             _pendingCustomInstallPath = normalized;
         }
 
+        internal void SetParameterBackupPresetForAutomation(string presetId)
+        {
+            EnsureAvatarSelectedForParameterBackupAutomation();
+            string[] visibleOptions = GetVisibleParameterBackupOptionsForTesting(_selectedAvatar);
+            string[] excludedParameterNames = ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
+                presetId,
+                visibleOptions);
+
+            ApplyParameterBackupStateForAutomation(enabled: true, excludedParameterNames);
+        }
+
+        internal void SetParameterBackupExclusionsForAutomation(bool enabled, IEnumerable<string> exactVisibleNames)
+        {
+            string[] excludedParameterNames = Array.Empty<string>();
+            if (enabled)
+            {
+                EnsureAvatarSelectedForParameterBackupAutomation();
+                string[] visibleOptions = GetVisibleParameterBackupOptionsForTesting(_selectedAvatar);
+                excludedParameterNames = ASMLiteParameterBackupPresetResolver.ResolveExactExcludedNames(
+                    exactVisibleNames,
+                    visibleOptions);
+            }
+
+            ApplyParameterBackupStateForAutomation(enabled, excludedParameterNames);
+        }
+
+        private void EnsureAvatarSelectedForParameterBackupAutomation()
+        {
+            if (_selectedAvatar == null)
+                throw new InvalidOperationException("Select an avatar before configuring ASM-Lite parameter backup automation.");
+        }
+
+        private void ApplyParameterBackupStateForAutomation(bool enabled, string[] excludedParameterNames)
+        {
+            string[] sanitized = enabled ? SanitizeExcludedParameterNames(excludedParameterNames) : Array.Empty<string>();
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(component, "Toggle ASM-Lite Parameter Backup Customization", ref component.useParameterExclusions, enabled);
+                SetComponentExcludedNames(component, "Change ASM-Lite Parameter Backup", sanitized);
+            }
+
+            _pendingUseParameterExclusions = enabled;
+            _pendingExcludedParameterNames = sanitized;
+        }
+
         internal void SetRootNameStateForAutomation(bool enabled, string value)
         {
             string normalized = enabled ? NormalizeOptionalString(value) : string.Empty;

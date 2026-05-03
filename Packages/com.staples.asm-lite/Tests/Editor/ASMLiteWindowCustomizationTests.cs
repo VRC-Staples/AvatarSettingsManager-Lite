@@ -713,6 +713,140 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void ParameterBackupAutomation_DefaultSelectionKeepsBackupCustomizationDisabled()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                AssertParameterBackupSnapshotFields(
+                    "default disabled backup row",
+                    window,
+                    _ctx.Comp,
+                    expectedEnabled: false,
+                    expectedExcludedNames: Array.Empty<string>());
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
+        public void ParameterBackupAutomation_NoneExcludedPreset_EnablesCustomizationWithEmptyExclusions()
+        {
+            var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                AssertParameterBackupPresetVisibleOptions(_ctx, "none-excluded backup row");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetParameterBackupPresetForAutomation(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NoneExcludedPresetId);
+
+                AssertParameterBackupSnapshotFields(
+                    "none-excluded backup row",
+                    window,
+                    _ctx.Comp,
+                    expectedEnabled: true,
+                    expectedExcludedNames: Array.Empty<string>());
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+                Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
+        public void ParameterBackupAutomation_SingleArmsPreset_StoresSingleVisibleExclusion()
+        {
+            var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                AssertParameterBackupPresetVisibleOptions(_ctx, "single-arms backup row");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetParameterBackupPresetForAutomation(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId);
+
+                AssertParameterBackupSnapshotFields(
+                    "single-arms backup row",
+                    window,
+                    _ctx.Comp,
+                    expectedEnabled: true,
+                    expectedExcludedNames: new[] { "AvatarLimbScaling_Arms" });
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+                Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
+        public void ParameterBackupAutomation_NestedMediaPreset_StoresOnlyNestedMediaSubset()
+        {
+            var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                AssertParameterBackupPresetVisibleOptions(_ctx, "nested-media backup row");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetParameterBackupPresetForAutomation(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NestedMediaPresetId);
+
+                AssertParameterBackupSnapshotFields(
+                    "nested-media backup row",
+                    window,
+                    _ctx.Comp,
+                    expectedEnabled: true,
+                    expectedExcludedNames: new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
+                CollectionAssert.DoesNotContain(_ctx.Comp.excludedParameterNames, "VRCOSC/Media/Album",
+                    "The nested-media preset should exclude only the stable Play/Volume subset, not every visible option under the same nested branch.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+                Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
+        public void ParameterBackupAutomation_ExactVisibleNames_NormalizesAndStoresSortedSnapshot()
+        {
+            var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                AssertParameterBackupPresetVisibleOptions(_ctx, "sorted exact-name backup row");
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+
+                window.SetParameterBackupExclusionsForAutomation(
+                    enabled: true,
+                    exactVisibleNames: new[]
+                    {
+                        " VRCOSC\\Media//Volume ",
+                        "AvatarLimbScaling_Arms ",
+                        "VRCOSC/ Media / Play",
+                    });
+
+                AssertParameterBackupSnapshotFields(
+                    "sorted exact-name backup row",
+                    window,
+                    _ctx.Comp,
+                    expectedEnabled: true,
+                    expectedExcludedNames: new[] { "AvatarLimbScaling_Arms", "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+                Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
         public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
         {
             var limbRoot = new GameObject("AvatarLimbScaling");
@@ -1185,6 +1319,138 @@ namespace ASMLite.Tests.Editor
             {
                 Object.DestroyImmediate(window);
             }
+        }
+
+        private static void AssertParameterBackupSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow window,
+            ASMLite.ASMLiteComponent component,
+            bool expectedEnabled,
+            string[] expectedExcludedNames)
+        {
+            Assert.IsNotNull(window, $"{scenario}: expected an automation window.");
+            Assert.IsNotNull(component, $"{scenario}: expected an attached ASM-Lite component.");
+            expectedExcludedNames = expectedExcludedNames ?? Array.Empty<string>();
+
+            Assert.AreEqual(expectedEnabled, component.useParameterExclusions,
+                $"{scenario}: attached component should expose the parameter-backup customization gate.");
+            CollectionAssert.AreEqual(expectedExcludedNames, component.excludedParameterNames ?? Array.Empty<string>(),
+                $"{scenario}: attached component should store the exact sorted backup exclusion snapshot.");
+
+            var pendingTesting = window.GetPendingCustomizationSnapshotForTesting();
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), pendingTesting.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the pending testing snapshot.");
+            Assert.AreEqual(expectedEnabled, pendingTesting.UseParameterExclusions,
+                $"{scenario}: pending testing snapshot should expose the parameter-backup customization gate.");
+            CollectionAssert.AreEqual(expectedExcludedNames, pendingTesting.ExcludedParameterNames,
+                $"{scenario}: pending testing snapshot should preserve sorted backup exclusions.");
+
+            AssertParameterBackupAutomationSnapshotFields(
+                scenario + " pending automation snapshot",
+                window.GetPendingCustomizationSnapshotForAutomation(),
+                component,
+                expectedEnabled,
+                expectedExcludedNames);
+            AssertParameterBackupAutomationSnapshotFields(
+                scenario + " attached automation snapshot",
+                window.GetAttachedCustomizationSnapshotForAutomation(),
+                component,
+                expectedEnabled,
+                expectedExcludedNames);
+        }
+
+        private static void AssertParameterBackupAutomationSnapshotFields(
+            string scenario,
+            ASMLite.Editor.ASMLiteWindow.CustomizationAutomationSnapshot snapshot,
+            ASMLite.ASMLiteComponent component,
+            bool expectedEnabled,
+            string[] expectedExcludedNames)
+        {
+            Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), snapshot.SelectedAvatar,
+                $"{scenario}: selected avatar should remain wired into the automation snapshot.");
+            Assert.AreSame(component, snapshot.Component,
+                $"{scenario}: automation snapshot should expose the attached ASM-Lite component.");
+            Assert.IsTrue(snapshot.HasAttachedComponent,
+                $"{scenario}: automation snapshot should identify the attached component branch.");
+            Assert.AreEqual(expectedEnabled, snapshot.Customization.UseParameterExclusions,
+                $"{scenario}: automation snapshot should expose the parameter-backup customization gate.");
+            CollectionAssert.AreEqual(expectedExcludedNames, snapshot.Customization.ExcludedParameterNames,
+                $"{scenario}: automation snapshot should preserve sorted backup exclusions.");
+        }
+
+        private static VRCExpressionParameters SeedParameterBackupPresetVisibleOptions(AsmLiteTestContext ctx)
+        {
+            var limbRoot = new GameObject("AvatarLimbScaling");
+            limbRoot.transform.SetParent(ctx.AvatarGo.transform, false);
+
+            var arms = new GameObject("Arms");
+            arms.transform.SetParent(limbRoot.transform, false);
+
+            var limbVf = arms.AddComponent<VF.Model.VRCFury>();
+            limbVf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "AvatarLimbScaling_Arms",
+                name = "Avatar Limb Scaling/Arms",
+                menuPath = string.Empty,
+            };
+
+            var mediaRoot = new GameObject("Media");
+            mediaRoot.transform.SetParent(ctx.AvatarGo.transform, false);
+
+            var mediaVf = mediaRoot.AddComponent<VF.Model.VRCFury>();
+            var referencedParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            referencedParams.parameters = new[]
+            {
+                CreateParameterBackupPresetParameter("VRCOSC/Media/Play", VRCExpressionParameters.ValueType.Bool),
+                CreateParameterBackupPresetParameter("VRCOSC/Media/Volume", VRCExpressionParameters.ValueType.Float),
+                CreateParameterBackupPresetParameter("VRCOSC/Media/Album", VRCExpressionParameters.ValueType.Int),
+            };
+
+            mediaVf.content = new VF.Model.Feature.FullControllerLike
+            {
+                prms = new[]
+                {
+                    new VF.Model.Feature.FullControllerLikePrmsEntry
+                    {
+                        parameters = new VF.Model.Feature.FullControllerLikeParamsRef
+                        {
+                            objRef = referencedParams,
+                            id = string.Empty,
+                        },
+                    },
+                },
+            };
+
+            return referencedParams;
+        }
+
+        private static VRCExpressionParameters.Parameter CreateParameterBackupPresetParameter(
+            string name,
+            VRCExpressionParameters.ValueType valueType)
+        {
+            return new VRCExpressionParameters.Parameter
+            {
+                name = name,
+                valueType = valueType,
+                defaultValue = 0f,
+                saved = false,
+                networkSynced = false,
+            };
+        }
+
+        private static void AssertParameterBackupPresetVisibleOptions(AsmLiteTestContext ctx, string scenario)
+        {
+            string[] visibleOptions = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(ctx.AvDesc);
+
+            CollectionAssert.Contains(visibleOptions, "AvatarLimbScaling_Arms",
+                $"{scenario}: assigned prefab toggle globals must be visible before resolving backup presets.");
+            CollectionAssert.Contains(visibleOptions, "VRCOSC/Media/Play",
+                $"{scenario}: nested media Play must be visible before resolving backup presets.");
+            CollectionAssert.Contains(visibleOptions, "VRCOSC/Media/Volume",
+                $"{scenario}: nested media Volume must be visible before resolving backup presets.");
+            CollectionAssert.Contains(visibleOptions, "VRCOSC/Media/Album",
+                $"{scenario}: regression setup should include an extra visible nested sibling so preset tests prove subset behavior.");
         }
 
         private static void AssertNamingSnapshotFields(
