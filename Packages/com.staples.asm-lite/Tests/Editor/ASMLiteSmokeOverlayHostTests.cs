@@ -924,9 +924,10 @@ namespace ASMLite.Tests.Editor
                 const string commandId = "cmd_000018_run-suite";
 
                 WriteCommand(context.Paths, BuildRunSuiteCommand(18, commandId, "prebuild-path-matrix"));
-                AdvanceUntilIdleAfterRun(context);
+                AdvanceUntilIdleAfterRun(context, maxTicks: 128);
 
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "prelude-recover-context", StringComparison.Ordinal)), Is.EqualTo(4));
+                Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "set-slot-count", StringComparison.Ordinal)), Is.EqualTo(4));
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "set-install-path-state", StringComparison.Ordinal)), Is.EqualTo(4));
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-pending-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(4));
                 Assert.That(context.Runtime.ExecutedActions.Count(action => string.Equals(action, "assert-attached-customization-snapshot", StringComparison.Ordinal)), Is.EqualTo(4));
@@ -2583,11 +2584,11 @@ namespace ASMLite.Tests.Editor
             };
         }
 
-        private static ASMLiteSmokeCaseDefinition BuildPhase1PathCase(string presetId, bool enabled, string normalizedPath, int slotCount)
+        private static ASMLiteSmokeCaseDefinition BuildPhase1PathCase(string presetId, bool enabled, string normalizedPath, int rowIndex)
         {
             return new ASMLiteSmokeCaseDefinition
             {
-                caseId = $"P{slotCount:00}-install-path-{presetId}",
+                caseId = $"P{rowIndex:00}-install-path-{presetId}",
                 label = $"Install path {presetId}",
                 description = $"Prebuild customization flow with install-path preset '{presetId}'.",
                 expectedOutcome = "Pending and attached customization snapshots match install-path expectations.",
@@ -2597,7 +2598,17 @@ namespace ASMLite.Tests.Editor
                     presetId,
                     new ASMLiteSmokeStepDefinition
                     {
-                        stepId = $"P{slotCount:00}-set-install-path-{presetId}",
+                        stepId = $"P{rowIndex:00}-set-slot-count-4",
+                        label = "Set slot count 4",
+                        description = "Set automation slot count to the install-path matrix baseline.",
+                        actionType = "set-slot-count",
+                        args = new ASMLiteSmokeStepArgs { slotCount = 4 },
+                        expectedOutcome = "Slot count 4 is staged for setup.",
+                        debugHint = "Inspect slot-count automation state.",
+                    },
+                    new ASMLiteSmokeStepDefinition
+                    {
+                        stepId = $"P{rowIndex:00}-set-install-path-{presetId}",
                         label = $"Set install path {presetId}",
                         description = $"Set automation install-path preset '{presetId}'.",
                         actionType = "set-install-path-state",
@@ -2607,7 +2618,7 @@ namespace ASMLite.Tests.Editor
                     },
                     new ASMLiteSmokeStepArgs
                     {
-                        slotCount = slotCount,
+                        slotCount = 4,
                         installPathPresetId = presetId,
                         expectedInstallPathEnabled = enabled,
                         expectedNormalizedEffectivePath = normalizedPath,
@@ -2623,15 +2634,38 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeStepDefinition customizationStep,
             ASMLiteSmokeStepArgs expectedArgs)
         {
+            return BuildPhase1CustomizationSteps(axis, suffix, new[] { customizationStep }, expectedArgs);
+        }
+
+        private static ASMLiteSmokeStepDefinition[] BuildPhase1CustomizationSteps(
+            string axis,
+            string suffix,
+            ASMLiteSmokeStepDefinition firstCustomizationStep,
+            ASMLiteSmokeStepDefinition secondCustomizationStep,
+            ASMLiteSmokeStepArgs expectedArgs)
+        {
+            return BuildPhase1CustomizationSteps(axis, suffix, new[] { firstCustomizationStep, secondCustomizationStep }, expectedArgs);
+        }
+
+        private static ASMLiteSmokeStepDefinition[] BuildPhase1CustomizationSteps(
+            string axis,
+            string suffix,
+            ASMLiteSmokeStepDefinition[] customizationSteps,
+            ASMLiteSmokeStepArgs expectedArgs)
+        {
             return new[]
             {
                 new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-recover-context", label = "Recover setup context", description = "Recover setup context before the prebuild assertion.", actionType = "prelude-recover-context", expectedOutcome = "Setup context is recovered.", debugHint = "Inspect prelude recovery output." },
                 new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-no-component", label = "No component before setup", description = "Assert ASM-Lite component is not attached before setup.", actionType = "assert-no-component", expectedOutcome = "No ASM-Lite component is attached.", debugHint = "Inspect avatar hierarchy before setup." },
-                customizationStep,
-                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-pending-snapshot", label = "Pending customization matches", description = "Assert staged customization snapshot before Add Prefab.", actionType = "assert-pending-customization-snapshot", args = expectedArgs, expectedOutcome = "Pending customization snapshot matches.", debugHint = "Inspect pending customization snapshot." },
-                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-add-prefab", label = "Add prefab", description = "Attach ASM-Lite prefab with the staged customization.", actionType = "add-prefab", expectedOutcome = "ASM-Lite component is attached.", debugHint = "Inspect Add Prefab result." },
-                new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-attached-snapshot", label = "Attached customization matches", description = "Assert attached component snapshot after Add Prefab.", actionType = "assert-attached-customization-snapshot", args = expectedArgs, expectedOutcome = "Attached customization snapshot matches.", debugHint = "Inspect attached component snapshot." },
-            };
+            }
+                .Concat(customizationSteps)
+                .Concat(new[]
+                {
+                    new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-pending-snapshot", label = "Pending customization matches", description = "Assert staged customization snapshot before Add Prefab.", actionType = "assert-pending-customization-snapshot", args = expectedArgs, expectedOutcome = "Pending customization snapshot matches.", debugHint = "Inspect pending customization snapshot." },
+                    new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-add-prefab", label = "Add prefab", description = "Attach ASM-Lite prefab with the staged customization.", actionType = "add-prefab", expectedOutcome = "ASM-Lite component is attached.", debugHint = "Inspect Add Prefab result." },
+                    new ASMLiteSmokeStepDefinition { stepId = $"{axis}-{suffix}-assert-attached-snapshot", label = "Attached customization matches", description = "Assert attached component snapshot after Add Prefab.", actionType = "assert-attached-customization-snapshot", args = expectedArgs, expectedOutcome = "Attached customization snapshot matches.", debugHint = "Inspect attached component snapshot." },
+                })
+                .ToArray();
         }
 
         private static ASMLiteSmokeCaseDefinition BuildDestructiveResetCase(

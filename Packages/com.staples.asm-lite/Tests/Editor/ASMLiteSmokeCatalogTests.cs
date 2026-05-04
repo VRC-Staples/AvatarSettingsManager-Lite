@@ -961,6 +961,7 @@ namespace ASMLite.Tests.Editor
                     "assert-window-focused",
                     "select-avatar",
                     "assert-no-component",
+                    "set-slot-count",
                     "set-install-path-state",
                     "assert-pending-customization-snapshot",
                     "add-prefab",
@@ -969,6 +970,7 @@ namespace ASMLite.Tests.Editor
                 },
                 item.steps.Select(step => step.actionType).ToArray());
 
+            Assert.AreEqual(4, item.steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
             Assert.AreEqual(expectedPreset, item.steps.Single(step => step.actionType == "set-install-path-state").args.installPathPresetId);
 
             foreach (ASMLiteSmokeStepDefinition step in item.steps.Where(step => step.actionType.Contains("customization-snapshot")))

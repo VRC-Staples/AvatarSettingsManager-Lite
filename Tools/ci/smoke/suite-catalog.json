@@ -2158,6 +2158,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "P01-install-path-disabled-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the path-matrix baseline slot count before staging install path.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "P01-install-path-disabled-set-install-path-state",
                   "label": "Set install path install path disabled",
                   "description": "Apply install path preset disabled.",
@@ -2275,6 +2286,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P02-install-path-root-selected-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the path-matrix baseline slot count before staging install path.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "P02-install-path-root-selected-set-install-path-state",
@@ -2396,6 +2418,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "P03-install-path-simple-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the path-matrix baseline slot count before staging install path.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "P03-install-path-simple-set-install-path-state",
                   "label": "Set install path install path simple",
                   "description": "Apply install path preset simple.",
@@ -2513,6 +2546,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "P04-install-path-nested-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the path-matrix baseline slot count before staging install path.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "P04-install-path-nested-set-install-path-state",
