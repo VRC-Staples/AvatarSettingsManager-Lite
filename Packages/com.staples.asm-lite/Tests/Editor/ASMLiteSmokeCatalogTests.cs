@@ -1009,9 +1009,11 @@ namespace ASMLite.Tests.Editor
                     "assert-window-focused",
                     "select-avatar",
                     "assert-no-component",
+                    "set-slot-count",
                     "set-root-name-state",
                 },
-                item.steps.Take(7).Select(step => step.actionType).ToArray());
+                item.steps.Take(8).Select(step => step.actionType).ToArray());
+            Assert.AreEqual(4, item.steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
             Assert.AreEqual("assert-pending-customization-snapshot", item.steps[item.steps.Length - 4].actionType);
             Assert.AreEqual("add-prefab", item.steps[item.steps.Length - 3].actionType);
             Assert.AreEqual("assert-attached-customization-snapshot", item.steps[item.steps.Length - 2].actionType);
@@ -1198,6 +1200,7 @@ namespace ASMLite.Tests.Editor
                     "assert-window-focused",
                     "select-avatar",
                     "assert-no-component",
+                    "set-slot-count",
                     "assert-parameter-backup-option-present",
                     "set-parameter-backup-state",
                     "assert-pending-customization-snapshot",
@@ -1206,6 +1209,8 @@ namespace ASMLite.Tests.Editor
                     "assert-primary-action",
                 },
                 item.steps.Select(step => step.actionType).ToArray());
+
+            Assert.AreEqual(4, item.steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
 
             ASMLiteSmokeStepDefinition assertStep = item.steps.Single(step => step.actionType == "assert-parameter-backup-option-present");
             Assert.AreEqual(expectedPresetId ?? "single-arms", assertStep.args.parameterBackupPresetId);

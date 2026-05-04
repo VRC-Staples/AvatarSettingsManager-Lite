@@ -2696,6 +2696,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "N01-naming-default-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "N01-naming-default-set-root-name-state",
                   "label": "Set naming gate state",
                   "description": "Apply the explicit custom menu naming gate state for this row.",
@@ -2813,6 +2824,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N02-naming-root-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "N02-naming-root-only-set-root-name-state",
@@ -2937,6 +2959,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N03-naming-preset-first-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "N03-naming-preset-first-only-set-root-name-state",
@@ -3081,6 +3114,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N04-naming-preset-all-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "N04-naming-preset-all-set-root-name-state",
@@ -3236,6 +3280,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "N05-naming-save-only-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "N05-naming-save-only-set-root-name-state",
                   "label": "Set naming gate state",
                   "description": "Apply the explicit custom menu naming gate state for this row.",
@@ -3372,6 +3427,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "N06-naming-full-pack-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "N06-naming-full-pack-set-root-name-state",
@@ -4973,6 +5039,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "B01-parameter-backup-default-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "B01-parameter-backup-default-assert-parameter-backup-option-present",
                   "label": "Required backup option is visible",
                   "description": "Verify the row-required parameter backup option can be resolved from visible options.",
@@ -5105,6 +5182,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B02-parameter-backup-enabled-none-excluded-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "B02-parameter-backup-enabled-none-excluded-assert-parameter-backup-option-present",
@@ -5244,6 +5332,17 @@
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
                 },
                 {
+                  "stepId": "B03-parameter-backup-single-exclusion-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
+                },
+                {
                   "stepId": "B03-parameter-backup-single-exclusion-assert-parameter-backup-option-present",
                   "label": "Required backup option is visible",
                   "description": "Verify the row-required parameter backup option can be resolved from visible options.",
@@ -5381,6 +5480,17 @@
                   "actionType": "assert-no-component",
                   "expectedOutcome": "The avatar has no ASM-Lite component.",
                   "debugHint": "If this fails, inspect prelude cleanup and fixture reset state."
+                },
+                {
+                  "stepId": "B04-parameter-backup-nested-subset-set-slot-count",
+                  "label": "Set slot count 4",
+                  "description": "Apply the matrix baseline slot count before staging customization.",
+                  "actionType": "set-slot-count",
+                  "expectedOutcome": "Slot count 4 is staged.",
+                  "debugHint": "If this fails, inspect slot-count automation range handling.",
+                  "args": {
+                    "slotCount": 4
+                  }
                 },
                 {
                   "stepId": "B04-parameter-backup-nested-subset-assert-parameter-backup-option-present",
