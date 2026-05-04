@@ -127,7 +127,6 @@ namespace ASMLite.Editor
         [NonSerialized] private bool _visibleAutomationCompletionReviewAcknowledged;
         [NonSerialized] private string _visibleAutomationCompletionReviewTitle = string.Empty;
         [NonSerialized] private string _visibleAutomationCompletionReviewMessage = string.Empty;
-        [NonSerialized] private double _visibleAutomationCompletionReviewAutoCloseAt;
         [NonSerialized] private VisibleAutomationStatusOverlayWindow _visibleAutomationStatusOverlayWindow;
         [NonSerialized] private VisibleAutomationChecklistOverlayWindow _visibleAutomationChecklistOverlayWindow;
         [NonSerialized] private VisibleAutomationCompletionReviewOverlayWindow _visibleAutomationCompletionReviewOverlayWindow;
@@ -1787,7 +1786,6 @@ namespace ASMLite.Editor
                 : message.Trim();
             _visibleAutomationCompletionReviewAcknowledged = false;
             _visibleAutomationCompletionReviewVisible = true;
-            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
             _visibleAutomationCompletionReviewRequestId++;
             _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
             DeleteVisibleAutomationExternalOverlayAckFile();
@@ -1799,7 +1797,6 @@ namespace ASMLite.Editor
         {
             _visibleAutomationCompletionReviewAcknowledged = true;
             _visibleAutomationCompletionReviewVisible = false;
-            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
             CloseVisibleAutomationCompletionReviewOverlayWindow();
             RefreshVisibleAutomationOverlayVisuals();
             Repaint();
@@ -6764,7 +6761,6 @@ namespace ASMLite.Editor
             _visibleAutomationCompletionReviewAcknowledged = false;
             _visibleAutomationCompletionReviewTitle = string.Empty;
             _visibleAutomationCompletionReviewMessage = string.Empty;
-            _visibleAutomationCompletionReviewAutoCloseAt = 0d;
             _visibleAutomationUsingHostWindowFallbackBounds = false;
             EnsureVisibleAutomationChecklistVisualCount(0);
             CloseVisibleAutomationOverlayPopupWindows();

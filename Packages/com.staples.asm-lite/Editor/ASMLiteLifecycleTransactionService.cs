@@ -760,7 +760,6 @@ namespace ASMLite.Editor
 
             GameObject instance = null;
             bool reattachAttempted = false;
-            bool reattachSucceeded = false;
             bool installPathAdoptionAttempted = false;
             bool installPathAdoptionSucceeded = false;
             ASMLiteMigrationContinuityService.InstallPathAdoptionResult adoption = default;
@@ -995,7 +994,6 @@ namespace ASMLite.Editor
                     }
                 }
 
-                reattachSucceeded = true;
                 string verifyFailureMessage = string.Empty;
                 string verifyFailureContext = string.Empty;
                 if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify)
