@@ -1,7 +1,5 @@
 using System;
-using System.Linq;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
@@ -34,10 +32,9 @@ namespace ASMLite.Tests.Editor
         {
             string[] visibleOptions =
             {
-                "AvatarLimbScaling_Arms",
-                "Unrelated/Keep",
-                "VRCOSC/Media/Play",
-                "VRCOSC/Media/Volume",
+                "Fixture/ParamC",
+                "Fixture/ParamA",
+                "Fixture/ParamB",
             };
 
             CollectionAssert.AreEqual(
@@ -46,14 +43,14 @@ namespace ASMLite.Tests.Editor
                     ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NoneExcludedPresetId,
                     visibleOptions));
             CollectionAssert.AreEqual(
-                new[] { "AvatarLimbScaling_Arms" },
+                new[] { "Fixture/ParamA" },
                 ASMLite.Editor.ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
-                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId,
+                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleVisiblePresetId,
                     visibleOptions));
             CollectionAssert.AreEqual(
-                new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" },
+                new[] { "Fixture/ParamA", "Fixture/ParamB" },
                 ASMLite.Editor.ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
-                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NestedMediaPresetId,
+                    ASMLite.Editor.ASMLiteParameterBackupPresetResolver.FirstTwoVisiblePresetId,
                     visibleOptions));
         }
 
@@ -62,17 +59,17 @@ namespace ASMLite.Tests.Editor
         {
             string[] visibleOptions =
             {
-                "AvatarLimbScaling_Arms",
-                "VRCOSC/Media/Volume",
-                "VRCOSC/Media/Play",
+                "Fixture/ParamB",
+                "Fixture/ParamC",
+                "Fixture/ParamA",
             };
 
             string[] resolved = ASMLite.Editor.ASMLiteParameterBackupPresetResolver.ResolveExactExcludedNames(
-                new[] { " VRCOSC\\Media//Volume ", "AvatarLimbScaling_Arms ", "VRCOSC/ Media / Play" },
+                new[] { " Fixture\\ParamC ", "Fixture/ ParamA ", "Fixture//ParamB" },
                 visibleOptions);
 
             CollectionAssert.AreEqual(
-                new[] { "AvatarLimbScaling_Arms", "VRCOSC/Media/Play", "VRCOSC/Media/Volume" },
+                new[] { "Fixture/ParamA", "Fixture/ParamB", "Fixture/ParamC" },
                 resolved,
                 "Exact-name backup exclusions should compare after trimming, slash normalization, segment trimming, dedupe, and ordinal sorting.");
         }
@@ -82,7 +79,7 @@ namespace ASMLite.Tests.Editor
         {
             bool ok = ASMLite.Editor.ASMLiteParameterBackupPresetResolver.TryResolvePresetExcludedNames(
                 "sideways",
-                new[] { "AvatarLimbScaling_Arms" },
+                new[] { "Fixture/ParamA" },
                 out var excluded,
                 out string errorMessage);
 
@@ -90,51 +87,48 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.AreEqual(Array.Empty<string>(), excluded);
             StringAssert.Contains("Unknown parameter backup preset ID 'sideways'", errorMessage);
             StringAssert.Contains(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NoneExcludedPresetId, errorMessage);
-            StringAssert.Contains(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId, errorMessage);
-            StringAssert.Contains(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NestedMediaPresetId, errorMessage);
+            StringAssert.Contains(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleVisiblePresetId, errorMessage);
+            StringAssert.Contains(ASMLite.Editor.ASMLiteParameterBackupPresetResolver.FirstTwoVisiblePresetId, errorMessage);
         }
 
         [Test]
         public void PresetMissingFromVisibleOptions_FailsReadably()
         {
             bool ok = ASMLite.Editor.ASMLiteParameterBackupPresetResolver.TryResolvePresetExcludedNames(
-                ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NestedMediaPresetId,
-                new[] { "AvatarLimbScaling_Arms" },
+                ASMLite.Editor.ASMLiteParameterBackupPresetResolver.FirstTwoVisiblePresetId,
+                new[] { "Fixture/ParamA" },
                 out var excluded,
                 out string errorMessage);
 
             Assert.IsFalse(ok);
             CollectionAssert.AreEqual(Array.Empty<string>(), excluded);
-            StringAssert.Contains("parameter backup preset ID 'nested-media'", errorMessage);
-            StringAssert.Contains("VRCOSC/Media/Play", errorMessage);
-            StringAssert.Contains("VRCOSC/Media/Volume", errorMessage);
+            StringAssert.Contains("parameter backup preset ID 'first-two-visible'", errorMessage);
+            StringAssert.Contains("requires at least 2 visible parameter backup option", errorMessage);
         }
 
         [Test]
         public void SeededVrcFuryVisibleOptions_CanBeAssertedForPresetResolution()
         {
-            var limbRoot = new GameObject("AvatarLimbScaling");
-            limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
-            var arms = new GameObject("Arms");
-            arms.transform.SetParent(limbRoot.transform, false);
-            var limbVf = arms.AddComponent<VF.Model.VRCFury>();
-            limbVf.content = new VF.Model.Feature.Toggle
+            var sourceRoot = new GameObject("FixtureSource");
+            sourceRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+            var sourceVf = sourceRoot.AddComponent<VF.Model.VRCFury>();
+            sourceVf.content = new VF.Model.Feature.Toggle
             {
                 useGlobalParam = true,
-                globalParam = "AvatarLimbScaling_Arms",
-                name = "Avatar Limb Scaling/Arms",
+                globalParam = "Fixture/Source/One",
+                name = "Fixture Source One",
                 menuPath = string.Empty,
             };
 
-            var mediaRoot = new GameObject("Media");
-            mediaRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
-            var mediaVf = mediaRoot.AddComponent<VF.Model.VRCFury>();
+            var referencedRoot = new GameObject("FixtureReferenced");
+            referencedRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+            var referencedVf = referencedRoot.AddComponent<VF.Model.VRCFury>();
             var referencedParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             referencedParams.parameters = new[]
             {
                 new VRCExpressionParameters.Parameter
                 {
-                    name = "VRCOSC/Media/Play",
+                    name = "Fixture/Referenced/A",
                     valueType = VRCExpressionParameters.ValueType.Bool,
                     defaultValue = 0f,
                     saved = false,
@@ -142,7 +136,7 @@ namespace ASMLite.Tests.Editor
                 },
                 new VRCExpressionParameters.Parameter
                 {
-                    name = "VRCOSC/Media/Volume",
+                    name = "Fixture/Referenced/B",
                     valueType = VRCExpressionParameters.ValueType.Float,
                     defaultValue = 0f,
                     saved = false,
@@ -152,7 +146,7 @@ namespace ASMLite.Tests.Editor
 
             try
             {
-                mediaVf.content = new VF.Model.Feature.FullControllerLike
+                referencedVf.content = new VF.Model.Feature.FullControllerLike
                 {
                     prms = new[]
                     {
@@ -169,22 +163,19 @@ namespace ASMLite.Tests.Editor
 
                 string[] visibleOptions = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
 
-                CollectionAssert.Contains(visibleOptions, "AvatarLimbScaling_Arms",
-                    "The seeded assigned VRCFury source parameter must be deterministically visible for backup-row automation.");
-                CollectionAssert.Contains(visibleOptions, "VRCOSC/Media/Play",
-                    "The seeded VRCFury referenced parameter asset must expose its nested Play parameter for backup-row automation.");
-                CollectionAssert.Contains(visibleOptions, "VRCOSC/Media/Volume",
-                    "The seeded VRCFury referenced parameter asset must expose its nested Volume parameter for backup-row automation.");
+                CollectionAssert.Contains(visibleOptions, "Fixture/Source/One");
+                CollectionAssert.Contains(visibleOptions, "Fixture/Referenced/A");
+                CollectionAssert.Contains(visibleOptions, "Fixture/Referenced/B");
 
                 CollectionAssert.AreEqual(
-                    new[] { "AvatarLimbScaling_Arms" },
+                    new[] { "Fixture/Referenced/A" },
                     ASMLite.Editor.ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
-                        ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleArmsPresetId,
+                        ASMLite.Editor.ASMLiteParameterBackupPresetResolver.SingleVisiblePresetId,
                         visibleOptions));
                 CollectionAssert.AreEqual(
-                    new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" },
+                    new[] { "Fixture/Referenced/A", "Fixture/Referenced/B" },
                     ASMLite.Editor.ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
-                        ASMLite.Editor.ASMLiteParameterBackupPresetResolver.NestedMediaPresetId,
+                        ASMLite.Editor.ASMLiteParameterBackupPresetResolver.FirstTwoVisiblePresetId,
                         visibleOptions));
             }
             finally

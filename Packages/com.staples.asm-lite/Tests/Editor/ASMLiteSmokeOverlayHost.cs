@@ -1418,6 +1418,9 @@ namespace ASMLite.Tests.Editor
             }
 
             ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
+            if (!TryApplyExpectedParameterBackupPreset(expected, avatar, args, out detail))
+                return false;
+
             ASMLiteSmokeCustomizationSnapshot actual = ASMLiteSmokeCustomizationSnapshot.FromAutomationSnapshot(
                 window.GetPendingCustomizationSnapshotForAutomation());
 
@@ -1438,6 +1441,9 @@ namespace ASMLite.Tests.Editor
         {
             ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
             VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
+            if (!TryApplyExpectedParameterBackupPreset(expected, avatar, args, out detail))
+                return false;
+
             ASMLiteComponent component = avatar == null ? null : FindASMLiteComponent(avatar);
             ASMLiteSmokeCustomizationSnapshot actual = ASMLiteSmokeCustomizationSnapshot.FromAttachedComponent(component);
 
@@ -1452,6 +1458,24 @@ namespace ASMLite.Tests.Editor
             }
 
             return false;
+        }
+
+        private static bool TryApplyExpectedParameterBackupPreset(
+            ASMLiteSmokeCustomizationSnapshot expected,
+            VRCAvatarDescriptor avatar,
+            ASMLiteSmokeStepArgs args,
+            out string detail)
+        {
+            detail = string.Empty;
+            if (expected == null || args == null || !args.useParameterExclusions || string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
+                return true;
+
+            string[] visibleOptions = ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(avatar);
+            if (!TryResolveParameterBackupExcludedNames(args, visibleOptions, out string[] excludedNames, out detail))
+                return false;
+
+            expected.ExcludedParameterNames = excludedNames;
+            return true;
         }
 
         private bool TryGetAttachedComponent(string avatarName, out ASMLiteComponent component, out string detail)

@@ -540,10 +540,10 @@ namespace ASMLite.Tests.Editor
             }));
             Assert.That(backup.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
-            AssertPhase1BackupCase(backup.cases[0], expectedEnabled: false, expectedPresetId: null, expectedExcludedNames: Array.Empty<string>());
-            AssertPhase1BackupCase(backup.cases[1], expectedEnabled: true, expectedPresetId: "none-excluded", expectedExcludedNames: Array.Empty<string>());
-            AssertPhase1BackupCase(backup.cases[2], expectedEnabled: true, expectedPresetId: "single-arms", expectedExcludedNames: new[] { "AvatarLimbScaling_Arms" });
-            AssertPhase1BackupCase(backup.cases[3], expectedEnabled: true, expectedPresetId: "nested-media", expectedExcludedNames: new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" });
+            AssertPhase1BackupCase(backup.cases[0], expectedEnabled: false, expectedPresetId: null);
+            AssertPhase1BackupCase(backup.cases[1], expectedEnabled: true, expectedPresetId: "none-excluded");
+            AssertPhase1BackupCase(backup.cases[2], expectedEnabled: true, expectedPresetId: "single-visible");
+            AssertPhase1BackupCase(backup.cases[3], expectedEnabled: true, expectedPresetId: "first-two-visible");
 
             ASMLiteSmokeSuiteDefinition combo = suites["prebuild-combo-matrix"];
             Assert.AreEqual("exhaustive", combo.speed);
@@ -690,11 +690,11 @@ namespace ASMLite.Tests.Editor
                     Assert.IsTrue(step.args.clearExistingNameMask);
                 }
                 if (string.Equals(actionType, "assert-parameter-backup-option-present", StringComparison.Ordinal))
-                    Assert.AreEqual("single-arms", step.args.parameterBackupPresetId);
+                    Assert.AreEqual("single-visible", step.args.parameterBackupPresetId);
                 if (string.Equals(actionType, "set-parameter-backup-state", StringComparison.Ordinal))
                 {
                     Assert.IsTrue(step.args.useParameterExclusions);
-                    Assert.AreEqual("single-arms", step.args.parameterBackupPresetId);
+                    Assert.AreEqual("single-visible", step.args.parameterBackupPresetId);
                 }
                 if (actionType.Contains("customization-snapshot"))
                 {
@@ -1188,8 +1188,7 @@ namespace ASMLite.Tests.Editor
         private static void AssertPhase1BackupCase(
             ASMLiteSmokeCaseDefinition item,
             bool expectedEnabled,
-            string expectedPresetId,
-            string[] expectedExcludedNames)
+            string expectedPresetId)
         {
             CollectionAssert.AreEqual(
                 new[]
@@ -1213,7 +1212,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(4, item.steps.Single(step => step.actionType == "set-slot-count").args.slotCount);
 
             ASMLiteSmokeStepDefinition assertStep = item.steps.Single(step => step.actionType == "assert-parameter-backup-option-present");
-            Assert.AreEqual(expectedPresetId ?? "single-arms", assertStep.args.parameterBackupPresetId);
+            Assert.AreEqual(expectedPresetId ?? "single-visible", assertStep.args.parameterBackupPresetId);
 
             ASMLiteSmokeStepDefinition setStep = item.steps.Single(step => step.actionType == "set-parameter-backup-state");
             Assert.AreEqual(expectedEnabled, setStep.args.useParameterExclusions);
@@ -1226,7 +1225,8 @@ namespace ASMLite.Tests.Editor
                 Assert.That(step.args.expectedInstallPathEnabled, Is.False);
                 Assert.AreEqual(string.Empty, step.args.expectedNormalizedEffectivePath);
                 Assert.AreEqual(expectedEnabled, step.args.useParameterExclusions);
-                CollectionAssert.AreEqual(expectedExcludedNames, step.args.excludedParameterNames);
+                Assert.AreEqual(expectedEnabled ? expectedPresetId : string.Empty, step.args.parameterBackupPresetId);
+                CollectionAssert.AreEqual(Array.Empty<string>(), step.args.excludedParameterNames);
             }
 
             ASMLiteSmokeStepArgs pendingArgs = item.steps.Single(step => step.actionType == "assert-pending-customization-snapshot").args;
@@ -1306,9 +1306,9 @@ namespace ASMLite.Tests.Editor
                 case "set-action-label-mask":
                     return "\"args\": { \"customSaveLabel\": \"Store\", \"customLoadLabel\": \"Wear\", \"customClearLabel\": \"Clear Fit\", \"customConfirmLabel\": \"Apply\", \"clearExistingNameMask\": true }\n";
                 case "assert-parameter-backup-option-present":
-                    return "\"args\": { \"parameterBackupPresetId\": \"single-arms\" }\n";
+                    return "\"args\": { \"parameterBackupPresetId\": \"single-visible\" }\n";
                 case "set-parameter-backup-state":
-                    return "\"args\": { \"useParameterExclusions\": true, \"parameterBackupPresetId\": \"single-arms\" }\n";
+                    return "\"args\": { \"useParameterExclusions\": true, \"parameterBackupPresetId\": \"single-visible\" }\n";
                 case "assert-pending-customization-snapshot":
                 case "assert-attached-customization-snapshot":
                     return "\"args\": { "

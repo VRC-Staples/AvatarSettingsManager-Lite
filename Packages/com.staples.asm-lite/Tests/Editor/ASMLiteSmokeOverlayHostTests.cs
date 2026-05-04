@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Tests.Editor
 {
@@ -203,6 +204,54 @@ namespace ASMLite.Tests.Editor
             }
             finally
             {
+                UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_ResolvesBackupPresetSelectorsFromVisibleOptions()
+        {
+            GameObject avatarObject = null;
+            VRCExpressionParameters expressionParameters = null;
+            try
+            {
+                avatarObject = new GameObject("Phase1_BackupPresetSelectorAvatar");
+                var avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
+                expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+                expressionParameters.parameters = new[]
+                {
+                    new VRCExpressionParameters.Parameter
+                    {
+                        name = "Smoke/Visible/One",
+                        valueType = VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = true,
+                    },
+                    new VRCExpressionParameters.Parameter
+                    {
+                        name = "Smoke/Visible/Two",
+                        valueType = VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = true,
+                    },
+                };
+                avatar.expressionParameters = expressionParameters;
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "assert-parameter-backup-option-present",
+                        new ASMLiteSmokeStepArgs { parameterBackupPresetId = "single-visible" },
+                        string.Empty,
+                        avatarObject.name,
+                        out string assertDetail,
+                        out string assertStackTrace),
+                    Is.True,
+                    assertDetail + "\n" + assertStackTrace);
+                StringAssert.Contains("Smoke/Visible/One", assertDetail);
+                Assert.That(assertStackTrace, Is.Empty);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
                 UnityEngine.Object.DestroyImmediate(avatarObject);
             }
         }

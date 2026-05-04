@@ -7,17 +7,17 @@ namespace ASMLite.Editor
     internal static class ASMLiteParameterBackupPresetResolver
     {
         internal const string NoneExcludedPresetId = "none-excluded";
-        internal const string SingleArmsPresetId = "single-arms";
-        internal const string NestedMediaPresetId = "nested-media";
+        internal const string SingleVisiblePresetId = "single-visible";
+        internal const string FirstTwoVisiblePresetId = "first-two-visible";
 
-        private static readonly Dictionary<string, string[]> s_presetExcludedNames = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        private static readonly string[] s_stablePresetIds =
         {
-            { NoneExcludedPresetId, Array.Empty<string>() },
-            { SingleArmsPresetId, new[] { "AvatarLimbScaling_Arms" } },
-            { NestedMediaPresetId, new[] { "VRCOSC/Media/Play", "VRCOSC/Media/Volume" } },
+            FirstTwoVisiblePresetId,
+            NoneExcludedPresetId,
+            SingleVisiblePresetId,
         };
 
-        internal static string[] StablePresetIds => s_presetExcludedNames.Keys
+        internal static string[] StablePresetIds => s_stablePresetIds
             .OrderBy(id => id, StringComparer.Ordinal)
             .ToArray();
 
@@ -37,18 +37,29 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (!s_presetExcludedNames.TryGetValue(normalizedPresetId, out var presetNames))
+            switch (normalizedPresetId)
             {
-                errorMessage = $"Unknown parameter backup preset ID '{normalizedPresetId}'. Known preset IDs: {string.Join(", ", StablePresetIds)}.";
-                return false;
+                case NoneExcludedPresetId:
+                    excludedParameterNames = Array.Empty<string>();
+                    return true;
+                case SingleVisiblePresetId:
+                    return TryResolveFirstVisibleOptions(
+                        visibleParameterOptions,
+                        1,
+                        out excludedParameterNames,
+                        out errorMessage,
+                        $"parameter backup preset ID '{normalizedPresetId}'");
+                case FirstTwoVisiblePresetId:
+                    return TryResolveFirstVisibleOptions(
+                        visibleParameterOptions,
+                        2,
+                        out excludedParameterNames,
+                        out errorMessage,
+                        $"parameter backup preset ID '{normalizedPresetId}'");
+                default:
+                    errorMessage = $"Unknown parameter backup preset ID '{normalizedPresetId}'. Known preset IDs: {string.Join(", ", StablePresetIds)}.";
+                    return false;
             }
-
-            return TryResolveExactExcludedNames(
-                presetNames,
-                visibleParameterOptions,
-                out excludedParameterNames,
-                out errorMessage,
-                $"parameter backup preset ID '{normalizedPresetId}'");
         }
 
         internal static string[] ResolvePresetExcludedNames(
@@ -105,6 +116,30 @@ namespace ASMLite.Editor
                 return excludedParameterNames;
 
             throw new InvalidOperationException(errorMessage);
+        }
+
+        private static bool TryResolveFirstVisibleOptions(
+            IEnumerable<string> visibleParameterOptions,
+            int requiredCount,
+            out string[] excludedParameterNames,
+            out string errorMessage,
+            string sourceLabel)
+        {
+            excludedParameterNames = Array.Empty<string>();
+            errorMessage = string.Empty;
+
+            string[] visibleNames = NormalizeVisibleNames(visibleParameterOptions);
+            if (visibleNames.Length < requiredCount)
+            {
+                errorMessage = $"Unable to resolve {sourceLabel}; requires at least {requiredCount} visible parameter backup option(s), but found {visibleNames.Length}.";
+                return false;
+            }
+
+            excludedParameterNames = visibleNames
+                .Take(requiredCount)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
+            return true;
         }
 
         internal static string[] NormalizeVisibleNames(IEnumerable<string> names)
