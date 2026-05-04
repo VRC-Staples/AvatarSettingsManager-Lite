@@ -213,6 +213,8 @@ namespace ASMLite.Tests.Editor
         {
             GameObject avatarObject = null;
             VRCExpressionParameters expressionParameters = null;
+            string firstVisibleParameterName = nameof(UnityRuntime_ResolvesBackupPresetSelectorsFromVisibleOptions) + "/First";
+            string secondVisibleParameterName = nameof(UnityRuntime_ResolvesBackupPresetSelectorsFromVisibleOptions) + "/Second";
             try
             {
                 avatarObject = new GameObject("Phase1_BackupPresetSelectorAvatar");
@@ -222,14 +224,14 @@ namespace ASMLite.Tests.Editor
                 {
                     new VRCExpressionParameters.Parameter
                     {
-                        name = "Smoke/Visible/One",
+                        name = firstVisibleParameterName,
                         valueType = VRCExpressionParameters.ValueType.Int,
                         defaultValue = 0f,
                         saved = true,
                     },
                     new VRCExpressionParameters.Parameter
                     {
-                        name = "Smoke/Visible/Two",
+                        name = secondVisibleParameterName,
                         valueType = VRCExpressionParameters.ValueType.Int,
                         defaultValue = 0f,
                         saved = true,
@@ -246,13 +248,114 @@ namespace ASMLite.Tests.Editor
                         out string assertStackTrace),
                     Is.True,
                     assertDetail + "\n" + assertStackTrace);
-                StringAssert.Contains("Smoke/Visible/One", assertDetail);
+                StringAssert.Contains(firstVisibleParameterName, assertDetail);
                 Assert.That(assertStackTrace, Is.Empty);
             }
             finally
             {
                 UnityEngine.Object.DestroyImmediate(expressionParameters);
                 UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AttachedBackupPresetSnapshotUsesStagedVisibleSelection()
+        {
+            GameObject avatarObject = null;
+            VRCExpressionParameters expressionParameters = null;
+            string stagedVisibleParameterName = nameof(UnityRuntime_AttachedBackupPresetSnapshotUsesStagedVisibleSelection) + "/Staged";
+            string laterPrependedParameterName = nameof(UnityRuntime_AttachedBackupPresetSnapshotUsesStagedVisibleSelection) + "/Prepended";
+            bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
+            LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                avatarObject = new GameObject("Phase1_BackupPresetStagedSelectionAvatar");
+                var avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
+                expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+                expressionParameters.parameters = new[]
+                {
+                    new VRCExpressionParameters.Parameter
+                    {
+                        name = stagedVisibleParameterName,
+                        valueType = VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = true,
+                    },
+                };
+                avatar.expressionParameters = expressionParameters;
+                Selection.activeObject = avatarObject;
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "set-parameter-backup-state",
+                        new ASMLiteSmokeStepArgs
+                        {
+                            useParameterExclusions = true,
+                            parameterBackupPresetId = "single-visible",
+                        },
+                        string.Empty,
+                        avatarObject.name,
+                        out string setDetail,
+                        out string setStackTrace),
+                    Is.True,
+                    setDetail + "\n" + setStackTrace);
+                StringAssert.Contains(stagedVisibleParameterName, setDetail);
+                Assert.That(setStackTrace, Is.Empty);
+
+                expressionParameters.parameters = new[]
+                {
+                    new VRCExpressionParameters.Parameter
+                    {
+                        name = laterPrependedParameterName,
+                        valueType = VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = true,
+                    },
+                    new VRCExpressionParameters.Parameter
+                    {
+                        name = stagedVisibleParameterName,
+                        valueType = VRCExpressionParameters.ValueType.Int,
+                        defaultValue = 0f,
+                        saved = true,
+                    },
+                };
+                var component = avatarObject.AddComponent<ASMLite.ASMLiteComponent>();
+                component.slotCount = 4;
+                component.useParameterExclusions = true;
+                component.excludedParameterNames = new[] { stagedVisibleParameterName };
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "assert-attached-customization-snapshot",
+                        new ASMLiteSmokeStepArgs
+                        {
+                            slotCount = 4,
+                            expectedInstallPathEnabled = false,
+                            expectedNormalizedEffectivePath = string.Empty,
+                            expectedComponentPresent = true,
+                            expectedPrimaryAction = "Rebuild",
+                            useParameterExclusions = true,
+                            parameterBackupPresetId = "single-visible",
+                        },
+                        string.Empty,
+                        avatarObject.name,
+                        out string assertDetail,
+                        out string assertStackTrace),
+                    Is.True,
+                    assertDetail + "\n" + assertStackTrace);
+                Assert.That(assertStackTrace, Is.Empty);
+            }
+            finally
+            {
+                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                    "close-window",
+                    new ASMLiteSmokeStepArgs(),
+                    string.Empty,
+                    avatarObject == null ? string.Empty : avatarObject.name,
+                    out _,
+                    out _);
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+                UnityEngine.Object.DestroyImmediate(avatarObject);
+                Selection.activeObject = null;
+                LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
             }
         }
 

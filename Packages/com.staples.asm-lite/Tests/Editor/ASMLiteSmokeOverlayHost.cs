@@ -517,6 +517,7 @@ namespace ASMLite.Tests.Editor
 
         private readonly List<ConsoleErrorRecord> _consoleErrors = new List<ConsoleErrorRecord>();
         private readonly ASMLiteSmokeSetupFixtureService _fixtureService = new ASMLiteSmokeSetupFixtureService();
+        private readonly Dictionary<string, string[]> _parameterBackupPresetSelections = new Dictionary<string, string[]>(StringComparer.Ordinal);
         private bool _consoleErrorCaptureActive;
 
         private ASMLiteSmokeOverlayHostUnityRuntime()
@@ -751,6 +752,7 @@ namespace ASMLite.Tests.Editor
         public bool ResetSetupFixture(out string detail, out string stackTrace)
         {
             stackTrace = string.Empty;
+            _parameterBackupPresetSelections.Clear();
             return _fixtureService.Reset(out detail);
         }
 
@@ -1330,6 +1332,8 @@ namespace ASMLite.Tests.Editor
             else
                 excludedNames = Array.Empty<string>();
 
+            RememberParameterBackupPresetSelection(avatar, args, excludedNames);
+
             ASMLiteComponent component = FindASMLiteComponent(avatar);
             if (component != null)
             {
@@ -1439,13 +1443,13 @@ namespace ASMLite.Tests.Editor
 
         private bool AssertAttachedCustomizationSnapshot(string avatarName, ASMLiteSmokeStepArgs args, out string detail)
         {
-            ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
             VRCAvatarDescriptor avatar = FindAvatarByName(avatarName);
-            if (!TryApplyExpectedParameterBackupPreset(expected, avatar, args, out detail))
-                return false;
-
             ASMLiteComponent component = avatar == null ? null : FindASMLiteComponent(avatar);
             ASMLiteSmokeCustomizationSnapshot actual = ASMLiteSmokeCustomizationSnapshot.FromAttachedComponent(component);
+
+            ASMLiteSmokeCustomizationSnapshot expected = ASMLiteSmokeCustomizationSnapshot.FromExpectedArgs(args);
+            if (!TryApplyExpectedParameterBackupPreset(expected, avatar, args, out detail))
+                return false;
 
             if (!ASMLiteSmokeCustomizationSnapshot.TryBuildMismatchDetail(
                 "assert-attached-customization-snapshot",
@@ -1460,7 +1464,7 @@ namespace ASMLite.Tests.Editor
             return false;
         }
 
-        private static bool TryApplyExpectedParameterBackupPreset(
+        private bool TryApplyExpectedParameterBackupPreset(
             ASMLiteSmokeCustomizationSnapshot expected,
             VRCAvatarDescriptor avatar,
             ASMLiteSmokeStepArgs args,
@@ -1470,12 +1474,71 @@ namespace ASMLite.Tests.Editor
             if (expected == null || args == null || !args.useParameterExclusions || string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
                 return true;
 
+            if (TryGetRememberedParameterBackupPresetSelection(avatar, args, out string[] rememberedExcludedNames))
+            {
+                expected.ExcludedParameterNames = rememberedExcludedNames;
+                return true;
+            }
+
             string[] visibleOptions = ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(avatar);
             if (!TryResolveParameterBackupExcludedNames(args, visibleOptions, out string[] excludedNames, out detail))
                 return false;
 
             expected.ExcludedParameterNames = excludedNames;
             return true;
+        }
+
+        private void RememberParameterBackupPresetSelection(
+            VRCAvatarDescriptor avatar,
+            ASMLiteSmokeStepArgs args,
+            string[] excludedNames)
+        {
+            if (args == null || string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
+                return;
+
+            string key = BuildParameterBackupPresetSelectionKey(avatar, args.parameterBackupPresetId);
+            if (string.IsNullOrEmpty(key))
+                return;
+
+            if (!args.useParameterExclusions)
+            {
+                _parameterBackupPresetSelections.Remove(key);
+                return;
+            }
+
+            _parameterBackupPresetSelections[key] = SortExcludedParameterNames(excludedNames);
+        }
+
+        private bool TryGetRememberedParameterBackupPresetSelection(
+            VRCAvatarDescriptor avatar,
+            ASMLiteSmokeStepArgs args,
+            out string[] excludedNames)
+        {
+            excludedNames = Array.Empty<string>();
+            if (args == null || string.IsNullOrWhiteSpace(args.parameterBackupPresetId))
+                return false;
+
+            string key = BuildParameterBackupPresetSelectionKey(avatar, args.parameterBackupPresetId);
+            if (string.IsNullOrEmpty(key)
+                || !_parameterBackupPresetSelections.TryGetValue(key, out string[] rememberedExcludedNames))
+            {
+                return false;
+            }
+
+            excludedNames = SortExcludedParameterNames(rememberedExcludedNames);
+            return true;
+        }
+
+        private static string BuildParameterBackupPresetSelectionKey(VRCAvatarDescriptor avatar, string presetId)
+        {
+            if (avatar == null || string.IsNullOrWhiteSpace(presetId))
+                return string.Empty;
+
+            string avatarName = NormalizeUnityRuntimeName(avatar.gameObject == null ? string.Empty : avatar.gameObject.name);
+            if (string.IsNullOrWhiteSpace(avatarName))
+                return string.Empty;
+
+            return avatarName + "\n" + presetId.Trim();
         }
 
         private bool TryGetAttachedComponent(string avatarName, out ASMLiteComponent component, out string detail)
