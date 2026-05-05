@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -12,6 +13,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Tests.Editor
 {
@@ -518,6 +520,13 @@ namespace ASMLite.Tests.Editor
         private readonly List<ConsoleErrorRecord> _consoleErrors = new List<ConsoleErrorRecord>();
         private readonly ASMLiteSmokeSetupFixtureService _fixtureService = new ASMLiteSmokeSetupFixtureService();
         private readonly Dictionary<string, string[]> _parameterBackupPresetSelections = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        private IEnumerator _av3SaveLoadHarnessEnumerator;
+        private bool _av3SaveLoadHarnessRunning;
+        private bool _av3SaveLoadHarnessHasResult;
+        private bool _av3SaveLoadHarnessSucceeded;
+        private string _av3SaveLoadHarnessDetail = string.Empty;
+        private string _av3SaveLoadHarnessStackTrace = string.Empty;
+        private string _av3SaveLoadHarnessAvatarName = string.Empty;
         private bool _consoleErrorCaptureActive;
 
         private ASMLiteSmokeOverlayHostUnityRuntime()
@@ -881,6 +890,12 @@ namespace ASMLite.Tests.Editor
                         EditorApplication.isPlaying = true;
                         detail = "Entered playmode.";
                         return true;
+
+                    case "run-av3-save-load-harness":
+                        return RunAv3SaveLoadHarnessStep(avatarName, out detail, out stackTrace);
+
+                    case "assert-av3-save-load-result":
+                        return AssertAv3SaveLoadHarnessResult(avatarName, out detail, out stackTrace);
 
                     case "assert-runtime-component-valid":
                     {
@@ -1592,6 +1607,158 @@ namespace ASMLite.Tests.Editor
             return string.Join("/", names.ToArray());
         }
 
+        private bool RunAv3SaveLoadHarnessStep(string avatarName, out string detail, out string stackTrace)
+        {
+            detail = string.Empty;
+            stackTrace = string.Empty;
+
+            string normalizedAvatarName = string.IsNullOrWhiteSpace(avatarName) ? ASMLiteSmokeOverlayHostCommandLine.DefaultAvatarName : avatarName.Trim();
+            if (!_av3SaveLoadHarnessRunning
+                || !string.Equals(_av3SaveLoadHarnessAvatarName, normalizedAvatarName, StringComparison.Ordinal))
+            {
+                ResetAv3SaveLoadHarnessState();
+                VRCAvatarDescriptor avatar = FindAvatarByName(normalizedAvatarName);
+                if (avatar == null)
+                {
+                    detail = $"review-required: AV3 save/load harness could not find avatar '{normalizedAvatarName}'.";
+                    return false;
+                }
+
+                var savedParameters = SelectAv3SaveLoadHarnessParameters(avatar.expressionParameters, saved: true, maxCount: 6);
+                if (savedParameters.Length == 0)
+                {
+                    detail = $"review-required: AV3 save/load harness found no supported saved Bool/Int/Float parameters on avatar '{normalizedAvatarName}'.";
+                    return false;
+                }
+
+                var unsavedParameters = SelectAv3SaveLoadHarnessParameters(avatar.expressionParameters, saved: false, maxCount: 3);
+                var harness = new ASMLiteAv3SaveLoadHarness(
+                    savedParameters.Select(ToAv3SaveLoadDescriptor).ToArray(),
+                    unsavedParameters.Select(ToAv3SaveLoadDescriptor).ToArray());
+
+                _av3SaveLoadHarnessEnumerator = harness.RunCoreInvariant(avatar.gameObject, 0xA5A50014u);
+                _av3SaveLoadHarnessRunning = true;
+                _av3SaveLoadHarnessHasResult = false;
+                _av3SaveLoadHarnessSucceeded = false;
+                _av3SaveLoadHarnessAvatarName = normalizedAvatarName;
+                _av3SaveLoadHarnessDetail = $"AV3 save/load harness started for avatar '{normalizedAvatarName}' savedSubset=[{string.Join(", ", savedParameters.Select(parameter => parameter.name))}] unsavedSubset=[{string.Join(", ", unsavedParameters.Select(parameter => parameter.name))}].";
+                _av3SaveLoadHarnessStackTrace = string.Empty;
+            }
+
+            try
+            {
+                if (_av3SaveLoadHarnessEnumerator != null && _av3SaveLoadHarnessEnumerator.MoveNext())
+                {
+                    detail = ASMLiteSmokeOverlayHostRunner.PendingStepPrefix + " AV3 save/load harness is still running.";
+                    return false;
+                }
+
+                _av3SaveLoadHarnessRunning = false;
+                _av3SaveLoadHarnessHasResult = true;
+                _av3SaveLoadHarnessSucceeded = true;
+                _av3SaveLoadHarnessDetail = $"AV3 save/load harness passed for avatar '{_av3SaveLoadHarnessAvatarName}'.";
+                detail = _av3SaveLoadHarnessDetail;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _av3SaveLoadHarnessRunning = false;
+                _av3SaveLoadHarnessHasResult = true;
+                _av3SaveLoadHarnessSucceeded = false;
+                _av3SaveLoadHarnessDetail = $"review-required: AV3 save/load harness failed for avatar '{_av3SaveLoadHarnessAvatarName}': {ex.Message}";
+                _av3SaveLoadHarnessStackTrace = ex.ToString();
+                detail = _av3SaveLoadHarnessDetail;
+                stackTrace = _av3SaveLoadHarnessStackTrace;
+                return false;
+            }
+        }
+
+        private bool AssertAv3SaveLoadHarnessResult(string avatarName, out string detail, out string stackTrace)
+        {
+            stackTrace = _av3SaveLoadHarnessStackTrace;
+            string normalizedAvatarName = string.IsNullOrWhiteSpace(avatarName) ? ASMLiteSmokeOverlayHostCommandLine.DefaultAvatarName : avatarName.Trim();
+            if (!_av3SaveLoadHarnessHasResult)
+            {
+                detail = $"review-required: AV3 save/load harness result is not available for avatar '{normalizedAvatarName}'. Run the harness step first.";
+                return false;
+            }
+
+            detail = string.IsNullOrWhiteSpace(_av3SaveLoadHarnessDetail)
+                ? $"AV3 save/load harness result was {(_av3SaveLoadHarnessSucceeded ? "passed" : "failed")}."
+                : _av3SaveLoadHarnessDetail;
+            return _av3SaveLoadHarnessSucceeded;
+        }
+
+        private void ResetAv3SaveLoadHarnessState()
+        {
+            _av3SaveLoadHarnessEnumerator = null;
+            _av3SaveLoadHarnessRunning = false;
+            _av3SaveLoadHarnessHasResult = false;
+            _av3SaveLoadHarnessSucceeded = false;
+            _av3SaveLoadHarnessDetail = string.Empty;
+            _av3SaveLoadHarnessStackTrace = string.Empty;
+            _av3SaveLoadHarnessAvatarName = string.Empty;
+        }
+
+        private static VRCExpressionParameters.Parameter[] SelectAv3SaveLoadHarnessParameters(
+            VRCExpressionParameters expressionParameters,
+            bool saved,
+            int maxCount)
+        {
+            maxCount = Math.Max(0, maxCount);
+            if (expressionParameters == null || maxCount == 0)
+                return Array.Empty<VRCExpressionParameters.Parameter>();
+
+            var candidates = (expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => IsSupportedAv3SaveLoadHarnessParameter(parameter) && parameter.saved == saved)
+                .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .ToArray();
+            var selected = new List<VRCExpressionParameters.Parameter>(maxCount);
+            var typeOrder = new[]
+            {
+                VRCExpressionParameters.ValueType.Bool,
+                VRCExpressionParameters.ValueType.Int,
+                VRCExpressionParameters.ValueType.Float,
+            };
+
+            while (selected.Count < maxCount)
+            {
+                bool addedAny = false;
+                foreach (var type in typeOrder)
+                {
+                    if (selected.Count >= maxCount)
+                        break;
+                    var next = candidates.FirstOrDefault(parameter =>
+                        parameter.valueType == type
+                        && selected.All(existing => !string.Equals(existing.name, parameter.name, StringComparison.Ordinal)));
+                    if (next == null)
+                        continue;
+                    selected.Add(next);
+                    addedAny = true;
+                }
+                if (!addedAny)
+                    break;
+            }
+            return selected.ToArray();
+        }
+
+        private static bool IsSupportedAv3SaveLoadHarnessParameter(VRCExpressionParameters.Parameter parameter)
+        {
+            return parameter != null
+                && !string.IsNullOrWhiteSpace(parameter.name)
+                && !parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
+                && !string.Equals(parameter.name, ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName, StringComparison.Ordinal)
+                && (parameter.valueType == VRCExpressionParameters.ValueType.Bool
+                    || parameter.valueType == VRCExpressionParameters.ValueType.Int
+                    || parameter.valueType == VRCExpressionParameters.ValueType.Float);
+        }
+
+        private static ASMLiteAv3ParameterDescriptor ToAv3SaveLoadDescriptor(VRCExpressionParameters.Parameter parameter)
+        {
+            return ASMLiteAv3SaveLoadHarness.Descriptor(parameter.name, parameter.valueType);
+        }
+
         private static bool TryValidateScenePath(string scenePath, out string detail)
         {
             string normalizedPath = string.IsNullOrWhiteSpace(scenePath) ? string.Empty : scenePath.Trim();
@@ -2048,6 +2215,7 @@ namespace ASMLite.Tests.Editor
 
     internal sealed class ASMLiteSmokeOverlayHostRunner
     {
+        internal const string PendingStepPrefix = "ASMLITE_PENDING:";
         private const double PostLifecycleMutationSettleSeconds = 0.25d;
 
         private readonly ASMLiteSmokeOverlayHostConfiguration _configuration;
@@ -2629,6 +2797,14 @@ namespace ASMLite.Tests.Editor
                 ? $"Step '{step.stepId}' failed."
                 : detail.Trim();
 
+            if (IsPendingStepMessage(failureMessage))
+            {
+                activeRun.NextStepExecuteAllowedAtSeconds = _runtime.GetTimeSinceStartup() + PostLifecycleMutationSettleSeconds;
+                activeRun.Phase = ActiveRunPhase.StepExecute;
+                _currentMessage = failureMessage.Substring(PendingStepPrefix.Length).Trim();
+                return;
+            }
+
             if (expectsStepFailure)
             {
                 if (ASMLiteSmokeExpectedDiagnosticMatcher.MatchesExpectedDiagnostic(
@@ -2675,6 +2851,12 @@ namespace ASMLite.Tests.Editor
             };
             activeRun.Result.Succeeded = false;
             activeRun.Phase = ActiveRunPhase.SuiteFailed;
+        }
+
+        private static bool IsPendingStepMessage(string message)
+        {
+            return !string.IsNullOrWhiteSpace(message)
+                && message.TrimStart().StartsWith(PendingStepPrefix, StringComparison.Ordinal);
         }
 
         private void PassActiveRunStep(

@@ -7373,6 +7373,97 @@
               ]
             }
           ]
+        },
+        {
+          "suiteId": "playmode-save-load-av3",
+          "label": "AV3 Save / Load Runtime Harness",
+          "description": "Manual playmode suite that runs the AV3 save/load harness against the canonical avatar and reports operator-readable runtime results.",
+          "resetOverride": "SceneReload",
+          "speed": "manual-only",
+          "risk": "safe",
+          "defaultSelected": false,
+          "presetGroups": [
+            "manual-playmode"
+          ],
+          "requiresPlayMode": true,
+          "stopOnFirstFailure": true,
+          "expectedOutcome": "The canonical avatar enters playmode, uses the generated ASM-Lite control parameter, runs the AV3 save/load invariant, and exits back to suite selection on success.",
+          "debugHint": "If the harness fails, review the reported seed, phase, parameter name, generated control parameter status, and AV3 emulator runtime diagnostics before rerunning.",
+          "cases": [
+            {
+              "caseId": "save-load-av3-runtime",
+              "label": "AV3 save/load runtime harness",
+              "description": "Prepare the canonical avatar, enter playmode, execute the AV3 save/load harness, assert its stored result, and exit playmode.",
+              "expectedOutcome": "The harness saves slot 1 values, dirties saved and unsaved runtime parameters, loads slot 1, restores saved parameters, and preserves unsaved parameters.",
+              "debugHint": "If the suite reaches review-required, inspect the failed assertion message for the seed, phase, parameter, expected/actual values, and AV3 runtime diagnostic.",
+              "steps": [
+                {
+                  "stepId": "open-scene",
+                  "label": "Canonical scene is open",
+                  "description": "Open the canonical smoke scene before preparing the avatar for AV3 runtime execution.",
+                  "actionType": "open-scene",
+                  "expectedOutcome": "The canonical scene is loaded for manual AV3 save/load validation.",
+                  "debugHint": "If the scene cannot be opened, confirm the fixture scene path still exists."
+                },
+                {
+                  "stepId": "open-window",
+                  "label": "ASM-Lite window is open",
+                  "description": "Open the product window before runtime setup begins.",
+                  "actionType": "open-window",
+                  "expectedOutcome": "The ASM-Lite window is available for AV3 save/load setup.",
+                  "debugHint": "If the window is missing, inspect editor window lifecycle before entering playmode."
+                },
+                {
+                  "stepId": "select-avatar",
+                  "label": "Oct25_Dress is selected",
+                  "description": "Target the canonical avatar fixture before AV3 runtime preparation.",
+                  "actionType": "select-avatar",
+                  "expectedOutcome": "Oct25_Dress is the active AV3 save/load target.",
+                  "debugHint": "If selection fails, confirm the canonical avatar still exists in the loaded scene."
+                },
+                {
+                  "stepId": "add-prefab",
+                  "label": "ASM-Lite scaffold is present",
+                  "description": "Add the ASM-Lite prefab scaffold and generated assets required by the AV3 save/load runtime harness.",
+                  "actionType": "add-prefab",
+                  "expectedOutcome": "The avatar has the ASM-Lite scaffold and generated assets required for AV3 save/load runtime validation.",
+                  "debugHint": "If scaffold setup fails, inspect editor-side generation prerequisites before entering playmode."
+                },
+                {
+                  "stepId": "enter-playmode",
+                  "label": "Play mode is entered",
+                  "description": "Transition the Unity host into playmode for AV3 emulator runtime coverage.",
+                  "actionType": "enter-playmode",
+                  "expectedOutcome": "The host enters playmode and begins AV3 runtime initialization on the canonical avatar.",
+                  "debugHint": "If enter-playmode hangs, inspect unsaved scene prompts, compilation state, and AV3 emulator package state before retrying."
+                },
+                {
+                  "stepId": "run-av3-save-load-harness",
+                  "label": "AV3 save/load harness runs",
+                  "description": "Run the AV3 save/load harness after confirming the generated ASM-Lite control parameter is first in the generated expression parameters asset.",
+                  "actionType": "run-av3-save-load-harness",
+                  "expectedOutcome": "The AV3 save/load harness completes and stores an operator-readable result for assertion.",
+                  "debugHint": "If the stored result fails, inspect the seed, phase, parameter, expected/actual values, and generated control parameter diagnostics."
+                },
+                {
+                  "stepId": "assert-av3-save-load-result",
+                  "label": "AV3 save/load result passed",
+                  "description": "Assert the stored AV3 save/load harness result and report a readable review-required reason on failure.",
+                  "actionType": "assert-av3-save-load-result",
+                  "expectedOutcome": "The stored AV3 save/load harness result passed; failures include seed, phase, parameter, expected/actual values, and diagnostics.",
+                  "debugHint": "If this assertion fails, use the reported reason as the operator review note before choosing rerun or return to suite list."
+                },
+                {
+                  "stepId": "exit-playmode",
+                  "label": "Play mode is exited",
+                  "description": "Return the host to edit mode after AV3 save/load validation completes.",
+                  "actionType": "exit-playmode",
+                  "expectedOutcome": "The host exits playmode cleanly and the overlay returns to suite selection after the passing run.",
+                  "debugHint": "If exit-playmode fails, inspect playmode teardown logs and pending scene state."
+                }
+              ]
+            }
+          ]
         }
       ]
     }

@@ -314,6 +314,8 @@ namespace ASMLite.Tests.Editor
             "return-to-package-managed",
             "enter-playmode",
             "exit-playmode",
+            "run-av3-save-load-harness",
+            "assert-av3-save-load-result",
             "assert-primary-action",
             "assert-generated-references-package-managed",
             "assert-runtime-component-valid",

@@ -45,6 +45,38 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LoadCanonical_includes_manual_playmode_av3_save_load_suite()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            ASMLiteSmokeGroupDefinition runtimeGroup = catalog.groups.Single(group => group.groupId == "playmode-runtime");
+            ASMLiteSmokeSuiteDefinition suite = runtimeGroup.suites.Single(item => item.suiteId == "playmode-save-load-av3");
+
+            Assert.That(suite.defaultSelected, Is.False, "The AV3 save/load suite must remain manual/non-default.");
+            Assert.AreEqual("manual-only", suite.speed);
+            Assert.AreEqual("safe", suite.risk);
+            Assert.That(suite.requiresPlayMode, Is.True);
+            CollectionAssert.AreEquivalent(new[] { "manual-playmode" }, suite.presetGroups);
+            Assert.That(suite.cases.Select(item => item.caseId), Is.EqualTo(new[] { "save-load-av3-runtime" }));
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "open-scene",
+                    "open-window",
+                    "select-avatar",
+                    "add-prefab",
+                    "enter-playmode",
+                    "run-av3-save-load-harness",
+                    "assert-av3-save-load-result",
+                    "exit-playmode",
+                },
+                suite.cases.Single().steps.Select(step => step.actionType).ToArray());
+
+            ASMLiteSmokeStepDefinition harnessStep = suite.cases.Single().steps.Single(step => step.stepId == "run-av3-save-load-harness");
+            StringAssert.Contains("generated ASM-Lite control", harnessStep.description);
+            StringAssert.Contains("save/load harness", harnessStep.expectedOutcome);
+        }
+
+        [Test]
         public void LoadCanonical_parses_suite_metadata_for_default_presets_and_destructive_gating()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();

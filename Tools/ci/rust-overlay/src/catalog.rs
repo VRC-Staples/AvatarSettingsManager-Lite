@@ -980,6 +980,8 @@ fn is_supported_action_type(action_type: &str) -> bool {
         | "return-to-package-managed"
         | "enter-playmode"
         | "exit-playmode"
+        | "run-av3-save-load-harness"
+        | "assert-av3-save-load-result"
         | "assert-primary-action"
         | "assert-no-component"
         | "set-slot-count"
@@ -1193,6 +1195,45 @@ mod tests {
                 .expect("setup suite exists")
                 .speed,
             "quick"
+        );
+    }
+
+    #[test]
+    fn catalog_includes_manual_playmode_av3_save_load_suite() {
+        let catalog = load_canonical_catalog().expect("canonical catalog should parse");
+        let runtime_group = catalog
+            .groups
+            .iter()
+            .find(|group| group.group_id == "playmode-runtime")
+            .expect("runtime group exists");
+        let suite = runtime_group
+            .suites
+            .iter()
+            .find(|suite| suite.suite_id == "playmode-save-load-av3")
+            .expect("manual AV3 save/load suite exists");
+
+        assert!(!suite.default_selected);
+        assert_eq!(suite.speed, "manual-only");
+        assert_eq!(suite.risk, "safe");
+        assert!(suite.requires_play_mode);
+        assert_eq!(suite.preset_groups, vec!["manual-playmode"]);
+        let steps: Vec<&str> = suite.cases[0]
+            .steps
+            .iter()
+            .map(|step| step.action_type.as_str())
+            .collect();
+        assert_eq!(
+            steps,
+            vec![
+                "open-scene",
+                "open-window",
+                "select-avatar",
+                "add-prefab",
+                "enter-playmode",
+                "run-av3-save-load-harness",
+                "assert-av3-save-load-result",
+                "exit-playmode"
+            ]
         );
     }
 
