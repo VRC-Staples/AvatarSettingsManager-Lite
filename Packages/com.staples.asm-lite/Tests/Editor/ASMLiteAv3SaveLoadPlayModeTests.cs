@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.TestTools;
+using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
@@ -35,7 +38,17 @@ namespace ASMLite.Tests.Editor
     {
         private const string TestAvatarName = "ASMLite_AV3_SaveLoad_P0_Avatar";
         private const string MergedParamsPath = "Assets/ASMLiteTests_Temp/ASMLiteAv3SaveLoadP0MergedParams.asset";
+        private const string RealUatAvatarName = "ASMLite_AV3_SaveLoad_P3_RealUAT_Avatar";
+        private const string RealUatMergedParamsPath = "Assets/ASMLiteTests_Temp/ASMLiteAv3SaveLoadP3RealMergedParams.asset";
         private const string VrcFuryPlayModeEditorPref = "com.vrcfury.playMode";
+        private const string RealUatAvatarAssetPathEnvVar = "ASMLITE_AV3_UAT_AVATAR_ASSET_PATH";
+        private const string RealUatAvatarNameEnvVar = "ASMLITE_AV3_UAT_AVATAR_NAME";
+        private const string RealUatMaxSavedParametersEnvVar = "ASMLITE_AV3_UAT_MAX_SAVED_PARAMETERS";
+        private const string RealUatAvatarAssetPathArg = "-asmliteAv3UatAvatarAssetPath";
+        private const string RealUatAvatarNameArg = "-asmliteAv3UatAvatarName";
+        private const string RealUatMaxSavedParametersArg = "-asmliteAv3UatMaxSavedParameters";
+        private const int DefaultRealUatMaxSavedParameters = 6;
+        private const int DefaultRealUatMaxUnsavedParameters = 3;
 
         private static readonly ASMLiteAv3SaveLoadSeedCase[] Phase2SeedCases =
         {
@@ -85,6 +98,7 @@ namespace ASMLite.Tests.Editor
         };
 
         private AsmLiteTestContext _ctx;
+        private GameObject _realUatRootInstance;
         private bool _hadVrcFuryPlayModePref;
         private bool _previousVrcFuryPlayMode;
         private bool _disabledVrcFuryPlayMode;
@@ -177,6 +191,41 @@ namespace ASMLite.Tests.Editor
             yield return harness.RunCoreInvariant(avatar, seedCase.Seed);
         }
 
+        [UnityTest]
+        [Category("Manual")]
+        public IEnumerator P3_ExternalUat_OperatorSelectedRealAvatar_RestoresSafeSavedSubsetAndPreservesUnsavedMetadataSubset()
+        {
+            var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
+            if (!runtimeResolution.IsAvailable)
+                Assert.Inconclusive(runtimeResolution.Diagnostic);
+
+            var selection = ReadRealUatSelection();
+            if (!selection.IsConfigured)
+                Assert.Inconclusive(selection.Diagnostic);
+
+            var setup = BuildAndWireRealUatAvatarFixture(selection);
+            ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
+
+            yield return new EnterPlayMode();
+
+            GameObject avatar = GameObject.Find(RealUatAvatarName);
+            Assert.IsNotNull(avatar,
+                $"P3: operator-selected real UAT avatar clone should survive EnterPlayMode. asset='{selection.AssetPath}' avatarSelector='{selection.AvatarName}'.");
+
+            var harness = new ASMLiteAv3SaveLoadHarness(setup.SavedDescriptors, setup.UnsavedDescriptors);
+            yield return harness.RunCoreInvariant(avatar, 0xA5A50013u);
+        }
+
+        [Test]
+        public void P3_ExternalUatSelection_DefaultsToManualOptInDiagnostic()
+        {
+            var selection = ReadRealUatSelection(Array.Empty<string>(), _ => null);
+
+            Assert.IsFalse(selection.IsConfigured, "P3: real UAT selection must stay manual/non-default.");
+            StringAssert.Contains(RealUatAvatarAssetPathEnvVar, selection.Diagnostic);
+            StringAssert.Contains(RealUatAvatarAssetPathArg, selection.Diagnostic);
+        }
+
         private void BuildAndWireAvatarFixture()
         {
             ASMLiteTestFixtures.ResetGeneratedExprParams();
@@ -211,6 +260,196 @@ namespace ASMLite.Tests.Editor
             WireFxController(_ctx.AvDesc, generatedController);
             DisableVrcFuryPlayModeProcessing();
             EditorUtility.SetDirty(_ctx.AvDesc);
+        }
+
+        private RealUatAvatarSetup BuildAndWireRealUatAvatarFixture(RealUatSelection selection)
+        {
+            Assert.IsTrue(selection.IsConfigured, "P3: real UAT setup requires explicit operator selection.");
+            Assert.IsFalse(string.IsNullOrWhiteSpace(selection.AssetPath), "P3: configured real UAT asset path was empty.");
+
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
+            EnsureTestTempFolder();
+
+            var sourcePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(selection.AssetPath);
+            Assert.IsNotNull(sourcePrefab,
+                $"P3: operator-selected real UAT prefab was not found at '{selection.AssetPath}'. "
+                + $"Use a project-relative prefab path via {RealUatAvatarAssetPathEnvVar} or {RealUatAvatarAssetPathArg}; the test intentionally does not scan the project for avatars.");
+
+            _realUatRootInstance = PrefabUtility.InstantiatePrefab(sourcePrefab) as GameObject;
+            if (_realUatRootInstance == null)
+                _realUatRootInstance = UnityEngine.Object.Instantiate(sourcePrefab);
+            Assert.IsNotNull(_realUatRootInstance, $"P3: failed to instantiate real UAT prefab '{selection.AssetPath}'.");
+
+            var descriptor = SelectRealUatDescriptor(_realUatRootInstance, selection);
+            descriptor.gameObject.name = RealUatAvatarName;
+            Assert.IsNotNull(descriptor.expressionParameters,
+                $"P3: selected real UAT avatar '{descriptor.gameObject.name}' from '{selection.AssetPath}' has no VRCExpressionParameters asset.");
+
+            var savedParameters = SelectRealUatParameters(
+                descriptor.expressionParameters,
+                saved: true,
+                maxCount: selection.MaxSavedParameters);
+            if (savedParameters.Length == 0)
+            {
+                Assert.Inconclusive(
+                    $"P3: selected real UAT avatar '{descriptor.gameObject.name}' from '{selection.AssetPath}' has no supported saved Bool/Int/Float parameters. "
+                    + "Choose an avatar with saved expression parameters or lower exclusions before running this manual test.");
+            }
+
+            var unsavedParameters = SelectRealUatParameters(
+                descriptor.expressionParameters,
+                saved: false,
+                maxCount: DefaultRealUatMaxUnsavedParameters);
+
+            var selectedSavedNames = new HashSet<string>(savedParameters.Select(parameter => parameter.name), StringComparer.Ordinal);
+            var excludedNames = (descriptor.expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                .Where(IsSupportedRealUatParameter)
+                .Select(parameter => parameter.name)
+                .Where(name => !selectedSavedNames.Contains(name))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+
+            var componentRoot = new GameObject("ASMLite_P3_RealUAT_ManualCloneOnly");
+            componentRoot.transform.SetParent(descriptor.transform, worldPositionStays: false);
+            var component = componentRoot.AddComponent<ASMLiteComponent>();
+            component.slotCount = 1;
+            component.useParameterExclusions = true;
+            component.excludedParameterNames = excludedNames;
+
+            int buildResult = ASMLiteBuilder.Build(component);
+            Assert.AreEqual(savedParameters.Length, buildResult,
+                $"P3: Build should back up only the operator-selected safe saved subset for real UAT. "
+                + $"asset='{selection.AssetPath}' avatar='{descriptor.gameObject.name}' "
+                + $"selectedSaved=[{string.Join(", ", selectedSavedNames.OrderBy(name => name, StringComparer.Ordinal))}] "
+                + $"excludedCount={excludedNames.Length} got={buildResult}.");
+
+            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(generatedParams, $"P3: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");
+            Assert.IsTrue((generatedParams.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                    .Any(parameter => parameter != null && parameter.name == ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName),
+                "P3: generated expression params must include ASMLite_Ctrl before real UAT play-mode check.");
+
+            var generatedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(generatedController, $"P3: generated FX controller missing at {ASMLiteAssetPaths.FXController}.");
+
+            var mergedParams = BuildMergedParameters(descriptor.expressionParameters, generatedParams);
+            AssetDatabase.DeleteAsset(RealUatMergedParamsPath);
+            AssetDatabase.CreateAsset(mergedParams, RealUatMergedParamsPath);
+            AssetDatabase.SaveAssets();
+
+            descriptor.expressionParameters = mergedParams;
+            WireFxController(descriptor, generatedController);
+            DisableVrcFuryPlayModeProcessing();
+            EditorUtility.SetDirty(descriptor);
+
+            Debug.Log(
+                $"P3: Real UAT manual avatar clone prepared. asset='{selection.AssetPath}' avatar='{descriptor.gameObject.name}' "
+                + $"savedSubset=[{string.Join(", ", savedParameters.Select(parameter => parameter.name))}] "
+                + $"unsavedMetadataSubset=[{string.Join(", ", unsavedParameters.Select(parameter => parameter.name))}] "
+                + $"excludedMetadataCount={excludedNames.Length}. Source prefab asset was not modified.");
+
+            return new RealUatAvatarSetup(
+                savedParameters.Select(ToDescriptor).ToArray(),
+                unsavedParameters.Select(ToDescriptor).ToArray());
+        }
+
+        private static void EnsureTestTempFolder()
+        {
+            if (!AssetDatabase.IsValidFolder("Assets/ASMLiteTests_Temp"))
+                AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+        }
+
+        private static VRCAvatarDescriptor SelectRealUatDescriptor(GameObject root, RealUatSelection selection)
+        {
+            Assert.IsNotNull(root, "P3: cannot select a real UAT descriptor from a null prefab instance.");
+
+            var descriptors = root.GetComponentsInChildren<VRCAvatarDescriptor>(includeInactive: true);
+            Assert.IsTrue(descriptors.Length > 0,
+                $"P3: operator-selected real UAT prefab '{selection.AssetPath}' contains no VRCAvatarDescriptor. "
+                + "Choose the avatar prefab root or provide a prefab containing the descriptor.");
+
+            if (!string.IsNullOrWhiteSpace(selection.AvatarName))
+            {
+                var selected = descriptors.FirstOrDefault(descriptor =>
+                    descriptor != null && string.Equals(descriptor.gameObject.name, selection.AvatarName, StringComparison.Ordinal));
+                Assert.IsNotNull(selected,
+                    $"P3: real UAT prefab '{selection.AssetPath}' did not contain avatar descriptor named '{selection.AvatarName}'. "
+                    + $"Available=[{string.Join(", ", descriptors.Where(descriptor => descriptor != null).Select(descriptor => descriptor.gameObject.name))}].");
+                return selected;
+            }
+
+            if (descriptors.Length == 1)
+                return descriptors[0];
+
+            Assert.Inconclusive(
+                $"P3: real UAT prefab '{selection.AssetPath}' contains multiple avatar descriptors. "
+                + $"Set {RealUatAvatarNameEnvVar} or {RealUatAvatarNameArg} to one of: "
+                + $"[{string.Join(", ", descriptors.Where(descriptor => descriptor != null).Select(descriptor => descriptor.gameObject.name))}].");
+            return null;
+        }
+
+        private static VRCExpressionParameters.Parameter[] SelectRealUatParameters(
+            VRCExpressionParameters expressionParameters,
+            bool saved,
+            int maxCount)
+        {
+            maxCount = Math.Max(0, maxCount);
+            if (expressionParameters == null || maxCount == 0)
+                return Array.Empty<VRCExpressionParameters.Parameter>();
+
+            var candidates = (expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => IsSupportedRealUatParameter(parameter) && parameter.saved == saved)
+                .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .ToArray();
+
+            var selected = new List<VRCExpressionParameters.Parameter>(maxCount);
+            var typeOrder = new[]
+            {
+                VRCExpressionParameters.ValueType.Bool,
+                VRCExpressionParameters.ValueType.Int,
+                VRCExpressionParameters.ValueType.Float,
+            };
+
+            while (selected.Count < maxCount)
+            {
+                bool addedAny = false;
+                foreach (var type in typeOrder)
+                {
+                    if (selected.Count >= maxCount)
+                        break;
+
+                    var next = candidates.FirstOrDefault(parameter =>
+                        parameter.valueType == type
+                        && selected.All(existing => !string.Equals(existing.name, parameter.name, StringComparison.Ordinal)));
+                    if (next == null)
+                        continue;
+
+                    selected.Add(next);
+                    addedAny = true;
+                }
+
+                if (!addedAny)
+                    break;
+            }
+
+            return selected.ToArray();
+        }
+
+        private static bool IsSupportedRealUatParameter(VRCExpressionParameters.Parameter parameter)
+        {
+            return parameter != null
+                && !string.IsNullOrWhiteSpace(parameter.name)
+                && !parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
+                && !string.Equals(parameter.name, ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName, StringComparison.Ordinal)
+                && (parameter.valueType == VRCExpressionParameters.ValueType.Bool
+                    || parameter.valueType == VRCExpressionParameters.ValueType.Int
+                    || parameter.valueType == VRCExpressionParameters.ValueType.Float);
+        }
+
+        private static ASMLiteAv3ParameterDescriptor ToDescriptor(VRCExpressionParameters.Parameter parameter)
+        {
+            return ASMLiteAv3SaveLoadHarness.Descriptor(parameter.name, parameter.valueType);
         }
 
         private void AddVisibilityParameters()
@@ -307,13 +546,169 @@ namespace ASMLite.Tests.Editor
             _disabledVrcFuryPlayMode = false;
         }
 
+        private static RealUatSelection ReadRealUatSelection()
+        {
+            return ReadRealUatSelection(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable);
+        }
+
+        private static RealUatSelection ReadRealUatSelection(string[] commandLineArgs, Func<string, string> readEnvironmentVariable)
+        {
+            commandLineArgs = commandLineArgs ?? Array.Empty<string>();
+            readEnvironmentVariable = readEnvironmentVariable ?? (_ => null);
+
+            string rawAssetPath = FirstNonEmpty(
+                ReadCommandLineValue(commandLineArgs, RealUatAvatarAssetPathArg),
+                readEnvironmentVariable(RealUatAvatarAssetPathEnvVar));
+            string avatarName = FirstNonEmpty(
+                ReadCommandLineValue(commandLineArgs, RealUatAvatarNameArg),
+                readEnvironmentVariable(RealUatAvatarNameEnvVar));
+
+            int maxSavedParameters = ParsePositiveInt(
+                FirstNonEmpty(
+                    ReadCommandLineValue(commandLineArgs, RealUatMaxSavedParametersArg),
+                    readEnvironmentVariable(RealUatMaxSavedParametersEnvVar)),
+                DefaultRealUatMaxSavedParameters);
+
+            if (string.IsNullOrWhiteSpace(rawAssetPath))
+            {
+                return RealUatSelection.Unconfigured(
+                    "P3: External real-avatar UAT is manual/non-default and did not run because no operator-selected avatar prefab was provided. "
+                    + $"Set {RealUatAvatarAssetPathEnvVar}=Assets/Path/Avatar.prefab or pass {RealUatAvatarAssetPathArg} Assets/Path/Avatar.prefab. "
+                    + $"Optional selector: {RealUatAvatarNameEnvVar} / {RealUatAvatarNameArg}. "
+                    + "The test intentionally avoids broad project scans and never mutates the source prefab asset.");
+            }
+
+            string assetPath = NormalizeAssetPath(rawAssetPath);
+            return RealUatSelection.Configured(assetPath, avatarName, maxSavedParameters);
+        }
+
+        private static string NormalizeAssetPath(string rawAssetPath)
+        {
+            rawAssetPath = (rawAssetPath ?? string.Empty).Trim().Trim('\"');
+            if (string.IsNullOrWhiteSpace(rawAssetPath))
+                return string.Empty;
+
+            string guidPath = AssetDatabase.GUIDToAssetPath(rawAssetPath);
+            if (!string.IsNullOrWhiteSpace(guidPath))
+                return guidPath;
+
+            rawAssetPath = rawAssetPath.Replace('\\', '/');
+            if (rawAssetPath.StartsWith("Assets/", StringComparison.Ordinal) || string.Equals(rawAssetPath, "Assets", StringComparison.Ordinal))
+                return rawAssetPath;
+
+            try
+            {
+                string fullPath = Path.GetFullPath(rawAssetPath).Replace('\\', '/');
+                string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Replace('\\', '/').TrimEnd('/');
+                if (fullPath.StartsWith(projectRoot + "/", StringComparison.OrdinalIgnoreCase))
+                    return fullPath.Substring(projectRoot.Length + 1);
+            }
+            catch
+            {
+                // Fall through to the raw value so the load assertion reports the exact input.
+            }
+
+            return rawAssetPath;
+        }
+
+        private static string ReadCommandLineValue(string[] args, string key)
+        {
+            if (args == null || string.IsNullOrWhiteSpace(key))
+                return string.Empty;
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (!string.Equals(args[i], key, StringComparison.Ordinal))
+                    continue;
+
+                if (i + 1 < args.Length)
+                    return args[i + 1];
+                return string.Empty;
+            }
+
+            string prefix = key + "=";
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] != null && args[i].StartsWith(prefix, StringComparison.Ordinal))
+                    return args[i].Substring(prefix.Length);
+            }
+
+            return string.Empty;
+        }
+
+        private static string FirstNonEmpty(params string[] values)
+        {
+            foreach (string value in values ?? Array.Empty<string>())
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value.Trim();
+            }
+
+            return string.Empty;
+        }
+
+        private static int ParsePositiveInt(string text, int fallback)
+        {
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value) && value > 0)
+                return value;
+            return fallback;
+        }
+
         private void DestroyTestAvatar()
         {
             RestoreVrcFuryPlayModeProcessing();
             var avatar = _ctx?.AvatarGo != null ? _ctx.AvatarGo : GameObject.Find(TestAvatarName);
             ASMLiteTestFixtures.TearDownTestAvatar(avatar);
             AssetDatabase.DeleteAsset(MergedParamsPath);
+            AssetDatabase.DeleteAsset(RealUatMergedParamsPath);
+            if (_realUatRootInstance != null)
+            {
+                UnityEngine.Object.DestroyImmediate(_realUatRootInstance);
+                _realUatRootInstance = null;
+            }
             _ctx = null;
+        }
+
+        private readonly struct RealUatSelection
+        {
+            private RealUatSelection(bool isConfigured, string assetPath, string avatarName, int maxSavedParameters, string diagnostic)
+            {
+                IsConfigured = isConfigured;
+                AssetPath = assetPath ?? string.Empty;
+                AvatarName = avatarName ?? string.Empty;
+                MaxSavedParameters = maxSavedParameters > 0 ? maxSavedParameters : DefaultRealUatMaxSavedParameters;
+                Diagnostic = diagnostic ?? string.Empty;
+            }
+
+            internal bool IsConfigured { get; }
+            internal string AssetPath { get; }
+            internal string AvatarName { get; }
+            internal int MaxSavedParameters { get; }
+            internal string Diagnostic { get; }
+
+            internal static RealUatSelection Configured(string assetPath, string avatarName, int maxSavedParameters)
+            {
+                return new RealUatSelection(true, assetPath, avatarName, maxSavedParameters, string.Empty);
+            }
+
+            internal static RealUatSelection Unconfigured(string diagnostic)
+            {
+                return new RealUatSelection(false, string.Empty, string.Empty, DefaultRealUatMaxSavedParameters, diagnostic);
+            }
+        }
+
+        private readonly struct RealUatAvatarSetup
+        {
+            internal RealUatAvatarSetup(
+                ASMLiteAv3ParameterDescriptor[] savedDescriptors,
+                ASMLiteAv3ParameterDescriptor[] unsavedDescriptors)
+            {
+                SavedDescriptors = savedDescriptors ?? Array.Empty<ASMLiteAv3ParameterDescriptor>();
+                UnsavedDescriptors = unsavedDescriptors ?? Array.Empty<ASMLiteAv3ParameterDescriptor>();
+            }
+
+            internal ASMLiteAv3ParameterDescriptor[] SavedDescriptors { get; }
+            internal ASMLiteAv3ParameterDescriptor[] UnsavedDescriptors { get; }
         }
     }
 }
