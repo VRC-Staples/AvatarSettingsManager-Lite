@@ -101,7 +101,7 @@ namespace ASMLite.Tests.Editor
 
     internal sealed class ASMLiteAv3SaveLoadHarness
     {
-        internal const uint Phase1Seed = 0xA5A50001u;
+        private const float MinimumDirtyFloatSeparation = 0.25f;
         private const double RuntimeParameterTimeoutSeconds = 10.0d;
         private const double ActionTimeoutSeconds = 10.0d;
 
@@ -116,11 +116,11 @@ namespace ASMLite.Tests.Editor
             _unsavedParameters = (unsavedParameters ?? Enumerable.Empty<ASMLiteAv3ParameterDescriptor>()).ToArray();
         }
 
-        internal IEnumerator RunPhase1CoreInvariant(GameObject avatar, uint seed)
+        internal IEnumerator RunCoreInvariant(GameObject avatar, uint seed)
         {
             object runtime = null;
-            yield return WaitForRuntimeAndParameters(avatar, resolved => runtime = resolved);
-            Assert.IsNotNull(runtime, "P1: AV3 runtime should be resolved before running the save/load invariant.");
+            yield return WaitForRuntimeAndParameters(avatar, seed, resolved => runtime = resolved);
+            Assert.IsNotNull(runtime, $"seed={FormatSeed(seed)} phase=runtime-parameters param=<runtime> type=n/a expected=<resolved> actual=<null> tolerance=n/a delta=n/a");
 
             var savedSnapshot = GenerateSnapshot(_savedParameters, seed, "saved-values", null);
             ApplySnapshot(runtime, seed, "apply-saved-before-save", savedSnapshot);
@@ -161,7 +161,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private IEnumerator WaitForRuntimeAndParameters(GameObject avatar, Action<object> setRuntime)
+        private IEnumerator WaitForRuntimeAndParameters(GameObject avatar, uint seed, Action<object> setRuntime)
         {
             string[] requiredNames = _savedParameters
                 .Concat(_unsavedParameters)
@@ -193,7 +193,7 @@ namespace ASMLite.Tests.Editor
                 .OrderBy(name => name, StringComparer.Ordinal);
 
             Assert.Fail(
-                "P1: AV3 runtime did not expose every required saved/unsaved/control parameter before timeout. "
+                $"seed={FormatSeed(seed)} phase=runtime-parameters param=<all> type=n/a expected=<visible> actual=<missing> tolerance=n/a delta=n/a. "
                 + $"Missing=[{string.Join(", ", missingNames)}]. "
                 + $"LastDiagnostic={lastDiagnostic}. "
                 + $"Visible=[{string.Join(", ", visibleSnapshot.AllNames.OrderBy(name => name, StringComparer.Ordinal))}]");
@@ -211,7 +211,12 @@ namespace ASMLite.Tests.Editor
             {
                 var value = GenerateValue(seed, phase, descriptor, index);
                 if (mustDifferFrom != null && mustDifferFrom.TryGetValue(descriptor.Name, out var previous))
+                {
                     value = EnsureDifferent(value, previous);
+                    Assert.IsTrue(
+                        IsSufficientlyDifferent(value, previous),
+                        $"seed={FormatSeed(seed)} phase={phase} param={descriptor.Name} type={descriptor.Type} expected=<dirty-different> actual=saved={previous.ToDisplayString()} dirty={value.ToDisplayString()} tolerance=n/a delta=n/a");
+                }
 
                 values.Add(new KeyValuePair<string, ASMLiteAv3ParameterValue>(descriptor.Name, value));
                 index++;
@@ -255,11 +260,31 @@ namespace ASMLite.Tests.Editor
                         ? candidate
                         : ASMLiteAv3ParameterValue.Int((previous.IntValue + 73) % 256);
                 case ASMLiteAv3ParameterType.Float:
-                    return Math.Abs(candidate.FloatValue - previous.FloatValue) > 0.05f
+                    return Math.Abs(candidate.FloatValue - previous.FloatValue) >= MinimumDirtyFloatSeparation
                         ? candidate
                         : ASMLiteAv3ParameterValue.Float(previous.FloatValue <= 0f ? previous.FloatValue + 0.5f : previous.FloatValue - 0.5f);
                 default:
                     return candidate;
+            }
+        }
+
+        private static bool IsSufficientlyDifferent(
+            ASMLiteAv3ParameterValue candidate,
+            ASMLiteAv3ParameterValue previous)
+        {
+            if (candidate.Type != previous.Type)
+                return false;
+
+            switch (candidate.Type)
+            {
+                case ASMLiteAv3ParameterType.Bool:
+                    return candidate.BoolValue != previous.BoolValue;
+                case ASMLiteAv3ParameterType.Int:
+                    return candidate.IntValue != previous.IntValue;
+                case ASMLiteAv3ParameterType.Float:
+                    return Math.Abs(candidate.FloatValue - previous.FloatValue) >= MinimumDirtyFloatSeparation;
+                default:
+                    return false;
             }
         }
 

@@ -13,12 +13,36 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
+    public readonly struct ASMLiteAv3SaveLoadSeedCase
+    {
+        public ASMLiteAv3SaveLoadSeedCase(string name, uint seed)
+        {
+            Name = name ?? string.Empty;
+            Seed = seed;
+        }
+
+        public string Name { get; }
+        public uint Seed { get; }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
     [TestFixture]
     public class ASMLiteAv3SaveLoadPlayModeTests
     {
         private const string TestAvatarName = "ASMLite_AV3_SaveLoad_P0_Avatar";
         private const string MergedParamsPath = "Assets/ASMLiteTests_Temp/ASMLiteAv3SaveLoadP0MergedParams.asset";
         private const string VrcFuryPlayModeEditorPref = "com.vrcfury.playMode";
+
+        private static readonly ASMLiteAv3SaveLoadSeedCase[] Phase2SeedCases =
+        {
+            new ASMLiteAv3SaveLoadSeedCase("Seed_0xA5A50001", 0xA5A50001u),
+            new ASMLiteAv3SaveLoadSeedCase("Seed_0xA5A50002", 0xA5A50002u),
+            new ASMLiteAv3SaveLoadSeedCase("Seed_0xA5A50003", 0xA5A50003u),
+        };
 
         private static readonly string[] SavedParameterNames =
         {
@@ -134,7 +158,8 @@ namespace ASMLite.Tests.Editor
         }
 
         [UnityTest]
-        public IEnumerator P1_Av3Runtime_SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters()
+        public IEnumerator P2_Av3Runtime_SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed(
+            [ValueSource(nameof(Phase2SeedCases))] ASMLiteAv3SaveLoadSeedCase seedCase)
         {
             var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
             if (!runtimeResolution.IsAvailable)
@@ -146,10 +171,10 @@ namespace ASMLite.Tests.Editor
             yield return new EnterPlayMode();
 
             GameObject avatar = GameObject.Find(TestAvatarName);
-            Assert.IsNotNull(avatar, "P1: test avatar should survive EnterPlayMode for AV3 save/load invariant.");
+            Assert.IsNotNull(avatar, $"P2: test avatar should survive EnterPlayMode for AV3 save/load invariant. seed={seedCase}");
 
             var harness = new ASMLiteAv3SaveLoadHarness(SavedParameterDescriptors, UnsavedParameterDescriptors);
-            yield return harness.RunPhase1CoreInvariant(avatar, ASMLiteAv3SaveLoadHarness.Phase1Seed);
+            yield return harness.RunCoreInvariant(avatar, seedCase.Seed);
         }
 
         private void BuildAndWireAvatarFixture()
