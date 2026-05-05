@@ -27,17 +27,26 @@ namespace ASMLite.Tests.Editor
             string phase,
             ASMLiteAv3ParameterSnapshot expectedSnapshot)
         {
+            AssertSnapshotMatches(runtime, new ASMLiteAv3SaveLoadRunContext(seed), phase, expectedSnapshot);
+        }
+
+        internal static void AssertSnapshotMatches(
+            object runtime,
+            ASMLiteAv3SaveLoadRunContext context,
+            string phase,
+            ASMLiteAv3ParameterSnapshot expectedSnapshot)
+        {
             var failures = new List<string>();
             foreach (var pair in expectedSnapshot.Values)
             {
                 if (!ASMLiteAv3RuntimeBridge.TryReadParameter(runtime, pair.Key, pair.Value.Type, out var actual, out var diagnostic))
                 {
-                    failures.Add(FormatFailure(seed, phase, pair.Key, pair.Value, null, diagnostic));
+                    failures.Add(FormatFailure(context, phase, pair.Key, pair.Value, null, diagnostic));
                     continue;
                 }
 
                 if (!ValueMatches(runtime, pair.Value, actual))
-                    failures.Add(FormatFailure(seed, phase, pair.Key, pair.Value, actual, diagnostic));
+                    failures.Add(FormatFailure(context, phase, pair.Key, pair.Value, actual, diagnostic));
             }
 
             if (failures.Count > 0)
@@ -66,7 +75,7 @@ namespace ASMLite.Tests.Editor
         }
 
         private static string FormatFailure(
-            uint seed,
+            ASMLiteAv3SaveLoadRunContext context,
             string phase,
             string parameterName,
             ASMLiteAv3ParameterValue expected,
@@ -102,12 +111,7 @@ namespace ASMLite.Tests.Editor
                 delta = "n/a";
             }
 
-            return $"seed={FormatSeed(seed)} phase={phase} param={parameterName} type={expected.Type} expected={expected.ToDisplayString()} actual={actualText} tolerance={tolerance} delta={delta} diagnostic={diagnostic}";
-        }
-
-        private static string FormatSeed(uint seed)
-        {
-            return "0x" + seed.ToString("X8", CultureInfo.InvariantCulture);
+            return $"{context.ToDisplayString()} phase={phase} param={parameterName} type={expected.Type} expected={expected.ToDisplayString()} actual={actualText} tolerance={tolerance} delta={delta} diagnostic={diagnostic}";
         }
     }
 }

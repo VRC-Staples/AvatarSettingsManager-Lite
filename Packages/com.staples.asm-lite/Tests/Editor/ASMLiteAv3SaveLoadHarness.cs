@@ -99,6 +99,49 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    internal readonly struct ASMLiteAv3SaveLoadRunContext
+    {
+        internal ASMLiteAv3SaveLoadRunContext(uint seed)
+            : this(seed, seed, -1, 1)
+        {
+        }
+
+        internal ASMLiteAv3SaveLoadRunContext(uint baseSeed, uint iterationSeed, int iterationIndex, int iterationCount)
+        {
+            BaseSeed = baseSeed;
+            IterationSeed = iterationSeed;
+            IterationIndex = iterationIndex;
+            IterationCount = iterationCount > 0 ? iterationCount : 1;
+        }
+
+        internal uint BaseSeed { get; }
+        internal uint IterationSeed { get; }
+        internal int IterationIndex { get; }
+        internal int IterationCount { get; }
+        internal uint ValueSeed => IterationSeed;
+        internal bool HasIteration => IterationIndex >= 0;
+
+        internal string ToDisplayString()
+        {
+            if (!HasIteration)
+                return "seed=" + FormatSeed(IterationSeed);
+
+            return "seed=" + FormatSeed(BaseSeed)
+                + " iteration=" + (IterationIndex + 1).ToString(CultureInfo.InvariantCulture) + "/" + IterationCount.ToString(CultureInfo.InvariantCulture)
+                + " iterationSeed=" + FormatSeed(IterationSeed);
+        }
+
+        public override string ToString()
+        {
+            return ToDisplayString();
+        }
+
+        internal static string FormatSeed(uint seed)
+        {
+            return "0x" + seed.ToString("X8", CultureInfo.InvariantCulture);
+        }
+    }
+
     internal sealed class ASMLiteAv3SaveLoadHarness
     {
         private const float MinimumDirtyFloatSeparation = 0.25f;
@@ -118,32 +161,37 @@ namespace ASMLite.Tests.Editor
 
         internal IEnumerator RunCoreInvariant(GameObject avatar, uint seed)
         {
+            return RunCoreInvariant(avatar, new ASMLiteAv3SaveLoadRunContext(seed));
+        }
+
+        internal IEnumerator RunCoreInvariant(GameObject avatar, ASMLiteAv3SaveLoadRunContext context)
+        {
             object runtime = null;
-            yield return WaitForRuntimeAndParameters(avatar, seed, resolved => runtime = resolved);
-            Assert.IsNotNull(runtime, $"seed={FormatSeed(seed)} phase=runtime-parameters param=<runtime> type=n/a expected=<resolved> actual=<null> tolerance=n/a delta=n/a");
+            yield return WaitForRuntimeAndParameters(avatar, context, resolved => runtime = resolved);
+            Assert.IsNotNull(runtime, $"{context.ToDisplayString()} phase=runtime-parameters param=<runtime> type=n/a expected=<resolved> actual=<null> tolerance=n/a delta=n/a");
 
-            var savedSnapshot = GenerateSnapshot(_savedParameters, seed, "saved-values", null);
-            ApplySnapshot(runtime, seed, "apply-saved-before-save", savedSnapshot);
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "saved-visible-before-save", savedSnapshot);
+            var savedSnapshot = GenerateSnapshot(_savedParameters, context, "saved-values", null);
+            ApplySnapshot(runtime, context, "apply-saved-before-save", savedSnapshot);
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "saved-visible-before-save", savedSnapshot);
             yield return null;
 
-            TriggerControl(runtime, seed, "save-trigger", 1);
-            yield return PollUntilControlIdle(runtime, seed, "save-settle");
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "saved-after-save", savedSnapshot);
+            TriggerControl(runtime, context, "save-trigger", 1);
+            yield return PollUntilControlIdle(runtime, context, "save-settle");
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "saved-after-save", savedSnapshot);
 
-            var dirtySavedSnapshot = GenerateSnapshot(_savedParameters, seed, "dirty-saved-values", savedSnapshot);
-            var dirtyUnsavedSnapshot = GenerateSnapshot(_unsavedParameters, seed, "dirty-unsaved-values", null);
-            ApplySnapshot(runtime, seed, "apply-dirty-saved-before-load", dirtySavedSnapshot);
-            ApplySnapshot(runtime, seed, "apply-dirty-unsaved-before-load", dirtyUnsavedSnapshot);
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "dirty-saved-visible-before-load", dirtySavedSnapshot);
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "dirty-unsaved-visible-before-load", dirtyUnsavedSnapshot);
+            var dirtySavedSnapshot = GenerateSnapshot(_savedParameters, context, "dirty-saved-values", savedSnapshot);
+            var dirtyUnsavedSnapshot = GenerateSnapshot(_unsavedParameters, context, "dirty-unsaved-values", null);
+            ApplySnapshot(runtime, context, "apply-dirty-saved-before-load", dirtySavedSnapshot);
+            ApplySnapshot(runtime, context, "apply-dirty-unsaved-before-load", dirtyUnsavedSnapshot);
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "dirty-saved-visible-before-load", dirtySavedSnapshot);
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "dirty-unsaved-visible-before-load", dirtyUnsavedSnapshot);
             yield return null;
 
-            TriggerControl(runtime, seed, "load-trigger", 2);
-            yield return PollUntilLoadSettled(runtime, seed, savedSnapshot, dirtyUnsavedSnapshot);
+            TriggerControl(runtime, context, "load-trigger", 2);
+            yield return PollUntilLoadSettled(runtime, context, savedSnapshot, dirtyUnsavedSnapshot);
 
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "load-saved-restored", savedSnapshot);
-            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, seed, "load-unsaved-preserved", dirtyUnsavedSnapshot);
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "load-saved-restored", savedSnapshot);
+            ASMLiteAv3SaveLoadAssertions.AssertSnapshotMatches(runtime, context, "load-unsaved-preserved", dirtyUnsavedSnapshot);
         }
 
         internal static ASMLiteAv3ParameterDescriptor Descriptor(string name, VRCExpressionParameters.ValueType type)
@@ -161,7 +209,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private IEnumerator WaitForRuntimeAndParameters(GameObject avatar, uint seed, Action<object> setRuntime)
+        private IEnumerator WaitForRuntimeAndParameters(GameObject avatar, ASMLiteAv3SaveLoadRunContext context, Action<object> setRuntime)
         {
             string[] requiredNames = _savedParameters
                 .Concat(_unsavedParameters)
@@ -193,7 +241,7 @@ namespace ASMLite.Tests.Editor
                 .OrderBy(name => name, StringComparer.Ordinal);
 
             Assert.Fail(
-                $"seed={FormatSeed(seed)} phase=runtime-parameters param=<all> type=n/a expected=<visible> actual=<missing> tolerance=n/a delta=n/a. "
+                $"{context.ToDisplayString()} phase=runtime-parameters param=<all> type=n/a expected=<visible> actual=<missing> tolerance=n/a delta=n/a. "
                 + $"Missing=[{string.Join(", ", missingNames)}]. "
                 + $"LastDiagnostic={lastDiagnostic}. "
                 + $"Visible=[{string.Join(", ", visibleSnapshot.AllNames.OrderBy(name => name, StringComparer.Ordinal))}]");
@@ -201,7 +249,7 @@ namespace ASMLite.Tests.Editor
 
         private static ASMLiteAv3ParameterSnapshot GenerateSnapshot(
             IEnumerable<ASMLiteAv3ParameterDescriptor> descriptors,
-            uint seed,
+            ASMLiteAv3SaveLoadRunContext context,
             string phase,
             ASMLiteAv3ParameterSnapshot mustDifferFrom)
         {
@@ -209,13 +257,13 @@ namespace ASMLite.Tests.Editor
             int index = 0;
             foreach (var descriptor in descriptors ?? Enumerable.Empty<ASMLiteAv3ParameterDescriptor>())
             {
-                var value = GenerateValue(seed, phase, descriptor, index);
+                var value = GenerateValue(context.ValueSeed, phase, descriptor, index);
                 if (mustDifferFrom != null && mustDifferFrom.TryGetValue(descriptor.Name, out var previous))
                 {
                     value = EnsureDifferent(value, previous);
                     Assert.IsTrue(
                         IsSufficientlyDifferent(value, previous),
-                        $"seed={FormatSeed(seed)} phase={phase} param={descriptor.Name} type={descriptor.Type} expected=<dirty-different> actual=saved={previous.ToDisplayString()} dirty={value.ToDisplayString()} tolerance=n/a delta=n/a");
+                        $"{context.ToDisplayString()} phase={phase} param={descriptor.Name} type={descriptor.Type} expected=<dirty-different> actual=saved={previous.ToDisplayString()} dirty={value.ToDisplayString()} tolerance=n/a delta=n/a");
                 }
 
                 values.Add(new KeyValuePair<string, ASMLiteAv3ParameterValue>(descriptor.Name, value));
@@ -314,33 +362,33 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static void ApplySnapshot(object runtime, uint seed, string phase, ASMLiteAv3ParameterSnapshot snapshot)
+        private static void ApplySnapshot(object runtime, ASMLiteAv3SaveLoadRunContext context, string phase, ASMLiteAv3ParameterSnapshot snapshot)
         {
             foreach (var pair in snapshot.Values)
             {
                 Assert.IsTrue(
                     ASMLiteAv3RuntimeBridge.TryWriteParameter(runtime, pair.Key, pair.Value, out var diagnostic),
-                    $"seed={FormatSeed(seed)} phase={phase} param={pair.Key} type={pair.Value.Type} expected={pair.Value.ToDisplayString()} actual=<write-failed> tolerance=n/a delta=n/a diagnostic={diagnostic}");
+                    $"{context.ToDisplayString()} phase={phase} param={pair.Key} type={pair.Value.Type} expected={pair.Value.ToDisplayString()} actual=<write-failed> tolerance=n/a delta=n/a diagnostic={diagnostic}");
             }
         }
 
-        private static void TriggerControl(object runtime, uint seed, string phase, int value)
+        private static void TriggerControl(object runtime, ASMLiteAv3SaveLoadRunContext context, string phase, int value)
         {
             Assert.IsTrue(
                 ASMLiteAv3RuntimeBridge.TryWriteControl(runtime, value, out var writeDiagnostic),
-                $"seed={FormatSeed(seed)} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual=<write-failed> tolerance=n/a delta=n/a diagnostic={writeDiagnostic}");
+                $"{context.ToDisplayString()} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual=<write-failed> tolerance=n/a delta=n/a diagnostic={writeDiagnostic}");
 
             Assert.IsTrue(
                 ASMLiteAv3RuntimeBridge.TryReadControl(runtime, out int actual, out var readDiagnostic),
-                $"seed={FormatSeed(seed)} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual=<read-failed> tolerance=n/a delta=n/a diagnostic={readDiagnostic}");
+                $"{context.ToDisplayString()} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual=<read-failed> tolerance=n/a delta=n/a diagnostic={readDiagnostic}");
 
             Assert.AreEqual(
                 value,
                 actual,
-                $"seed={FormatSeed(seed)} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual={actual} tolerance=n/a delta=n/a");
+                $"{context.ToDisplayString()} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected={value} actual={actual} tolerance=n/a delta=n/a");
         }
 
-        private static IEnumerator PollUntilControlIdle(object runtime, uint seed, string phase)
+        private static IEnumerator PollUntilControlIdle(object runtime, ASMLiteAv3SaveLoadRunContext context, string phase)
         {
             string lastDiagnostic = string.Empty;
             int lastActual = int.MinValue;
@@ -354,12 +402,12 @@ namespace ASMLite.Tests.Editor
             }
 
             Assert.Fail(
-                $"seed={FormatSeed(seed)} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected=0 actual={(lastActual == int.MinValue ? "<read-failed>" : lastActual.ToString(CultureInfo.InvariantCulture))} tolerance=n/a delta=n/a diagnostic={lastDiagnostic}");
+                $"{context.ToDisplayString()} phase={phase} param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected=0 actual={(lastActual == int.MinValue ? "<read-failed>" : lastActual.ToString(CultureInfo.InvariantCulture))} tolerance=n/a delta=n/a diagnostic={lastDiagnostic}");
         }
 
         private static IEnumerator PollUntilLoadSettled(
             object runtime,
-            uint seed,
+            ASMLiteAv3SaveLoadRunContext context,
             ASMLiteAv3ParameterSnapshot savedSnapshot,
             ASMLiteAv3ParameterSnapshot unsavedSnapshot)
         {
@@ -382,13 +430,9 @@ namespace ASMLite.Tests.Editor
             if (lastControl != 0)
             {
                 Assert.Fail(
-                    $"seed={FormatSeed(seed)} phase=load-settle param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected=0 actual={(lastControl == int.MinValue ? "<read-failed>" : lastControl.ToString(CultureInfo.InvariantCulture))} tolerance=n/a delta=n/a diagnostic={lastDiagnostic}");
+                    $"{context.ToDisplayString()} phase=load-settle param={ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName} type=Int expected=0 actual={(lastControl == int.MinValue ? "<read-failed>" : lastControl.ToString(CultureInfo.InvariantCulture))} tolerance=n/a delta=n/a diagnostic={lastDiagnostic}");
             }
         }
 
-        private static string FormatSeed(uint seed)
-        {
-            return "0x" + seed.ToString("X8", CultureInfo.InvariantCulture);
-        }
     }
 }

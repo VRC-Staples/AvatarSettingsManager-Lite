@@ -33,6 +33,29 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    public readonly struct ASMLiteAv3SaveLoadFuzzCase
+    {
+        public ASMLiteAv3SaveLoadFuzzCase(string name, bool isEnabled, uint seed, int iterations, string diagnostic)
+        {
+            Name = name ?? string.Empty;
+            IsEnabled = isEnabled;
+            Seed = seed;
+            Iterations = iterations;
+            Diagnostic = diagnostic ?? string.Empty;
+        }
+
+        public string Name { get; }
+        public bool IsEnabled { get; }
+        public uint Seed { get; }
+        public int Iterations { get; }
+        public string Diagnostic { get; }
+
+        public override string ToString()
+        {
+            return Name;
+        }
+    }
+
     [TestFixture]
     public class ASMLiteAv3SaveLoadPlayModeTests
     {
@@ -44,11 +67,18 @@ namespace ASMLite.Tests.Editor
         private const string RealUatAvatarAssetPathEnvVar = "ASMLITE_AV3_UAT_AVATAR_ASSET_PATH";
         private const string RealUatAvatarNameEnvVar = "ASMLITE_AV3_UAT_AVATAR_NAME";
         private const string RealUatMaxSavedParametersEnvVar = "ASMLITE_AV3_UAT_MAX_SAVED_PARAMETERS";
+        private const string RealUatMaxUnsavedParametersEnvVar = "ASMLITE_AV3_UAT_MAX_UNSAVED_PARAMETERS";
+        private const string FuzzSeedEnvVar = "ASMLITE_AV3_SAVE_LOAD_FUZZ_SEED";
+        private const string FuzzIterationsEnvVar = "ASMLITE_AV3_SAVE_LOAD_FUZZ_ITERATIONS";
         private const string RealUatAvatarAssetPathArg = "-asmliteAv3UatAvatarAssetPath";
         private const string RealUatAvatarNameArg = "-asmliteAv3UatAvatarName";
         private const string RealUatMaxSavedParametersArg = "-asmliteAv3UatMaxSavedParameters";
+        private const string RealUatMaxUnsavedParametersArg = "-asmliteAv3UatMaxUnsavedParameters";
+        private const string FuzzSeedArg = "-asmliteAv3SaveLoadFuzzSeed";
+        private const string FuzzIterationsArg = "-asmliteAv3SaveLoadFuzzIterations";
+        private const uint DefaultFuzzSeed = 0xA5A5F005u;
         private const int DefaultRealUatMaxSavedParameters = 6;
-        private const int DefaultRealUatMaxUnsavedParameters = 3;
+        private const int DefaultRealUatMaxUnsavedParameters = 6;
 
         private static readonly ASMLiteAv3SaveLoadSeedCase[] Phase2SeedCases =
         {
@@ -56,6 +86,14 @@ namespace ASMLite.Tests.Editor
             new ASMLiteAv3SaveLoadSeedCase("Seed_0xA5A50002", 0xA5A50002u),
             new ASMLiteAv3SaveLoadSeedCase("Seed_0xA5A50003", 0xA5A50003u),
         };
+
+        private static IEnumerable<ASMLiteAv3SaveLoadFuzzCase> Phase5FuzzCases
+        {
+            get
+            {
+                yield return ASMLiteAv3FuzzReplayConfig.Read().ToFuzzCase();
+            }
+        }
 
         private static readonly string[] SavedParameterNames =
         {
@@ -229,6 +267,79 @@ namespace ASMLite.Tests.Editor
             StringAssert.Contains(RealUatAvatarAssetPathArg, selection.Diagnostic);
         }
 
+        [UnityTest]
+        [Category("Manual")]
+        public IEnumerator P5_LocalFuzz_SaveLoadSlot1_ReplayableScaleCoverage(
+            [ValueSource(nameof(Phase5FuzzCases))] ASMLiteAv3SaveLoadFuzzCase fuzzCase)
+        {
+            if (!fuzzCase.IsEnabled)
+            {
+                Debug.Log(fuzzCase.Diagnostic);
+                yield break;
+            }
+
+            var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
+            if (!runtimeResolution.IsAvailable)
+                Assert.Inconclusive(runtimeResolution.Diagnostic);
+
+            BuildAndWireAvatarFixture();
+            ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
+
+            yield return new EnterPlayMode();
+
+            GameObject avatar = GameObject.Find(TestAvatarName);
+            Assert.IsNotNull(avatar,
+                $"P5: test avatar should survive EnterPlayMode for replayable AV3 fuzz/scale coverage. {fuzzCase}");
+
+            var harness = new ASMLiteAv3SaveLoadHarness(SavedParameterDescriptors, UnsavedParameterDescriptors);
+            Debug.Log($"P5: starting replayable AV3 save/load fuzz/scale coverage. {fuzzCase}. Re-run with {FuzzSeedEnvVar}={FormatSeed(fuzzCase.Seed)} {FuzzIterationsEnvVar}={fuzzCase.Iterations.ToString(CultureInfo.InvariantCulture)} or {FuzzSeedArg} {FormatSeed(fuzzCase.Seed)} {FuzzIterationsArg} {fuzzCase.Iterations.ToString(CultureInfo.InvariantCulture)}.");
+            for (int iterationIndex = 0; iterationIndex < fuzzCase.Iterations; iterationIndex++)
+            {
+                uint iterationSeed = DeriveFuzzIterationSeed(fuzzCase.Seed, iterationIndex);
+                var context = new ASMLiteAv3SaveLoadRunContext(fuzzCase.Seed, iterationSeed, iterationIndex, fuzzCase.Iterations);
+                Debug.Log($"P5: AV3 save/load fuzz iteration {context.ToDisplayString()}. Re-run with {FuzzSeedEnvVar}={FormatSeed(fuzzCase.Seed)} {FuzzIterationsEnvVar}={fuzzCase.Iterations.ToString(CultureInfo.InvariantCulture)}.");
+                yield return harness.RunCoreInvariant(avatar, context);
+            }
+        }
+
+        [Test]
+        public void P5_FuzzReplayConfig_DefaultsToLocalOptInDisabledDiagnostic()
+        {
+            var config = ASMLiteAv3FuzzReplayConfig.Read(Array.Empty<string>(), _ => null);
+
+            Assert.IsFalse(config.IsEnabled, "P5: fuzz/scale coverage must stay local opt-in and disabled by default.");
+            Assert.AreEqual(0, config.Iterations, "P5: disabled default must not allocate any fuzz iterations.");
+            StringAssert.Contains(FuzzSeedEnvVar, config.Diagnostic);
+            StringAssert.Contains(FuzzIterationsEnvVar, config.Diagnostic);
+            StringAssert.Contains(FuzzSeedArg, config.Diagnostic);
+            StringAssert.Contains(FuzzIterationsArg, config.Diagnostic);
+        }
+
+        [Test]
+        public void P5_FuzzReplayConfig_ParsesReplayableSeedAndIterationsFromCommandLineBeforeEnvironment()
+        {
+            var config = ASMLiteAv3FuzzReplayConfig.Read(
+                new[]
+                {
+                    FuzzSeedArg, "0xA5A5F00D",
+                    FuzzIterationsArg + "=7",
+                },
+                name =>
+                {
+                    if (name == FuzzSeedEnvVar)
+                        return "0xDEADBEEF";
+                    if (name == FuzzIterationsEnvVar)
+                        return "3";
+                    return null;
+                });
+
+            Assert.IsTrue(config.IsEnabled, "P5: a valid seed plus positive iteration count should enable local fuzz coverage.");
+            Assert.AreEqual(0xA5A5F00Du, config.Seed, "P5: command-line seed should override environment seed for exact replay.");
+            Assert.AreEqual(7, config.Iterations, "P5: command-line iteration count should override environment iteration count for exact replay.");
+            StringAssert.Contains("0xA5A5F00D", config.ToString());
+            StringAssert.Contains("iterations=7", config.ToString());
+        }
+
         private void BuildAndWireAvatarFixture()
         {
             ASMLiteTestFixtures.ResetGeneratedExprParams();
@@ -302,7 +413,7 @@ namespace ASMLite.Tests.Editor
             var unsavedParameters = SelectRealUatParameters(
                 descriptor.expressionParameters,
                 saved: false,
-                maxCount: DefaultRealUatMaxUnsavedParameters);
+                maxCount: selection.MaxUnsavedParameters);
 
             var selectedSavedNames = new HashSet<string>(savedParameters.Select(parameter => parameter.name), StringComparer.Ordinal);
             var excludedNames = (descriptor.expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
@@ -404,6 +515,8 @@ namespace ASMLite.Tests.Editor
                 .Where(parameter => IsSupportedRealUatParameter(parameter) && parameter.saved == saved)
                 .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
                 .Select(group => group.First())
+                .OrderBy(parameter => parameter.valueType)
+                .ThenBy(parameter => parameter.name, StringComparer.Ordinal)
                 .ToArray();
 
             var selected = new List<VRCExpressionParameters.Parameter>(maxCount);
@@ -422,9 +535,7 @@ namespace ASMLite.Tests.Editor
                     if (selected.Count >= maxCount)
                         break;
 
-                    var next = candidates.FirstOrDefault(parameter =>
-                        parameter.valueType == type
-                        && selected.All(existing => !string.Equals(existing.name, parameter.name, StringComparison.Ordinal)));
+                    var next = PickBalancedRealUatCandidate(candidates, selected, type);
                     if (next == null)
                         continue;
 
@@ -437,6 +548,32 @@ namespace ASMLite.Tests.Editor
             }
 
             return selected.ToArray();
+        }
+
+        private static VRCExpressionParameters.Parameter PickBalancedRealUatCandidate(
+            VRCExpressionParameters.Parameter[] candidates,
+            List<VRCExpressionParameters.Parameter> selected,
+            VRCExpressionParameters.ValueType type)
+        {
+            var selectedNames = new HashSet<string>(
+                selected.Select(parameter => parameter.name),
+                StringComparer.Ordinal);
+            var typedCandidates = (candidates ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => parameter != null && parameter.valueType == type && !selectedNames.Contains(parameter.name))
+                .OrderBy(parameter => parameter.name, StringComparer.Ordinal)
+                .ToArray();
+            if (typedCandidates.Length == 0)
+                return null;
+
+            int selectedOfType = selected.Count(parameter => parameter != null && parameter.valueType == type);
+            int index = selectedOfType % 2 == 0
+                ? selectedOfType / 2
+                : typedCandidates.Length - 1 - (selectedOfType / 2);
+            if (index < 0)
+                index = 0;
+            if (index >= typedCandidates.Length)
+                index = typedCandidates.Length - 1;
+            return typedCandidates[index];
         }
 
         private static bool IsSupportedRealUatParameter(VRCExpressionParameters.Parameter parameter)
@@ -453,6 +590,25 @@ namespace ASMLite.Tests.Editor
         private static ASMLiteAv3ParameterDescriptor ToDescriptor(VRCExpressionParameters.Parameter parameter)
         {
             return ASMLiteAv3SaveLoadHarness.Descriptor(parameter.name, parameter.valueType);
+        }
+
+        private static uint DeriveFuzzIterationSeed(uint seed, int iterationIndex)
+        {
+            unchecked
+            {
+                uint mixed = seed ^ ((uint)Math.Max(0, iterationIndex) * 0x9E3779B9u) ^ 0xC2B2AE35u;
+                mixed ^= mixed >> 16;
+                mixed *= 0x7FEB352Du;
+                mixed ^= mixed >> 15;
+                mixed *= 0x846CA68Bu;
+                mixed ^= mixed >> 16;
+                return mixed == 0u ? 0xA5A5F005u : mixed;
+            }
+        }
+
+        private static string FormatSeed(uint seed)
+        {
+            return ASMLiteAv3SaveLoadRunContext.FormatSeed(seed);
         }
 
         private void AddVisibilityParameters()
@@ -572,6 +728,12 @@ namespace ASMLite.Tests.Editor
                     readEnvironmentVariable(RealUatMaxSavedParametersEnvVar)),
                 DefaultRealUatMaxSavedParameters);
 
+            int maxUnsavedParameters = ParsePositiveInt(
+                FirstNonEmpty(
+                    ReadCommandLineValue(commandLineArgs, RealUatMaxUnsavedParametersArg),
+                    readEnvironmentVariable(RealUatMaxUnsavedParametersEnvVar)),
+                DefaultRealUatMaxUnsavedParameters);
+
             if (string.IsNullOrWhiteSpace(rawAssetPath))
             {
                 return RealUatSelection.Unconfigured(
@@ -582,7 +744,7 @@ namespace ASMLite.Tests.Editor
             }
 
             string assetPath = NormalizeAssetPath(rawAssetPath);
-            return RealUatSelection.Configured(assetPath, avatarName, maxSavedParameters);
+            return RealUatSelection.Configured(assetPath, avatarName, maxSavedParameters, maxUnsavedParameters);
         }
 
         private static string NormalizeAssetPath(string rawAssetPath)
@@ -672,14 +834,111 @@ namespace ASMLite.Tests.Editor
             _ctx = null;
         }
 
+        private readonly struct ASMLiteAv3FuzzReplayConfig
+        {
+            private ASMLiteAv3FuzzReplayConfig(bool isEnabled, uint seed, int iterations, string diagnostic)
+            {
+                IsEnabled = isEnabled;
+                Seed = seed;
+                Iterations = isEnabled && iterations > 0 ? iterations : 0;
+                Diagnostic = diagnostic ?? string.Empty;
+            }
+
+            internal bool IsEnabled { get; }
+            internal uint Seed { get; }
+            internal int Iterations { get; }
+            internal string Diagnostic { get; }
+
+            internal static ASMLiteAv3FuzzReplayConfig Read()
+            {
+                return Read(Environment.GetCommandLineArgs(), Environment.GetEnvironmentVariable);
+            }
+
+            internal static ASMLiteAv3FuzzReplayConfig Read(string[] commandLineArgs, Func<string, string> readEnvironmentVariable)
+            {
+                commandLineArgs = commandLineArgs ?? Array.Empty<string>();
+                readEnvironmentVariable = readEnvironmentVariable ?? (_ => null);
+
+                string rawIterations = FirstNonEmpty(
+                    ReadCommandLineValue(commandLineArgs, FuzzIterationsArg),
+                    readEnvironmentVariable(FuzzIterationsEnvVar));
+                if (!int.TryParse(rawIterations, NumberStyles.Integer, CultureInfo.InvariantCulture, out int iterations) || iterations <= 0)
+                {
+                    return Disabled(
+                        "P5: Replayable AV3 save/load fuzz/scale coverage is local-only opt-in and disabled by default. "
+                        + $"Set {FuzzIterationsEnvVar}=N (or pass {FuzzIterationsArg} N) to enable; "
+                        + $"optionally set {FuzzSeedEnvVar}=0xSEED (or pass {FuzzSeedArg} 0xSEED). "
+                        + $"Default replay seed when omitted is {FormatSeed(DefaultFuzzSeed)}.");
+                }
+
+                string rawSeed = FirstNonEmpty(
+                    ReadCommandLineValue(commandLineArgs, FuzzSeedArg),
+                    readEnvironmentVariable(FuzzSeedEnvVar));
+                uint seed = DefaultFuzzSeed;
+                if (!string.IsNullOrWhiteSpace(rawSeed) && !TryParseSeed(rawSeed, out seed))
+                {
+                    return Disabled(
+                        $"P5: Invalid AV3 save/load fuzz seed '{rawSeed}'. "
+                        + $"Use decimal uint or hex 0xSEED via {FuzzSeedEnvVar} / {FuzzSeedArg}. "
+                        + $"Iterations requested={iterations.ToString(CultureInfo.InvariantCulture)}; fuzz did not run.");
+                }
+
+                return new ASMLiteAv3FuzzReplayConfig(
+                    true,
+                    seed,
+                    iterations,
+                    $"P5: Replayable AV3 save/load fuzz/scale coverage enabled. seed={FormatSeed(seed)} iterations={iterations.ToString(CultureInfo.InvariantCulture)}.");
+            }
+
+            internal ASMLiteAv3SaveLoadFuzzCase ToFuzzCase()
+            {
+                string name = IsEnabled
+                    ? $"Seed_{FormatSeed(Seed)}_iterations={Iterations.ToString(CultureInfo.InvariantCulture)}"
+                    : "Disabled_LocalOptIn";
+                return new ASMLiteAv3SaveLoadFuzzCase(name, IsEnabled, Seed, Iterations, Diagnostic);
+            }
+
+            public override string ToString()
+            {
+                return IsEnabled
+                    ? $"seed={FormatSeed(Seed)} iterations={Iterations.ToString(CultureInfo.InvariantCulture)}"
+                    : Diagnostic;
+            }
+
+            private static ASMLiteAv3FuzzReplayConfig Disabled(string diagnostic)
+            {
+                return new ASMLiteAv3FuzzReplayConfig(false, DefaultFuzzSeed, 0, diagnostic);
+            }
+
+            private static bool TryParseSeed(string text, out uint seed)
+            {
+                seed = 0u;
+                text = (text ?? string.Empty).Trim().Trim('\"');
+                if (string.IsNullOrWhiteSpace(text))
+                    return false;
+
+                if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    return uint.TryParse(
+                        text.Substring(2),
+                        NumberStyles.HexNumber,
+                        CultureInfo.InvariantCulture,
+                        out seed);
+                }
+
+                return uint.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out seed);
+            }
+        }
+
         private readonly struct RealUatSelection
         {
-            private RealUatSelection(bool isConfigured, string assetPath, string avatarName, int maxSavedParameters, string diagnostic)
+            private RealUatSelection(bool isConfigured, string assetPath, string avatarName, int maxSavedParameters, int maxUnsavedParameters, string diagnostic)
             {
                 IsConfigured = isConfigured;
                 AssetPath = assetPath ?? string.Empty;
                 AvatarName = avatarName ?? string.Empty;
                 MaxSavedParameters = maxSavedParameters > 0 ? maxSavedParameters : DefaultRealUatMaxSavedParameters;
+                MaxUnsavedParameters = maxUnsavedParameters > 0 ? maxUnsavedParameters : DefaultRealUatMaxUnsavedParameters;
                 Diagnostic = diagnostic ?? string.Empty;
             }
 
@@ -687,16 +946,17 @@ namespace ASMLite.Tests.Editor
             internal string AssetPath { get; }
             internal string AvatarName { get; }
             internal int MaxSavedParameters { get; }
+            internal int MaxUnsavedParameters { get; }
             internal string Diagnostic { get; }
 
-            internal static RealUatSelection Configured(string assetPath, string avatarName, int maxSavedParameters)
+            internal static RealUatSelection Configured(string assetPath, string avatarName, int maxSavedParameters, int maxUnsavedParameters)
             {
-                return new RealUatSelection(true, assetPath, avatarName, maxSavedParameters, string.Empty);
+                return new RealUatSelection(true, assetPath, avatarName, maxSavedParameters, maxUnsavedParameters, string.Empty);
             }
 
             internal static RealUatSelection Unconfigured(string diagnostic)
             {
-                return new RealUatSelection(false, string.Empty, string.Empty, DefaultRealUatMaxSavedParameters, diagnostic);
+                return new RealUatSelection(false, string.Empty, string.Empty, DefaultRealUatMaxSavedParameters, DefaultRealUatMaxUnsavedParameters, diagnostic);
             }
         }
 
