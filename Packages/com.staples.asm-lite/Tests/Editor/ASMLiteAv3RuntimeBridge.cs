@@ -95,6 +95,197 @@ namespace ASMLite.Tests.Editor
             return names.Count > 0;
         }
 
+        internal static bool TryFindRuntime(
+            GameObject avatar,
+            out object runtime,
+            out string diagnostic)
+        {
+            runtime = null;
+
+            var resolution = ResolveRuntimeType();
+            if (!resolution.IsAvailable)
+            {
+                diagnostic = resolution.Diagnostic;
+                return false;
+            }
+
+            if (avatar == null)
+            {
+                diagnostic = "P1: Cannot locate AV3 runtime because the avatar GameObject is null.";
+                return false;
+            }
+
+            runtime = avatar.GetComponent(resolution.Type)
+                ?? avatar.GetComponentsInChildren(resolution.Type, includeInactive: true).FirstOrDefault();
+
+            if (runtime == null)
+            {
+                diagnostic = $"P1: Avatar '{avatar.name}' does not yet have AV3 runtime component {ExpectedRuntimeTypeName}.";
+                return false;
+            }
+
+            diagnostic = $"P1: Found AV3 runtime component {ExpectedRuntimeTypeName} on avatar '{avatar.name}'.";
+            return true;
+        }
+
+        internal static bool HasParameter(object runtime, string name, ASMLiteAv3ParameterType type)
+        {
+            return TryGetRuntimeParameter(runtime, name, type, out _);
+        }
+
+        internal static bool TryReadParameter(
+            object runtime,
+            string name,
+            ASMLiteAv3ParameterType type,
+            out ASMLiteAv3ParameterValue value,
+            out string diagnostic)
+        {
+            value = default;
+
+            if (!TryGetRuntimeParameter(runtime, name, type, out var parameter))
+            {
+                diagnostic = $"P1: AV3 runtime parameter '{name}' of type {type} was not found.";
+                return false;
+            }
+
+            switch (type)
+            {
+                case ASMLiteAv3ParameterType.Bool:
+                    if (TryReadMember(parameter, "value", out var boolObject) && boolObject is bool boolValue)
+                    {
+                        value = ASMLiteAv3ParameterValue.Bool(boolValue);
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 bool parameter '{name}' did not expose bool field 'value'.";
+                    return false;
+
+                case ASMLiteAv3ParameterType.Int:
+                    if (TryReadMember(parameter, "value", out var intObject) && intObject is int intValue)
+                    {
+                        value = ASMLiteAv3ParameterValue.Int(intValue);
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 int parameter '{name}' did not expose int field 'value'.";
+                    return false;
+
+                case ASMLiteAv3ParameterType.Float:
+                    if (TryReadMember(parameter, "exportedValue", out var floatObject) && floatObject is float floatValue)
+                    {
+                        value = ASMLiteAv3ParameterValue.Float(floatValue);
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 float parameter '{name}' did not expose float member 'exportedValue'.";
+                    return false;
+
+                default:
+                    diagnostic = $"P1: Unsupported AV3 parameter type '{type}' for '{name}'.";
+                    return false;
+            }
+        }
+
+        internal static bool TryWriteParameter(
+            object runtime,
+            string name,
+            ASMLiteAv3ParameterValue value,
+            out string diagnostic)
+        {
+            if (!TryGetRuntimeParameter(runtime, name, value.Type, out var parameter))
+            {
+                diagnostic = $"P1: AV3 runtime parameter '{name}' of type {value.Type} was not found for write.";
+                return false;
+            }
+
+            switch (value.Type)
+            {
+                case ASMLiteAv3ParameterType.Bool:
+                    if (TryWriteMember(parameter, "value", value.BoolValue))
+                    {
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 bool parameter '{name}' did not accept write to field 'value'.";
+                    return false;
+
+                case ASMLiteAv3ParameterType.Int:
+                    if (TryWriteMember(parameter, "value", value.IntValue))
+                    {
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 int parameter '{name}' did not accept write to field 'value'.";
+                    return false;
+
+                case ASMLiteAv3ParameterType.Float:
+                    float clampedFloat = ClampFloatOnly(value.FloatValue);
+                    if (TryWriteMember(parameter, "exportedValue", clampedFloat))
+                    {
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    if (TryWriteMember(parameter, "value", clampedFloat))
+                    {
+                        diagnostic = string.Empty;
+                        return true;
+                    }
+
+                    diagnostic = $"P1: AV3 float parameter '{name}' did not accept write to member 'exportedValue' or 'value'.";
+                    return false;
+
+                default:
+                    diagnostic = $"P1: Unsupported AV3 parameter type '{value.Type}' for '{name}'.";
+                    return false;
+            }
+        }
+
+        internal static bool TryReadControl(object runtime, out int value, out string diagnostic)
+        {
+            if (TryReadParameter(
+                    runtime,
+                    ASMLiteControlParameterName,
+                    ASMLiteAv3ParameterType.Int,
+                    out var parameterValue,
+                    out diagnostic))
+            {
+                value = parameterValue.IntValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        internal static bool TryWriteControl(object runtime, int value, out string diagnostic)
+        {
+            return TryWriteParameter(
+                runtime,
+                ASMLiteControlParameterName,
+                ASMLiteAv3ParameterValue.Int(value),
+                out diagnostic);
+        }
+
+        internal static float ClampFloatOnly(float value)
+        {
+            if (value < -1f)
+                return -1f;
+            if (value > 1f)
+                return 1f;
+            return value;
+        }
+
+        internal static float FloatToleranceFor(object runtime)
+        {
+            return 0.0001f;
+        }
+
         private static RuntimeTypeResolution ResolveType(string fullTypeName, string assemblyName)
         {
             if (string.IsNullOrEmpty(fullTypeName))
@@ -198,6 +389,110 @@ namespace ASMLite.Tests.Editor
 
             var field = target.GetType().GetField(fieldName, InstanceBindingFlags);
             return field != null ? field.GetValue(target) : null;
+        }
+
+        private static bool TryGetRuntimeParameter(
+            object runtime,
+            string name,
+            ASMLiteAv3ParameterType type,
+            out object parameter)
+        {
+            parameter = null;
+            if (runtime == null || string.IsNullOrWhiteSpace(name))
+                return false;
+
+            switch (type)
+            {
+                case ASMLiteAv3ParameterType.Bool:
+                    return TryGetRuntimeParameter(runtime, "BoolToIndex", "Bools", name, out parameter);
+                case ASMLiteAv3ParameterType.Int:
+                    return TryGetRuntimeParameter(runtime, "IntToIndex", "Ints", name, out parameter);
+                case ASMLiteAv3ParameterType.Float:
+                    return TryGetRuntimeParameter(runtime, "FloatToIndex", "Floats", name, out parameter);
+                default:
+                    return false;
+            }
+        }
+
+        private static bool TryGetRuntimeParameter(
+            object runtime,
+            string dictionaryFieldName,
+            string listFieldName,
+            string name,
+            out object parameter)
+        {
+            parameter = null;
+
+            var dictionary = ReadFieldValue(runtime, dictionaryFieldName) as IDictionary;
+            var list = ReadFieldValue(runtime, listFieldName) as IList;
+            if (dictionary == null || list == null || !dictionary.Contains(name))
+                return false;
+
+            var rawIndex = dictionary[name];
+            if (!(rawIndex is int index) || index < 0 || index >= list.Count)
+                return false;
+
+            parameter = list[index];
+            return parameter != null;
+        }
+
+        private static bool TryReadMember(object target, string memberName, out object value)
+        {
+            value = null;
+            if (target == null || string.IsNullOrWhiteSpace(memberName))
+                return false;
+
+            var type = target.GetType();
+            var property = type.GetProperty(memberName, InstanceBindingFlags);
+            if (property != null && property.CanRead)
+            {
+                value = property.GetValue(target, null);
+                return true;
+            }
+
+            var field = type.GetField(memberName, InstanceBindingFlags);
+            if (field != null)
+            {
+                value = field.GetValue(target);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryWriteMember(object target, string memberName, object value)
+        {
+            if (target == null || string.IsNullOrWhiteSpace(memberName))
+                return false;
+
+            var type = target.GetType();
+            var property = type.GetProperty(memberName, InstanceBindingFlags);
+            if (property != null && property.CanWrite && CanAssign(property.PropertyType, value))
+            {
+                property.SetValue(target, value, null);
+                return true;
+            }
+
+            var field = type.GetField(memberName, InstanceBindingFlags);
+            if (field != null && CanAssign(field.FieldType, value))
+            {
+                field.SetValue(target, value);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool CanAssign(Type targetType, object value)
+        {
+            if (targetType == null)
+                return false;
+
+            if (value == null)
+                return !targetType.IsValueType;
+
+            return targetType.IsInstanceOfType(value)
+                || string.Equals(targetType.FullName, value.GetType().FullName, StringComparison.Ordinal);
         }
 
         private static void SetBoolField(object target, string fieldName, bool value)

@@ -40,6 +40,26 @@ namespace ASMLite.Tests.Editor
             "ASMTest_FloatUnsaved_B",
         };
 
+        private static readonly ASMLiteAv3ParameterDescriptor[] SavedParameterDescriptors =
+        {
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_BoolSaved_A", VRCExpressionParameters.ValueType.Bool),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_BoolSaved_B", VRCExpressionParameters.ValueType.Bool),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_IntSaved_A", VRCExpressionParameters.ValueType.Int),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_IntSaved_B", VRCExpressionParameters.ValueType.Int),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_FloatSaved_A", VRCExpressionParameters.ValueType.Float),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_FloatSaved_B", VRCExpressionParameters.ValueType.Float),
+        };
+
+        private static readonly ASMLiteAv3ParameterDescriptor[] UnsavedParameterDescriptors =
+        {
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_BoolUnsaved_A", VRCExpressionParameters.ValueType.Bool),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_BoolUnsaved_B", VRCExpressionParameters.ValueType.Bool),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_IntUnsaved_A", VRCExpressionParameters.ValueType.Int),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_IntUnsaved_B", VRCExpressionParameters.ValueType.Int),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_FloatUnsaved_A", VRCExpressionParameters.ValueType.Float),
+            ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_FloatUnsaved_B", VRCExpressionParameters.ValueType.Float),
+        };
+
         private AsmLiteTestContext _ctx;
         private bool _hadVrcFuryPlayModePref;
         private bool _previousVrcFuryPlayMode;
@@ -111,6 +131,25 @@ namespace ASMLite.Tests.Editor
                 "P0: AV3 runtime did not expose every required saved/unsaved/control parameter before timeout. "
                 + $"Missing=[{string.Join(", ", requiredNames.Where(name => !snapshot.Contains(name)))}]. "
                 + $"LastDiagnostic={lastDiagnostic}. Visible=[{string.Join(", ", snapshot.AllNames.OrderBy(name => name, StringComparer.Ordinal))}]");
+        }
+
+        [UnityTest]
+        public IEnumerator P1_Av3Runtime_SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters()
+        {
+            var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
+            if (!runtimeResolution.IsAvailable)
+                Assert.Inconclusive(runtimeResolution.Diagnostic);
+
+            BuildAndWireAvatarFixture();
+            ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
+
+            yield return new EnterPlayMode();
+
+            GameObject avatar = GameObject.Find(TestAvatarName);
+            Assert.IsNotNull(avatar, "P1: test avatar should survive EnterPlayMode for AV3 save/load invariant.");
+
+            var harness = new ASMLiteAv3SaveLoadHarness(SavedParameterDescriptors, UnsavedParameterDescriptors);
+            yield return harness.RunPhase1CoreInvariant(avatar, ASMLiteAv3SaveLoadHarness.Phase1Seed);
         }
 
         private void BuildAndWireAvatarFixture()
