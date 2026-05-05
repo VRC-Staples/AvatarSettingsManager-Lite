@@ -513,6 +513,40 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    internal sealed class ASMLiteSmokeCoroutineDriver
+    {
+        private readonly Stack<IEnumerator> _stack = new Stack<IEnumerator>();
+
+        internal ASMLiteSmokeCoroutineDriver(IEnumerator root)
+        {
+            if (root != null)
+                _stack.Push(root);
+        }
+
+        internal bool MoveNext()
+        {
+            while (_stack.Count > 0)
+            {
+                IEnumerator current = _stack.Peek();
+                if (!current.MoveNext())
+                {
+                    _stack.Pop();
+                    continue;
+                }
+
+                if (current.Current is IEnumerator nested)
+                {
+                    _stack.Push(nested);
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+    }
+
     internal sealed class ASMLiteSmokeOverlayHostUnityRuntime : IASMLiteSmokeOverlayHostRuntime
     {
         internal static readonly ASMLiteSmokeOverlayHostUnityRuntime Instance = new ASMLiteSmokeOverlayHostUnityRuntime();
@@ -520,7 +554,7 @@ namespace ASMLite.Tests.Editor
         private readonly List<ConsoleErrorRecord> _consoleErrors = new List<ConsoleErrorRecord>();
         private readonly ASMLiteSmokeSetupFixtureService _fixtureService = new ASMLiteSmokeSetupFixtureService();
         private readonly Dictionary<string, string[]> _parameterBackupPresetSelections = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        private IEnumerator _av3SaveLoadHarnessEnumerator;
+        private ASMLiteSmokeCoroutineDriver _av3SaveLoadHarnessEnumerator;
         private bool _av3SaveLoadHarnessRunning;
         private bool _av3SaveLoadHarnessHasResult;
         private bool _av3SaveLoadHarnessSucceeded;
@@ -1636,7 +1670,8 @@ namespace ASMLite.Tests.Editor
                     savedParameters.Select(ToAv3SaveLoadDescriptor).ToArray(),
                     unsavedParameters.Select(ToAv3SaveLoadDescriptor).ToArray());
 
-                _av3SaveLoadHarnessEnumerator = harness.RunCoreInvariant(avatar.gameObject, 0xA5A50014u);
+                _av3SaveLoadHarnessEnumerator = new ASMLiteSmokeCoroutineDriver(
+                    harness.RunCoreInvariant(avatar.gameObject, 0xA5A50014u));
                 _av3SaveLoadHarnessRunning = true;
                 _av3SaveLoadHarnessHasResult = false;
                 _av3SaveLoadHarnessSucceeded = false;

@@ -6986,6 +6986,7 @@
                   "debugHint": "Inspect avatar lookup and fixture override name.",
                   "args": {
                     "fixtureMutation": "missing-avatar-by-override-name",
+                    "avatarName": "No descriptor-bearing avatar",
                     "expectStepFailure": true,
                     "expectedDiagnosticCode": "SETUP_AVATAR_NOT_FOUND",
                     "expectedDiagnosticContains": "No descriptor-bearing avatar",
@@ -7012,7 +7013,7 @@
                     "fixtureMutation": "duplicate-avatar-name",
                     "expectStepFailure": true,
                     "expectedDiagnosticCode": "SETUP_AVATAR_AMBIGUOUS",
-                    "expectedDiagnosticContains": "Multiple avatars match",
+                    "expectedDiagnosticContains": "Multiple avatar descriptors",
                     "preserveFailureEvidence": true
                   }
                 }

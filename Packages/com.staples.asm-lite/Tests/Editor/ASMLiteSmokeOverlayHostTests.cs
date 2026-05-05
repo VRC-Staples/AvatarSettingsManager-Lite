@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -95,6 +96,38 @@ namespace ASMLite.Tests.Editor
         {
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("Oct25_Dress (Clone)"));
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" Oct25_Dress (Clone) (Clone) "));
+        }
+
+        [Test]
+        public void CoroutineDriver_ExecutesNestedEnumeratorsBeforeCompletingParent()
+        {
+            int nestedTicks = 0;
+            bool nestedCompleted = false;
+
+            IEnumerator Nested()
+            {
+                nestedTicks++;
+                yield return null;
+                nestedTicks++;
+                nestedCompleted = true;
+            }
+
+            IEnumerator Parent()
+            {
+                yield return Nested();
+                Assert.IsTrue(nestedCompleted,
+                    "Nested coroutine work must finish before the parent harness resumes.");
+            }
+
+            var driver = new ASMLiteSmokeCoroutineDriver(Parent());
+
+            Assert.IsTrue(driver.MoveNext(), "First driver tick should keep the nested coroutine pending.");
+            Assert.AreEqual(1, nestedTicks);
+            Assert.IsFalse(nestedCompleted);
+
+            Assert.IsFalse(driver.MoveNext(), "Second driver tick should finish the nested coroutine and parent.");
+            Assert.AreEqual(2, nestedTicks);
+            Assert.IsTrue(nestedCompleted);
         }
 
         [Test]
@@ -856,6 +889,29 @@ namespace ASMLite.Tests.Editor
                 Selection.activeObject = null;
                 if (avatarObject != null)
                     UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void UnityRuntime_AvatarSelection_ReportsMissingOverrideNameInDiagnostic()
+        {
+            try
+            {
+                Selection.activeObject = null;
+
+                bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
+                    "No descriptor-bearing avatar",
+                    out VRCAvatarDescriptor avatar,
+                    out string detail);
+
+                Assert.That(resolved, Is.False);
+                Assert.That(avatar, Is.Null);
+                StringAssert.Contains("SETUP_AVATAR_NOT_FOUND", detail);
+                StringAssert.Contains("No descriptor-bearing avatar", detail);
+            }
+            finally
+            {
+                Selection.activeObject = null;
             }
         }
 

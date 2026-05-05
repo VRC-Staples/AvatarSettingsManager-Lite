@@ -1220,20 +1220,22 @@ namespace ASMLite.Editor
                 string deterministicBackupName = $"ASMLite_Bak_S{slot}_{p.name}";
                 string defaultName = $"ASMLite_Def_{p.name}";
 
-                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName);
-                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name);
+                bool isBoolParameter = p.valueType == VRCExpressionParameters.ValueType.Bool;
+                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName, isBoolParameter);
+                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name, isBoolParameter);
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
                 // Also apply defaults back to the live avatar parameter immediately
                 // so Clear Preset visibly resets the avatar instead of requiring an
                 // extra Load action afterward.
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, p.name);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, p.name, isBoolParameter);
 
                 AddLegacyAliasDriverCopiesForSlot(
                     slot,
                     p.name,
                     defaultName,
+                    isBoolParameter,
                     legacyAliasBindings,
                     saveParams,
                     seenSavePairs,
@@ -1303,6 +1305,7 @@ namespace ASMLite.Editor
             int slot,
             string sourceParamName,
             string defaultName,
+            bool isBoolParameter,
             List<LegacyAliasBinding> bindings,
             List<VRC_AvatarParameterDriver.Parameter> saveParams,
             HashSet<string> seenSavePairs,
@@ -1324,10 +1327,10 @@ namespace ASMLite.Editor
                 if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
                     continue;
 
-                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName);
-                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, sourceParamName);
+                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName, isBoolParameter);
+                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, sourceParamName, isBoolParameter);
             }
         }
 
@@ -1335,7 +1338,8 @@ namespace ASMLite.Editor
             List<VRC_AvatarParameterDriver.Parameter> target,
             HashSet<string> seenPairs,
             string source,
-            string destination)
+            string destination,
+            bool preClearBoolDestination = false)
         {
             if (target == null || seenPairs == null)
                 return;
@@ -1345,6 +1349,16 @@ namespace ASMLite.Editor
             string key = source + "\u001F" + destination;
             if (!seenPairs.Add(key))
                 return;
+
+            if (preClearBoolDestination)
+            {
+                target.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name = destination,
+                    value = 0f,
+                });
+            }
 
             target.Add(new VRC_AvatarParameterDriver.Parameter
             {

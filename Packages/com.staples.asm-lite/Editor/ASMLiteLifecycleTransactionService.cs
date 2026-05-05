@@ -757,6 +757,7 @@ namespace ASMLite.Editor
                 default,
                 new ASMLiteBuilder.RebuildMigrationReport(0, cleanup, componentMissing: false, avatarDescriptorFound: true),
                 default);
+            var packageManagedSnapshot = CreatePackageManagedCustomizationSnapshot(pendingSnapshot);
 
             GameObject instance = null;
             bool reattachAttempted = false;
@@ -824,9 +825,9 @@ namespace ASMLite.Editor
                         : ASMLiteBuilder.DefaultRootControlName,
                     out string detachedInstallPrefix);
 
-                ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, pendingSnapshot);
+                ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, packageManagedSnapshot);
                 if (resolvedDetachedInstallPath
-                    && (!pendingSnapshot.UseCustomInstallPath || string.IsNullOrWhiteSpace(pendingSnapshot.CustomInstallPath)))
+                    && (!packageManagedSnapshot.UseCustomInstallPath || string.IsNullOrWhiteSpace(packageManagedSnapshot.CustomInstallPath)))
                 {
                     component.useCustomInstallPath = true;
                     component.customInstallPath = detachedInstallPrefix;
@@ -965,9 +966,9 @@ namespace ASMLite.Editor
                         recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
-                if (!adoption.Adopted && pendingSnapshot.UseCustomInstallPath)
+                if (!adoption.Adopted && packageManagedSnapshot.UseCustomInstallPath)
                 {
-                    ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, pendingSnapshot);
+                    ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, packageManagedSnapshot);
                     if (!TryRefreshLiveInstallPathRouting(component, "Detached Return Recovery Finalize", out string finalizeRoutingFailure))
                     {
                         UnityEngine.Object.DestroyImmediate(instance);
@@ -1750,6 +1751,37 @@ namespace ASMLite.Editor
             return ASMLiteBuildDiagnosticResult.Pass();
         }
 
+        private static ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CreatePackageManagedCustomizationSnapshot(
+            ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot snapshot)
+        {
+            return new ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot(
+                snapshot.SlotCount,
+                snapshot.IconMode,
+                snapshot.SelectedGearIndex,
+                snapshot.ActionIconMode,
+                snapshot.CustomSaveIcon,
+                snapshot.CustomLoadIcon,
+                snapshot.CustomClearIcon,
+                snapshot.UseCustomSlotIcons,
+                snapshot.CustomIcons,
+                snapshot.UseCustomRootIcon,
+                snapshot.CustomRootIcon,
+                snapshot.UseCustomRootName,
+                snapshot.CustomRootName,
+                snapshot.CustomPresetNames,
+                snapshot.CustomPresetNameFormat,
+                snapshot.CustomSaveLabel,
+                snapshot.CustomLoadLabel,
+                snapshot.CustomClearPresetLabel,
+                snapshot.CustomConfirmLabel,
+                snapshot.UseCustomInstallPath,
+                snapshot.CustomInstallPath,
+                snapshot.UseParameterExclusions,
+                snapshot.ExcludedParameterNames,
+                useVendorizedGeneratedAssets: false,
+                vendorizedGeneratedAssetsPath: string.Empty);
+        }
+
         private static ComponentVendorizedStateSnapshot CaptureComponentVendorizedState(ASMLiteComponent component)
         {
             return new ComponentVendorizedStateSnapshot(
@@ -1765,6 +1797,7 @@ namespace ASMLite.Editor
             component.useVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
             component.vendorizedGeneratedAssetsPath = NormalizeOptionalPath(vendorizedGeneratedAssetsPath);
             EditorUtility.SetDirty(component);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(component);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }

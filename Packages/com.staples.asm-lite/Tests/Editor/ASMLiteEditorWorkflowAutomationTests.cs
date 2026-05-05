@@ -641,6 +641,42 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void Automation_SameWindowVendorizeDetachRecovery_ClearsStaleVendorizedPendingState()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                ResetDescriptorToDefaultGeneratedAssetReferences(_ctx.AvDesc);
+
+                InvokeDetachForAutomation(window, _ctx.Comp, vendorizeToAssets: true);
+
+                var detachedSnapshot = window.GetPendingCustomizationSnapshotForTesting();
+                Assert.IsTrue(detachedSnapshot.UseVendorizedGeneratedAssets,
+                    "Vendorize + detach should leave the shared pending snapshot carrying the last attached vendorized state until cleanup runs.");
+                AssertCanonicalVendorizedGeneratedAssetsPath(detachedSnapshot.VendorizedGeneratedAssetsPath,
+                    "Vendorize + detach should preserve the canonical vendorized generated-assets path before cleanup.");
+
+                window.ReturnToPackageManagedForAutomation();
+
+                var recovered = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(recovered,
+                    "Same-window detached recovery should reattach ASM-Lite after vendorize + detach success.");
+                Assert.IsFalse(recovered.useVendorizedGeneratedAssets,
+                    "Same-window detached recovery should clear stale pending vendorized mode before verifying package-managed state.");
+                Assert.AreEqual(string.Empty, recovered.vendorizedGeneratedAssetsPath,
+                    "Same-window detached recovery should clear stale pending vendorized generated-assets path.");
+                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                    ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, recovered),
+                    "Same-window detached recovery should restore PackageManaged tool state.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void Automation_AttachedVendorizedDetach_RetargetsDirectDeliveryDescriptorReferencesToVendorizedAssets()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();

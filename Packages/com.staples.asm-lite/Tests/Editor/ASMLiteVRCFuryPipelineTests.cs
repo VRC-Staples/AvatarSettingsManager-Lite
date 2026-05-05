@@ -294,6 +294,58 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
+        public void VF07_Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy()
+        {
+            const string source = "Menu/BoolToggle";
+            const string backup = "ASMLite_Bak_S1_Menu/BoolToggle";
+            const string defaultKey = "ASMLite_Def_Menu/BoolToggle";
+
+            _ctx.Comp.slotCount = 1;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = source,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                $"VF07: setup failure, expected one bool parameter. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF07");
+            var saveDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
+            var loadDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            var resetDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
+
+            AssertHasPreClearBeforeCopy("VF07 save", saveDriver, source, backup);
+            AssertHasPreClearBeforeCopy("VF07 load", loadDriver, backup, source);
+            AssertHasPreClearBeforeCopy("VF07 reset backup", resetDriver, defaultKey, backup);
+            AssertHasPreClearBeforeCopy("VF07 reset source", resetDriver, defaultKey, source);
+        }
+
+        private static void AssertHasPreClearBeforeCopy(string aid, VRC_AvatarParameterDriver driver, string source, string destination)
+        {
+            int copyIndex = driver.parameters.FindIndex(parameter =>
+                parameter.type == VRC_AvatarParameterDriver.ChangeType.Copy
+                && parameter.source == source
+                && parameter.name == destination);
+            Assert.GreaterOrEqual(copyIndex, 0,
+                $"{aid}: expected Copy {source} -> {destination}.");
+
+            int preClearIndex = driver.parameters.FindIndex(parameter =>
+                parameter.type == VRC_AvatarParameterDriver.ChangeType.Set
+                && parameter.name == destination
+                && parameter.value == 0f);
+            Assert.GreaterOrEqual(preClearIndex, 0,
+                $"{aid}: expected Set false before Copy into bool destination '{destination}'.");
+            Assert.Less(preClearIndex, copyIndex,
+                $"{aid}: Set false must run before Copy into bool destination '{destination}'.");
+        }
+
+        [Test, Category("Integration")]
         public void VF06_Regression_DeterministicRebuild_PreservesMappedLegacyBackupAliasesForLoadContinuity()
         {
             const string legacySource = "VF777_Menu/Hat";

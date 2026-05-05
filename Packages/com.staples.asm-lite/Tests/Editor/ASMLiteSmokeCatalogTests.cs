@@ -390,12 +390,13 @@ namespace ASMLite.Tests.Editor
                 "missing-avatar",
                 "SETUP_AVATAR_NOT_FOUND",
                 "No descriptor-bearing avatar",
-                expectedMutation: "missing-avatar-by-override-name");
+                expectedMutation: "missing-avatar-by-override-name",
+                expectedAvatarName: "No descriptor-bearing avatar");
             AssertExpectedDiagnostic(
                 negatives,
                 "duplicate-avatar-ambiguity",
                 "SETUP_AVATAR_AMBIGUOUS",
-                "Multiple avatars match",
+                "Multiple avatar descriptors",
                 expectedMutation: "duplicate-avatar-name");
             AssertExpectedDiagnostic(
                 negatives,
@@ -909,7 +910,8 @@ namespace ASMLite.Tests.Editor
             string expectedActionType = "select-avatar",
             string expectedScenePath = null,
             string expectedObjectName = null,
-            string expectedMutation = null)
+            string expectedMutation = null,
+            string expectedAvatarName = null)
         {
             ASMLiteSmokeStepDefinition step = suite.cases.Single(item => item.caseId == caseId).steps.Single();
             Assert.AreEqual(expectedActionType, step.actionType);
@@ -923,6 +925,8 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(expectedObjectName, step.args.objectName);
             if (expectedMutation != null)
                 Assert.AreEqual(expectedMutation, step.args.fixtureMutation);
+            if (expectedAvatarName != null)
+                Assert.AreEqual(expectedAvatarName, step.args.avatarName);
         }
 
         private static void AssertDestructiveResetCase(
