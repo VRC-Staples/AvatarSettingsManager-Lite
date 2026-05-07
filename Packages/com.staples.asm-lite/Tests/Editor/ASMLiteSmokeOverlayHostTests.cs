@@ -7,16 +7,124 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase;
 
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
     public class ASMLiteSmokeOverlayHostTests
     {
+        private const string RuntimeVrcEmoteParameterName = "VRCEmote";
+        private const string RuntimeVrcFaceBlendHorizontalParameterName = "VRCFaceBlendH";
+
+        private static string HarnessFixtureParameterName(string testName, string role)
+        {
+            return testName + "/" + role;
+        }
+
+        private static string HarnessVrcFuryStableParameterName(int ordinal)
+        {
+            return $"VF{100 + ordinal:00}_ASMLiteHarness/Toggle{ordinal}";
+        }
+
+        private static string HarnessVrcFurySyncDataParameterName(string valueKind, int ordinal)
+        {
+            return $"VF{ordinal:00}_SyncData{valueKind}{ordinal}";
+        }
+
+        private static string HarnessGoRuntimeParameterName(string testName)
+        {
+            return "Go/" + testName + "RuntimeState";
+        }
+
+        private static string HarnessBackupSlot1ParameterName(string parameterName)
+        {
+            return "ASMLite_Bak_S1_" + parameterName;
+        }
+
+        private static VRCExpressionParameters.Parameter HarnessParameter(
+            string name,
+            VRCExpressionParameters.ValueType valueType,
+            bool saved)
+        {
+            return new VRCExpressionParameters.Parameter
+            {
+                name = name,
+                valueType = valueType,
+                saved = saved,
+            };
+        }
+
+        private static void AddParameterDriverLayer(
+            AnimatorController controller,
+            string layerName,
+            string parameterName,
+            VRC_AvatarParameterDriver.ChangeType changeType)
+        {
+            var stateMachine = new AnimatorStateMachine { name = layerName + "StateMachine" };
+            var state = stateMachine.AddState(layerName + "State");
+            var driver = state.AddStateMachineBehaviour<VRCAvatarParameterDriver>();
+            driver.parameters = new List<VRC_AvatarParameterDriver.Parameter>
+            {
+                new VRC_AvatarParameterDriver.Parameter
+                {
+                    type = changeType,
+                    name = parameterName,
+                    value = 0f,
+                },
+            };
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = layerName,
+                defaultWeight = 1f,
+                stateMachine = stateMachine,
+            });
+        }
+
+        private static void AddTransitionConditionLayer(
+            AnimatorController controller,
+            string layerName,
+            string parameterName)
+        {
+            var stateMachine = new AnimatorStateMachine { name = layerName + "StateMachine" };
+            var sourceState = stateMachine.AddState(layerName + "Source");
+            var targetState = stateMachine.AddState(layerName + "Target");
+            var transition = sourceState.AddTransition(targetState);
+            transition.AddCondition(AnimatorConditionMode.If, 0f, parameterName);
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = layerName,
+                defaultWeight = 1f,
+                stateMachine = stateMachine,
+            });
+        }
+
+        private static void AddBlendParameterLayer(
+            AnimatorController controller,
+            string layerName,
+            string parameterName)
+        {
+            var stateMachine = new AnimatorStateMachine { name = layerName + "StateMachine" };
+            var state = stateMachine.AddState(layerName + "State");
+            state.motion = new BlendTree
+            {
+                name = layerName + "BlendTree",
+                blendType = BlendTreeType.Simple1D,
+                blendParameter = parameterName,
+            };
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = layerName,
+                defaultWeight = 1f,
+                stateMachine = stateMachine,
+            });
+        }
+
         [Test]
         public void CommandLine_ParsesRequiredSessionAndCatalogPaths()
         {
@@ -238,6 +346,400 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(avatarObject);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadGeneratedCoverage_FailsWhenSelectedBackupParameterMissing()
+        {
+            var generatedParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            string selectedParameterName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadGeneratedCoverage_FailsWhenSelectedBackupParameterMissing),
+                "SavedBool");
+            string missingBackupName = HarnessBackupSlot1ParameterName(selectedParameterName);
+            string unrelatedBackupName = HarnessBackupSlot1ParameterName(HarnessFixtureParameterName(
+                nameof(Av3SaveLoadGeneratedCoverage_FailsWhenSelectedBackupParameterMissing),
+                "UnrelatedBool"));
+            try
+            {
+                var selected = new[]
+                {
+                    HarnessParameter(selectedParameterName, VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                generatedParameters.parameters = new[]
+                {
+                    HarnessParameter(unrelatedBackupName, VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.TryAssertAv3SaveLoadGeneratedCoverage(
+                        selected,
+                        generatedParameters,
+                        out string detail),
+                    Is.False);
+                StringAssert.Contains(missingBackupName, detail);
+                StringAssert.Contains("backup coverage", detail);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(generatedParameters);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadGeneratedCoverage_PassesWhenSelectedBackupParameterExists()
+        {
+            var generatedParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            string selectedParameterName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadGeneratedCoverage_PassesWhenSelectedBackupParameterExists),
+                "SavedBool");
+            string backupName = HarnessBackupSlot1ParameterName(selectedParameterName);
+            try
+            {
+                var selected = new[]
+                {
+                    HarnessParameter(selectedParameterName, VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                generatedParameters.parameters = new[]
+                {
+                    HarnessParameter(backupName, VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.TryAssertAv3SaveLoadGeneratedCoverage(
+                        selected,
+                        generatedParameters,
+                        out string detail),
+                    Is.True,
+                    detail);
+                StringAssert.Contains(backupName, detail);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(generatedParameters);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            string selectedBoolName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters),
+                "SavedBool");
+            string stableIntName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters),
+                "SavedInt");
+            string stableFloatName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters),
+                "SavedFloat");
+            string goRuntimeName = HarnessGoRuntimeParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters));
+            string unsavedBoolName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters),
+                "UnsavedBool");
+            try
+            {
+                expressionParameters.parameters = new[]
+                {
+                    HarnessParameter(selectedBoolName, VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(goRuntimeName, VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter(RuntimeVrcEmoteParameterName, VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter(RuntimeVrcFaceBlendHorizontalParameterName, VRCExpressionParameters.ValueType.Float, saved: true),
+                    HarnessParameter(stableIntName, VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter(stableFloatName, VRCExpressionParameters.ValueType.Float, saved: true),
+                    HarnessParameter(unsavedBoolName, VRCExpressionParameters.ValueType.Bool, saved: false),
+                };
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessParameters(
+                        expressionParameters,
+                        saved: true,
+                        maxCount: 4)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                CollectionAssert.DoesNotContain(selectedNames, goRuntimeName,
+                    "Locomotion/runtime-driven Go/* parameters are not stable save/load harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, RuntimeVrcEmoteParameterName,
+                    "SDK runtime-driven VRC parameters are not stable save/load harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, RuntimeVrcFaceBlendHorizontalParameterName,
+                    "SDK runtime-driven VRC face-blend parameters are not stable save/load harness targets.");
+                CollectionAssert.AreEqual(
+                    new[] { selectedBoolName, stableIntName, stableFloatName },
+                    selectedNames);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSelection_SkipsVrcfurySyncDataParameters()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            string syncIntName = HarnessVrcFurySyncDataParameterName("Num", 1);
+            string syncBoolName = HarnessVrcFurySyncDataParameterName("Bool", 2);
+            string syncIndexName = "VF68_SyncIndex0";
+            string unsavedBoolName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVrcfurySyncDataParameters),
+                "UnsavedBool");
+            string unsavedIntName = HarnessFixtureParameterName(
+                nameof(Av3SaveLoadHarnessSelection_SkipsVrcfurySyncDataParameters),
+                "UnsavedInt");
+            try
+            {
+                expressionParameters.parameters = new[]
+                {
+                    HarnessParameter(syncIntName, VRCExpressionParameters.ValueType.Int, saved: false),
+                    HarnessParameter(syncBoolName, VRCExpressionParameters.ValueType.Bool, saved: false),
+                    HarnessParameter(syncIndexName, VRCExpressionParameters.ValueType.Int, saved: false),
+                    HarnessParameter(unsavedBoolName, VRCExpressionParameters.ValueType.Bool, saved: false),
+                    HarnessParameter(unsavedIntName, VRCExpressionParameters.ValueType.Int, saved: false),
+                };
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessParameters(
+                        expressionParameters,
+                        saved: false,
+                        maxCount: 4)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                CollectionAssert.DoesNotContain(selectedNames, syncIntName,
+                    "VRCFury sync data parameters are runtime-owned and should not be treated as stable unsaved harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, syncBoolName,
+                    "VRCFury sync data parameters are runtime-owned and should not be treated as stable unsaved harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, syncIndexName,
+                    "VRCFury sync index parameters are runtime-owned and should not be treated as stable unsaved harness targets.");
+                CollectionAssert.AreEqual(
+                    new[] { unsavedBoolName, unsavedIntName },
+                    selectedNames);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSavedSelection_IncludesStableVrcfuryCreatedTogglesBeyondSampleCap()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            try
+            {
+                var stableVrcFuryParameters = new[]
+                {
+                    HarnessParameter(HarnessVrcFuryStableParameterName(1), VRCExpressionParameters.ValueType.Float, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(2), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(3), VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                string unsavedVrcFuryParameterName = HarnessVrcFuryStableParameterName(4);
+                expressionParameters.parameters = new[]
+                {
+                    HarnessParameter("User/SavedBoolA", VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter("User/SavedBoolB", VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter("User/SavedIntA", VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter("User/SavedFloatA", VRCExpressionParameters.ValueType.Float, saved: true),
+                    HarnessParameter("VF68_SyncIndex0", VRCExpressionParameters.ValueType.Int, saved: false),
+                    HarnessParameter("VF68_SyncDataNum0", VRCExpressionParameters.ValueType.Int, saved: false),
+                }
+                    .Concat(stableVrcFuryParameters)
+                    .Concat(new[]
+                    {
+                        HarnessParameter(unsavedVrcFuryParameterName, VRCExpressionParameters.ValueType.Float, saved: false),
+                    })
+                    .ToArray();
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessSavedParameters(
+                        expressionParameters,
+                        maxSampleCount: 3)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                foreach (var parameter in stableVrcFuryParameters)
+                {
+                    CollectionAssert.Contains(selectedNames, parameter.name,
+                        "The runtime harness must include saved VRCFury-created toggles even when they fall outside the ordinary sampled subset.");
+                }
+                CollectionAssert.DoesNotContain(selectedNames, "VF68_SyncIndex0",
+                    "VRCFury sync index parameters are runtime-owned and not stable save/load targets.");
+                CollectionAssert.DoesNotContain(selectedNames, "VF68_SyncDataNum0",
+                    "VRCFury sync data parameters are runtime-owned and not stable save/load targets.");
+                CollectionAssert.DoesNotContain(selectedNames, unsavedVrcFuryParameterName,
+                    "Unsaved VRCFury-created parameters should not be treated as saved backup targets.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSavedSelection_ExcludesAnimatorDrivenVrcfuryParametersOutsideAsmLiteLayers()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            var controller = new AnimatorController();
+            try
+            {
+                var stableVrcFuryParameters = new[]
+                {
+                    HarnessParameter(HarnessVrcFuryStableParameterName(1), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(2), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(3), VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                expressionParameters.parameters = stableVrcFuryParameters;
+
+                AddParameterDriverLayer(
+                    controller,
+                    "ASMLite_Slot1",
+                    stableVrcFuryParameters[0].name,
+                    VRC_AvatarParameterDriver.ChangeType.Set);
+                AddParameterDriverLayer(
+                    controller,
+                    "Harness_UserFx",
+                    stableVrcFuryParameters[1].name,
+                    VRC_AvatarParameterDriver.ChangeType.Set);
+
+                var selected = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessSavedParameters(
+                    expressionParameters,
+                    maxSampleCount: 1);
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.ExcludeAnimatorDrivenAv3SaveLoadHarnessParameters(
+                        selected,
+                        controller,
+                        out string[] excludedNames)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[0].name,
+                    "ASM-Lite slot drivers should not make an otherwise stable harness target look externally animator-owned.");
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[1].name,
+                    "Externally animator-driven parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[2].name,
+                    "Undriven VRCFury-created parameters should remain deterministic harness targets.");
+                CollectionAssert.AreEquivalent(new[] { stableVrcFuryParameters[1].name }, excludedNames);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+                UnityEngine.Object.DestroyImmediate(controller);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSavedSelection_ExcludesVrcfuryAnimatorConditionAndBlendParameters()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            var controller = new AnimatorController();
+            try
+            {
+                var stableVrcFuryParameters = new[]
+                {
+                    HarnessParameter(HarnessVrcFuryStableParameterName(4), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(5), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(6), VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                expressionParameters.parameters = stableVrcFuryParameters;
+
+                AddTransitionConditionLayer(
+                    controller,
+                    "Harness_UserFxCondition",
+                    stableVrcFuryParameters[0].name);
+                AddBlendParameterLayer(
+                    controller,
+                    "Harness_UserFxBlend",
+                    stableVrcFuryParameters[1].name);
+
+                var selected = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessSavedParameters(
+                    expressionParameters,
+                    maxSampleCount: 1);
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.ExcludeAnimatorDrivenAv3SaveLoadHarnessParameters(
+                        selected,
+                        controller,
+                        out string[] excludedNames)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[0].name,
+                    "VRCFury-generated toggles used as external transition conditions are not stable direct-write AV3 harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[1].name,
+                    "VRCFury-generated toggles used as external blend parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[2].name,
+                    "VRCFury-created parameters that are not referenced by external animator layers should remain harness targets.");
+                CollectionAssert.AreEquivalent(
+                    new[] { stableVrcFuryParameters[0].name, stableVrcFuryParameters[1].name },
+                    excludedNames);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+                UnityEngine.Object.DestroyImmediate(controller);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessControllerResolution_UsesAvatarFxController()
+        {
+            GameObject avatarObject = null;
+            var avatarFxController = new AnimatorController();
+            try
+            {
+                avatarObject = new GameObject("HarnessControllerResolutionAvatar");
+                var avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
+                avatar.baseAnimationLayers = new[]
+                {
+                    new VRCAvatarDescriptor.CustomAnimLayer
+                    {
+                        type = VRCAvatarDescriptor.AnimLayerType.FX,
+                        isDefault = false,
+                        isEnabled = true,
+                        animatorController = avatarFxController,
+                    },
+                };
+
+                Assert.AreSame(
+                    avatarFxController,
+                    ASMLiteSmokeOverlayHostUnityRuntime.ResolveAv3SaveLoadHarnessAnimatorController(avatar),
+                    "The save/load harness must inspect the avatar's merged FX controller after VRCFury rebuilds, not only ASM-Lite's source controller asset.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(avatarObject);
+                UnityEngine.Object.DestroyImmediate(avatarFxController);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadGeneratedCoverage_ChecksEverySelectedVrcfuryCreatedToggleBackup()
+        {
+            var generatedParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            try
+            {
+                var selected = new[]
+                {
+                    HarnessParameter(HarnessVrcFuryStableParameterName(1), VRCExpressionParameters.ValueType.Float, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(2), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(3), VRCExpressionParameters.ValueType.Bool, saved: true),
+                };
+                int missingBackupIndex = 1;
+                generatedParameters.parameters = selected
+                    .Where((parameter, index) => index != missingBackupIndex)
+                    .Select(parameter => HarnessParameter(
+                        HarnessBackupSlot1ParameterName(parameter.name),
+                        parameter.valueType,
+                        saved: true))
+                    .ToArray();
+
+                Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.TryAssertAv3SaveLoadGeneratedCoverage(
+                        selected,
+                        generatedParameters,
+                        out string detail),
+                    Is.False);
+                StringAssert.Contains(HarnessBackupSlot1ParameterName(selected[missingBackupIndex].name), detail);
+                StringAssert.Contains("VRCFury toggle parameters selected by the harness are saved", detail);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(generatedParameters);
             }
         }
 

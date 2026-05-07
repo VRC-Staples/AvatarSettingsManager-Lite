@@ -63,13 +63,19 @@ namespace ASMLite.Tests.Editor
                     "open-scene",
                     "open-window",
                     "select-avatar",
+                    "set-parameter-backup-state",
                     "add-prefab",
+                    "rebuild",
                     "enter-playmode",
                     "run-av3-save-load-harness",
                     "assert-av3-save-load-result",
                     "exit-playmode",
                 },
                 suite.cases.Single().steps.Select(step => step.actionType).ToArray());
+
+            ASMLiteSmokeStepDefinition backupResetStep = suite.cases.Single().steps.Single(step => step.stepId == "reset-parameter-backup-coverage");
+            Assert.IsFalse(backupResetStep.args.useParameterExclusions,
+                "The AV3 save/load suite must reset backup exclusions so VRCFury toggle parameters selected by the harness keep generated coverage.");
 
             ASMLiteSmokeStepDefinition harnessStep = suite.cases.Single().steps.Single(step => step.stepId == "run-av3-save-load-harness");
             StringAssert.Contains("generated ASM-Lite control", harnessStep.description);

@@ -1228,13 +1228,22 @@ mod tests {
                 "open-scene",
                 "open-window",
                 "select-avatar",
+                "set-parameter-backup-state",
                 "add-prefab",
+                "rebuild",
                 "enter-playmode",
                 "run-av3-save-load-harness",
                 "assert-av3-save-load-result",
                 "exit-playmode"
             ]
         );
+
+        let reset_step = suite.cases[0]
+            .steps
+            .iter()
+            .find(|step| step.step_id == "reset-parameter-backup-coverage")
+            .expect("AV3 suite resets stale backup exclusions before rebuilding");
+        assert_eq!(reset_step.args.use_parameter_exclusions, Some(false));
     }
 
     #[test]

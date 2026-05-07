@@ -7423,12 +7423,31 @@
                   "debugHint": "If selection fails, confirm the canonical avatar still exists in the loaded scene."
                 },
                 {
+                  "stepId": "reset-parameter-backup-coverage",
+                  "label": "All save/load parameters are covered",
+                  "description": "Disable parameter-backup exclusions so VRCFury toggle parameters selected by the AV3 harness get generated save/load coverage.",
+                  "actionType": "set-parameter-backup-state",
+                  "expectedOutcome": "Parameter-backup exclusions are disabled before ASM-Lite is attached or rebuilt.",
+                  "debugHint": "If this fails, inspect stale window customization state before entering playmode.",
+                  "args": {
+                    "useParameterExclusions": false
+                  }
+                },
+                {
                   "stepId": "add-prefab",
                   "label": "ASM-Lite scaffold is present",
-                  "description": "Add the ASM-Lite prefab scaffold and generated assets required by the AV3 save/load runtime harness.",
+                  "description": "Add the ASM-Lite prefab scaffold required by the AV3 save/load runtime harness if it is missing.",
                   "actionType": "add-prefab",
-                  "expectedOutcome": "The avatar has the ASM-Lite scaffold and generated assets required for AV3 save/load runtime validation.",
-                  "debugHint": "If scaffold setup fails, inspect editor-side generation prerequisites before entering playmode."
+                  "expectedOutcome": "The avatar has the ASM-Lite scaffold required for AV3 save/load runtime validation.",
+                  "debugHint": "If scaffold setup fails, inspect editor-side generation prerequisites before rebuilding."
+                },
+                {
+                  "stepId": "rebuild",
+                  "label": "Generated assets are refreshed",
+                  "description": "Rebuild generated ASM-Lite assets so existing scene scaffolds pick up the current save/load driver generation before playmode.",
+                  "actionType": "rebuild",
+                  "expectedOutcome": "The generated controller and expression parameters are current before AV3 runtime validation begins.",
+                  "debugHint": "If rebuild fails, inspect generated controller and expression parameter asset paths before entering playmode."
                 },
                 {
                   "stepId": "enter-playmode",
