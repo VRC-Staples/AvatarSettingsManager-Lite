@@ -1899,12 +1899,6 @@ namespace ASMLite.Tests.Editor
             foreach (var driver in (stateMachine.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                 CollectDrivenParameterNames(driver, targetNames, drivenNames);
 
-            foreach (var transition in stateMachine.anyStateTransitions ?? Array.Empty<AnimatorStateTransition>())
-                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
-            foreach (var transition in stateMachine.entryTransitions ?? Array.Empty<AnimatorTransition>())
-                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
             foreach (var childState in stateMachine.states ?? Array.Empty<ChildAnimatorState>())
             {
                 var state = childState.state;
@@ -1913,54 +1907,10 @@ namespace ASMLite.Tests.Editor
 
                 foreach (var driver in (state.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                     CollectDrivenParameterNames(driver, targetNames, drivenNames);
-
-                foreach (var transition in state.transitions ?? Array.Empty<AnimatorStateTransition>())
-                    CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
-                CollectMotionParameterNames(state.motion, targetNames, drivenNames);
             }
 
             foreach (var childStateMachine in stateMachine.stateMachines ?? Array.Empty<ChildAnimatorStateMachine>())
                 CollectExternallyAnimatorDrivenParameterNames(childStateMachine.stateMachine, targetNames, drivenNames);
-        }
-
-        private static void CollectTransitionConditionParameterNames(
-            AnimatorTransitionBase transition,
-            ISet<string> targetNames,
-            HashSet<string> drivenNames)
-        {
-            if (transition == null || targetNames == null || drivenNames == null)
-                return;
-
-            foreach (var condition in transition.conditions ?? Array.Empty<AnimatorCondition>())
-            {
-                if (!string.IsNullOrWhiteSpace(condition.parameter) && targetNames.Contains(condition.parameter))
-                    drivenNames.Add(condition.parameter);
-            }
-        }
-
-        private static void CollectMotionParameterNames(
-            Motion motion,
-            ISet<string> targetNames,
-            HashSet<string> drivenNames)
-        {
-            if (motion == null || targetNames == null || drivenNames == null)
-                return;
-
-            if (!(motion is BlendTree blendTree))
-                return;
-
-            if (!string.IsNullOrWhiteSpace(blendTree.blendParameter) && targetNames.Contains(blendTree.blendParameter))
-                drivenNames.Add(blendTree.blendParameter);
-            if (!string.IsNullOrWhiteSpace(blendTree.blendParameterY) && targetNames.Contains(blendTree.blendParameterY))
-                drivenNames.Add(blendTree.blendParameterY);
-
-            foreach (var child in blendTree.children)
-            {
-                if (!string.IsNullOrWhiteSpace(child.directBlendParameter) && targetNames.Contains(child.directBlendParameter))
-                    drivenNames.Add(child.directBlendParameter);
-                CollectMotionParameterNames(child.motion, targetNames, drivenNames);
-            }
         }
 
         private static void CollectDrivenParameterNames(

@@ -625,7 +625,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Av3SaveLoadHarnessSavedSelection_ExcludesVrcfuryAnimatorConditionAndBlendParameters()
+        public void Av3SaveLoadHarnessSavedSelection_KeepsAnimatorReadOnlyConditionAndBlendParameters()
         {
             var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             var controller = new AnimatorController();
@@ -659,15 +659,13 @@ namespace ASMLite.Tests.Editor
                     .Select(parameter => parameter.name)
                     .ToArray();
 
-                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[0].name,
-                    "VRCFury-generated toggles used as external transition conditions are not stable direct-write AV3 harness targets.");
-                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[1].name,
-                    "VRCFury-generated toggles used as external blend parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[0].name,
+                    "Animator transition conditions read menu parameters; they do not make the parameter animator-owned.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[1].name,
+                    "Blend tree parameters read menu parameters; they do not make the parameter animator-owned.");
                 CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[2].name,
                     "VRCFury-created parameters that are not referenced by external animator layers should remain harness targets.");
-                CollectionAssert.AreEquivalent(
-                    new[] { stableVrcFuryParameters[0].name, stableVrcFuryParameters[1].name },
-                    excludedNames);
+                CollectionAssert.IsEmpty(excludedNames);
             }
             finally
             {
