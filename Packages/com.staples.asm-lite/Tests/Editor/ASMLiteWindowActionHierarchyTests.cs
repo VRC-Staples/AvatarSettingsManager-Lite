@@ -56,7 +56,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_PackageManagedAttached_SplitsPrimaryAndAdvancedCorrectly()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 advancedDisclosureExpanded: false);
 
@@ -83,7 +83,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_ComponentPresentVendorized_StaysExplicit()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 hasComponent: true,
                 advancedDisclosureExpanded: false);
 
@@ -101,7 +101,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_ComponentPresentVendorized_ExpandedAdvancedMakesMaintenanceVisible()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 hasComponent: true,
                 advancedDisclosureExpanded: true);
 
@@ -119,7 +119,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_ComponentMissingDetached_StaysExplicit()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached,
+                ASMLite.Editor.ASMLiteInstallationState.Detached,
                 hasComponent: false,
                 advancedDisclosureExpanded: false);
 
@@ -135,7 +135,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_ComponentMissingVendorized_StaysExplicit()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 hasComponent: false,
                 advancedDisclosureExpanded: false);
 
@@ -151,7 +151,7 @@ namespace ASMLite.Tests.Editor
         public void BuildActionHierarchyContract_AvatarSelectedNotInstalled_StaysExplicit()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
                 hasComponent: false,
                 advancedDisclosureExpanded: false);
 
@@ -170,7 +170,7 @@ namespace ASMLite.Tests.Editor
 
             var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp);
 
-            Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized, toolState,
+            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Vendorized, toolState,
                 "Component-present vendorized combinations should resolve explicitly to Vendorized state.");
         }
 
@@ -225,7 +225,7 @@ namespace ASMLite.Tests.Editor
 
             var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null);
 
-            Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached, toolState,
+            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Detached, toolState,
                 "Component-missing avatars with ASM-Lite runtime markers should resolve explicitly to Detached state.");
         }
 
@@ -237,7 +237,7 @@ namespace ASMLite.Tests.Editor
 
             var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null);
 
-            Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.NotInstalled, toolState,
+            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.NotInstalled, toolState,
                 "Avatar-selected without component or runtime markers should resolve explicitly to NotInstalled state.");
         }
 

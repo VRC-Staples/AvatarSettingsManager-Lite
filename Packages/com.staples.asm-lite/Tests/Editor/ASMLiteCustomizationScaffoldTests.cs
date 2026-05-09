@@ -869,7 +869,7 @@ namespace ASMLite.Tests.Editor
                         "Vendorize should attempt rollback after live FullController retarget failure.");
                     Assert.IsTrue(result.RollbackSucceeded,
                         "Vendorize rollback should restore the package-managed baseline after live FullController retarget failure.");
-                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged, result.RollbackState,
+                    Assert.AreEqual(ASMLiteInstallationState.PackageManaged, result.RollbackState,
                         "Vendorize rollback state should resolve back to PackageManaged after live FullController retarget failure.");
                 }
 
@@ -893,7 +893,7 @@ namespace ASMLite.Tests.Editor
                     "Vendorize rollback should restore live FullController references back to package-managed assets after live retarget failure.");
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(_ctx.Comp)),
                     "Vendorize rollback should keep prefab-instance FullController prefix overrides cleared after live retarget failure.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
                     "Vendorize rollback should resolve the attached avatar back to PackageManaged tool state.");
             }
@@ -945,9 +945,9 @@ namespace ASMLite.Tests.Editor
                         "Detach should attempt rollback after verify-stage failure.");
                     Assert.IsTrue(result.RollbackSucceeded,
                         "Detach rollback should restore the attached package-managed baseline after verify-stage failure.");
-                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged, result.RollbackState,
+                    Assert.AreEqual(ASMLiteInstallationState.PackageManaged, result.RollbackState,
                         "Detach rollback state should resolve back to PackageManaged after verify-stage failure.");
-                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled, result.RecoveredState,
+                    Assert.AreEqual(ASMLiteInstallationState.NotInstalled, result.RecoveredState,
                         "Detach rollback should report the detached baseline state after attached package-managed recovery.");
                 }
 
@@ -970,7 +970,7 @@ namespace ASMLite.Tests.Editor
                     "Detach rollback should restore live FullController references back to package-managed assets after verify-stage failure.");
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
                     "Detach rollback should preserve install-path routing after verify-stage failure.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Detach rollback should remove detached runtime markers before leaving the avatar attached again.");
             }

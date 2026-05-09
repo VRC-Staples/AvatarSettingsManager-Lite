@@ -350,7 +350,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "A56: setup should leave the avatar detached before recovery.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A56: setup should classify the avatar as Detached before recovery.");
 
