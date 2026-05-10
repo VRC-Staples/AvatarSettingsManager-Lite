@@ -128,26 +128,21 @@ namespace ASMLite.Tests.Editor
         }
 
         private static int CountASMLiteLayers(AnimatorController ctrl)
-            => ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
+            => ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
 
         private static int CountASMLiteFxParams(AnimatorController ctrl)
-            => ctrl.parameters.Count(p => p.name != null
-                && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
+            => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
 
         private static int CountASMLiteExprParams(VRCExpressionParameters exprParams)
         {
             var items = exprParams?.parameters ?? new VRCExpressionParameters.Parameter[0];
-            return items.Count(p => p != null
-                && p.name != null
-                && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
+            return items.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
         }
 
         private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
         {
             if (rootMenu?.controls == null) return 0;
-            return rootMenu.controls.Count(c => c != null
-                && c.name == "Settings Manager"
-                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
+            return rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
         }
 
         private static int FindFxLayerIndex(VRCAvatarDescriptor avDesc)
@@ -190,9 +185,8 @@ namespace ASMLite.Tests.Editor
 
             int count = 0;
             string normalizedPrefix = assetPrefix.Replace('\\', '/').TrimEnd('/');
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (!string.IsNullOrWhiteSpace(menuPath)
-                && menuPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal))
+            string menuPath = AssetDatabase.GetAssetPath(menu);
+            if (ASMLiteGeneratedOwnershipPolicy.PathStartsWith(menuPath, normalizedPrefix))
             {
                 count++;
             }
@@ -233,11 +227,11 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Expected a populated FullController menu reference.");
             Assert.IsTrue(parametersReference.HasReference,
                 assertionMessage + " Expected a populated FullController parameter reference.");
-            Assert.IsTrue(controllerReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(controllerReference.AssetPath, normalizedPrefix),
                 assertionMessage + " Expected the FullController FX controller reference to point at the expected generated-assets prefix.");
-            Assert.IsTrue(menuReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(menuReference.AssetPath, normalizedPrefix),
                 assertionMessage + " Expected the FullController menu reference to point at the expected generated-assets prefix.");
-            Assert.IsTrue(parametersReference.AssetPath.StartsWith(normalizedPrefix, System.StringComparison.Ordinal),
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(parametersReference.AssetPath, normalizedPrefix),
                 assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
         }
 

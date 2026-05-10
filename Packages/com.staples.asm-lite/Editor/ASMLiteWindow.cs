@@ -3948,7 +3948,7 @@ namespace ASMLite.Editor
                 {
                     if (p == null || string.IsNullOrEmpty(p.name))
                         continue;
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name))
                         continue;
                     if (p.valueType != VRCExpressionParameters.ValueType.Bool
                         && p.valueType != VRCExpressionParameters.ValueType.Int
@@ -3970,7 +3970,7 @@ namespace ASMLite.Editor
                     string paramName = referencedVfParams[i];
                     if (string.IsNullOrWhiteSpace(paramName))
                         continue;
-                    if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(paramName))
                         continue;
 
                     names.Add(paramName);
@@ -3989,7 +3989,7 @@ namespace ASMLite.Editor
                     string assigned = assignedGlobals[i];
                     if (string.IsNullOrWhiteSpace(assigned))
                         continue;
-                    if (assigned.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(assigned))
                         continue;
 
                     names.Add(assigned);
@@ -4017,11 +4017,11 @@ namespace ASMLite.Editor
 
                     if (string.IsNullOrWhiteSpace(deterministic))
                         continue;
-                    if (deterministic.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(deterministic))
                         continue;
 
                     if (!string.IsNullOrWhiteSpace(candidate.GlobalParam)
-                        && !candidate.GlobalParam.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        && !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(candidate.GlobalParam))
                     {
                         names.Remove(candidate.GlobalParam.Trim());
                     }
@@ -4081,7 +4081,7 @@ namespace ASMLite.Editor
             if (string.IsNullOrWhiteSpace(menuPath))
                 return false;
 
-            return string.Equals(Path.GetFileName(menuPath), "ASMLite_Presets_Menu.asset", StringComparison.Ordinal);
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(menuPath);
         }
 
         private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
@@ -4093,9 +4093,7 @@ namespace ASMLite.Editor
             if (string.IsNullOrWhiteSpace(menuPath))
                 return false;
 
-            string fileName = Path.GetFileName(menuPath);
-            return fileName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                && fileName.EndsWith("Menu.asset", StringComparison.Ordinal);
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(menuPath);
         }
 
         private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
@@ -5764,125 +5762,11 @@ namespace ASMLite.Editor
                 return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
             if (avatar == null)
                 return AsmLiteToolState.NotInstalled;
-            if (HasVendorizedAsmLiteReferences(avatar))
+            if (ASMLiteGeneratedOwnershipPolicy.HasVendorizedReferences(avatar))
                 return AsmLiteToolState.Vendorized;
-            if (HasAsmLiteRuntimeMarkers(avatar))
+            if (ASMLiteGeneratedOwnershipPolicy.HasRuntimeMarkers(avatar))
                 return AsmLiteToolState.Detached;
             return AsmLiteToolState.NotInstalled;
-        }
-
-        private static bool HasVendorizedAsmLiteReferences(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            const string vendorPrefix = "Assets/ASM-Lite/";
-
-            string exprPath = avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                return true;
-
-            string menuPath = avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                return true;
-
-            if (avatar.expressionsMenu != null && avatar.expressionsMenu.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control?.subMenu == null)
-                        continue;
-
-                    string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
-                    if (!string.IsNullOrWhiteSpace(subPath) && subPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.baseAnimationLayers != null)
-            {
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    var ctrl = avatar.baseAnimationLayers[i].animatorController;
-                    if (!ctrl)
-                        continue;
-
-                    string ctrlPath = AssetDatabase.GetAssetPath(ctrl)?.Replace('\\', '/');
-                    if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            var expr = avatar.expressionParameters;
-            if (expr?.parameters != null)
-            {
-                for (int i = 0; i < expr.parameters.Length; i++)
-                {
-                    var p = expr.parameters[i];
-                    if (p == null || string.IsNullOrWhiteSpace(p.name))
-                        continue;
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(p.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.baseAnimationLayers != null)
-            {
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    var ctrl = avatar.baseAnimationLayers[i].animatorController as UnityEditor.Animations.AnimatorController;
-                    if (ctrl == null)
-                        continue;
-
-                    for (int j = 0; j < ctrl.layers.Length; j++)
-                    {
-                        if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                            return true;
-                    }
-
-                    for (int j = 0; j < ctrl.parameters.Length; j++)
-                    {
-                        string paramName = ctrl.parameters[j].name;
-                        if (string.IsNullOrWhiteSpace(paramName))
-                            continue;
-                        if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                            || string.Equals(paramName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                            return true;
-                    }
-                }
-            }
-
-            if (avatar.expressionsMenu?.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                        return true;
-
-                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(subPath)
-                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
-                        return true;
-                }
-            }
-
-            return false;
         }
 
         private ASMLiteComponent GetOrRefreshComponent()

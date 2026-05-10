@@ -99,7 +99,7 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(result, 0);
 
             var genCtrl = LoadGeneratedController("A05");
-            int layerCount = genCtrl.layers.Count(l => l.name.StartsWith("ASMLite_"));
+            int layerCount = genCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             Assert.AreEqual(2, layerCount,
                 "Should create exactly slotCount ASMLite_ layers in the generated FX controller.");
         }
@@ -410,7 +410,7 @@ namespace ASMLite.Tests.Editor
 
             var genCtrl = LoadGeneratedController("A17");
             var asmParams = genCtrl.parameters
-                .Where(p => p.name.StartsWith("ASMLite_"))
+                .Where(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter)
                 .Select(p => p.name)
                 .ToList();
 

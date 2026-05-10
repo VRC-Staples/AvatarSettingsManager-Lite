@@ -217,7 +217,7 @@ namespace ASMLite.Editor
             {
                 if (p == null || string.IsNullOrEmpty(p.name))
                     continue;
-                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name))
                 {
                     Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}': already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
                     continue;
@@ -1661,7 +1661,7 @@ namespace ASMLite.Editor
             }
 
             string generatedDir    = ASMLiteAssetPaths.GeneratedDir;
-            string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
+            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
 
             // In-memory arrays for references used outside the batch block.
             var confirmMenus      = new VRCExpressionsMenu[slotCount];
@@ -1920,7 +1920,7 @@ namespace ASMLite.Editor
             // Remove existing ASMLite_ layers (iterate backwards)
             for (int i = ctrl.layers.Length - 1; i >= 0; i--)
             {
-                if (ctrl.layers[i].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer(ctrl.layers[i]))
                     ctrl.RemoveLayer(i);
             }
 
@@ -1932,7 +1932,7 @@ namespace ASMLite.Editor
                 removedAny = false;
                 foreach (var p in ctrl.parameters)
                 {
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter(p))
                     {
                         ctrl.RemoveParameter(p);
                         removedAny = true;
@@ -2035,7 +2035,7 @@ namespace ASMLite.Editor
             {
                 if (p == null || string.IsNullOrEmpty(p.name))
                     continue;
-                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter(p))
                     continue;
                 filtered.Add(p);
             }
@@ -2111,7 +2111,7 @@ namespace ASMLite.Editor
                 rootMenu.controls = new List<VRCExpressionsMenu.Control>();
 
             // Load the generated presets menu that PopulateExpressionMenu created.
-            string presetsMenuPath = $"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset";
+            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
             var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
             if (presetsMenu == null)
             {
@@ -2124,11 +2124,7 @@ namespace ASMLite.Editor
             // Remove existing ASM-Lite root entries (idempotent), including stale names
             // from toggle flips between custom and default root naming.
             rootMenu.controls.RemoveAll(c =>
-                c != null
-                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
-                && (string.Equals(c.name, DefaultRootControlName, StringComparison.Ordinal)
-                    || string.Equals(c.name, effectiveRootControlName, StringComparison.Ordinal)
-                    || string.Equals(AssetDatabase.GetAssetPath(c.subMenu), presetsMenuPath, StringComparison.Ordinal)));
+                ASMLiteGeneratedOwnershipPolicy.IsInjectedRootMenuControl(c, effectiveRootControlName));
 
             // Check VRC menu control limit (8 max)
             if (rootMenu.controls.Count >= 8)

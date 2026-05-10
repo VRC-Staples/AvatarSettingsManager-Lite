@@ -177,45 +177,37 @@ namespace ASMLite.Tests.Editor
         }
 
         private static int CountASMLiteLayers(AnimatorController ctrl)
-            => ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
+            => ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
 
         private static int CountASMLiteFxParams(AnimatorController ctrl)
-            => ctrl.parameters.Count(p => p.name != null
-                && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
+            => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
 
         private static int CountASMLiteExprParams(VRCExpressionParameters exprParams)
-            => exprParams.parameters.Count(p => p != null
-                && p.name != null
-                && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"));
+            => exprParams.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
 
         private static int ExpectedGeneratedExprAsmParamCount(int slotCount, int discoveredParamCount)
             => 1 + discoveredParamCount + (slotCount * discoveredParamCount);
 
         private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
-            => rootMenu.controls.Count(c => c != null
-                && c.name == "Settings Manager"
-                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
+            => rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
 
         private static int CountDiscoveredNonASMLiteParams(VRCExpressionParameters exprParams)
         {
             var items = exprParams?.parameters ?? new VRCExpressionParameters.Parameter[0];
             return items.Count(p => p != null
                 && !string.IsNullOrEmpty(p.name)
-                && !p.name.StartsWith("ASMLite_"));
+                && !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name));
         }
 
         private static int CountDuplicateFxParamNames(AnimatorController ctrl)
             => ctrl.parameters
-                .Where(p => !string.IsNullOrEmpty(p.name)
-                    && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"))
+                .Where(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter)
                 .GroupBy(p => p.name)
                 .Count(g => g.Count() > 1);
 
         private static int CountDuplicateExprParamNames(VRCExpressionParameters exprParams)
             => (exprParams?.parameters ?? new VRCExpressionParameters.Parameter[0])
-                .Where(p => p != null
-                    && !string.IsNullOrEmpty(p.name)
-                    && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl"))
+                .Where(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter)
                 .GroupBy(p => p.name)
                 .Count(g => g.Count() > 1);
 

@@ -70,21 +70,21 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 2;
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "VF01_UserParam", VRCExpressionParameters.ValueType.Int);
 
-            int liveFxAsmLayersBefore = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
+            int liveFxAsmLayersBefore = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             int liveExprAsmBefore = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
-                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_"));
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
             int liveMenuSettingsBefore = (_ctx.AvDesc.expressionsMenu.controls ?? new System.Collections.Generic.List<VRCExpressionsMenu.Control>())
-                .Count(c => c != null && c.name == "Settings Manager");
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(1, buildResult,
                 $"VF01: Build should discover exactly one user parameter. got {buildResult}.");
 
-            int liveFxAsmLayersAfter = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_"));
+            int liveFxAsmLayersAfter = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             int liveExprAsmAfter = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
-                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_"));
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
             int liveMenuSettingsAfter = (_ctx.AvDesc.expressionsMenu.controls ?? new System.Collections.Generic.List<VRCExpressionsMenu.Control>())
-                .Count(c => c != null && c.name == "Settings Manager");
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
 
             Assert.AreEqual(liveFxAsmLayersBefore, liveFxAsmLayersAfter,
                 $"VF01: Build should not inject ASMLite layers into fixture descriptor FX controller. before={liveFxAsmLayersBefore}, after={liveFxAsmLayersAfter}.");
@@ -101,13 +101,13 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(generatedExpr, "VF01: generated expression params must exist.");
             Assert.IsNotNull(generatedMenu, "VF01: generated menu must exist.");
 
-            Assert.AreEqual(2, generatedCtrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_")),
+            Assert.AreEqual(2, generatedCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer),
                 "VF01: generated FX controller should carry one ASMLite layer per configured slot.");
             Assert.AreEqual(4,
-                generatedExpr.parameters.Count(p => p != null && p.name != null && (p.name.StartsWith("ASMLite_") || p.name == "ASMLite_Ctrl")),
+                generatedExpr.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter),
                 "VF01: generated expression params should contain ASMLite_Ctrl + one Clear-default key + one backup per slot.");
             Assert.AreEqual(1,
-                generatedMenu.controls.Count(c => c != null && c.name == "Settings Manager"),
+                generatedMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl),
                 "VF01: generated root menu should contain one Settings Manager wrapper.");
         }
 

@@ -1322,7 +1322,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (HasAvatarGeneratedReferencesUnderPrefix(avatar, ASMLiteAssetPaths.GeneratedDir))
+            if (ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, ASMLiteAssetPaths.GeneratedDir))
             {
                 failureMessage = "[ASM-Lite] Attached vendorize verification failed because descriptor-level generated assets still referenced package-managed generated assets after vendorization.";
                 failureContext = ASMLiteAssetPaths.GeneratedDir;
@@ -1361,7 +1361,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (HasAvatarGeneratedReferencesUnderPrefix(avatar, vendorizedDir))
+            if (ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, vendorizedDir))
             {
                 failureMessage = "[ASM-Lite] Attached return verification failed because descriptor-level generated assets still referenced the vendorized folder.";
                 failureContext = vendorizedDir;
@@ -1451,9 +1451,9 @@ namespace ASMLite.Editor
             }
 
             string normalizedExpectedPrefix = NormalizeOptionalPath(expectedPrefix);
-            if (!PathStartsWith(snapshot.ControllerAssetPath, normalizedExpectedPrefix)
-                || !PathStartsWith(snapshot.MenuAssetPath, normalizedExpectedPrefix)
-                || !PathStartsWith(snapshot.ParametersAssetPath, normalizedExpectedPrefix))
+            if (!ASMLiteGeneratedOwnershipPolicy.PathStartsWith(snapshot.ControllerAssetPath, normalizedExpectedPrefix)
+                || !ASMLiteGeneratedOwnershipPolicy.PathStartsWith(snapshot.MenuAssetPath, normalizedExpectedPrefix)
+                || !ASMLiteGeneratedOwnershipPolicy.PathStartsWith(snapshot.ParametersAssetPath, normalizedExpectedPrefix))
             {
                 failureMessage = "[ASM-Lite] Lifecycle transaction verification failed because live FullController references were not retargeted to the expected generated-assets prefix.";
                 failureContext = normalizedExpectedPrefix;
@@ -1463,35 +1463,6 @@ namespace ASMLite.Editor
             failureMessage = string.Empty;
             failureContext = string.Empty;
             return true;
-        }
-
-        private static bool HasAvatarGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string prefix)
-        {
-            if (avatar == null)
-                return false;
-
-            string normalizedPrefix = NormalizeOptionalPath(prefix);
-            if (string.IsNullOrWhiteSpace(normalizedPrefix))
-                return false;
-
-            string exprPath = NormalizeOptionalPath(avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters) : string.Empty);
-            if (PathStartsWith(exprPath, normalizedPrefix))
-                return true;
-
-            string menuPath = NormalizeOptionalPath(avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu) : string.Empty);
-            if (PathStartsWith(menuPath, normalizedPrefix) || MenuReferencesPrefix(avatar.expressionsMenu, normalizedPrefix))
-                return true;
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                string controllerPath = NormalizeOptionalPath(avatar.baseAnimationLayers[i].animatorController
-                    ? AssetDatabase.GetAssetPath(avatar.baseAnimationLayers[i].animatorController)
-                    : string.Empty);
-                if (PathStartsWith(controllerPath, normalizedPrefix))
-                    return true;
-            }
-
-            return false;
         }
 
         private static bool VerifyDirectDeliveryState(
@@ -1508,7 +1479,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (!HasAsmLiteRuntimeMarkers(avatar))
+            if (!ASMLiteGeneratedOwnershipPolicy.HasRuntimeMarkers(avatar))
             {
                 failureMessage = "[ASM-Lite] Detach verification failed because ASM-Lite runtime markers were not present after direct delivery.";
                 failureContext = avatar.gameObject.name;
@@ -1525,7 +1496,7 @@ namespace ASMLite.Editor
                     return false;
                 }
 
-                if (!HasAvatarGeneratedReferencesUnderPrefix(avatar, normalizedVendorizedDir))
+                if (!ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, normalizedVendorizedDir))
                 {
                     failureMessage = "[ASM-Lite] Vendorize + detach verification failed because descriptor-level generated assets were not routed through the vendorized folder after direct delivery.";
                     failureContext = normalizedVendorizedDir;
@@ -1658,73 +1629,6 @@ namespace ASMLite.Editor
                 : ASMLiteWindow.AsmLiteToolState.NotInstalled;
         }
 
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            var expr = avatar.expressionParameters;
-            if (expr?.parameters != null)
-            {
-                for (int i = 0; i < expr.parameters.Length; i++)
-                {
-                    var parameter = expr.parameters[i];
-                    if (parameter == null || string.IsNullOrWhiteSpace(parameter.name))
-                        continue;
-                    if (parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameter.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var controller = avatar.baseAnimationLayers[i].animatorController as AnimatorController;
-                if (controller == null)
-                    continue;
-
-                for (int layerIndex = 0; layerIndex < controller.layers.Length; layerIndex++)
-                {
-                    if (controller.layers[layerIndex].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        return true;
-                }
-
-                for (int parameterIndex = 0; parameterIndex < controller.parameters.Length; parameterIndex++)
-                {
-                    string parameterName = controller.parameters[parameterIndex].name;
-                    if (string.IsNullOrWhiteSpace(parameterName))
-                        continue;
-                    if (parameterName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameterName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.expressionsMenu?.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                        return true;
-
-                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(subPath)
-                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
         private static ASMLiteBuildDiagnosticResult BuildRollbackDiagnostic(
             ASMLiteBuildDiagnosticResult originalDiagnostic,
             ASMLiteBuildDiagnosticResult rollbackDiagnostic,
@@ -1848,41 +1752,6 @@ namespace ASMLite.Editor
             }
 
             return true;
-        }
-
-        private static bool PathStartsWith(string assetPath, string prefix)
-        {
-            if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(prefix))
-                return false;
-
-            return assetPath.StartsWith(prefix.TrimEnd('/'), StringComparison.Ordinal);
-        }
-
-        private static bool MenuReferencesPrefix(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu menu, string prefix)
-        {
-            return MenuReferencesPrefix(menu, prefix, new System.Collections.Generic.HashSet<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu>());
-        }
-
-        private static bool MenuReferencesPrefix(
-            VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu menu,
-            string prefix,
-            System.Collections.Generic.HashSet<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu> visited)
-        {
-            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
-                return false;
-
-            for (int i = 0; i < menu.controls.Count; i++)
-            {
-                var control = menu.controls[i];
-                if (control?.subMenu == null)
-                    continue;
-
-                string subMenuPath = NormalizeOptionalPath(AssetDatabase.GetAssetPath(control.subMenu));
-                if (PathStartsWith(subMenuPath, prefix) || MenuReferencesPrefix(control.subMenu, prefix, visited))
-                    return true;
-            }
-
-            return false;
         }
 
         private static string NormalizeOptionalPath(string path)

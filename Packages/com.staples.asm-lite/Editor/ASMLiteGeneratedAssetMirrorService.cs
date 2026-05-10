@@ -155,7 +155,6 @@ namespace ASMLite.Editor
 
     internal static class ASMLiteGeneratedAssetMirrorService
     {
-        private const string VendorizedRoot = "Assets/ASM-Lite";
         private static ASMLiteGeneratedAssetMirrorTestFailurePoint s_testFailurePoint;
 
         internal static IDisposable PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint failurePoint)
@@ -626,7 +625,7 @@ namespace ASMLite.Editor
             if (avatar.expressionParameters != null)
             {
                 string exprPath = NormalizeAssetPath(AssetDatabase.GetAssetPath(avatar.expressionParameters));
-                if (PathStartsWith(exprPath, sourcePrefix))
+                if (ASMLiteGeneratedOwnershipPolicy.PathStartsWith(exprPath, sourcePrefix))
                 {
                     var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(destinationPrefix + "/" + Path.GetFileName(exprPath));
                     if (replacement == null)
@@ -652,7 +651,7 @@ namespace ASMLite.Editor
             if (avatar.expressionsMenu != null)
             {
                 string menuPath = NormalizeAssetPath(AssetDatabase.GetAssetPath(avatar.expressionsMenu));
-                if (PathStartsWith(menuPath, sourcePrefix))
+                if (ASMLiteGeneratedOwnershipPolicy.PathStartsWith(menuPath, sourcePrefix))
                 {
                     var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(destinationPrefix + "/" + Path.GetFileName(menuPath));
                     if (replacement == null)
@@ -682,7 +681,7 @@ namespace ASMLite.Editor
                 var layer = avatar.baseAnimationLayers[i];
                 var controller = layer.animatorController;
                 string controllerPath = NormalizeAssetPath(controller ? AssetDatabase.GetAssetPath(controller) : string.Empty);
-                if (!PathStartsWith(controllerPath, sourcePrefix))
+                if (!ASMLiteGeneratedOwnershipPolicy.PathStartsWith(controllerPath, sourcePrefix))
                     continue;
 
                 var replacement = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(destinationPrefix + "/" + Path.GetFileName(controllerPath));
@@ -708,7 +707,7 @@ namespace ASMLite.Editor
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            if (HasAvatarGeneratedReferencesUnderPrefix(avatar, sourcePrefix))
+            if (ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, sourcePrefix))
             {
                 return ASMLiteGeneratedAssetMirrorResult.Fail(
                     operation: operation,
@@ -800,7 +799,7 @@ namespace ASMLite.Editor
                     continue;
 
                 string subPath = NormalizeAssetPath(AssetDatabase.GetAssetPath(control.subMenu));
-                if (PathStartsWith(subPath, sourcePrefix))
+                if (ASMLiteGeneratedOwnershipPolicy.PathStartsWith(subPath, sourcePrefix))
                 {
                     string newPath = destinationPrefix + "/" + Path.GetFileName(subPath);
                     var replacement = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(newPath);
@@ -816,55 +815,6 @@ namespace ASMLite.Editor
             }
         }
 
-        private static bool MenuReferencesAssetPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
-        {
-            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
-                return false;
-
-            for (int i = 0; i < menu.controls.Count; i++)
-            {
-                var control = menu.controls[i];
-                if (control?.subMenu == null)
-                    continue;
-
-                string subPath = NormalizeAssetPath(AssetDatabase.GetAssetPath(control.subMenu));
-                if (PathStartsWith(subPath, assetPrefix))
-                    return true;
-
-                if (MenuReferencesAssetPrefix(control.subMenu, assetPrefix, visited))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool HasAvatarGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string assetPrefix)
-        {
-            if (avatar == null || string.IsNullOrWhiteSpace(assetPrefix))
-                return false;
-
-            string normalizedPrefix = NormalizeAssetPath(assetPrefix);
-            string exprPath = NormalizeAssetPath(avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters) : string.Empty);
-            if (PathStartsWith(exprPath, normalizedPrefix))
-                return true;
-
-            string menuPath = NormalizeAssetPath(avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu) : string.Empty);
-            if (PathStartsWith(menuPath, normalizedPrefix))
-                return true;
-
-            if (MenuReferencesAssetPrefix(avatar.expressionsMenu, normalizedPrefix, new HashSet<VRCExpressionsMenu>()))
-                return true;
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var controller = avatar.baseAnimationLayers[i].animatorController;
-                string controllerPath = NormalizeAssetPath(controller ? AssetDatabase.GetAssetPath(controller) : string.Empty);
-                if (PathStartsWith(controllerPath, normalizedPrefix))
-                    return true;
-            }
-
-            return false;
-        }
 
         private static string EnsureVendorizeAvatarFolder(VRCAvatarDescriptor avatar)
         {
@@ -998,19 +948,9 @@ namespace ASMLite.Editor
                 AssetDatabase.DeleteAsset(normalizedPath);
         }
 
-        private static bool PathStartsWith(string assetPath, string prefix)
-        {
-            if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(prefix))
-                return false;
-
-            return assetPath.StartsWith(prefix.TrimEnd('/'), StringComparison.Ordinal);
-        }
-
         private static string NormalizeAssetPath(string path)
         {
-            return string.IsNullOrWhiteSpace(path)
-                ? string.Empty
-                : path.Replace('\\', '/').TrimEnd('/');
+            return ASMLiteGeneratedOwnershipPolicy.NormalizeAssetPath(path);
         }
 
         private static string SanitizePathFragment(string value)
