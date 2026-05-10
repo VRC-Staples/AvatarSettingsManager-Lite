@@ -468,12 +468,18 @@ namespace ASMLite.Editor
             if (names == null || names.Length == 0)
                 return Array.Empty<string>();
 
-            return names
-                .Select(ASMLiteParameterBackupPresetResolver.NormalizeVisibleName)
-                .Where(n => !string.IsNullOrEmpty(n))
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(n => n, StringComparer.Ordinal)
-                .ToArray();
+            var sanitized = new List<string>(names.Length);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < names.Length; i++)
+            {
+                string candidate = ASMLiteParameterBackupPresetResolver.NormalizeVisibleName(names[i]);
+                if (string.IsNullOrEmpty(candidate) || !seen.Add(candidate))
+                    continue;
+
+                sanitized.Add(candidate);
+            }
+
+            return sanitized.Count == 0 ? Array.Empty<string>() : sanitized.ToArray();
         }
 
         private static bool TextureArraysEqual(Texture2D[] left, Texture2D[] right)

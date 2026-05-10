@@ -8351,7 +8351,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentPreprocessTests.cs",
       "class": "ASMLiteComponentPreprocessTests",
       "method": "OnPreprocess_NoAvatarContext_DoesNotThrow",
-      "line": 27,
+      "line": 28,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -8375,7 +8375,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentPreprocessTests.cs",
       "class": "ASMLiteComponentPreprocessTests",
       "method": "PreprocessOrder_RemainsNegativeTen",
-      "line": 11,
+      "line": 12,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
