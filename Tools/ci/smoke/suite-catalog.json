@@ -4981,7 +4981,7 @@
           "requiresPlayMode": false,
           "stopOnFirstFailure": true,
           "expectedOutcome": "All parameter backup rows preserve normalized pending and attached snapshots and finish with Rebuild available.",
-          "debugHint": "If this suite fails, inspect visible parameter names, preset IDs, and sorted exclusion snapshot mismatches.",
+          "debugHint": "If this suite fails, inspect visible parameter names, preset IDs, and first-seen exclusion snapshot mismatches.",
           "cases": [
             {
               "caseId": "B01-parameter-backup-default",

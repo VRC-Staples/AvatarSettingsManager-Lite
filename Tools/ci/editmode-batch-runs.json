@@ -19,14 +19,23 @@
           "groupNames": [
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteAssetPathsTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentPreprocessTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationDraftTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationScaffoldTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteFullControllerWiringTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteGeneratedOwnershipPolicyTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteGenerationWiringSummaryWriterTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteIconFixtureRegistryTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallationStateTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallPathWiringTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteLifecycleSeamTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBackupPresetResolverTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowAdapterBoundaryTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowNamingGroupingTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowRiskAffordanceTests(?:\\.|$)",
@@ -44,7 +53,37 @@
     {
       "name": "editmode-integration",
       "resultFile": "editmode-integration-results.xml",
-      "categoryNames": ["Integration"]
+      "categoryNames": [
+        "Integration"
+      ]
+    },
+    {
+      "name": "editmode-smoke-protocol",
+      "resultFile": "editmode-smoke-protocol-results.xml",
+      "filters": [
+        {
+          "groupNames": [
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolCompatibilityTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeCatalogTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeRunExecutorTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeAtomicIoTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeArtifactPathsTests(?:\\.|$)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "editmode-smoke-overlay-host",
+      "resultFile": "editmode-smoke-overlay-host-results.xml",
+      "filters": [
+        {
+          "groupNames": [
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeOverlayHostTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeSetupFixtureServiceTests(?:\\.|$)"
+          ]
+        }
+      ]
     }
   ]
 }

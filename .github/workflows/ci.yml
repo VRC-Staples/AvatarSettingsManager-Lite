@@ -108,6 +108,9 @@ jobs:
       - name: Run required-check status helper tests
         run: python3 Tools/ci/tests/test_check_required_statuses.py
 
+      - name: Validate test suite map parity
+        run: python3 Tools/ci/test-suites/validate-suites.py
+
   lint:
     name: Super-Linter
     runs-on: ubuntu-latest
@@ -372,6 +375,7 @@ jobs:
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
           RUNNER
 
+          set +e
           docker run --rm \
             --workdir /github/workspace \
             --env HOME=/root \
@@ -383,10 +387,13 @@ jobs:
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
             "${UNITY_IMAGE}" \
             /bin/bash /tmp/unity-runner.sh
-          test -f artifacts/editmode-results.xml || {
-            echo "::error::Missing canonical NUnit result file: artifacts/editmode-results.xml"
-            exit 1
-          }
+          UNITY_RUN_EXIT=$?
+          set -e
+
+          python3 Tools/ci/verify-unity-editmode-results.py \
+            --unity-exit-code "${UNITY_RUN_EXIT}" \
+            --results artifacts/editmode-results.xml \
+            --log artifacts/editmode.log
           rm -f "${RUNNER_SCRIPT}"
       - name: Upload NUnit results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

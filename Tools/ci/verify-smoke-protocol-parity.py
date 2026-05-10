@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-CS_REGISTRY = ROOT / "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteSmokeAutomationContracts.cs"
+CS_REGISTRY = ROOT / "Packages/com.staples.asm-lite/Tests/Editor/Support/SmokeProtocol/ASMLiteSmokeAutomationContracts.cs"
 RS_PROTOCOL = ROOT / "Tools/ci/rust-overlay/src/protocol.rs"
 FIXTURES = ROOT / "Tools/ci/smoke/protocol-fixtures"
 

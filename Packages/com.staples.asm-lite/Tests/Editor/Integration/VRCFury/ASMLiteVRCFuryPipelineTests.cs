@@ -1,0 +1,450 @@
+using System.Linq;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.Animations;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase;
+using ASMLite.Editor;
+
+namespace ASMLite.Tests.Editor
+{
+    /// <summary>
+    /// VF delivery pipeline assertions that intentionally avoid direct descriptor-injection checks.
+    /// These tests prove Build() writes generated assets for VRCFury pickup while leaving fixture
+    /// descriptor surfaces untouched.
+    /// </summary>
+    [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
+    public class ASMLiteVRCFuryPipelineTests
+    {
+        private AsmLiteTestContext _ctx;
+
+        [SetUp]
+        public void SetUp()
+        {
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            Assert.IsNotNull(_ctx, "VF01: fixture creation returned null context.");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            ASMLiteToggleNameBroker.ClearPendingRestoreState();
+            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+        }
+
+        private static AnimatorController LoadGeneratedController(string aid)
+        {
+            var generatedCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(generatedCtrl, $"{aid}: generated FX controller must exist.");
+            return generatedCtrl;
+        }
+
+        private static VRCExpressionParameters LoadGeneratedParams(string aid)
+        {
+            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(generatedExpr, $"{aid}: generated expression params must exist.");
+            Assert.IsNotNull(generatedExpr.parameters, $"{aid}: generated expression params list must not be null.");
+            return generatedExpr;
+        }
+
+        private static VRC_AvatarParameterDriver LoadSlotDriver(string aid, AnimatorController ctrl, string layerName, string stateName)
+        {
+            var layer = ctrl.layers.FirstOrDefault(l => l.name == layerName);
+            Assert.IsNotNull(layer.stateMachine, $"{aid}: expected layer '{layerName}' in generated controller.");
+
+            var state = layer.stateMachine.states.FirstOrDefault(s => s.state.name == stateName).state;
+            Assert.IsNotNull(state, $"{aid}: expected state '{stateName}' in layer '{layerName}'.");
+
+            var driver = state.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
+            Assert.IsNotNull(driver, $"{aid}: expected one VRCAvatarParameterDriver on state '{stateName}'.");
+            return driver;
+        }
+
+        [Test, Category("Integration")]
+        public void VF01_Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces()
+        {
+            _ctx.Comp.slotCount = 2;
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "VF01_UserParam", VRCExpressionParameters.ValueType.Int);
+
+            int liveFxAsmLayersBefore = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
+            int liveExprAsmBefore = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
+            int liveMenuSettingsBefore = (_ctx.AvDesc.expressionsMenu.controls ?? new System.Collections.Generic.List<VRCExpressionsMenu.Control>())
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                $"VF01: Build should discover exactly one user parameter. got {buildResult}.");
+
+            int liveFxAsmLayersAfter = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
+            int liveExprAsmAfter = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
+            int liveMenuSettingsAfter = (_ctx.AvDesc.expressionsMenu.controls ?? new System.Collections.Generic.List<VRCExpressionsMenu.Control>())
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+
+            Assert.AreEqual(liveFxAsmLayersBefore, liveFxAsmLayersAfter,
+                $"VF01: Build should not inject ASMLite layers into fixture descriptor FX controller. before={liveFxAsmLayersBefore}, after={liveFxAsmLayersAfter}.");
+            Assert.AreEqual(liveExprAsmBefore, liveExprAsmAfter,
+                $"VF01: Build should not inject ASMLite expression params into fixture descriptor asset. before={liveExprAsmBefore}, after={liveExprAsmAfter}.");
+            Assert.AreEqual(liveMenuSettingsBefore, liveMenuSettingsAfter,
+                $"VF01: Build should not inject Settings Manager into fixture descriptor root menu. before={liveMenuSettingsBefore}, after={liveMenuSettingsAfter}.");
+
+            var generatedCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+
+            Assert.IsNotNull(generatedCtrl, "VF01: generated FX controller must exist.");
+            Assert.IsNotNull(generatedExpr, "VF01: generated expression params must exist.");
+            Assert.IsNotNull(generatedMenu, "VF01: generated menu must exist.");
+
+            Assert.AreEqual(2, generatedCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer),
+                "VF01: generated FX controller should carry one ASMLite layer per configured slot.");
+            Assert.AreEqual(4,
+                generatedExpr.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter),
+                "VF01: generated expression params should contain ASMLite_Ctrl + one Clear-default key + one backup per slot.");
+            Assert.AreEqual(1,
+                generatedMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl),
+                "VF01: generated root menu should contain one Settings Manager wrapper.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF02_Regression_StaleFirstUploadSchemaLag_FirstRebuildUsesCurrentDescriptorParamSet()
+        {
+            _ctx.Comp.slotCount = 1;
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "OldSchemaParam",
+                    valueType = VRCExpressionParameters.ValueType.Int,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                });
+            int firstBuild = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, firstBuild,
+                $"VF02: setup failure, first build should discover one stale param. got {firstBuild}.");
+
+            var beforeCtrl = LoadGeneratedController("VF02");
+            Assert.IsTrue(beforeCtrl.parameters.Any(p => p.name == "OldSchemaParam"),
+                "VF02: setup failure, expected stale schema marker in generated FX controller before rebuild.");
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF135_Clothing/Rezz",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int rebuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, rebuildResult,
+                $"VF02: rebuild should discover the current descriptor schema in one pass. got {rebuildResult}.");
+
+            var rebuiltCtrl = LoadGeneratedController("VF02");
+            var rebuiltExpr = LoadGeneratedParams("VF02");
+
+            Assert.IsTrue(rebuiltCtrl.parameters.Any(p => p.name == "VF135_Clothing/Rezz"),
+                "VF02 regression guard: first rebuild must include the current VF-scoped parameter in generated FX controller.");
+            Assert.IsFalse(rebuiltCtrl.parameters.Any(p => p.name == "OldSchemaParam"),
+                "VF02 regression guard: first rebuild must not require a second upload cycle to evict stale FX schema names.");
+            Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_VF135_Clothing/Rezz"),
+                "VF02 regression guard: first rebuild must emit backup key for the current VF-scoped parameter.");
+            Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_VF135_Clothing/Rezz"),
+                "VF02 regression guard: first rebuild must emit Clear Preset default key for the current VF-scoped parameter.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF03_Regression_VFPickupDrift_OpaqueVFNamesRemainUnrenamedInGeneratedAssets()
+        {
+            _ctx.Comp.slotCount = 2;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF120_Clothing/Rezz",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0.25f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF120_Menu/Hood",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, buildResult,
+                $"VF03: setup failure, expected two discovered VF-scoped params. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF03");
+            var generatedExpr = LoadGeneratedParams("VF03");
+
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "VF120_Clothing/Rezz"),
+                "VF03 regression guard: generated FX controller must preserve VF-scoped source names exactly.");
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "VF120_Menu/Hood"),
+                "VF03 regression guard: generated FX controller must preserve VF-scoped source names exactly.");
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "Rezz" || p.name == "Hood"),
+                "VF03 regression guard: generated FX controller must not strip VF prefixes or rename opaque source names.");
+
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_VF120_Clothing/Rezz"),
+                "VF03 regression guard: generated expression params must preserve VF-scoped backup key naming for slot 1.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S2_VF120_Menu/Hood"),
+                "VF03 regression guard: generated expression params must preserve VF-scoped backup key naming for slot 2.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF04_Regression_DuplicateDescriptorParams_DoNotDuplicateGeneratedKeysOrBreakBuild()
+        {
+            _ctx.Comp.slotCount = 1;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF200_Mode/Outfit",
+                    valueType = VRCExpressionParameters.ValueType.Int,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF200_Mode/Outfit",
+                    valueType = VRCExpressionParameters.ValueType.Int,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "VF200_Mode/Accessory",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(3, buildResult,
+                $"VF04: discovery should still observe all descriptor entries before generation dedupe. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF04");
+            var generatedExpr = LoadGeneratedParams("VF04");
+
+            int sourceDuplicates = generatedCtrl.parameters.Count(p => p.name == "VF200_Mode/Outfit");
+            int backupDuplicates = generatedExpr.parameters.Count(p => p != null && p.name == "ASMLite_Bak_S1_VF200_Mode/Outfit");
+
+            Assert.AreEqual(1, sourceDuplicates,
+                "VF04 regression guard: duplicate descriptor names must be deduped in generated FX source parameter declarations.");
+            Assert.AreEqual(1, backupDuplicates,
+                "VF04 regression guard: duplicate descriptor names must be deduped in generated expression backup keys.");
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "VF200_Mode/Accessory"),
+                "VF04 regression guard: dedupe path must preserve distinct sibling parameters.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF05_Regression_BrokerDeterministicNames_AreConsumedAsOpaqueSourceParams()
+        {
+            _ctx.Comp.slotCount = 1;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "ASM_VF_Outfit_Hood__Avatar_ASM_Lite",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "ASM_VF_Outfit_Hat__Avatar_ASM_Lite",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0.5f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(2, buildResult,
+                $"VF05: build should discover broker-assigned deterministic names as regular source params. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF05");
+            var generatedExpr = LoadGeneratedParams("VF05");
+
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated FX controller must preserve broker deterministic source names exactly.");
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == "ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated FX controller must preserve broker deterministic source names exactly.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated backup keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
+                "VF05 regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF07_Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy()
+        {
+            const string source = "Menu/BoolToggle";
+            const string backup = "ASMLite_Bak_S1_Menu/BoolToggle";
+            const string defaultKey = "ASMLite_Def_Menu/BoolToggle";
+
+            _ctx.Comp.slotCount = 1;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = source,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                $"VF07: setup failure, expected one bool parameter. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF07");
+            var saveDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
+            var loadDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            var resetDriver = LoadSlotDriver("VF07", generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
+
+            AssertHasPreClearBeforeCopy("VF07 save", saveDriver, source, backup);
+            AssertHasPreClearBeforeCopy("VF07 load", loadDriver, backup, source);
+            AssertHasPreClearBeforeCopy("VF07 reset backup", resetDriver, defaultKey, backup);
+            AssertHasPreClearBeforeCopy("VF07 reset source", resetDriver, defaultKey, source);
+        }
+
+        private static void AssertHasPreClearBeforeCopy(string aid, VRC_AvatarParameterDriver driver, string source, string destination)
+        {
+            int copyIndex = driver.parameters.FindIndex(parameter =>
+                parameter.type == VRC_AvatarParameterDriver.ChangeType.Copy
+                && parameter.source == source
+                && parameter.name == destination);
+            Assert.GreaterOrEqual(copyIndex, 0,
+                $"{aid}: expected Copy {source} -> {destination}.");
+
+            int preClearIndex = driver.parameters.FindIndex(parameter =>
+                parameter.type == VRC_AvatarParameterDriver.ChangeType.Set
+                && parameter.name == destination
+                && parameter.value == 0f);
+            Assert.GreaterOrEqual(preClearIndex, 0,
+                $"{aid}: expected Set false before Copy into bool destination '{destination}'.");
+            Assert.Less(preClearIndex, copyIndex,
+                $"{aid}: Set false must run before Copy into bool destination '{destination}'.");
+        }
+
+        [Test, Category("Integration")]
+        public void VF06_Regression_DeterministicRebuild_PreservesMappedLegacyBackupAliasesForLoadContinuity()
+        {
+            const string legacySource = "VF777_Menu/Hat";
+            const string legacyBackup = "ASMLite_Bak_S1_VF777_Menu/Hat";
+
+            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(stubAsset, "VF06 setup: generated expression parameters asset must exist.");
+            stubAsset.parameters = new[]
+            {
+                new VRCExpressionParameters.Parameter
+                {
+                    name = legacyBackup,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 1f,
+                    saved = true,
+                    networkSynced = true,
+                }
+            };
+            EditorUtility.SetDirty(stubAsset);
+            AssetDatabase.SaveAssets();
+
+            _ctx.Comp.slotCount = 1;
+
+            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
+            var toggle = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = false,
+                globalParam = legacySource,
+                menuPath = "Menu/Hat",
+                name = "Hat",
+            };
+            vf.content = toggle;
+
+            var enrollment = ASMLiteToggleNameBroker.EnrollForBuildRequest();
+            Assert.GreaterOrEqual(enrollment.EnrolledCount, 1,
+                "VF06 setup: expected deterministic broker enrollment before continuity build.");
+
+            string deterministicSource = toggle.globalParam;
+            Assert.IsFalse(string.IsNullOrWhiteSpace(deterministicSource),
+                "VF06 setup: enrollment should assign deterministic global parameter name.");
+            Assert.AreNotEqual(legacySource, deterministicSource,
+                "VF06 setup: deterministic source should not keep legacy VF{id}_ global name verbatim.");
+            string deterministicBackup = $"ASMLite_Bak_S1_{deterministicSource}";
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = deterministicSource,
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(1, buildResult,
+                $"VF06: deterministic rebuild should discover one live deterministic source param. got {buildResult}.");
+
+            var generatedCtrl = LoadGeneratedController("VF06");
+            var generatedExpr = LoadGeneratedParams("VF06");
+            var saveDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
+            var loadDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
+            var resetDriver = LoadSlotDriver("VF06", generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
+
+            Assert.IsTrue(generatedCtrl.parameters.Any(p => p.name == deterministicSource),
+                "VF06 regression guard: generated FX controller must consume deterministic source param on rebuild.");
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == legacySource),
+                "VF06 regression guard: generated FX controller must not regress to legacy VF{id}_ source declaration after deterministic enrollment.");
+
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == deterministicBackup),
+                "VF06 regression guard: deterministic backup key must be generated from deterministic source.");
+            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == legacyBackup),
+                "VF06 regression guard: mapped legacy backup alias must remain preserved for preset continuity.");
+
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == deterministicBackup),
+                "VF06 regression guard: save path must keep deterministic backup copy.");
+            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == legacyBackup),
+                "VF06 regression guard: save path must mirror into mapped legacy backup alias.");
+
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicBackup && p.name == deterministicSource),
+                "VF06 regression guard: load path must keep deterministic backup source.");
+            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
+                "VF06 regression guard: load path must remain compatible with legacy mapped backup alias.");
+
+            string deterministicDefault = $"ASMLite_Def_{deterministicSource}";
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == deterministicBackup),
+                "VF06 regression guard: clear path must keep deterministic backup reset wiring.");
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == legacyBackup),
+                "VF06 regression guard: clear path must mirror mapped legacy alias reset wiring.");
+
+            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
+            Assert.GreaterOrEqual(report.MappedCount, 1,
+                "VF06 regression guard: continuity diagnostics must count mapped legacy aliases.");
+            Assert.GreaterOrEqual(report.MirroredCount, 1,
+                "VF06 regression guard: continuity diagnostics must count mirrored legacy aliases.");
+            Assert.AreEqual(0, report.UnmatchedCount,
+                "VF06 regression guard: mapped scenario should not report unmatched aliases.");
+        }
+    }
+}
