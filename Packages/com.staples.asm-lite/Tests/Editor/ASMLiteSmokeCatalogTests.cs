@@ -10,6 +10,54 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeCatalogTests
     {
         [Test]
+        public void ActionRegistry_covers_every_canonical_catalog_step()
+        {
+            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
+            string[] canonicalActions = catalog.groups
+                .SelectMany(group => group.suites)
+                .SelectMany(suite => suite.cases)
+                .SelectMany(item => item.steps)
+                .Select(step => step.actionType)
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(action => action, StringComparer.Ordinal)
+                .ToArray();
+
+            CollectionAssert.IsSubsetOf(canonicalActions, ASMLiteSmokeActionRegistry.AllActionTypes.ToArray());
+            Assert.That(ASMLiteSmokeActionRegistry.IsSupported(" open-scene "), Is.True);
+            Assert.That(ASMLiteSmokeActionRegistry.IsSupported("missing-action"), Is.False);
+        }
+
+        [Test]
+        public void NormalizedStepCommand_applies_fixture_defaults_without_mutating_action_identity()
+        {
+            var step = new ASMLiteSmokeStepDefinition
+            {
+                stepId = "normalize-step",
+                label = "Normalize step",
+                description = "Normalize smoke step defaults.",
+                actionType = " open-scene ",
+                args = new ASMLiteSmokeStepArgs
+                {
+                    scenePath = " Assets/Override.unity ",
+                    avatarName = " Avatar Override ",
+                    excludedParameterNames = new[] { "Zeta", " Alpha " },
+                },
+                expectedOutcome = "Defaults resolved.",
+                debugHint = "Normalize command seam."
+            };
+
+            ASMLiteSmokeStepCommand command = ASMLiteSmokeStepCommand.FromStep(
+                step,
+                defaultScenePath: "Assets/Click ME.unity",
+                defaultAvatarName: "Oct25_Dress");
+
+            Assert.AreEqual("open-scene", command.ActionType);
+            Assert.AreEqual("Assets/Override.unity", command.ScenePath);
+            Assert.AreEqual("Avatar Override", command.AvatarName);
+            Assert.That(command.Args.excludedParameterNames, Is.EqualTo(new[] { "Alpha", "Zeta" }));
+        }
+
+        [Test]
         public void LoadCanonical_preserves_expected_group_order_and_fixture_metadata()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();

@@ -814,7 +814,13 @@ namespace ASMLite.Tests.Editor
 
             try
             {
-                string normalizedAction = string.IsNullOrWhiteSpace(actionType) ? string.Empty : actionType.Trim();
+                string normalizedAction = ASMLiteSmokeActionRegistry.NormalizeActionType(actionType);
+                if (!ASMLiteSmokeActionRegistry.IsSupported(normalizedAction))
+                {
+                    detail = $"Unsupported smoke actionType '{normalizedAction}'.";
+                    return false;
+                }
+
                 ASMLiteWindow window;
 
                 switch (normalizedAction)
@@ -2524,6 +2530,9 @@ namespace ASMLite.Tests.Editor
         private int _runOrdinal;
         private string _currentState = ASMLiteSmokeProtocol.HostStateIdle;
         private string _currentMessage = "Unity host booting.";
+        private readonly ASMLiteSmokeHostStateMachine _hostStateMachine = new ASMLiteSmokeHostStateMachine(
+            ASMLiteSmokeProtocol.HostStateIdle,
+            "Unity host booting.");
         private bool _isRunning;
         private bool _isUpdateRegistered;
         private double _lastHeartbeatWriteAt;
@@ -2801,26 +2810,32 @@ namespace ASMLite.Tests.Editor
         {
             _lastCommandSeq = Math.Max(_lastCommandSeq, command.commandSeq);
 
+            if (!ASMLiteSmokeCommandRegistry.IsPolledCommand(command.commandType))
+            {
+                RejectCommand(command, $"{command.commandType} is a valid protocol command but is not accepted by file-poll dispatch in this host phase.");
+                return;
+            }
+
             switch (command.commandType)
             {
-                case "shutdown-session":
+                case ASMLiteSmokeCommandRegistry.ShutdownSession:
                     HandleShutdownSession(command);
                     break;
 
-                case "run-suite":
+                case ASMLiteSmokeCommandRegistry.RunSuite:
                     HandleRunSuite(command);
                     break;
 
-                case "review-decision":
+                case ASMLiteSmokeCommandRegistry.ReviewDecision:
                     HandleReviewDecision(command);
                     break;
 
-                case "abort-run":
+                case ASMLiteSmokeCommandRegistry.AbortRun:
                     HandleAbortRun(command);
                     break;
 
                 default:
-                    RejectCommand(command, $"{command.commandType} is not implemented in this host phase.");
+                    RejectCommand(command, $"{command.commandType} is registered for polling but has no host handler.");
                     break;
             }
         }
@@ -3771,23 +3786,14 @@ namespace ASMLite.Tests.Editor
             int lastRunEventSeq,
             string resultStatus = null)
         {
-            string runDirectoryPath = _paths.GetRunDirectoryPath(runOrdinal, result.SuiteId);
-            Directory.CreateDirectory(runDirectoryPath);
-
             string resultPath = _paths.GetResultPath(runOrdinal, result.SuiteId);
             string failurePath = _paths.GetFailurePath(runOrdinal, result.SuiteId);
-            string eventsSlicePath = _paths.GetEventsSlicePath(runOrdinal, result.SuiteId);
-            string nunitPath = _paths.GetNUnitPath(runOrdinal, result.SuiteId);
 
             ASMLiteSmokeProtocolEvent[] allEvents =
                 ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(_paths.EventsLogPath);
             ASMLiteSmokeProtocolEvent[] runEvents = allEvents
                 .Where(evt => evt.eventSeq >= firstRunEventSeq && evt.eventSeq <= lastRunEventSeq)
                 .ToArray();
-
-            string sliceNdjson = ASMLiteSmokeProtocol.ToNdjson(runEvents);
-            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(eventsSlicePath, sliceNdjson);
-            ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(nunitPath, BuildNUnitXml(result, command.commandId, startedAtUtc, endedAtUtc));
 
             string groupLabel = result.GroupId;
             if (catalog != null && catalog.TryGetGroup(result.GroupId, out ASMLiteSmokeGroupDefinition group) && group != null)
@@ -3804,14 +3810,13 @@ namespace ASMLite.Tests.Editor
                 : resultStatus.Trim();
             bool shouldWriteFailureArtifact = string.Equals(normalizedResultStatus, "failed", StringComparison.Ordinal);
 
-            ASMLiteSmokeArtifactReferences artifactRefs = new ASMLiteSmokeArtifactReferences
-            {
-                resultPath = GetSessionRelativePath(resultPath),
-                failurePath = shouldWriteFailureArtifact ? GetSessionRelativePath(failurePath) : string.Empty,
-                eventsSlicePath = GetSessionRelativePath(eventsSlicePath),
-                nunitPath = GetSessionRelativePath(nunitPath),
-                debugSummaryPath = string.Empty
-            };
+            ASMLiteSmokeArtifactReferences artifactRefs = new ASMLiteSmokeArtifactWriter(_paths, GetSessionRelativePath)
+                .PrepareRunArtifacts(
+                    runOrdinal,
+                    result.SuiteId,
+                    runEvents,
+                    BuildNUnitXml(result, command.commandId, startedAtUtc, endedAtUtc),
+                    shouldWriteFailureArtifact);
 
             double durationSeconds = Math.Max(0d, endedAtSeconds - startedAtSeconds);
             ASMLiteSmokeRunResultDocument resultDocument = new ASMLiteSmokeRunResultDocument
@@ -3919,15 +3924,23 @@ namespace ASMLite.Tests.Editor
                 return false;
             }
 
-            ASMLiteSmokeStepArgs args = step.args ?? new ASMLiteSmokeStepArgs();
-            string scenePath = string.IsNullOrWhiteSpace(args.scenePath) ? _configuration.ScenePath : args.scenePath.Trim();
-            string avatarName = string.IsNullOrWhiteSpace(args.avatarName) ? _configuration.AvatarName : args.avatarName.Trim();
+            ASMLiteSmokeStepCommand command;
+            try
+            {
+                command = ASMLiteSmokeStepCommand.FromStep(step, _configuration.ScenePath, _configuration.AvatarName);
+            }
+            catch (Exception ex)
+            {
+                detail = ex.Message;
+                stackTrace = string.IsNullOrWhiteSpace(ex.StackTrace) ? string.Empty : ex.StackTrace.Trim();
+                return false;
+            }
 
-            if (!string.IsNullOrWhiteSpace(args.fixtureMutation))
+            if (!string.IsNullOrWhiteSpace(command.Args.fixtureMutation))
             {
                 string evidenceRootPath = Path.Combine(_paths.SessionRootPath, "fixture-evidence");
                 bool fixturePassed = _runtime.ApplySetupFixtureMutation(
-                    args,
+                    command.Args,
                     _configuration.ScenePath,
                     _configuration.AvatarName,
                     evidenceRootPath,
@@ -3941,7 +3954,7 @@ namespace ASMLite.Tests.Editor
             }
 
             int consoleErrorCheckpoint = _runtime.GetConsoleErrorCheckpoint();
-            bool stepPassed = _runtime.ExecuteCatalogStep(step.actionType, args, scenePath, avatarName, out detail, out stackTrace);
+            bool stepPassed = _runtime.ExecuteCatalogStep(command.ActionType, command.Args, command.ScenePath, command.AvatarName, out detail, out stackTrace);
             if (_runtime.TryGetConsoleErrorsSince(consoleErrorCheckpoint, out string consoleErrorDetail, out string consoleErrorStackTrace))
             {
                 detail = consoleErrorDetail;
@@ -4072,8 +4085,11 @@ namespace ASMLite.Tests.Editor
 
         private void PublishHostState(string state, string message, int lastEventSeq, int lastCommandSeq)
         {
-            string normalizedState = string.IsNullOrWhiteSpace(state) ? ASMLiteSmokeProtocol.HostStateIdle : state.Trim();
-            string normalizedMessage = string.IsNullOrWhiteSpace(message) ? "Unity host status update." : message.Trim();
+            _hostStateMachine.TransitionTo(
+                string.IsNullOrWhiteSpace(state) ? ASMLiteSmokeProtocol.HostStateIdle : state,
+                string.IsNullOrWhiteSpace(message) ? "Unity host status update." : message);
+            string normalizedState = _hostStateMachine.State;
+            string normalizedMessage = _hostStateMachine.Message;
             string unityVersion = _runtime.GetUnityVersion();
             if (string.IsNullOrWhiteSpace(unityVersion))
                 unityVersion = "unknown";

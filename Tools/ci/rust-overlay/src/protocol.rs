@@ -134,6 +134,81 @@ pub const REVIEW_DECISION_RETURN_TO_SUITE_LIST: &str = "return-to-suite-list";
 pub const REVIEW_DECISION_RERUN_SUITE: &str = "rerun-suite";
 pub const REVIEW_DECISION_EXIT: &str = "exit";
 
+pub const COMMAND_TYPE_LAUNCH_SESSION: &str = "launch-session";
+pub const COMMAND_TYPE_RUN_SUITE: &str = "run-suite";
+pub const COMMAND_TYPE_REVIEW_DECISION: &str = "review-decision";
+pub const COMMAND_TYPE_ABORT_RUN: &str = "abort-run";
+pub const COMMAND_TYPE_SHUTDOWN_SESSION: &str = "shutdown-session";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandDispatchMode {
+    StartupOnly,
+    PolledCommand,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CommandDefinition {
+    pub command_type: &'static str,
+    pub payload_field_name: Option<&'static str>,
+    pub dispatch_mode: CommandDispatchMode,
+}
+
+const COMMAND_DEFINITIONS: &[CommandDefinition] = &[
+    CommandDefinition {
+        command_type: COMMAND_TYPE_LAUNCH_SESSION,
+        payload_field_name: Some("launchSession"),
+        dispatch_mode: CommandDispatchMode::StartupOnly,
+    },
+    CommandDefinition {
+        command_type: COMMAND_TYPE_RUN_SUITE,
+        payload_field_name: Some("runSuite"),
+        dispatch_mode: CommandDispatchMode::PolledCommand,
+    },
+    CommandDefinition {
+        command_type: COMMAND_TYPE_REVIEW_DECISION,
+        payload_field_name: Some("reviewDecision"),
+        dispatch_mode: CommandDispatchMode::PolledCommand,
+    },
+    CommandDefinition {
+        command_type: COMMAND_TYPE_ABORT_RUN,
+        payload_field_name: Some("abortRun"),
+        dispatch_mode: CommandDispatchMode::PolledCommand,
+    },
+    CommandDefinition {
+        command_type: COMMAND_TYPE_SHUTDOWN_SESSION,
+        payload_field_name: None,
+        dispatch_mode: CommandDispatchMode::PolledCommand,
+    },
+];
+
+pub fn all_command_definitions() -> &'static [CommandDefinition] {
+    COMMAND_DEFINITIONS
+}
+
+pub fn command_definition(command_type: &str) -> Option<&'static CommandDefinition> {
+    let normalized = command_type.trim();
+    COMMAND_DEFINITIONS
+        .iter()
+        .find(|definition| definition.command_type == normalized)
+}
+
+pub fn is_supported_command_type(command_type: &str) -> bool {
+    command_definition(command_type).is_some()
+}
+
+pub fn is_polled_command_type(command_type: &str) -> bool {
+    command_definition(command_type)
+        .map(|definition| definition.dispatch_mode == CommandDispatchMode::PolledCommand)
+        .unwrap_or(false)
+}
+
+pub fn polled_command_types() -> impl Iterator<Item = &'static str> {
+    COMMAND_DEFINITIONS
+        .iter()
+        .filter(|definition| definition.dispatch_mode == CommandDispatchMode::PolledCommand)
+        .map(|definition| definition.command_type)
+}
+
 pub fn protocol_fixture_directory() -> PathBuf {
     repository_root().join("Tools/ci/smoke/protocol-fixtures")
 }
@@ -339,10 +414,16 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
         ));
     }
     command.command_type = require_non_blank(&command.command_type, "commandType")?;
+    let command_definition = command_definition(&command.command_type).ok_or_else(|| {
+        ProtocolError(format!(
+            "commandType '{}' is not supported.",
+            command.command_type
+        ))
+    })?;
     command.created_at_utc = require_non_blank(&command.created_at_utc, "createdAtUtc")?;
 
-    match command.command_type.as_str() {
-        "launch-session" => {
+    match command_definition.command_type {
+        COMMAND_TYPE_LAUNCH_SESSION => {
             let payload = command.launch_session.as_mut().ok_or_else(|| {
                 ProtocolError(
                     "launchSession payload is required for commandType 'launch-session'."
@@ -359,7 +440,7 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
             }
             normalize_and_validate_launch_session(payload)?;
         }
-        "run-suite" => {
+        COMMAND_TYPE_RUN_SUITE => {
             let payload = command.run_suite.as_mut().ok_or_else(|| {
                 ProtocolError(
                     "runSuite payload is required for commandType 'run-suite'.".to_string(),
@@ -375,7 +456,7 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
             }
             normalize_and_validate_run_suite(payload)?;
         }
-        "review-decision" => {
+        COMMAND_TYPE_REVIEW_DECISION => {
             let payload = command.review_decision.as_mut().ok_or_else(|| {
                 ProtocolError(
                     "reviewDecision payload is required for commandType 'review-decision'."
@@ -392,7 +473,7 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
             }
             normalize_and_validate_review_decision(payload)?;
         }
-        "abort-run" => {
+        COMMAND_TYPE_ABORT_RUN => {
             let payload = command.abort_run.as_mut().ok_or_else(|| {
                 ProtocolError(
                     "abortRun payload is required for commandType 'abort-run'.".to_string(),
@@ -408,7 +489,7 @@ fn normalize_and_validate_command(command: &mut SmokeProtocolCommand) -> Result<
             }
             normalize_and_validate_abort_run(payload)?;
         }
-        "shutdown-session" => {
+        COMMAND_TYPE_SHUTDOWN_SESSION => {
             if command.launch_session.is_some()
                 || command.run_suite.is_some()
                 || command.review_decision.is_some()
@@ -641,6 +722,39 @@ mod tests {
         let abort_payload = abort.abort_run.expect("abort payload");
         assert_eq!(abort_payload.run_id, "run-0001-lifecycle-roundtrip");
         assert_eq!(abort_payload.suite_id, "lifecycle-roundtrip");
+    }
+
+    #[test]
+    fn command_registry_documents_payloads_and_dispatch_modes() {
+        let command_types: Vec<&str> = all_command_definitions()
+            .iter()
+            .map(|definition| definition.command_type)
+            .collect();
+        assert_eq!(
+            command_types,
+            vec![
+                "launch-session",
+                "run-suite",
+                "review-decision",
+                "abort-run",
+                "shutdown-session",
+            ]
+        );
+
+        let launch = command_definition("launch-session").expect("launch-session should be registered");
+        assert_eq!(launch.payload_field_name, Some("launchSession"));
+        assert_eq!(launch.dispatch_mode, CommandDispatchMode::StartupOnly);
+
+        let polled: Vec<&str> = polled_command_types().collect();
+        assert_eq!(
+            polled,
+            vec![
+                "run-suite",
+                "review-decision",
+                "abort-run",
+                "shutdown-session",
+            ]
+        );
     }
 
     #[test]
