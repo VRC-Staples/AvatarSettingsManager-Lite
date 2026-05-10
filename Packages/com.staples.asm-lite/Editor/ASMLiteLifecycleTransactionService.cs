@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
-using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Editor
 {
@@ -85,10 +82,10 @@ namespace ASMLite.Editor
                     message: installPathFailure);
             }
 
-            discoveredParamCount = ASMLiteBuilder.Build(component);
-            if (discoveredParamCount < 0)
+            var buildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component);
+            discoveredParamCount = buildResult.DiscoveredParamCount;
+            if (!buildResult.Success)
             {
-                var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
                 return ASMLiteLifecycleTransactionResult.Fail(
                     operation: ASMLiteLifecycleOperation.AttachedVendorize,
                     failedStage: ASMLiteLifecycleTransactionStage.Preflight,
@@ -97,10 +94,10 @@ namespace ASMLite.Editor
                     rollbackState: ResolveToolState(avatar, component),
                     rollbackAttempted: false,
                     rollbackSucceeded: false,
-                    contextPath: diagnostic?.ContextPath ?? ASMLiteAssetPaths.GeneratedDir,
-                    remediation: diagnostic?.Remediation ?? "Fix the build diagnostic before retrying attached vendorize.",
-                    message: diagnostic?.Message ?? "[ASM-Lite] Attached vendorize transaction failed because Build() did not succeed.",
-                    diagnostic: diagnostic,
+                    contextPath: string.IsNullOrWhiteSpace(buildResult.ContextPath) ? ASMLiteAssetPaths.GeneratedDir : buildResult.ContextPath,
+                    remediation: string.IsNullOrWhiteSpace(buildResult.Remediation) ? "Fix the build diagnostic before retrying attached vendorize." : buildResult.Remediation,
+                    message: string.IsNullOrWhiteSpace(buildResult.Message) ? "[ASM-Lite] Attached vendorize transaction failed because Build() did not succeed." : buildResult.Message,
+                    diagnostic: buildResult.Diagnostic,
                     discoveredParamCount: discoveredParamCount);
             }
 
@@ -195,7 +192,7 @@ namespace ASMLite.Editor
             string verifyFailureMessage = string.Empty;
             string verifyFailureContext = string.Empty;
             if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeVerify)
-                || !VerifyAttachedVendorizeState(component, avatar, mirrorResult.TargetPath, out verifyFailureMessage, out verifyFailureContext))
+                || !ASMLiteLifecycleVerification.VerifyAttachedVendorizeState(component, avatar, mirrorResult.TargetPath, out verifyFailureMessage, out verifyFailureContext))
             {
                 return FailAttachedVendorizeAndRollback(
                     component,
@@ -390,7 +387,7 @@ namespace ASMLite.Editor
             string verifyFailureMessage = string.Empty;
             string verifyFailureContext = string.Empty;
             if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringReturnVerify)
-                || !VerifyAttachedReturnState(component, avatar, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
+                || !ASMLiteLifecycleVerification.VerifyAttachedReturnState(component, avatar, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
             {
                 return FailAttachedReturnAndRollback(
                     component,
@@ -475,65 +472,30 @@ namespace ASMLite.Editor
                     message: $"[ASM-Lite] Detach transaction expected PackageManaged or Vendorized state but found {beforeState}.");
             }
 
-            var snapshot = CaptureDirectDeliveryRollbackSnapshot(avatar);
+            var snapshot = ASMLiteDirectDeliveryRollbackSnapshot.Capture(avatar);
             var componentSnapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component);
             try
             {
-                if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
-                {
-                    return FailDetachAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        snapshot,
-                        componentSnapshot,
-                        detail,
-                        avatar.gameObject.name,
-                        "Restore the attached ASM-Lite state before retrying detach.",
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        diagnostic: null);
-                }
-
-                if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterDetachExecute))
-                {
-                    return FailDetachAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        snapshot,
-                        componentSnapshot,
-                        "[ASM-Lite] Injected detach failure after direct-delivery content was applied but before destroy-time verification completed.",
-                        avatar.gameObject.name,
-                        "Disable the detach failure injection after validating rollback behavior.",
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        diagnostic: null);
-                }
-
-                string verifyFailureMessage = string.Empty;
-                string verifyFailureContext = string.Empty;
                 ASMLiteInstallationState expectedDetachedState = ResolveDetachSuccessState(beforeState, vendorizeToAssets: false);
                 string vendorizedDir = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
-                if (expectedDetachedState == ASMLiteInstallationState.Vendorized)
-                {
-                    var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, vendorizedDir);
-                    if (!descriptorRetargetResult.Success)
-                    {
-                        return FailDetachAndRollback(
-                            component,
-                            avatar,
-                            beforeState,
-                            snapshot,
-                            componentSnapshot,
-                            descriptorRetargetResult.Message,
-                            descriptorRetargetResult.ContextPath,
-                            descriptorRetargetResult.Remediation,
-                            ASMLiteLifecycleTransactionStage.Execute,
-                            diagnostic: null);
-                    }
-                }
+                var directDeliveryResult = ASMLiteDirectDeliveryTransaction.Execute(
+                    component,
+                    avatar,
+                    new ASMLiteDirectDeliveryTransactionPlan(
+                        expectedDetachedState,
+                        vendorizedDir,
+                        retargetDescriptorToVendorized: expectedDetachedState == ASMLiteInstallationState.Vendorized,
+                        verifyFailurePoint: ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify,
+                        executeFailureRemediation: "Restore the attached ASM-Lite state before retrying detach.",
+                        afterApplyFailureMessage: "[ASM-Lite] Injected detach failure after direct-delivery content was applied but before destroy-time verification completed.",
+                        afterApplyFailureRemediation: "Disable the detach failure injection after validating rollback behavior.",
+                        verifyFailureMessage: "[ASM-Lite] Injected detach verification failure after direct-delivery content was applied.",
+                        verifyFailureRemediation: "Disable the detach verification failure injection after validating rollback behavior.",
+                        verificationFailureRemediation: "Restore the attached ASM-Lite state before retrying detach.",
+                        verifyFailureContextUsesVendorizedDir: false),
+                    ShouldFailForTesting);
 
-                if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify)
-                    || !VerifyDirectDeliveryState(avatar, expectedDetachedState, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
+                if (!directDeliveryResult.Success)
                 {
                     return FailDetachAndRollback(
                         component,
@@ -541,25 +503,19 @@ namespace ASMLite.Editor
                         beforeState,
                         snapshot,
                         componentSnapshot,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify)
-                            ? "[ASM-Lite] Injected detach verification failure after direct-delivery content was applied."
-                            : verifyFailureMessage,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify)
-                            ? avatar.gameObject.name
-                            : verifyFailureContext,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachVerify)
-                            ? "Disable the detach verification failure injection after validating rollback behavior."
-                            : "Restore the attached ASM-Lite state before retrying detach.",
-                        ASMLiteLifecycleTransactionStage.Verify,
+                        directDeliveryResult.Message,
+                        directDeliveryResult.ContextPath,
+                        directDeliveryResult.Remediation,
+                        directDeliveryResult.FailedStage,
                         diagnostic: null);
                 }
 
                 return ASMLiteLifecycleTransactionResult.Pass(
                     operation: ASMLiteLifecycleOperation.DetachToDirectDelivery,
                     beforeState: beforeState,
-                    afterState: expectedDetachedState,
+                    afterState: directDeliveryResult.ExpectedDetachedState,
                     discoveredParamCount: -1,
-                    message: $"[ASM-Lite] {detail}");
+                    message: $"[ASM-Lite] {directDeliveryResult.Detail}");
             }
             finally
             {
@@ -612,62 +568,30 @@ namespace ASMLite.Editor
             }
 
             var snapshot = beforeState == ASMLiteInstallationState.Vendorized
-                ? CaptureDirectDeliveryRollbackSnapshot(avatar)
+                ? ASMLiteDirectDeliveryRollbackSnapshot.Capture(avatar)
                 : null;
             try
             {
-                if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
-                {
-                    return FailVendorizeAndDetachAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        snapshot,
-                        componentSnapshot,
-                        detail,
-                        avatar.gameObject.name,
-                        "Restore the attached ASM-Lite state before retrying vendorize + detach.",
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        diagnostic: null);
-                }
-
-                if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterDetachExecute))
-                {
-                    return FailVendorizeAndDetachAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        snapshot,
-                        componentSnapshot,
-                        "[ASM-Lite] Injected vendorize + detach failure after direct-delivery content was applied but before destroy-time verification completed.",
-                        avatar.gameObject.name,
-                        "Disable the vendorize + detach failure injection after validating rollback behavior.",
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        diagnostic: null);
-                }
-
                 string vendorizedDir = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
-                var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, vendorizedDir);
-                if (!descriptorRetargetResult.Success)
-                {
-                    return FailVendorizeAndDetachAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        snapshot,
-                        componentSnapshot,
-                        descriptorRetargetResult.Message,
-                        descriptorRetargetResult.ContextPath,
-                        descriptorRetargetResult.Remediation,
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        diagnostic: null);
-                }
-
-                string verifyFailureMessage = string.Empty;
-                string verifyFailureContext = string.Empty;
                 ASMLiteInstallationState expectedDetachedState = ResolveDetachSuccessState(beforeState, vendorizeToAssets: true);
-                if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify)
-                    || !VerifyDirectDeliveryState(avatar, expectedDetachedState, vendorizedDir, out verifyFailureMessage, out verifyFailureContext))
+                var directDeliveryResult = ASMLiteDirectDeliveryTransaction.Execute(
+                    component,
+                    avatar,
+                    new ASMLiteDirectDeliveryTransactionPlan(
+                        expectedDetachedState,
+                        vendorizedDir,
+                        retargetDescriptorToVendorized: true,
+                        verifyFailurePoint: ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify,
+                        executeFailureRemediation: "Restore the attached ASM-Lite state before retrying vendorize + detach.",
+                        afterApplyFailureMessage: "[ASM-Lite] Injected vendorize + detach failure after direct-delivery content was applied but before destroy-time verification completed.",
+                        afterApplyFailureRemediation: "Disable the vendorize + detach failure injection after validating rollback behavior.",
+                        verifyFailureMessage: "[ASM-Lite] Injected vendorize + detach verification failure after direct-delivery content was applied to vendorized assets.",
+                        verifyFailureRemediation: "Disable the vendorize + detach verification failure injection after validating rollback behavior.",
+                        verificationFailureRemediation: "Restore the attached ASM-Lite state before retrying vendorize + detach.",
+                        verifyFailureContextUsesVendorizedDir: true),
+                    ShouldFailForTesting);
+
+                if (!directDeliveryResult.Success)
                 {
                     return FailVendorizeAndDetachAndRollback(
                         component,
@@ -675,25 +599,19 @@ namespace ASMLite.Editor
                         beforeState,
                         snapshot,
                         componentSnapshot,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify)
-                            ? "[ASM-Lite] Injected vendorize + detach verification failure after direct-delivery content was applied to vendorized assets."
-                            : verifyFailureMessage,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify)
-                            ? vendorizedDir
-                            : verifyFailureContext,
-                        ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeDetachVerify)
-                            ? "Disable the vendorize + detach verification failure injection after validating rollback behavior."
-                            : "Restore the attached ASM-Lite state before retrying vendorize + detach.",
-                        ASMLiteLifecycleTransactionStage.Verify,
+                        directDeliveryResult.Message,
+                        directDeliveryResult.ContextPath,
+                        directDeliveryResult.Remediation,
+                        directDeliveryResult.FailedStage,
                         diagnostic: null);
                 }
 
                 return ASMLiteLifecycleTransactionResult.Pass(
                     operation: ASMLiteLifecycleOperation.VendorizeAndDetach,
                     beforeState: beforeState,
-                    afterState: expectedDetachedState,
+                    afterState: directDeliveryResult.ExpectedDetachedState,
                     discoveredParamCount: -1,
-                    message: $"[ASM-Lite] {detail}");
+                    message: $"[ASM-Lite] {directDeliveryResult.Detail}");
             }
             finally
             {
@@ -705,7 +623,7 @@ namespace ASMLite.Editor
             VRCAvatarDescriptor avatar,
             ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot pendingSnapshot)
         {
-            var beforeState = ASMLiteInstallationStateService.Resolve(avatar, null);
+            var beforeState = ASMLiteWindow.GetAsmLiteToolState(avatar, null);
             if (avatar == null)
             {
                 return ASMLiteLifecycleTransactionResult.Fail(
@@ -776,8 +694,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: false,
                         rollbackSucceeded: false,
                         contextPath: ASMLiteAssetPaths.Prefab,
@@ -788,7 +706,7 @@ namespace ASMLite.Editor
                         cleanupSucceeded: true,
                         reattachAttempted: false,
                         reattachSucceeded: false,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 reattachAttempted = true;
@@ -803,8 +721,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -815,7 +733,7 @@ namespace ASMLite.Editor
                         cleanupSucceeded: true,
                         reattachAttempted: true,
                         reattachSucceeded: false,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 bool resolvedDetachedInstallPath = ASMLiteMigrationContinuityService.TryResolveInstallPathPrefixFromMoveMenu(
@@ -865,8 +783,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -879,7 +797,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 EditorUtility.SetDirty(component);
@@ -895,8 +813,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: refreshResult.ContextPath,
@@ -910,7 +828,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 if (!TryRefreshLiveInstallPathRouting(component, "Detached Return Recovery Routing", out string routingFailure))
@@ -921,8 +839,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -935,27 +853,27 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
-                int buildResult = ASMLiteBuilder.Build(component);
-                if (buildResult < 0)
+                var recoveryBuildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component);
+                int buildResult = recoveryBuildResult.DiscoveredParamCount;
+                if (!recoveryBuildResult.Success)
                 {
-                    var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
                     UnityEngine.Object.DestroyImmediate(instance);
                     instance = null;
                     return ASMLiteLifecycleTransactionResult.Fail(
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
-                        contextPath: diagnostic?.ContextPath ?? ASMLiteAssetPaths.GeneratedDir,
-                        remediation: diagnostic?.Remediation ?? "Fix the build diagnostic before retrying detached recovery.",
-                        message: diagnostic?.Message ?? "[ASM-Lite] Detached return-to-package-managed recovery failed because Build() did not succeed.",
-                        diagnostic: diagnostic,
+                        contextPath: string.IsNullOrWhiteSpace(recoveryBuildResult.ContextPath) ? ASMLiteAssetPaths.GeneratedDir : recoveryBuildResult.ContextPath,
+                        remediation: string.IsNullOrWhiteSpace(recoveryBuildResult.Remediation) ? "Fix the build diagnostic before retrying detached recovery." : recoveryBuildResult.Remediation,
+                        message: string.IsNullOrWhiteSpace(recoveryBuildResult.Message) ? "[ASM-Lite] Detached return-to-package-managed recovery failed because Build() did not succeed." : recoveryBuildResult.Message,
+                        diagnostic: recoveryBuildResult.Diagnostic,
                         migrationOutcomeReport: migrationOutcome,
                         cleanupAttempted: true,
                         cleanupSucceeded: true,
@@ -963,7 +881,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 if (!adoption.Adopted && packageManagedSnapshot.UseCustomInstallPath)
@@ -977,8 +895,8 @@ namespace ASMLite.Editor
                             operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                             failedStage: ASMLiteLifecycleTransactionStage.Verify,
                             beforeState: beforeState,
-                            afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                            rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                            afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                            rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                             rollbackAttempted: true,
                             rollbackSucceeded: true,
                             contextPath: avatar.gameObject.name,
@@ -991,14 +909,14 @@ namespace ASMLite.Editor
                             reattachSucceeded: false,
                             installPathAdoptionAttempted: installPathAdoptionAttempted,
                             installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                            recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                            recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                     }
                 }
 
                 string verifyFailureMessage = string.Empty;
                 string verifyFailureContext = string.Empty;
                 if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify)
-                    || !VerifyDetachedRecoveryState(component, avatar, out verifyFailureMessage, out verifyFailureContext))
+                    || !ASMLiteLifecycleVerification.VerifyDetachedRecoveryState(component, avatar, out verifyFailureMessage, out verifyFailureContext))
                 {
                     UnityEngine.Object.DestroyImmediate(instance);
                     instance = null;
@@ -1007,7 +925,7 @@ namespace ASMLite.Editor
                         failedStage: ASMLiteLifecycleTransactionStage.Verify,
                         beforeState: beforeState,
                         afterState: ASMLiteInstallationState.PackageManaged,
-                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify)
@@ -1026,7 +944,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
                 }
 
                 if (pendingLegacyMoveMenuHelpers > 0)
@@ -1066,8 +984,8 @@ namespace ASMLite.Editor
                     operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                     failedStage: ASMLiteLifecycleTransactionStage.Execute,
                     beforeState: beforeState,
-                    afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
-                    rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                    afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                    rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                     rollbackAttempted: reattachAttempted,
                     rollbackSucceeded: true,
                     contextPath: ex.GetType().Name,
@@ -1080,7 +998,7 @@ namespace ASMLite.Editor
                     reattachSucceeded: false,
                     installPathAdoptionAttempted: installPathAdoptionAttempted,
                     installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                    recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
+                    recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
             }
         }
 
@@ -1127,7 +1045,7 @@ namespace ASMLite.Editor
                 && restoreLiveResult.Success
                 && routingRollbackSucceeded
                 && (rollbackMirrorResult == null || rollbackMirrorResult.Success)
-                && VerifyPackageManagedRollbackState(component, avatar, out _, out _);
+                && ASMLiteLifecycleVerification.VerifyPackageManagedRollbackState(component, avatar, out _, out _);
             var rollbackState = ResolveToolState(avatar, component);
 
             return ASMLiteLifecycleTransactionResult.Fail(
@@ -1174,7 +1092,7 @@ namespace ASMLite.Editor
             bool rollbackSucceeded = (rollbackDeleteResult == null || rollbackDeleteResult.Success)
                 && restoreDescriptorResult.Success
                 && restoreLiveResult.Success
-                && VerifyVendorizedRollbackState(component, avatar, vendorizedDir, out _, out _);
+                && ASMLiteLifecycleVerification.VerifyVendorizedRollbackState(component, avatar, vendorizedDir, out _, out _);
             var rollbackState = ResolveToolState(avatar, component);
 
             return ASMLiteLifecycleTransactionResult.Fail(
@@ -1197,7 +1115,7 @@ namespace ASMLite.Editor
             ASMLiteComponent component,
             VRCAvatarDescriptor avatar,
             ASMLiteInstallationState beforeState,
-            DirectDeliveryRollbackSnapshot snapshot,
+            ASMLiteDirectDeliveryRollbackSnapshot snapshot,
             ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot componentSnapshot,
             string message,
             string contextPath,
@@ -1206,7 +1124,9 @@ namespace ASMLite.Editor
             ASMLiteBuildDiagnosticResult diagnostic)
         {
             bool rollbackAttempted = true;
-            bool snapshotRestored = RestoreDirectDeliveryRollbackSnapshot(avatar, snapshot, out string rollbackFailureContext, out string rollbackFailureRemediation);
+            string rollbackFailureContext = string.Empty;
+            string rollbackFailureRemediation = string.Empty;
+            bool snapshotRestored = snapshot != null && snapshot.TryRestore(avatar, out rollbackFailureContext, out rollbackFailureRemediation);
             if (component != null)
             {
                 ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, componentSnapshot);
@@ -1215,7 +1135,7 @@ namespace ASMLite.Editor
                 AssetDatabase.SaveAssets();
             }
             bool rollbackSucceeded = snapshotRestored
-                && VerifyAttachedStateAfterDetachRollback(component, avatar, beforeState, out _, out _);
+                && ASMLiteLifecycleVerification.VerifyAttachedStateAfterDetachRollback(component, avatar, beforeState, out _, out _);
             var rollbackState = ResolveToolState(avatar, component);
             string effectiveContext = string.IsNullOrWhiteSpace(rollbackFailureContext) ? contextPath : rollbackFailureContext;
             string effectiveRemediation = string.IsNullOrWhiteSpace(rollbackFailureRemediation) ? remediation : rollbackFailureRemediation;
@@ -1224,7 +1144,7 @@ namespace ASMLite.Editor
                 operation: ASMLiteLifecycleOperation.DetachToDirectDelivery,
                 failedStage: failedStage,
                 beforeState: beforeState,
-                afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                 rollbackState: rollbackState,
                 rollbackAttempted: rollbackAttempted,
                 rollbackSucceeded: rollbackSucceeded,
@@ -1239,7 +1159,7 @@ namespace ASMLite.Editor
             ASMLiteComponent component,
             VRCAvatarDescriptor avatar,
             ASMLiteInstallationState beforeState,
-            DirectDeliveryRollbackSnapshot snapshot,
+            ASMLiteDirectDeliveryRollbackSnapshot snapshot,
             ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot componentSnapshot,
             string message,
             string contextPath,
@@ -1270,7 +1190,9 @@ namespace ASMLite.Editor
             }
             else
             {
-                bool snapshotRestored = RestoreDirectDeliveryRollbackSnapshot(avatar, snapshot, out string rollbackFailureContext, out string rollbackFailureRemediation);
+                string rollbackFailureContext = string.Empty;
+                string rollbackFailureRemediation = string.Empty;
+                bool snapshotRestored = snapshot != null && snapshot.TryRestore(avatar, out rollbackFailureContext, out rollbackFailureRemediation);
                 if (component != null)
                 {
                     ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, componentSnapshot);
@@ -1279,7 +1201,7 @@ namespace ASMLite.Editor
                     AssetDatabase.SaveAssets();
                 }
                 rollbackSucceeded = snapshotRestored
-                    && VerifyAttachedStateAfterDetachRollback(component, avatar, beforeState, out _, out _);
+                    && ASMLiteLifecycleVerification.VerifyAttachedStateAfterDetachRollback(component, avatar, beforeState, out _, out _);
                 rollbackState = ResolveToolState(avatar, component);
                 rollbackDiagnostic = rollbackSucceeded
                     ? ASMLiteBuildDiagnosticResult.Pass()
@@ -1290,7 +1212,7 @@ namespace ASMLite.Editor
                 operation: ASMLiteLifecycleOperation.VendorizeAndDetach,
                 failedStage: failedStage,
                 beforeState: beforeState,
-                afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
                 rollbackState: rollbackState,
                 rollbackAttempted: rollbackAttempted,
                 rollbackSucceeded: rollbackSucceeded,
@@ -1300,347 +1222,6 @@ namespace ASMLite.Editor
                 diagnostic: BuildRollbackDiagnostic(diagnostic, rollbackDiagnostic, rollbackSucceeded),
                 mirrorResult: rollbackMirrorResult,
                 recoveredState: ResolveDetachedBaselineState(beforeState));
-        }
-
-        private static bool VerifyAttachedVendorizeState(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            string vendorizedDir,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (!VerifyComponentVendorizedState(component, expectedUseVendorized: true, expectedPath: vendorizedDir, out failureMessage, out failureContext))
-                return false;
-
-            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, vendorizedDir, out failureMessage, out failureContext))
-                return false;
-
-            if (!AssetDatabase.IsValidFolder(vendorizedDir))
-            {
-                failureMessage = "[ASM-Lite] Attached vendorize verification failed because the vendorized generated-assets folder was missing.";
-                failureContext = vendorizedDir;
-                return false;
-            }
-
-            if (HasAvatarGeneratedReferencesUnderPrefix(avatar, ASMLiteAssetPaths.GeneratedDir))
-            {
-                failureMessage = "[ASM-Lite] Attached vendorize verification failed because descriptor-level generated assets still referenced package-managed generated assets after vendorization.";
-                failureContext = ASMLiteAssetPaths.GeneratedDir;
-                return false;
-            }
-
-            if (ResolveToolState(avatar, component) != ASMLiteInstallationState.Vendorized)
-            {
-                failureMessage = "[ASM-Lite] Attached vendorize verification failed because tool-state classification did not resolve to Vendorized.";
-                failureContext = "toolState";
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool VerifyAttachedReturnState(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            string vendorizedDir,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
-                return false;
-
-            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.GeneratedDir, out failureMessage, out failureContext))
-                return false;
-
-            if (AssetDatabase.IsValidFolder(vendorizedDir))
-            {
-                failureMessage = "[ASM-Lite] Attached return verification failed because the vendorized generated-assets folder still existed after delete staging.";
-                failureContext = vendorizedDir;
-                return false;
-            }
-
-            if (HasAvatarGeneratedReferencesUnderPrefix(avatar, vendorizedDir))
-            {
-                failureMessage = "[ASM-Lite] Attached return verification failed because descriptor-level generated assets still referenced the vendorized folder.";
-                failureContext = vendorizedDir;
-                return false;
-            }
-
-            if (ResolveToolState(avatar, component) != ASMLiteInstallationState.PackageManaged)
-            {
-                failureMessage = "[ASM-Lite] Attached return verification failed because tool-state classification did not resolve to PackageManaged.";
-                failureContext = "toolState";
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool VerifyPackageManagedRollbackState(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            out string failureMessage,
-            out string failureContext)
-        {
-            return VerifyAttachedReturnState(component, avatar, NormalizeOptionalPath(component != null ? component.vendorizedGeneratedAssetsPath : string.Empty), out failureMessage, out failureContext)
-                && ResolveToolState(avatar, component) == ASMLiteInstallationState.PackageManaged;
-        }
-
-        private static bool VerifyVendorizedRollbackState(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            string vendorizedDir,
-            out string failureMessage,
-            out string failureContext)
-        {
-            return VerifyAttachedVendorizeState(component, avatar, vendorizedDir, out failureMessage, out failureContext)
-                && ResolveToolState(avatar, component) == ASMLiteInstallationState.Vendorized;
-        }
-
-        private static bool VerifyComponentVendorizedState(
-            ASMLiteComponent component,
-            bool expectedUseVendorized,
-            string expectedPath,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (component == null)
-            {
-                failureMessage = "[ASM-Lite] Lifecycle transaction verification failed because the ASM-Lite component was missing.";
-                failureContext = "component";
-                return false;
-            }
-
-            string normalizedExpectedPath = NormalizeOptionalPath(expectedPath);
-            string normalizedActualPath = NormalizeOptionalPath(component.vendorizedGeneratedAssetsPath);
-            if (component.useVendorizedGeneratedAssets != expectedUseVendorized)
-            {
-                failureMessage = "[ASM-Lite] Lifecycle transaction verification failed because the component vendorized-mode flag did not match the expected state.";
-                failureContext = component.gameObject.name;
-                return false;
-            }
-
-            if (!string.Equals(normalizedActualPath, normalizedExpectedPath, StringComparison.Ordinal))
-            {
-                failureMessage = "[ASM-Lite] Lifecycle transaction verification failed because the component vendorized generated-assets path did not match the expected state.";
-                failureContext = normalizedActualPath;
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool VerifyLiveFullControllerReferencesUnderPrefix(
-            ASMLiteComponent component,
-            string expectedPrefix,
-            out string failureMessage,
-            out string failureContext)
-        {
-            var snapshotResult = ASMLitePrefabCreator.TryCaptureLiveFullControllerReferenceSnapshot(component, "Lifecycle Transaction Verify", out var snapshot);
-            if (!snapshotResult.Success)
-            {
-                failureMessage = snapshotResult.Message;
-                failureContext = snapshotResult.ContextPath;
-                return false;
-            }
-
-            string normalizedExpectedPrefix = NormalizeOptionalPath(expectedPrefix);
-            if (!PathStartsWith(snapshot.ControllerAssetPath, normalizedExpectedPrefix)
-                || !PathStartsWith(snapshot.MenuAssetPath, normalizedExpectedPrefix)
-                || !PathStartsWith(snapshot.ParametersAssetPath, normalizedExpectedPrefix))
-            {
-                failureMessage = "[ASM-Lite] Lifecycle transaction verification failed because live FullController references were not retargeted to the expected generated-assets prefix.";
-                failureContext = normalizedExpectedPrefix;
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool HasAvatarGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string prefix)
-        {
-            if (avatar == null)
-                return false;
-
-            string normalizedPrefix = NormalizeOptionalPath(prefix);
-            if (string.IsNullOrWhiteSpace(normalizedPrefix))
-                return false;
-
-            string exprPath = NormalizeOptionalPath(avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters) : string.Empty);
-            if (PathStartsWith(exprPath, normalizedPrefix))
-                return true;
-
-            string menuPath = NormalizeOptionalPath(avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu) : string.Empty);
-            if (PathStartsWith(menuPath, normalizedPrefix) || MenuReferencesPrefix(avatar.expressionsMenu, normalizedPrefix))
-                return true;
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                string controllerPath = NormalizeOptionalPath(avatar.baseAnimationLayers[i].animatorController
-                    ? AssetDatabase.GetAssetPath(avatar.baseAnimationLayers[i].animatorController)
-                    : string.Empty);
-                if (PathStartsWith(controllerPath, normalizedPrefix))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool VerifyDirectDeliveryState(
-            VRCAvatarDescriptor avatar,
-            ASMLiteInstallationState expectedDetachedState,
-            string vendorizedDir,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (avatar == null)
-            {
-                failureMessage = "[ASM-Lite] Detach verification failed because the avatar descriptor was missing.";
-                failureContext = "avatar";
-                return false;
-            }
-
-            if (!HasAsmLiteRuntimeMarkers(avatar))
-            {
-                failureMessage = "[ASM-Lite] Detach verification failed because ASM-Lite runtime markers were not present after direct delivery.";
-                failureContext = avatar.gameObject.name;
-                return false;
-            }
-
-            if (expectedDetachedState == ASMLiteInstallationState.Vendorized)
-            {
-                string normalizedVendorizedDir = NormalizeOptionalPath(vendorizedDir);
-                if (string.IsNullOrWhiteSpace(normalizedVendorizedDir) || !AssetDatabase.IsValidFolder(normalizedVendorizedDir))
-                {
-                    failureMessage = "[ASM-Lite] Vendorize + detach verification failed because the vendorized generated-assets folder was missing.";
-                    failureContext = normalizedVendorizedDir;
-                    return false;
-                }
-
-                if (!HasAvatarGeneratedReferencesUnderPrefix(avatar, normalizedVendorizedDir))
-                {
-                    failureMessage = "[ASM-Lite] Vendorize + detach verification failed because descriptor-level generated assets were not routed through the vendorized folder after direct delivery.";
-                    failureContext = normalizedVendorizedDir;
-                    return false;
-                }
-            }
-
-            var detachedState = ASMLiteInstallationStateService.Resolve(avatar, null);
-            if (detachedState != expectedDetachedState)
-            {
-                failureMessage = $"[ASM-Lite] Detach verification failed because tool-state classification did not resolve to {expectedDetachedState} after direct delivery.";
-                failureContext = "toolState";
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool VerifyAttachedStateAfterDetachRollback(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            ASMLiteInstallationState beforeState,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (beforeState == ASMLiteInstallationState.Vendorized)
-            {
-                string expectedVendorizedPath = NormalizeOptionalPath(component != null ? component.vendorizedGeneratedAssetsPath : string.Empty);
-                if (!VerifyComponentVendorizedState(component, expectedUseVendorized: true, expectedPath: expectedVendorizedPath, out failureMessage, out failureContext))
-                    return false;
-
-                if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.Vendorized)
-                {
-                    failureMessage = "[ASM-Lite] Detach rollback failed because the detached avatar state no longer resolved to Vendorized after restoring the attached vendorized baseline.";
-                    failureContext = "toolState";
-                    return false;
-                }
-
-                failureMessage = string.Empty;
-                failureContext = string.Empty;
-                return true;
-            }
-
-            if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
-                return false;
-
-            if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.NotInstalled)
-            {
-                failureMessage = "[ASM-Lite] Detach rollback failed because detached runtime markers still remained on the avatar after restoring the attached package-managed baseline.";
-                failureContext = "toolState";
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static bool VerifyDetachedRecoveryState(
-            ASMLiteComponent component,
-            VRCAvatarDescriptor avatar,
-            out string failureMessage,
-            out string failureContext)
-        {
-            if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
-                return false;
-
-            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.GeneratedDir, out failureMessage, out failureContext))
-                return false;
-
-            if (ResolveToolState(avatar, component) != ASMLiteInstallationState.PackageManaged)
-            {
-                failureMessage = "[ASM-Lite] Detached recovery verification failed because the reattached avatar did not resolve to PackageManaged tool state.";
-                failureContext = "toolState";
-                return false;
-            }
-
-            failureMessage = string.Empty;
-            failureContext = string.Empty;
-            return true;
-        }
-
-        private static DirectDeliveryRollbackSnapshot CaptureDirectDeliveryRollbackSnapshot(VRCAvatarDescriptor avatar)
-        {
-            return new DirectDeliveryRollbackSnapshot(avatar);
-        }
-
-        private static bool RestoreDirectDeliveryRollbackSnapshot(
-            VRCAvatarDescriptor avatar,
-            DirectDeliveryRollbackSnapshot snapshot,
-            out string failureContext,
-            out string failureRemediation)
-        {
-            failureContext = string.Empty;
-            failureRemediation = string.Empty;
-            if (avatar == null || snapshot == null)
-            {
-                failureContext = avatar == null ? "avatar" : "snapshot";
-                failureRemediation = "Capture a valid direct-delivery rollback snapshot before attempting detach rollback.";
-                return false;
-            }
-
-            try
-            {
-                snapshot.Restore(avatar);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                failureContext = ex.GetType().Name;
-                failureRemediation = ex.Message;
-                return false;
-            }
         }
 
         private static ASMLiteInstallationState ResolveDetachSuccessState(ASMLiteInstallationState beforeState, bool vendorizeToAssets)
@@ -1656,73 +1237,6 @@ namespace ASMLite.Editor
             return beforeState == ASMLiteInstallationState.Vendorized
                 ? ASMLiteInstallationState.Vendorized
                 : ASMLiteInstallationState.NotInstalled;
-        }
-
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            var expr = avatar.expressionParameters;
-            if (expr?.parameters != null)
-            {
-                for (int i = 0; i < expr.parameters.Length; i++)
-                {
-                    var parameter = expr.parameters[i];
-                    if (parameter == null || string.IsNullOrWhiteSpace(parameter.name))
-                        continue;
-                    if (parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameter.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var controller = avatar.baseAnimationLayers[i].animatorController as AnimatorController;
-                if (controller == null)
-                    continue;
-
-                for (int layerIndex = 0; layerIndex < controller.layers.Length; layerIndex++)
-                {
-                    if (controller.layers[layerIndex].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        return true;
-                }
-
-                for (int parameterIndex = 0; parameterIndex < controller.parameters.Length; parameterIndex++)
-                {
-                    string parameterName = controller.parameters[parameterIndex].name;
-                    if (string.IsNullOrWhiteSpace(parameterName))
-                        continue;
-                    if (parameterName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameterName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.expressionsMenu?.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                        return true;
-
-                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(subPath)
-                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
         }
 
         private static ASMLiteBuildDiagnosticResult BuildRollbackDiagnostic(
@@ -1804,7 +1318,7 @@ namespace ASMLite.Editor
 
         private static ASMLiteInstallationState ResolveToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
-            return ASMLiteInstallationStateService.Resolve(avatar, component);
+            return ASMLiteWindow.GetAsmLiteToolState(avatar, component);
         }
 
         private static ASMLiteLifecycleTransactionStage MapMirrorStage(ASMLiteGeneratedAssetMirrorStage mirrorStage)
@@ -1850,41 +1364,6 @@ namespace ASMLite.Editor
             return true;
         }
 
-        private static bool PathStartsWith(string assetPath, string prefix)
-        {
-            if (string.IsNullOrWhiteSpace(assetPath) || string.IsNullOrWhiteSpace(prefix))
-                return false;
-
-            return assetPath.StartsWith(prefix.TrimEnd('/'), StringComparison.Ordinal);
-        }
-
-        private static bool MenuReferencesPrefix(VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu menu, string prefix)
-        {
-            return MenuReferencesPrefix(menu, prefix, new System.Collections.Generic.HashSet<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu>());
-        }
-
-        private static bool MenuReferencesPrefix(
-            VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu menu,
-            string prefix,
-            System.Collections.Generic.HashSet<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu> visited)
-        {
-            if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
-                return false;
-
-            for (int i = 0; i < menu.controls.Count; i++)
-            {
-                var control = menu.controls[i];
-                if (control?.subMenu == null)
-                    continue;
-
-                string subMenuPath = NormalizeOptionalPath(AssetDatabase.GetAssetPath(control.subMenu));
-                if (PathStartsWith(subMenuPath, prefix) || MenuReferencesPrefix(control.subMenu, prefix, visited))
-                    return true;
-            }
-
-            return false;
-        }
-
         private static string NormalizeOptionalPath(string path)
         {
             return string.IsNullOrWhiteSpace(path)
@@ -1895,116 +1374,6 @@ namespace ASMLite.Editor
         private static bool ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint failurePoint)
         {
             return s_testFailurePoint == failurePoint;
-        }
-
-        private sealed class DirectDeliveryRollbackSnapshot : IDisposable
-        {
-            private readonly VRCExpressionParameters _expressionParametersAsset;
-            private readonly VRCExpressionParameters _expressionParametersClone;
-            private readonly VRCExpressionsMenu _expressionsMenuAsset;
-            private readonly VRCExpressionsMenu _expressionsMenuClone;
-            private readonly AnimatorController _fxControllerAsset;
-            private readonly AnimatorController _fxControllerClone;
-            private readonly int _fxLayerIndex;
-            private readonly VRCAvatarDescriptor.CustomAnimLayer _originalFxLayer;
-            private bool _disposed;
-
-            internal DirectDeliveryRollbackSnapshot(VRCAvatarDescriptor avatar)
-            {
-                _expressionParametersAsset = avatar != null ? avatar.expressionParameters : null;
-                _expressionParametersClone = CloneForRollback(_expressionParametersAsset);
-                _expressionsMenuAsset = avatar != null ? avatar.expressionsMenu : null;
-                _expressionsMenuClone = CloneForRollback(_expressionsMenuAsset);
-                _fxLayerIndex = FindFxLayerIndex(avatar);
-                if (_fxLayerIndex >= 0 && avatar != null)
-                {
-                    _originalFxLayer = avatar.baseAnimationLayers[_fxLayerIndex];
-                    _fxControllerAsset = _originalFxLayer.animatorController as AnimatorController;
-                    _fxControllerClone = CloneForRollback(_fxControllerAsset);
-                }
-                else
-                {
-                    _originalFxLayer = default;
-                }
-            }
-
-            internal void Restore(VRCAvatarDescriptor avatar)
-            {
-                if (avatar == null)
-                    return;
-
-                if (_expressionParametersAsset != null && _expressionParametersClone != null)
-                {
-                    EditorUtility.CopySerialized(_expressionParametersClone, _expressionParametersAsset);
-                    if (avatar.expressionParameters != _expressionParametersAsset)
-                        avatar.expressionParameters = _expressionParametersAsset;
-                    EditorUtility.SetDirty(_expressionParametersAsset);
-                }
-
-                if (_expressionsMenuAsset != null && _expressionsMenuClone != null)
-                {
-                    EditorUtility.CopySerialized(_expressionsMenuClone, _expressionsMenuAsset);
-                    if (avatar.expressionsMenu != _expressionsMenuAsset)
-                        avatar.expressionsMenu = _expressionsMenuAsset;
-                    EditorUtility.SetDirty(_expressionsMenuAsset);
-                }
-
-                if (_fxLayerIndex >= 0 && _fxLayerIndex < avatar.baseAnimationLayers.Length)
-                {
-                    if (_fxControllerAsset != null && _fxControllerClone != null)
-                    {
-                        EditorUtility.CopySerialized(_fxControllerClone, _fxControllerAsset);
-                        EditorUtility.SetDirty(_fxControllerAsset);
-                    }
-
-                    var restoredLayer = _originalFxLayer;
-                    restoredLayer.animatorController = _originalFxLayer.animatorController;
-                    avatar.baseAnimationLayers[_fxLayerIndex] = restoredLayer;
-                }
-
-                EditorUtility.SetDirty(avatar);
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }
-
-            public void Dispose()
-            {
-                if (_disposed)
-                    return;
-
-                _disposed = true;
-                if (_expressionParametersClone != null)
-                    UnityEngine.Object.DestroyImmediate(_expressionParametersClone);
-                if (_expressionsMenuClone != null)
-                    UnityEngine.Object.DestroyImmediate(_expressionsMenuClone);
-                if (_fxControllerClone != null)
-                    UnityEngine.Object.DestroyImmediate(_fxControllerClone);
-            }
-
-            private static T CloneForRollback<T>(T source)
-                where T : UnityEngine.Object
-            {
-                if (source == null)
-                    return null;
-
-                var clone = UnityEngine.Object.Instantiate(source);
-                clone.hideFlags = HideFlags.HideAndDontSave;
-                return clone;
-            }
-
-            private static int FindFxLayerIndex(VRCAvatarDescriptor avatar)
-            {
-                if (avatar == null || avatar.baseAnimationLayers == null)
-                    return -1;
-
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    if (avatar.baseAnimationLayers[i].type == VRCAvatarDescriptor.AnimLayerType.FX)
-                        return i;
-                }
-
-                return -1;
-            }
         }
 
         private readonly struct ComponentVendorizedStateSnapshot
