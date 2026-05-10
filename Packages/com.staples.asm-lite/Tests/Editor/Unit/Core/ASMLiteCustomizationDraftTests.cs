@@ -6,6 +6,7 @@ using VRC.SDK3.Avatars.Components;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteCustomizationDraftTests
     {
         private GameObject _avatarGo;

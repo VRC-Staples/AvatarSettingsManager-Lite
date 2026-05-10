@@ -6,6 +6,7 @@ using VRC.SDK3.Avatars.ScriptableObjects;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteInstallationStateTests
     {
         private AsmLiteTestContext _ctx;

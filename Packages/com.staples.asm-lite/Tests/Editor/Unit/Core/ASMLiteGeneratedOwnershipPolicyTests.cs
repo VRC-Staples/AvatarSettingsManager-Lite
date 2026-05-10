@@ -9,6 +9,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteGeneratedOwnershipPolicyTests
     {
         private const string TestAssetRoot = "Assets/ASMLiteGeneratedOwnershipPolicyTests";

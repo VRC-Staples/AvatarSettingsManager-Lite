@@ -7,6 +7,8 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
+    [TestFixture]
+    [Category("Headless")]
     internal sealed class ASMLiteIconFixtureRegistryTests
     {
         [Test]

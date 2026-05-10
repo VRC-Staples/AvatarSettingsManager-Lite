@@ -3,6 +3,8 @@ using NUnit.Framework;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteSceneAcquisitionRegressionTests
     {
         [Test]

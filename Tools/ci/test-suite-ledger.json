@@ -456,16 +456,21 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/EditorWorkflow/ASMLiteSceneAcquisitionRegressionTests.cs",
       "class": "ASMLiteSceneAcquisitionRegressionTests",
       "method": "SceneAcquisitionRegression_RejectsMissingScenePath",
-      "line": 9,
+      "line": 11,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
       "lane": "integration-headless",
       "headlessViability": "yes-fixture-isolated",
       "honesty": "editor-workflow-integration-coverage",
-      "recommendation": "add-integration-category-or-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Scene Acquisition Regression Rejects Missing Scene Path",
       "fixtureDependencies": [
         "canonical editor workflow fixture",
@@ -474,22 +479,27 @@
       "assetSceneMutations": "mutates-editor-scene-and-prefab-fixtures-with-cleanup",
       "externalProcessFilesystemEnvUsage": "Unity editor selection/window/AssetDatabase state",
       "runnerFilter": "ASMLiteSceneAcquisitionRegressionTests.SceneAcquisitionRegression_RejectsMissingScenePath",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the Integration category."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/EditorWorkflow/ASMLiteSceneAcquisitionRegressionTests.cs",
       "class": "ASMLiteSceneAcquisitionRegressionTests",
       "method": "SceneAcquisitionRegression_RejectsNonScenePath",
-      "line": 25,
+      "line": 27,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
       "lane": "integration-headless",
       "headlessViability": "yes-fixture-isolated",
       "honesty": "editor-workflow-integration-coverage",
-      "recommendation": "add-integration-category-or-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Scene Acquisition Regression Rejects Non Scene Path",
       "fixtureDependencies": [
         "canonical editor workflow fixture",
@@ -498,7 +508,7 @@
       "assetSceneMutations": "mutates-editor-scene-and-prefab-fixtures-with-cleanup",
       "externalProcessFilesystemEnvUsage": "Unity editor selection/window/AssetDatabase state",
       "runnerFilter": "ASMLiteSceneAcquisitionRegressionTests.SceneAcquisitionRegression_RejectsNonScenePath",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the Integration category."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
@@ -3059,7 +3069,7 @@
       "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
       "runnerFilter": "ASMLitePrefabWiringTests.W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Viable drift-probe coverage, but intentionally not selected by default CI in this pass; add an explicit category/filter only after follow-up review confirms the desired lane."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
@@ -8341,41 +8351,49 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentPreprocessTests.cs",
       "class": "ASMLiteComponentPreprocessTests",
       "method": "OnPreprocess_NoAvatarContext_DoesNotThrow",
-      "line": 25,
+      "line": 27,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "On Preprocess No Avatar Context Does Not Throw",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteComponentPreprocessTests.OnPreprocess_NoAvatarContext_DoesNotThrow",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentPreprocessTests.cs",
       "class": "ASMLiteComponentPreprocessTests",
       "method": "PreprocessOrder_RemainsNegativeTen",
-      "line": 9,
+      "line": 11,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Preprocess Order Remains Negative Ten",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteComponentPreprocessTests.PreprocessOrder_RemainsNegativeTen",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentTests.cs",
@@ -8669,106 +8687,121 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationDraftTests.cs",
       "class": "ASMLiteCustomizationDraftTests",
       "method": "ApplyToComponent_UsesAdapterOnlyWhenDraftDiffersFromLiveComponent",
-      "line": 169,
+      "line": 170,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Apply To Component Uses Adapter Only When Draft Differs From Live Component",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteCustomizationDraftTests.ApplyToComponent_UsesAdapterOnlyWhenDraftDiffersFromLiveComponent",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationDraftTests.cs",
       "class": "ASMLiteCustomizationDraftTests",
       "method": "CaptureFromComponent_NormalizesSharedMigrationSnapshotState",
-      "line": 31,
+      "line": 32,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Capture From Component Normalizes Shared Migration Snapshot State",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteCustomizationDraftTests.CaptureFromComponent_NormalizesSharedMigrationSnapshotState",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationDraftTests.cs",
       "class": "ASMLiteCustomizationDraftTests",
       "method": "DraftIconFixtures_MapThroughAutomationSnapshotStableIds",
-      "line": 130,
+      "line": 131,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Draft Icon Fixtures Map Through Automation Snapshot Stable Ids",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteCustomizationDraftTests.DraftIconFixtures_MapThroughAutomationSnapshotStableIds",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationDraftTests.cs",
       "class": "ASMLiteCustomizationDraftTests",
       "method": "DraftMutators_ClearDisabledInstallPathAndParameterExclusions",
-      "line": 101,
+      "line": 102,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Draft Mutators Clear Disabled Install Path And Parameter Exclusions",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteCustomizationDraftTests.DraftMutators_ClearDisabledInstallPathAndParameterExclusions",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationDraftTests.cs",
       "class": "ASMLiteCustomizationDraftTests",
       "method": "DraftMutators_ReconcilePendingAutomationAndMigrationSnapshots",
-      "line": 62,
+      "line": 63,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Draft Mutators Reconcile Pending Automation And Migration Snapshots",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteCustomizationDraftTests.DraftMutators_ReconcilePendingAutomationAndMigrationSnapshots",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
@@ -9320,15 +9353,19 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteFullControllerWiringTests.cs",
       "class": "ASMLiteFullControllerWiringTests",
       "method": "CaptureLiveFullControllerReferenceSnapshot_ReadsReferencesThroughDedicatedModule",
-      "line": 48,
+      "line": 50,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Capture Live Full Controller Reference Snapshot Reads References Through Dedicated Module",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9336,21 +9373,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteFullControllerWiringTests.CaptureLiveFullControllerReferenceSnapshot_ReadsReferencesThroughDedicatedModule",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteFullControllerWiringTests.cs",
       "class": "ASMLiteFullControllerWiringTests",
       "method": "RefreshLiveFullControllerWiring_CreatesVrcFuryPayloadThroughDedicatedModule",
-      "line": 33,
+      "line": 35,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Refresh Live Full Controller Wiring Creates Vrc Fury Payload Through Dedicated Module",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9358,21 +9399,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteFullControllerWiringTests.RefreshLiveFullControllerWiring_CreatesVrcFuryPayloadThroughDedicatedModule",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteFullControllerWiringTests.cs",
       "class": "ASMLiteFullControllerWiringTests",
       "method": "RetargetLiveFullControllerGeneratedAssets_RepointsReferencesThroughDedicatedModule",
-      "line": 68,
+      "line": 70,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Retarget Live Full Controller Generated Assets Repoints References Through Dedicated Module",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9380,22 +9425,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteFullControllerWiringTests.RetargetLiveFullControllerGeneratedAssets_RepointsReferencesThroughDedicatedModule",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "DescriptorReferencePolicy_TracesNestedMenuGraphsWithoutLooping",
-      "line": 139,
+      "line": 140,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Descriptor Reference Policy Traces Nested Menu Graphs Without Looping",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9403,22 +9451,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.DescriptorReferencePolicy_TracesNestedMenuGraphsWithoutLooping",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "GeneratedRuntimeNamePolicy_CoversDirectDeliveryMarkers",
-      "line": 26,
+      "line": 27,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Generated Runtime Name Policy Covers Direct Delivery Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9426,22 +9477,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.GeneratedRuntimeNamePolicy_CoversDirectDeliveryMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "InjectedRootMenuPolicy_PreservesPresetsFilenameOutsideGeneratedPathWhenNameDoesNotMatch",
-      "line": 90,
+      "line": 91,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Injected Root Menu Policy Preserves Presets Filename Outside Generated Path When Name Does Not Match",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9449,22 +9503,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.InjectedRootMenuPolicy_PreservesPresetsFilenameOutsideGeneratedPathWhenNameDoesNotMatch",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "PathPolicy_NormalizesSlashesAndMatchesWholePrefixSegments",
-      "line": 36,
+      "line": 37,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Path Policy Normalizes Slashes And Matches Whole Prefix Segments",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9472,22 +9529,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.PathPolicy_NormalizesSlashesAndMatchesWholePrefixSegments",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "ReferenceClassificationPolicy_SeparatesPackageVendorizedAndDirectDeliveryMarkers",
-      "line": 46,
+      "line": 47,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Reference Classification Policy Separates Package Vendorized And Direct Delivery Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9495,22 +9555,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.ReferenceClassificationPolicy_SeparatesPackageVendorizedAndDirectDeliveryMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "RootMenuControlPolicy_MatchesGeneratedNameAndPresetsMenuFilenameOnlyForSubmenus",
-      "line": 65,
+      "line": 66,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Root Menu Control Policy Matches Generated Name And Presets Menu Filename Only For Submenus",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9518,22 +9581,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.RootMenuControlPolicy_MatchesGeneratedNameAndPresetsMenuFilenameOnlyForSubmenus",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGeneratedOwnershipPolicyTests.cs",
       "class": "ASMLiteGeneratedOwnershipPolicyTests",
       "method": "RuntimeMarkerPolicy_DetectsDirectDeliverySubmenuAssetMarkers",
-      "line": 110,
+      "line": 111,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Runtime Marker Policy Detects Direct Delivery Submenu Asset Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9541,7 +9607,7 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteGeneratedOwnershipPolicyTests.RuntimeMarkerPolicy_DetectsDirectDeliverySubmenuAssetMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteGenerationWiringSummaryWriterTests.cs",
@@ -9616,15 +9682,19 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Fixture_id_lookup_from_textures_is_deterministic",
-      "line": 63,
+      "line": 65,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Fixture id lookup from textures is deterministic",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9632,21 +9702,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Fixture_id_lookup_from_textures_is_deterministic",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Known_fixture_ids_are_unique",
-      "line": 86,
+      "line": 88,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Known fixture ids are unique",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9654,21 +9728,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Known_fixture_ids_are_unique",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Known_fixture_ids_resolve_to_existing_package_textures",
-      "line": 13,
+      "line": 15,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Known fixture ids resolve to existing package textures",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9676,21 +9754,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Known_fixture_ids_resolve_to_existing_package_textures",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Root_and_action_fixture_ids_map_to_canonical_assets",
-      "line": 54,
+      "line": 56,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Root and action fixture ids map to canonical assets",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9698,21 +9780,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Root_and_action_fixture_ids_map_to_canonical_assets",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Slot_fixture_ids_are_stable_and_ordered",
-      "line": 31,
+      "line": 33,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Slot fixture ids are stable and ordered",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9720,21 +9806,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Slot_fixture_ids_are_stable_and_ordered",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
       "method": "Unknown_fixture_id_fails_readably",
-      "line": 76,
+      "line": 78,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Unknown fixture id fails readably",
       "fixtureDependencies": [
         "package fixture assets"
@@ -9742,7 +9832,7 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteIconFixtureRegistryTests.Unknown_fixture_id_fails_readably",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
@@ -10015,16 +10105,19 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
       "class": "ASMLiteInstallationStateTests",
       "method": "Resolve_AvatarSelectedNotInstalled_RemainsExplicit",
-      "line": 94,
+      "line": 95,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Resolve Avatar Selected Not Installed Remains Explicit",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10032,22 +10125,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteInstallationStateTests.Resolve_AvatarSelectedNotInstalled_RemainsExplicit",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
       "class": "ASMLiteInstallationStateTests",
       "method": "Resolve_ComponentMissingDetachedDetectedFromRuntimeMarkers",
-      "line": 42,
+      "line": 43,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Resolve Component Missing Detached Detected From Runtime Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10055,22 +10151,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteInstallationStateTests.Resolve_ComponentMissingDetachedDetectedFromRuntimeMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
       "class": "ASMLiteInstallationStateTests",
       "method": "Resolve_ComponentMissingVendorizedReferences_ReturnsVendorizedBeforeDetachedMarkers",
-      "line": 62,
+      "line": 63,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Resolve Component Missing Vendorized References Returns Vendorized Before Detached Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10078,22 +10177,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteInstallationStateTests.Resolve_ComponentMissingVendorizedReferences_ReturnsVendorizedBeforeDetachedMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
       "class": "ASMLiteInstallationStateTests",
       "method": "Resolve_ComponentPresentVendorized_WinsOverAvatarHeuristics",
-      "line": 31,
+      "line": 32,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Resolve Component Present Vendorized Wins Over Avatar Heuristics",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10101,21 +10203,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteInstallationStateTests.Resolve_ComponentPresentVendorized_WinsOverAvatarHeuristics",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
       "class": "ASMLiteLifecycleSeamTests",
       "method": "DirectDeliveryRollbackSnapshot_RestoresDescriptorAssetsAfterMutation",
-      "line": 29,
+      "line": 31,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Direct Delivery Rollback Snapshot Restores Descriptor Assets After Mutation",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10123,21 +10229,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteLifecycleSeamTests.DirectDeliveryRollbackSnapshot_RestoresDescriptorAssetsAfterMutation",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
       "class": "ASMLiteLifecycleSeamTests",
       "method": "DirectDeliveryVerification_ReportsMissingRuntimeMarkers",
-      "line": 73,
+      "line": 75,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Direct Delivery Verification Reports Missing Runtime Markers",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10145,21 +10255,25 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteLifecycleSeamTests.DirectDeliveryVerification_ReportsMissingRuntimeMarkers",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
       "class": "ASMLiteLifecycleSeamTests",
       "method": "GeneratedAssetBuildTransaction_ReportsBuilderDiagnosticsWithoutThrowing",
-      "line": 89,
+      "line": 91,
       "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Generated Asset Build Transaction Reports Builder Diagnostics Without Throwing",
       "fixtureDependencies": [
         "package fixture assets"
@@ -10167,112 +10281,127 @@
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteLifecycleSeamTests.GeneratedAssetBuildTransaction_ReportsBuilderDiagnosticsWithoutThrowing",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "ExactVisibleNames_NormalizeBeforeCompare_AndSortForSnapshotStorage",
-      "line": 58,
+      "line": 59,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Exact Visible Names Normalize Before Compare And Sort For Snapshot Storage",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.ExactVisibleNames_NormalizeBeforeCompare_AndSortForSnapshotStorage",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "PresetMissingFromVisibleOptions_FailsReadably",
-      "line": 95,
+      "line": 96,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Preset Missing From Visible Options Fails Readably",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.PresetMissingFromVisibleOptions_FailsReadably",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "SeededVrcFuryVisibleOptions_CanBeAssertedForPresetResolution",
-      "line": 110,
+      "line": 111,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Seeded Vrc Fury Visible Options Can Be Asserted For Preset Resolution",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.SeededVrcFuryVisibleOptions_CanBeAssertedForPresetResolution",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "StablePresetIds_ResolveAgainstVisibleBackupOptions",
-      "line": 31,
+      "line": 32,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Stable Preset Ids Resolve Against Visible Backup Options",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.StablePresetIds_ResolveAgainstVisibleBackupOptions",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "UnknownPresetId_FailsReadably",
-      "line": 78,
+      "line": 79,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Unknown Preset Id Fails Readably",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.UnknownPresetId_FailsReadably",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
@@ -11410,16 +11539,19 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
       "class": "ASMLiteWindowAdapterBoundaryTests",
       "method": "ASMLiteWindow_DoesNotOwnLifecycleOrFullControllerPolicy",
-      "line": 11,
+      "line": 12,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "ASMLite Window Does Not Own Lifecycle Or Full Controller Policy",
       "fixtureDependencies": [
         "window model fixtures"
@@ -11427,22 +11559,25 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_DoesNotOwnLifecycleOrFullControllerPolicy",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
       "class": "ASMLiteWindowAdapterBoundaryTests",
       "method": "ASMLiteWindow_KeepsExtractedPresenterSeamsAsPrimaryPolicyOwners",
-      "line": 35,
+      "line": 36,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "ASMLite Window Keeps Extracted Presenter Seams As Primary Policy Owners",
       "fixtureDependencies": [
         "window model fixtures"
@@ -11450,22 +11585,25 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_KeepsExtractedPresenterSeamsAsPrimaryPolicyOwners",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
       "class": "ASMLiteWindowAdapterBoundaryTests",
       "method": "ASMLiteWindow_RefreshesReadonlyCustomizationDraftWithoutReassignment",
-      "line": 53,
+      "line": 54,
       "attributes": [
         "TestFixture",
+        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless"
+      ],
       "lane": "core-headless",
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
-      "recommendation": "add-to-core-headless-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "ASMLite Window Refreshes Readonly Customization Draft Without Reassignment",
       "fixtureDependencies": [
         "window model fixtures"
@@ -11473,7 +11611,7 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_RefreshesReadonlyCustomizationDraftWithoutReassignment",
-      "notes": "Viable headless coverage but current default suite map does not select this class/method."
+      "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",

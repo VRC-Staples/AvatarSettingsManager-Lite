@@ -5,6 +5,7 @@ using UnityEngine;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowAdapterBoundaryTests
     {
         [Test]

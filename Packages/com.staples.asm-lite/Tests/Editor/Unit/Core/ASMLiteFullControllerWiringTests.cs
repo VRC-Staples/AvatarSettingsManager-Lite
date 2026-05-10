@@ -6,6 +6,8 @@ using UnityEngine;
 
 namespace ASMLite.Tests.Editor
 {
+    [TestFixture]
+    [Category("Headless")]
     public sealed class ASMLiteFullControllerWiringTests
     {
         private const string TempRoot = "Assets/ASMLiteTests_Temp";

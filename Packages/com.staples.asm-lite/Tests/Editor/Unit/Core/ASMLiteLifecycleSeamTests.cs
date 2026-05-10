@@ -8,6 +8,8 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
+    [TestFixture]
+    [Category("Headless")]
     public sealed class ASMLiteLifecycleSeamTests
     {
         private AsmLiteTestContext _ctx;
