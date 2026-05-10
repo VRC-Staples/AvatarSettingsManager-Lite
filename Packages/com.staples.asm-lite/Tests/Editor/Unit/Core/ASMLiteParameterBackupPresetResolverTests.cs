@@ -56,7 +56,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ExactVisibleNames_NormalizeBeforeCompare_AndSortForSnapshotStorage()
+        public void ExactVisibleNames_NormalizeBeforeCompare_AndPreserveFirstSeenOrderForSnapshotStorage()
         {
             string[] visibleOptions =
             {
@@ -70,9 +70,9 @@ namespace ASMLite.Tests.Editor
                 visibleOptions);
 
             CollectionAssert.AreEqual(
-                new[] { "Fixture/ParamA", "Fixture/ParamB", "Fixture/ParamC" },
+                new[] { "Fixture/ParamC", "Fixture/ParamA", "Fixture/ParamB" },
                 resolved,
-                "Exact-name backup exclusions should compare after trimming, slash normalization, segment trimming, dedupe, and ordinal sorting.");
+                "Exact-name backup exclusions should compare after trimming, slash normalization, segment trimming, de-dupe, and preserve first-seen order.");
         }
 
         [Test]

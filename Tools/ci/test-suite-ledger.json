@@ -10286,7 +10286,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
-      "method": "ExactVisibleNames_NormalizeBeforeCompare_AndSortForSnapshotStorage",
+      "method": "ExactVisibleNames_NormalizeBeforeCompare_AndPreserveFirstSeenOrderForSnapshotStorage",
       "line": 59,
       "attributes": [
         "TestFixture",
@@ -10300,11 +10300,11 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Exact Visible Names Normalize Before Compare And Sort For Snapshot Storage",
+      "publicBehaviorClaim": "Exact Visible Names Normalize Before Compare And Preserve First Seen Order For Snapshot Storage",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.ExactVisibleNames_NormalizeBeforeCompare_AndSortForSnapshotStorage",
+      "runnerFilter": "ASMLiteParameterBackupPresetResolverTests.ExactVisibleNames_NormalizeBeforeCompare_AndPreserveFirstSeenOrderForSnapshotStorage",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
@@ -12007,7 +12007,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_ExactNames_NormalizesSortsAndCanDisableDeterministically",
+      "method": "ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically",
       "line": 934,
       "attributes": [
         "TestFixture",
@@ -12021,19 +12021,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation Exact Names Normalizes Sorts And Can Disable Deterministically",
+      "publicBehaviorClaim": "Parameter Backup Automation Exact Names Normalizes Preserves First Seen Order And Can Disable Deterministically",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactNames_NormalizesSortsAndCanDisableDeterministically",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_ExactVisibleNames_NormalizesAndStoresSortedSnapshot",
+      "method": "ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder",
       "line": 818,
       "attributes": [
         "TestFixture",
@@ -12047,13 +12047,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation Exact Visible Names Normalizes And Stores Sorted Snapshot",
+      "publicBehaviorClaim": "Parameter Backup Automation Exact Visible Names Normalizes And Preserves First Seen Order",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactVisibleNames_NormalizesAndStoresSortedSnapshot",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {

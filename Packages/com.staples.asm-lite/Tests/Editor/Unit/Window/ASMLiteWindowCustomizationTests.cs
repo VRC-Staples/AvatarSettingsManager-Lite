@@ -815,13 +815,13 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_ExactVisibleNames_NormalizesAndStoresSortedSnapshot()
+        public void ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder()
         {
             var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                AssertParameterBackupPresetVisibleOptions(_ctx, "sorted exact-name backup row");
+                AssertParameterBackupPresetVisibleOptions(_ctx, "first-seen exact-name backup row");
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
 
                 window.SetParameterBackupExclusionsForAutomation(
@@ -834,11 +834,11 @@ namespace ASMLite.Tests.Editor
                     });
 
                 AssertParameterBackupSnapshotFields(
-                    "sorted exact-name backup row",
+                    "first-seen exact-name backup row",
                     window,
                     _ctx.Comp,
                     expectedEnabled: true,
-                    expectedExcludedNames: new[] { "Fixture/Referenced/A", "Fixture/Referenced/B", "Fixture/Source/One" });
+                    expectedExcludedNames: new[] { "Fixture/Referenced/B", "Fixture/Source/One", "Fixture/Referenced/A" });
             }
             finally
             {
@@ -916,13 +916,13 @@ namespace ASMLite.Tests.Editor
                 Assert.IsTrue(pending.UseParameterExclusions,
                     "The pending testing snapshot should expose parameter backup enablement.");
                 CollectionAssert.AreEqual(new[] { "Fixture/Source/One" }, pending.ExcludedParameterNames,
-                    "The pending testing snapshot should expose sorted, normalized excluded parameter names.");
+                    "The pending testing snapshot should expose normalized excluded parameter names.");
 
                 var automation = window.GetPendingCustomizationSnapshotForAutomation();
                 Assert.IsTrue(automation.UseParameterExclusions,
                     "The normalized automation snapshot should expose parameter backup enablement.");
                 CollectionAssert.AreEqual(new[] { "Fixture/Source/One" }, automation.ExcludedParameterNames,
-                    "The normalized automation snapshot should expose sorted, normalized excluded parameter names.");
+                    "The normalized automation snapshot should expose normalized excluded parameter names.");
             }
             finally
             {
@@ -931,7 +931,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_ExactNames_NormalizesSortsAndCanDisableDeterministically()
+        public void ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically()
         {
             ASMLiteTestFixtures.SetExpressionParams(_ctx,
                 new VRCExpressionParameters.Parameter
@@ -963,13 +963,13 @@ namespace ASMLite.Tests.Editor
                     "Alpha/Param",
                 });
 
-                string[] expectedExcluded = { "Alpha/Param", "Zed/Param" };
+                string[] expectedExcluded = { "Zed/Param", "Alpha/Param" };
                 Assert.IsTrue(_ctx.Comp.useParameterExclusions,
                     "Exact-name application should enable parameter backup customization on the attached component.");
                 CollectionAssert.AreEqual(expectedExcluded, _ctx.Comp.excludedParameterNames,
-                    "Exact-name application should normalize, de-duplicate, and sort excluded parameter names before persistence.");
+                    "Exact-name application should normalize, de-duplicate, and preserve first-seen order before persistence.");
                 CollectionAssert.AreEqual(expectedExcluded, window.GetPendingCustomizationSnapshotForAutomation().ExcludedParameterNames,
-                    "Automation snapshots should keep excluded parameter names sorted for deterministic comparisons.");
+                    "Automation snapshots should preserve first-seen excluded parameter order for deterministic comparisons.");
 
                 window.SetParameterBackupStateForAutomation(false);
 
@@ -1336,7 +1336,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedEnabled, component.useParameterExclusions,
                 $"{scenario}: attached component should expose the parameter-backup customization gate.");
             CollectionAssert.AreEqual(expectedExcludedNames, component.excludedParameterNames ?? Array.Empty<string>(),
-                $"{scenario}: attached component should store the exact sorted backup exclusion snapshot.");
+                $"{scenario}: attached component should store the exact first-seen backup exclusion snapshot.");
 
             var pendingTesting = window.GetPendingCustomizationSnapshotForTesting();
             Assert.AreSame(component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>(), pendingTesting.SelectedAvatar,
@@ -1344,7 +1344,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedEnabled, pendingTesting.UseParameterExclusions,
                 $"{scenario}: pending testing snapshot should expose the parameter-backup customization gate.");
             CollectionAssert.AreEqual(expectedExcludedNames, pendingTesting.ExcludedParameterNames,
-                $"{scenario}: pending testing snapshot should preserve sorted backup exclusions.");
+                $"{scenario}: pending testing snapshot should preserve first-seen backup exclusions.");
 
             AssertParameterBackupAutomationSnapshotFields(
                 scenario + " pending automation snapshot",
@@ -1376,7 +1376,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(expectedEnabled, snapshot.Customization.UseParameterExclusions,
                 $"{scenario}: automation snapshot should expose the parameter-backup customization gate.");
             CollectionAssert.AreEqual(expectedExcludedNames, snapshot.Customization.ExcludedParameterNames,
-                $"{scenario}: automation snapshot should preserve sorted backup exclusions.");
+                $"{scenario}: automation snapshot should preserve first-seen backup exclusions.");
         }
 
         private static VRCExpressionParameters SeedParameterBackupPresetVisibleOptions(AsmLiteTestContext ctx)

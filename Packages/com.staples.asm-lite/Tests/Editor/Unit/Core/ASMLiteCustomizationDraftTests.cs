@@ -95,7 +95,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual("Save", pending.SaveLabel);
             Assert.AreEqual("Menus/ASM", automation.CustomInstallPath);
             Assert.AreEqual("Menus/ASM", automation.EffectiveInstallPath);
-            CollectionAssert.AreEqual(new[] { "Alpha", "Beta" }, automation.ExcludedParameterNames);
+            CollectionAssert.AreEqual(new[] { "Beta", "Alpha" }, automation.ExcludedParameterNames);
         }
 
         [Test]

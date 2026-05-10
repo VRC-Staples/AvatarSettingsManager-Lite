@@ -31,6 +31,9 @@ RUN_LOCK_DIR="${RUN_LOCK_DIR:-/tmp/asmlite-editmode-local.lock}"
 RUN_LOCK_WAIT_SECONDS="${RUN_LOCK_WAIT_SECONDS:-0}"
 RUN_LOCK_POLL_SECONDS="${RUN_LOCK_POLL_SECONDS:-5}"
 LOCAL_DOCKER_CPUS="${LOCAL_DOCKER_CPUS:-}"
+ASMLITE_ENABLE_CODE_COVERAGE="${ASMLITE_ENABLE_CODE_COVERAGE:-1}"
+ASMLITE_UNITY_EXTRA_ARGS="${ASMLITE_UNITY_EXTRA_ARGS:-}"
+ASMLITE_DOCKER_UNITY_EXECUTABLE="${ASMLITE_DOCKER_UNITY_EXECUTABLE:-unity-editor}"
 EDITMODE_RUNNER_MODE="${EDITMODE_RUNNER_MODE:-docker}"
 EDITMODE_LOCAL_EXECUTION_STYLE="${EDITMODE_LOCAL_EXECUTION_STYLE:-headless}"
 UNITY_EXECUTABLE="${UNITY_EXECUTABLE:-}"
@@ -201,6 +204,12 @@ Environment overrides:
   RUN_LOCK_WAIT_SECONDS     Seconds to wait for the active run lock (0 = wait indefinitely)
   RUN_LOCK_POLL_SECONDS     Poll interval while waiting for the run lock
   LOCAL_DOCKER_CPUS         Optional Docker CPU limit for Docker mode
+  ASMLITE_ENABLE_CODE_COVERAGE
+                            Set to 0/false/no/off to skip Unity code coverage for faster local runs
+  ASMLITE_UNITY_EXTRA_ARGS
+                            Optional additional Unity command-line flags for test execution
+  ASMLITE_DOCKER_UNITY_EXECUTABLE
+                            Docker Unity executable for test execution (default: unity-editor)
 
 Docker mode keeps the existing CI-style activation/return flow and requires
 UNITY_EMAIL, UNITY_PASSWORD, plus UNITY_SERIAL or UNITY_LICENSE_SECRET/UNITY_LICENSE_FILE.
@@ -229,7 +238,7 @@ load_dotenv_defaults() {
     raw="${BASH_REMATCH[3]}"
 
     case "$key" in
-      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL|LOCAL_DOCKER_CPUS|EDITMODE_RUNNER_MODE|EDITMODE_LOCAL_EXECUTION_STYLE|UNITY_EXECUTABLE|EDITMODE_TEST_FILTER|EDITMODE_VISIBLE_CATEGORY|LOCAL_UNITY_MANAGE_LICENSE) ;;
+      UNITY_LICENSE_SECRET|UNITY_LICENSE_FILE|UNITY_EMAIL|UNITY_PASSWORD|UNITY_SERIAL|LOCAL_DOCKER_CPUS|ASMLITE_ENABLE_CODE_COVERAGE|ASMLITE_UNITY_EXTRA_ARGS|ASMLITE_DOCKER_UNITY_EXECUTABLE|EDITMODE_RUNNER_MODE|EDITMODE_LOCAL_EXECUTION_STYLE|UNITY_EXECUTABLE|EDITMODE_TEST_FILTER|EDITMODE_VISIBLE_CATEGORY|LOCAL_UNITY_MANAGE_LICENSE) ;;
       *) continue ;;
     esac
 
@@ -528,6 +537,39 @@ validate_docker_cpus() {
 
   DOCKER_CPU_ARGS=(--cpus "${LOCAL_DOCKER_CPUS}")
   echo "note: limiting docker container CPUs to ${LOCAL_DOCKER_CPUS} for this run."
+}
+
+coverage_enabled() {
+  case "${ASMLITE_ENABLE_CODE_COVERAGE}" in
+    0|false|FALSE|False|no|NO|No|off|OFF|Off) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+append_unity_coverage_args() {
+  local -n target_args="$1"
+  if coverage_enabled; then
+    target_args+=(
+      -enableCodeCoverage
+      -debugCodeOptimization
+      -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+    )
+  else
+    echo "note: Unity code coverage disabled for this run (ASMLITE_ENABLE_CODE_COVERAGE=${ASMLITE_ENABLE_CODE_COVERAGE})."
+  fi
+}
+
+append_unity_extra_args() {
+  local -n target_args="$1"
+  local -a extra_args=()
+
+  if [[ -z "${ASMLITE_UNITY_EXTRA_ARGS}" ]]; then
+    return 0
+  fi
+
+  read -r -a extra_args <<< "${ASMLITE_UNITY_EXTRA_ARGS}"
+  target_args+=("${extra_args[@]}")
+  echo "note: Unity extra args enabled: ${ASMLITE_UNITY_EXTRA_ARGS}"
 }
 
 acquire_run_lock() {
@@ -1108,10 +1150,9 @@ run_local_visible_suite_mode() {
     -testPlatform editmode
     "${test_filter_args[@]}"
     -testResults "${results_path}"
-    -enableCodeCoverage
-    -debugCodeOptimization
-    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
   )
+  append_unity_extra_args unity_cmd
+  append_unity_coverage_args unity_cmd
 
   echo "note: visible suite mode leaves the Unity editor window open while the filtered EditMode run executes."
 
@@ -1175,10 +1216,9 @@ run_local_mode() {
     -testPlatform editmode
     "${test_filter_args[@]}"
     -testResults "${results_path}"
-    -enableCodeCoverage
-    -debugCodeOptimization
-    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
   )
+  append_unity_extra_args unity_cmd
+  append_unity_coverage_args unity_cmd
 
   set +e
   timeout --signal=TERM --kill-after=30 "${RUN_TIMEOUT_SECONDS}" "${unity_cmd[@]}"
@@ -1239,6 +1279,30 @@ EDITMODE_RESULTS_PATH="${WORKSPACE_REPO_ROOT}/artifacts/editmode-results.xml"
 RUN_COVERAGE_DIR="${WORKSPACE_REPO_ROOT}/CodeCoverage"
 mkdir -p "${RUN_COVERAGE_DIR}"
 
+unity_extra_args=()
+unity_executable="${ASMLITE_DOCKER_UNITY_EXECUTABLE:-unity-editor}"
+if [[ -n "${ASMLITE_UNITY_EXTRA_ARGS:-}" ]]; then
+  read -r -a unity_extra_args <<< "${ASMLITE_UNITY_EXTRA_ARGS}"
+  echo "note: Unity extra args enabled: ${ASMLITE_UNITY_EXTRA_ARGS}"
+fi
+if [[ -n "${ASMLITE_DOCKER_UNITY_EXECUTABLE:-}" && "${ASMLITE_DOCKER_UNITY_EXECUTABLE}" != "unity-editor" ]]; then
+  echo "note: Docker Unity executable override: ${ASMLITE_DOCKER_UNITY_EXECUTABLE}"
+fi
+
+coverage_args=()
+case "${ASMLITE_ENABLE_CODE_COVERAGE:-1}" in
+  0|false|FALSE|False|no|NO|No|off|OFF|Off)
+    echo "note: Unity code coverage disabled for this run (ASMLITE_ENABLE_CODE_COVERAGE=${ASMLITE_ENABLE_CODE_COVERAGE:-0})."
+    ;;
+  *)
+    coverage_args=(
+      -enableCodeCoverage
+      -debugCodeOptimization
+      -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+    )
+    ;;
+esac
+
 if [[ -z "${DOCKER_PROJECT_PATH:-}" ]]; then
   echo "error: DOCKER_PROJECT_PATH is required." >&2
   exit 1
@@ -1275,19 +1339,21 @@ rm -rf "${DOCKER_PROJECT_PATH}/Temp"
 
 if [[ -n "${EDITMODE_TEST_FILTER:-}" ]]; then
   printf 'note: applying EditMode test filter override: %s\n' "$EDITMODE_TEST_FILTER"
-  unity-editor \
-    -batchmode \
-    -nographics \
-    -logFile "${EDITMODE_LOG_PATH}" \
-    -projectPath "${DOCKER_PROJECT_PATH}" \
-    -coverageResultsPath "${RUN_COVERAGE_DIR}" \
-    -runTests \
-    -testPlatform editmode \
-    -testFilter "${EDITMODE_TEST_FILTER}" \
-    -testResults "${EDITMODE_RESULTS_PATH}" \
-    -enableCodeCoverage \
-    -debugCodeOptimization \
-    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+  unity_cmd=(
+    "${unity_executable}"
+    -batchmode
+    -nographics
+    -logFile "${EDITMODE_LOG_PATH}"
+    -projectPath "${DOCKER_PROJECT_PATH}"
+    -coverageResultsPath "${RUN_COVERAGE_DIR}"
+    -runTests
+    -testPlatform editmode
+    -testFilter "${EDITMODE_TEST_FILTER}"
+    -testResults "${EDITMODE_RESULTS_PATH}"
+    "${unity_extra_args[@]}"
+    "${coverage_args[@]}"
+  )
+  "${unity_cmd[@]}"
 else
   : "${ASMLITE_BATCH_RESULTS_DIR:=${WORKSPACE_REPO_ROOT}/artifacts}"
   : "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH:=${WORKSPACE_REPO_ROOT}/artifacts/editmode-results.xml}"
@@ -1295,7 +1361,7 @@ else
   mkdir -p "${ASMLITE_BATCH_RESULTS_DIR}"
 
   unity_cmd=(
-    unity-editor
+    "${unity_executable}"
     -batchmode
     -nographics
     -logFile "${EDITMODE_LOG_PATH}"
@@ -1304,9 +1370,8 @@ else
     -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine
     -asmliteBatchResultsDir "${ASMLITE_BATCH_RESULTS_DIR}"
     -asmliteBatchCanonicalResultsPath "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}"
-    -enableCodeCoverage
-    -debugCodeOptimization
-    -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
+    "${unity_extra_args[@]}"
+    "${coverage_args[@]}"
   )
 
   if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" ]]; then
@@ -1325,6 +1390,9 @@ RUNNER
     --env UNITY_PASSWORD \
     --env UNITY_SERIAL="${UNITY_SERIAL}" \
     --env EDITMODE_TEST_FILTER="${EDITMODE_TEST_FILTER}" \
+    --env ASMLITE_ENABLE_CODE_COVERAGE="${ASMLITE_ENABLE_CODE_COVERAGE}" \
+    --env ASMLITE_UNITY_EXTRA_ARGS="${ASMLITE_UNITY_EXTRA_ARGS}" \
+    --env ASMLITE_DOCKER_UNITY_EXECUTABLE="${ASMLITE_DOCKER_UNITY_EXECUTABLE}" \
     --env ASMLITE_BATCH_RUNS_JSON="${ASMLITE_BATCH_RUNS_JSON:-}" \
     --env ASMLITE_BATCH_RUNS_JSON_PATH="${docker_batch_runs_json_path}" \
     --env ASMLITE_BATCH_RESULTS_DIR="${docker_batch_results_dir}" \

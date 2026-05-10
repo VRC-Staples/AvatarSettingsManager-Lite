@@ -86,7 +86,7 @@ namespace ASMLite.Editor
             if (!string.IsNullOrEmpty(errorMessage))
                 return false;
 
-            var requestedNames = NormalizeVisibleNames(exactVisibleNames);
+            var requestedNames = NormalizeVisibleNamesPreservingOrder(exactVisibleNames);
             if (requestedNames.Length == 0)
                 return true;
 
@@ -102,8 +102,6 @@ namespace ASMLite.Editor
 
             excludedParameterNames = requestedNames
                 .Select(name => visibleByNormalizedName[name])
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();
             return true;
         }
@@ -153,6 +151,25 @@ namespace ASMLite.Editor
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();
+        }
+
+        private static string[] NormalizeVisibleNamesPreservingOrder(IEnumerable<string> names)
+        {
+            if (names == null)
+                return Array.Empty<string>();
+
+            var normalizedNames = new List<string>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                string normalized = NormalizeVisibleName(name);
+                if (string.IsNullOrEmpty(normalized) || !seen.Add(normalized))
+                    continue;
+
+                normalizedNames.Add(normalized);
+            }
+
+            return normalizedNames.Count == 0 ? Array.Empty<string>() : normalizedNames.ToArray();
         }
 
         internal static string NormalizeVisibleName(string name)
