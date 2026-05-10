@@ -5635,16 +5635,16 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
       "method": "W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
-      "line": 41,
+      "line": 40,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
-        "Category(\"Integration\")"
+        "Category(\"Integration\")",
+        "Category(\"Headless\")"
       ],
       "categories": [
-        "Headless",
-        "Integration"
+        "Integration",
+        "Headless"
       ],
       "lane": "integration-headless",
       "headlessViability": "review",
@@ -5661,11 +5661,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
       "method": "W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
-      "line": 211,
+      "line": 210,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
+        "Test",
+        "Category(\"Headless\")"
       ],
       "categories": [
         "Headless"
@@ -5685,19 +5685,16 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
       "method": "W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
-      "line": 95,
+      "line": 94,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test"
       ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
+      "categories": [],
+      "lane": "needs-classification",
+      "headlessViability": "review",
       "honesty": "needs-review",
-      "recommendation": "default-ci",
+      "recommendation": "review",
       "publicBehaviorClaim": "Prefab Wiring Missing Parameter Fallback Group Returns Drift202",
       "fixtureDependencies": [],
       "assetSceneMutations": "review",
@@ -5709,16 +5706,16 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
       "method": "W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent",
-      "line": 147,
+      "line": 146,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
-        "Category(\"Integration\")"
+        "Category(\"Integration\")",
+        "Category(\"Headless\")"
       ],
       "categories": [
-        "Headless",
-        "Integration"
+        "Integration",
+        "Headless"
       ],
       "lane": "integration-headless",
       "headlessViability": "review",
@@ -5735,16 +5732,16 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
       "method": "W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable",
-      "line": 167,
+      "line": 166,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
-        "Category(\"Integration\")"
+        "Category(\"Integration\")",
+        "Category(\"Headless\")"
       ],
       "categories": [
-        "Headless",
-        "Integration"
+        "Integration",
+        "Headless"
       ],
       "lane": "integration-headless",
       "headlessViability": "review",

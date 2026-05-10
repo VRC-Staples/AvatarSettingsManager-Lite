@@ -32,12 +32,11 @@ namespace VF.Model.Feature
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
-    [Category("Headless")]
     public class ASMLitePrefabWiringTests
     {
         private const string SuiteName = nameof(ASMLitePrefabWiringTests);
 
-        [Test, Category("Integration")]
+        [Test, Category("Integration"), Category("Headless")]
         public void W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController()
         {
             var go = new GameObject("W01_WiringRoot");
@@ -143,7 +142,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Integration"), Category("Headless")]
         public void W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
@@ -163,7 +162,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Integration"), Category("Headless")]
         public void W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
@@ -207,7 +206,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test]
+        [Test, Category("Headless")]
         public void W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames()
         {
             var root = new GameObject("Root");
