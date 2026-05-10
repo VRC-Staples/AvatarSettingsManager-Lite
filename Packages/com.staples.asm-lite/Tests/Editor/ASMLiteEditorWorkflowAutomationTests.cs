@@ -234,7 +234,7 @@ namespace ASMLite.Tests.Editor
                 Assert.IsTrue(AssetDatabase.IsValidFolder(attachedVendorized.vendorizedGeneratedAssetsPath),
                     "Attached vendorize flow should create the mirrored GeneratedAssets folder on disk.");
                 _vendorizedAvatarFolder = Path.GetDirectoryName(attachedVendorized.vendorizedGeneratedAssetsPath)?.Replace('\\', '/');
-                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                     ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, attachedVendorized),
                     "Attached vendorize flow should resolve to Vendorized tool state.");
 
@@ -247,7 +247,7 @@ namespace ASMLite.Tests.Editor
                     "Attached vendorized recovery should clear vendorized mode on the component.");
                 Assert.AreEqual(string.Empty, packageManaged.vendorizedGeneratedAssetsPath,
                     "Attached vendorized recovery should clear the tracked mirrored path.");
-                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                     ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, packageManaged),
                     "Attached vendorized recovery should restore package-managed tool state.");
 
@@ -255,7 +255,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "Detach automation should remove the editable ASM-Lite prefab from the avatar.");
-                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached,
+                Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Detached,
                     ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Detach automation should leave the avatar in detached tool state.");
 
@@ -264,7 +264,7 @@ namespace ASMLite.Tests.Editor
                 var reattached = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(reattached,
                     "Detached recovery should re-attach ASM-Lite in package-managed mode.");
-                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                     ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, reattached),
                     "Detached recovery should restore package-managed tool state.");
                 Assert.AreEqual("Tools/Lifecycle", reattached.customInstallPath,
@@ -468,7 +468,7 @@ namespace ASMLite.Tests.Editor
                     nameof(Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation));
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(rolledBackComponent)),
                     "Automation vendorize rollback should keep prefab-instance FullController prefix overrides cleared after staged-copy failure.");
-                Assert.AreEqual(ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                     ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
                     "Automation vendorize rollback should resolve the attached avatar back to PackageManaged tool state after staged-copy failure.");
             }
@@ -520,10 +520,10 @@ namespace ASMLite.Tests.Editor
                     "Detach rollback should restore package-managed mode on the attached component after verify-stage failure.");
                 Assert.AreEqual(string.Empty, rolledBackComponent.vendorizedGeneratedAssetsPath,
                     "Detach rollback should keep the tracked vendorized path empty after verify-stage failure.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
                     "Detach rollback should resolve the attached avatar back to PackageManaged tool state.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Detach rollback should remove direct-delivery runtime markers before leaving the avatar attached again.");
 
@@ -589,7 +589,7 @@ namespace ASMLite.Tests.Editor
                     "Vendorize + detach rollback should clear the tracked vendorized path after verify-stage failure.");
                 Assert.IsFalse(AssetDatabase.IsValidFolder("Assets/ASM-Lite/TestAvatar/GeneratedAssets"),
                     "Vendorize + detach rollback should not leave the vendorized generated-assets folder behind after verify-stage failure.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, rolledBackComponent),
                     "Vendorize + detach rollback should resolve the attached avatar back to PackageManaged tool state.");
 
@@ -622,7 +622,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "Vendorize + detach should remove the editable ASM-Lite prefab after verified success.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                Assert.AreEqual(ASMLiteInstallationState.Vendorized,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Vendorize + detach should leave default-reference avatars classified as Vendorized after direct-delivery verification succeeds.");
                 string vendorizedGeneratedAssetsPath = window.GetPendingCustomizationSnapshotForTesting().VendorizedGeneratedAssetsPath;
@@ -666,7 +666,7 @@ namespace ASMLite.Tests.Editor
                     "Same-window detached recovery should clear stale pending vendorized mode before verifying package-managed state.");
                 Assert.AreEqual(string.Empty, recovered.vendorizedGeneratedAssetsPath,
                     "Same-window detached recovery should clear stale pending vendorized generated-assets path.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, recovered),
                     "Same-window detached recovery should restore PackageManaged tool state.");
             }
@@ -698,7 +698,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "Attached vendorized detach should remove the editable ASM-Lite prefab after verified success.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                Assert.AreEqual(ASMLiteInstallationState.Vendorized,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Attached vendorized detach should leave the avatar classified as Vendorized after direct-delivery verification succeeds.");
                 AssertDescriptorGeneratedReferencesUnderPrefix(_ctx.AvDesc, vendorizedGeneratedAssetsPath,
@@ -742,7 +742,7 @@ namespace ASMLite.Tests.Editor
                 InvokeDetachForAutomation(window, firstRecovered, vendorizeToAssets: true);
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "Vendorize + detach cycle should remove the editable ASM-Lite prefab after verified success.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+                Assert.AreEqual(ASMLiteInstallationState.Vendorized,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "Vendorize + detach cycle should leave the avatar classified as Vendorized after direct-delivery verification succeeds.");
                 string vendorizedGeneratedAssetsPath = window.GetPendingCustomizationSnapshotForTesting().VendorizedGeneratedAssetsPath;
@@ -770,7 +770,7 @@ namespace ASMLite.Tests.Editor
                     "Fresh-window detached recovery should restore package-managed mode on the reattached component.");
                 Assert.AreEqual(string.Empty, recovered.vendorizedGeneratedAssetsPath,
                     "Fresh-window detached recovery should clear the tracked vendorized generated-assets path.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, recovered),
                     "Fresh-window detached recovery should restore PackageManaged tool state.");
                 Assert.AreEqual("Tools/RepeatedLifecycle", recovered.customInstallPath,

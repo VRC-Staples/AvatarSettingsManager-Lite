@@ -328,7 +328,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp = null;
 
             Assert.AreEqual(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached,
+                ASMLite.Editor.ASMLiteInstallationState.Detached,
                 ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                 "Setup must model the real smoke failure shape: component-missing recovery markers should classify as Detached before the clean baseline mutation runs.");
 
@@ -340,7 +340,7 @@ namespace ASMLite.Tests.Editor
             Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.AreEqual(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
                 ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                 "Clean add baseline must remove detached ASM-Lite runtime markers so Add Prefab becomes the real primary action.");
 

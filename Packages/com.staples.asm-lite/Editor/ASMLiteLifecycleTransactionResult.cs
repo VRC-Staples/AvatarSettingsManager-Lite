@@ -29,10 +29,10 @@ namespace ASMLite.Editor
             ASMLiteLifecycleTransactionStage failedStage,
             bool rollbackAttempted,
             bool rollbackSucceeded,
-            ASMLiteWindow.AsmLiteToolState beforeState,
-            ASMLiteWindow.AsmLiteToolState afterState,
-            ASMLiteWindow.AsmLiteToolState rollbackState,
-            ASMLiteWindow.AsmLiteToolState recoveredState,
+            ASMLiteInstallationState beforeState,
+            ASMLiteInstallationState afterState,
+            ASMLiteInstallationState rollbackState,
+            ASMLiteInstallationState recoveredState,
             int discoveredParamCount,
             string message,
             string contextPath,
@@ -76,10 +76,10 @@ namespace ASMLite.Editor
         internal ASMLiteLifecycleTransactionStage FailedStage { get; }
         internal bool RollbackAttempted { get; }
         internal bool RollbackSucceeded { get; }
-        internal ASMLiteWindow.AsmLiteToolState BeforeState { get; }
-        internal ASMLiteWindow.AsmLiteToolState AfterState { get; }
-        internal ASMLiteWindow.AsmLiteToolState RollbackState { get; }
-        internal ASMLiteWindow.AsmLiteToolState RecoveredState { get; }
+        internal ASMLiteInstallationState BeforeState { get; }
+        internal ASMLiteInstallationState AfterState { get; }
+        internal ASMLiteInstallationState RollbackState { get; }
+        internal ASMLiteInstallationState RecoveredState { get; }
         internal int DiscoveredParamCount { get; }
         internal string Message { get; }
         internal string ContextPath { get; }
@@ -96,8 +96,8 @@ namespace ASMLite.Editor
 
         internal static ASMLiteLifecycleTransactionResult Pass(
             ASMLiteLifecycleOperation operation,
-            ASMLiteWindow.AsmLiteToolState beforeState,
-            ASMLiteWindow.AsmLiteToolState afterState,
+            ASMLiteInstallationState beforeState,
+            ASMLiteInstallationState afterState,
             int discoveredParamCount,
             string message,
             ASMLiteGeneratedAssetMirrorResult mirrorResult = null,
@@ -108,7 +108,7 @@ namespace ASMLite.Editor
             bool reattachSucceeded = false,
             bool installPathAdoptionAttempted = false,
             bool installPathAdoptionSucceeded = false,
-            ASMLiteWindow.AsmLiteToolState? recoveredState = null)
+            ASMLiteInstallationState? recoveredState = null)
         {
             return new ASMLiteLifecycleTransactionResult(
                 success: true,
@@ -138,9 +138,9 @@ namespace ASMLite.Editor
         internal static ASMLiteLifecycleTransactionResult Fail(
             ASMLiteLifecycleOperation operation,
             ASMLiteLifecycleTransactionStage failedStage,
-            ASMLiteWindow.AsmLiteToolState beforeState,
-            ASMLiteWindow.AsmLiteToolState afterState,
-            ASMLiteWindow.AsmLiteToolState rollbackState,
+            ASMLiteInstallationState beforeState,
+            ASMLiteInstallationState afterState,
+            ASMLiteInstallationState rollbackState,
             bool rollbackAttempted,
             bool rollbackSucceeded,
             string contextPath,
@@ -156,7 +156,7 @@ namespace ASMLite.Editor
             bool reattachSucceeded = false,
             bool installPathAdoptionAttempted = false,
             bool installPathAdoptionSucceeded = false,
-            ASMLiteWindow.AsmLiteToolState? recoveredState = null)
+            ASMLiteInstallationState? recoveredState = null)
         {
             return new ASMLiteLifecycleTransactionResult(
                 success: false,

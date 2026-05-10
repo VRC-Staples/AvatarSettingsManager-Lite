@@ -10,7 +10,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteWindowTerminologyTests
     {
         private static readonly Type WindowType = typeof(ASMLite.Editor.ASMLiteWindow);
-        private static readonly Type ToolStateType = WindowType.GetNestedType("AsmLiteToolState", BindingFlags.Public | BindingFlags.NonPublic);
+        private static readonly Type ToolStateType = typeof(ASMLite.Editor.ASMLiteInstallationState);
 
         private static readonly MethodInfo SnapshotMethod = WindowType.GetMethod(
             "GetTerminologySnapshot",
@@ -109,7 +109,7 @@ namespace ASMLite.Tests.Editor
 
         private static object GetSnapshot(string toolStateName, bool hasComponent)
         {
-            Assert.IsNotNull(ToolStateType, "Missing nested enum AsmLiteToolState on ASMLiteWindow.");
+            Assert.IsNotNull(ToolStateType, "Missing ASMLiteInstallationState enum.");
             Assert.IsNotNull(SnapshotMethod, "Missing GetTerminologySnapshot method on ASMLiteWindow.");
 
             object toolState = Enum.Parse(ToolStateType, toolStateName);

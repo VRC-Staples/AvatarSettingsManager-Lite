@@ -617,7 +617,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(ASMLiteAssetPaths.FXController,
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.baseAnimationLayers[restoredFxIndex].animatorController)?.Replace('\\', '/'),
                 "A55: return-to-managed should restore avatar FX controller back to package-managed generated assets.");
-            Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.PackageManaged,
+            Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
                 "A55: attached avatar should resolve to PackageManaged state after vendorized cleanup completes.");
         }
@@ -666,7 +666,7 @@ namespace ASMLite.Tests.Editor
                     "A56: delete-stage failure should surface as an execute-stage transaction failure.");
                 Assert.IsTrue(result.RollbackAttempted,
                     "A56: attached return should attempt rollback after delete-stage failure.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized, result.RollbackState,
+                Assert.AreEqual(ASMLiteInstallationState.Vendorized, result.RollbackState,
                     "A56: attached return rollback state should resolve back to Vendorized.");
             }
 
@@ -691,7 +691,7 @@ namespace ASMLite.Tests.Editor
                 "A56: rollback should restore avatar FX controller back to vendorized assets after delete-stage failure.");
             AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir,
                 "A56: rollback should restore live FullController references back to vendorized assets after delete-stage failure.");
-            Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Vendorized,
+            Assert.AreEqual(ASMLiteInstallationState.Vendorized,
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
                 "A56: attached avatar should resolve to Vendorized state after delete-stage rollback completes.");
         }
@@ -711,7 +711,7 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "A57: setup should leave the avatar detached before recovery failure injection.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A57: setup should classify the detached avatar as Detached before recovery failure injection.");
 
@@ -733,13 +733,13 @@ namespace ASMLite.Tests.Editor
                         "A57: detached recovery should record the reattach attempt before verify-stage failure.");
                     Assert.IsFalse(result.ReattachSucceeded,
                         "A57: detached recovery should report reattach failure after verify-stage failure destroys the partial prefab.");
-                    Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled, result.RecoveredState,
+                    Assert.AreEqual(ASMLiteInstallationState.NotInstalled, result.RecoveredState,
                         "A57: detached recovery should report the best-effort recovered state after tearing down the partial prefab.");
                 }
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "A57: detached recovery verify failure should not leave a partial ASM-Lite prefab attached.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A57: detached recovery verify failure should clean direct-delivery runtime markers instead of leaving the avatar half-restored.");
             }
@@ -778,7 +778,7 @@ namespace ASMLite.Tests.Editor
                     "A58: setup should leave exactly one matching legacy MoveMenu helper on the detached avatar before recovery failure injection.");
                 Assert.IsNull(_ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing"),
                     "A58: setup should rely on the legacy MoveMenu helper rather than the package-managed routing helper.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.Detached,
+                Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A58: setup should classify the avatar as Detached before pre-finalize recovery failure injection.");
 
@@ -800,7 +800,7 @@ namespace ASMLite.Tests.Editor
                     "A58: pre-finalize recovery failure should not leave a partial ASM-Lite prefab attached.");
                 Assert.AreEqual(1, CountMatchingMoveMenuHelpers(_ctx.AvDesc, legacyFromPath, legacyToPath),
                     "A58: detached recovery must preserve the legacy MoveMenu continuity helper when recovery fails before finalization succeeds.");
-                Assert.AreEqual(ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
                     "A58: pre-finalize recovery failure should still report the cleaned best-effort state after tearing down the partial prefab.");
             }

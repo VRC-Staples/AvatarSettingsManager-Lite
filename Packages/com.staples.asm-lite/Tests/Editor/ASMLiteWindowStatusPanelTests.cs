@@ -10,7 +10,7 @@ namespace ASMLite.Tests.Editor
         public void BuildStatusPanelSnapshot_MalformedPackageManagedWithoutComponent_HasNoExtraDetails()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: false,
                 slotCount: 0,
                 discoveredParamCount: 0,
@@ -38,7 +38,7 @@ namespace ASMLite.Tests.Editor
         public void BuildStatusPanelSnapshot_DetachedOrVendorizedWithoutComponent_UsesBakedOnlyGuidance()
         {
             var detached = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Detached,
+                ASMLite.Editor.ASMLiteInstallationState.Detached,
                 hasComponent: false,
                 slotCount: 0,
                 discoveredParamCount: 0,
@@ -50,7 +50,7 @@ namespace ASMLite.Tests.Editor
                 toggleBrokerCandidateCollisionAdjustments: 0));
 
             var vendorized = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.Vendorized,
+                ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 hasComponent: false,
                 slotCount: 0,
                 discoveredParamCount: 0,
@@ -78,7 +78,7 @@ namespace ASMLite.Tests.Editor
         public void BuildStatusPanelSnapshot_NotInstalledWithoutComponent_UsesWarningOnboardingGuidance()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.NotInstalled,
+                ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
                 hasComponent: false,
                 slotCount: 0,
                 discoveredParamCount: 0,
@@ -103,7 +103,7 @@ namespace ASMLite.Tests.Editor
         public void BuildStatusPanelSnapshot_AttachedMissingExpressionParameters_ExposesWarningDetail()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 slotCount: 4,
                 discoveredParamCount: -1,
@@ -127,7 +127,7 @@ namespace ASMLite.Tests.Editor
         public void BuildStatusPanelSnapshot_AttachedImportPendingAndToggleCollisions_ExposesMultipleConditionalWarnings()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 slotCount: 3,
                 discoveredParamCount: 0,
@@ -154,7 +154,7 @@ namespace ASMLite.Tests.Editor
         public void BuildCombinedStatusMessage_WithWarnings_ContainsSummaryAndBulletLines()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 slotCount: 3,
                 discoveredParamCount: 0,
@@ -179,7 +179,7 @@ namespace ASMLite.Tests.Editor
         public void BuildCombinedStatusMessage_InformationalOnly_UsesSummaryAndDetails()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
-                ASMLite.Editor.ASMLiteWindow.AsmLiteToolState.PackageManaged,
+                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 slotCount: 3,
                 discoveredParamCount: 8,

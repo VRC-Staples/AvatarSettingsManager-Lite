@@ -35,53 +35,43 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
-        // Pending slot count: shown before the prefab is added, applied on add.
-        private int _pendingSlotCount = 3;
+        // Pending customization draft: shown before the prefab is added, applied on add,
+        // and refreshed from the selected avatar component when present.
+        private readonly ASMLiteCustomizationDraft _customizationDraft = ASMLiteCustomizationDraft.CreateDefault();
+
+        private int _pendingSlotCount { get => _customizationDraft.SlotCount; set => _customizationDraft.SlotCount = value; }
+        private IconMode _pendingIconMode { get => _customizationDraft.IconMode; set => _customizationDraft.IconMode = value; }
+        private int _pendingSelectedGearIndex { get => _customizationDraft.SelectedGearIndex; set => _customizationDraft.SelectedGearIndex = value; }
+        private bool _pendingUseCustomSlotIcons { get => _customizationDraft.UseCustomSlotIcons; set => _customizationDraft.UseCustomSlotIcons = value; }
+        private Texture2D[] _pendingCustomIcons { get => _customizationDraft.CustomIcons; set => _customizationDraft.CustomIcons = value; }
+        private ActionIconMode _pendingActionIconMode { get => _customizationDraft.ActionIconMode; set => _customizationDraft.ActionIconMode = value; }
+        private Texture2D _pendingCustomSaveIcon { get => _customizationDraft.CustomSaveIcon; set => _customizationDraft.CustomSaveIcon = value; }
+        private Texture2D _pendingCustomLoadIcon { get => _customizationDraft.CustomLoadIcon; set => _customizationDraft.CustomLoadIcon = value; }
+        private Texture2D _pendingCustomClearIcon { get => _customizationDraft.CustomClearIcon; set => _customizationDraft.CustomClearIcon = value; }
+        private bool _pendingUseCustomRootIcon { get => _customizationDraft.UseCustomRootIcon; set => _customizationDraft.UseCustomRootIcon = value; }
+        private Texture2D _pendingCustomRootIcon { get => _customizationDraft.CustomRootIcon; set => _customizationDraft.CustomRootIcon = value; }
+        private bool _pendingUseCustomRootName { get => _customizationDraft.UseCustomRootName; set => _customizationDraft.UseCustomRootName = value; }
+        private string _pendingCustomRootName { get => _customizationDraft.CustomRootName; set => _customizationDraft.CustomRootName = value; }
+        private string[] _pendingCustomPresetNames { get => _customizationDraft.CustomPresetNames; set => _customizationDraft.CustomPresetNames = value; }
+        private string _pendingCustomPresetNameFormat { get => _customizationDraft.CustomPresetNameFormat; set => _customizationDraft.CustomPresetNameFormat = value; }
+        private string _pendingCustomSaveLabel { get => _customizationDraft.CustomSaveLabel; set => _customizationDraft.CustomSaveLabel = value; }
+        private string _pendingCustomLoadLabel { get => _customizationDraft.CustomLoadLabel; set => _customizationDraft.CustomLoadLabel = value; }
+        private string _pendingCustomClearPresetLabel { get => _customizationDraft.CustomClearPresetLabel; set => _customizationDraft.CustomClearPresetLabel = value; }
+        private string _pendingCustomConfirmLabel { get => _customizationDraft.CustomConfirmLabel; set => _customizationDraft.CustomConfirmLabel = value; }
+        private bool _pendingUseCustomInstallPath { get => _customizationDraft.UseCustomInstallPath; set => _customizationDraft.UseCustomInstallPath = value; }
+        private string _pendingCustomInstallPath { get => _customizationDraft.CustomInstallPath; set => _customizationDraft.CustomInstallPath = value; }
+        private bool _pendingUseParameterExclusions { get => _customizationDraft.UseParameterExclusions; set => _customizationDraft.UseParameterExclusions = value; }
+        private string[] _pendingExcludedParameterNames { get => _customizationDraft.ExcludedParameterNames; set => _customizationDraft.ExcludedParameterNames = value; }
+        private bool _pendingUseVendorizedGeneratedAssets { get => _customizationDraft.UseVendorizedGeneratedAssets; set => _customizationDraft.UseVendorizedGeneratedAssets = value; }
+        private string _pendingVendorizedGeneratedAssetsPath { get => _customizationDraft.VendorizedGeneratedAssetsPath; set => _customizationDraft.VendorizedGeneratedAssetsPath = value; }
 
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
-        private AsmLiteToolState? _cachedToolState;
+        private ASMLiteInstallationState? _cachedToolState;
 
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
         private int _discoveredParamCount = -1;
-
-        // Pending icon mode: shown before the prefab is added, applied on add.
-        private IconMode _pendingIconMode = IconMode.MultiColor;
-
-        // Pending gear index: shown before the prefab is added, applied on add.
-        private int _pendingSelectedGearIndex = 0;
-
-        // Pending custom slot-icon toggle/icons: shown before prefab is added, applied on add.
-        private bool _pendingUseCustomSlotIcons = false;
-        private Texture2D[] _pendingCustomIcons = new Texture2D[3];
-
-        // Pending action icon mode: shown before the prefab is added, applied on add.
-        private ActionIconMode _pendingActionIconMode = ActionIconMode.Default;
-
-        // Pending custom action icons: used when _pendingActionIconMode is Custom.
-        private Texture2D _pendingCustomSaveIcon;
-        private Texture2D _pendingCustomLoadIcon;
-        private Texture2D _pendingCustomClearIcon;
-
-        // Pending customization scaffold state: copied into new prefab instances
-        // and refreshed from the selected avatar component when present.
-        private bool _pendingUseCustomRootIcon = false;
-        private Texture2D _pendingCustomRootIcon;
-        private bool _pendingUseCustomRootName = false;
-        private string _pendingCustomRootName = string.Empty;
-        private string[] _pendingCustomPresetNames = Array.Empty<string>();
-        private string _pendingCustomPresetNameFormat = string.Empty;
-        private string _pendingCustomSaveLabel = string.Empty;
-        private string _pendingCustomLoadLabel = string.Empty;
-        private string _pendingCustomClearPresetLabel = string.Empty;
-        private string _pendingCustomConfirmLabel = string.Empty;
-        private bool _pendingUseCustomInstallPath = false;
-        private string _pendingCustomInstallPath = string.Empty;
-        private bool _pendingUseParameterExclusions = false;
-        private string[] _pendingExcludedParameterNames = Array.Empty<string>();
-        private bool _pendingUseVendorizedGeneratedAssets;
-        private string _pendingVendorizedGeneratedAssetsPath = string.Empty;
 
         // Icon settings foldouts (hierarchy-style UI groups).
         private bool _iconsRootFoldout = true;
@@ -281,8 +271,7 @@ namespace ASMLite.Editor
         private const string NotInstalledNoComponentText =
             "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".";
 
-        private const string DetachDescriptionText =
-            "Keep your current in-game preset data working, but remove the ASM-Lite tool object from this avatar. Great for sharing a finished avatar. You won’t be able to tweak ASM-Lite settings unless you add it again.";
+        private const string DetachDescriptionText = AsmLiteWindowActionModel.DetachDescriptionText;
 
         private const string ChangedPresetCountHelpText =
             "Changed preset count? Click \"Rebuild ASM-Lite\" to apply it.";
@@ -2035,37 +2024,48 @@ namespace ASMLite.Editor
             var component = GetOrRefreshComponent();
             var toolState = GetOrRefreshToolState(component);
             var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
-            if (!hierarchy.HasPrimaryAction(queuedAction) && !hierarchy.HasAdvancedAction(queuedAction))
+            if (!hierarchy.TryGetDescriptor(queuedAction, out var descriptor))
             {
                 Debug.LogWarning($"[ASM-Lite] Visible automation skipped unavailable action '{queuedAction}' for current tool state '{toolState}'.");
                 return;
             }
 
-            ExecuteVisibleAutomationAction(queuedAction);
+            ExecuteVisibleAutomationAction(descriptor);
         }
 
-        private void ExecuteVisibleAutomationAction(AsmLiteWindowAction action)
+        private void ExecuteVisibleAutomationAction(AsmLiteWindowActionDescriptor descriptor)
         {
-            switch (action)
+            if (!descriptor.SupportsVisibleAutomation)
             {
-                case AsmLiteWindowAction.AddPrefab:
+                Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{descriptor.Action}'.");
+                return;
+            }
+
+            if (!descriptor.IsEnabled)
+            {
+                Debug.LogWarning($"[ASM-Lite] Visible automation skipped disabled action '{descriptor.Action}'.");
+                return;
+            }
+
+            switch (descriptor.Execution)
+            {
+                case AsmLiteWindowActionExecution.AddPrefab:
                     AddPrefabForAutomation();
                     break;
-                case AsmLiteWindowAction.Rebuild:
+                case AsmLiteWindowActionExecution.Rebuild:
                     RebuildForAutomation();
                     break;
-                case AsmLiteWindowAction.ReturnToPackageManaged:
-                case AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged:
+                case AsmLiteWindowActionExecution.ReturnToPackageManaged:
                     ReturnToPackageManagedForAutomation();
                     break;
-                case AsmLiteWindowAction.Detach:
+                case AsmLiteWindowActionExecution.Detach:
                     DetachForAutomation();
                     break;
-                case AsmLiteWindowAction.Vendorize:
+                case AsmLiteWindowActionExecution.Vendorize:
                     VendorizeForAutomation();
                     break;
                 default:
-                    Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{action}'.");
+                    Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{descriptor.Action}'.");
                     break;
             }
         }
@@ -4074,28 +4074,12 @@ namespace ASMLite.Editor
 
         private static bool IsAsmLiteGeneratedPresetsMenu(VRCExpressionsMenu menu)
         {
-            if (menu == null)
-                return false;
-
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            return string.Equals(Path.GetFileName(menuPath), "ASMLite_Presets_Menu.asset", StringComparison.Ordinal);
+            return ASMLiteWindowOperations.IsGeneratedPresetsMenu(menu);
         }
 
         private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
         {
-            if (menu == null)
-                return false;
-
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            string fileName = Path.GetFileName(menuPath);
-            return fileName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                && fileName.EndsWith("Menu.asset", StringComparison.Ordinal);
+            return ASMLiteWindowOperations.IsGeneratedMenuAsset(menu);
         }
 
         private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
@@ -5121,24 +5105,24 @@ namespace ASMLite.Editor
             EditorGUILayout.HelpBox(BuildCombinedStatusMessage(snapshot), ToMessageType(GetCombinedStatusSeverity(snapshot)));
         }
 
-        private static string ResolveStatusCopy(AsmLiteToolState toolState, bool hasComponent)
+        private static string ResolveStatusCopy(ASMLiteInstallationState toolState, bool hasComponent)
         {
             switch (toolState)
             {
-                case AsmLiteToolState.PackageManaged:
+                case ASMLiteInstallationState.PackageManaged:
                     return StatusPackageManagedText;
-                case AsmLiteToolState.Vendorized:
+                case ASMLiteInstallationState.Vendorized:
                     return hasComponent ? StatusVendorizedAttachedText : StatusVendorizedDetachedText;
-                case AsmLiteToolState.Detached:
+                case ASMLiteInstallationState.Detached:
                     return StatusDetachedText;
                 default:
                     return StatusNotInstalledText;
             }
         }
 
-        private static MessageType ResolveStatusMessageType(AsmLiteToolState toolState)
+        private static MessageType ResolveStatusMessageType(ASMLiteInstallationState toolState)
         {
-            return toolState == AsmLiteToolState.NotInstalled
+            return toolState == ASMLiteInstallationState.NotInstalled
                 ? MessageType.None
                 : MessageType.Info;
         }
@@ -5166,7 +5150,7 @@ namespace ASMLite.Editor
         internal readonly struct StatusPanelSnapshotInput
         {
             public StatusPanelSnapshotInput(
-                AsmLiteToolState toolState,
+                ASMLiteInstallationState toolState,
                 bool hasComponent,
                 int slotCount,
                 int discoveredParamCount,
@@ -5189,7 +5173,7 @@ namespace ASMLite.Editor
                 ToggleBrokerCandidateCollisionAdjustments = toggleBrokerCandidateCollisionAdjustments;
             }
 
-            public AsmLiteToolState ToolState { get; }
+            public ASMLiteInstallationState ToolState { get; }
             public bool HasComponent { get; }
             public int SlotCount { get; }
             public int DiscoveredParamCount { get; }
@@ -5268,11 +5252,11 @@ namespace ASMLite.Editor
                     }
                 }
             }
-            else if (input.ToolState == AsmLiteToolState.Detached || input.ToolState == AsmLiteToolState.Vendorized)
+            else if (input.ToolState == ASMLiteInstallationState.Detached || input.ToolState == ASMLiteInstallationState.Vendorized)
             {
                 details.Add(new StatusDetailEntry(DetachedOrVendorizedNoComponentText, StatusDetailSeverity.Info));
             }
-            else if (input.ToolState == AsmLiteToolState.NotInstalled)
+            else if (input.ToolState == ASMLiteInstallationState.NotInstalled)
             {
                 details.Add(new StatusDetailEntry(NotInstalledNoComponentText, StatusDetailSeverity.Warning));
             }
@@ -5422,7 +5406,7 @@ namespace ASMLite.Editor
             }
         }
 
-        internal static TerminologySnapshot GetTerminologySnapshot(AsmLiteToolState toolState, bool hasComponent)
+        internal static TerminologySnapshot GetTerminologySnapshot(ASMLiteInstallationState toolState, bool hasComponent)
         {
             var alwaysVisible = new[]
             {
@@ -5449,10 +5433,10 @@ namespace ASMLite.Editor
                 ResolveStatusCopy(toolState, hasComponent),
             };
 
-            if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
+            if (toolState == ASMLiteInstallationState.Detached || toolState == ASMLiteInstallationState.Vendorized)
                 stateSpecific.Add(DetachedOrVendorizedNoComponentText);
 
-            if (toolState == AsmLiteToolState.NotInstalled)
+            if (toolState == ASMLiteInstallationState.NotInstalled)
                 stateSpecific.Add(NotInstalledNoComponentText);
 
             return new TerminologySnapshot(alwaysVisible, stateSpecific.ToArray());
@@ -5472,8 +5456,11 @@ namespace ASMLite.Editor
             EditorGUILayout.LabelField("Recommended", EditorStyles.miniBoldLabel);
             EditorGUILayout.Space(2f);
             EditorGUILayout.BeginVertical("box");
-            for (int i = 0; i < hierarchy.PrimaryActions.Length; i++)
-                DrawActionControl(hierarchy.PrimaryActions[i], component, toolState);
+            for (int i = 0; i < hierarchy.PrimaryDescriptors.Length; i++)
+            {
+                if (hierarchy.PrimaryDescriptors[i].IsVisible)
+                    DrawActionControl(hierarchy.PrimaryDescriptors[i], component, toolState);
+            }
             EditorGUILayout.EndVertical();
 
             if (!hierarchy.HasAdvancedActions)
@@ -5488,8 +5475,11 @@ namespace ASMLite.Editor
             if (_showAdvancedActions)
             {
                 EditorGUILayout.Space(6f);
-                for (int i = 0; i < hierarchy.AdvancedActions.Length; i++)
-                    DrawActionControl(hierarchy.AdvancedActions[i], component, toolState);
+                for (int i = 0; i < hierarchy.AdvancedDescriptors.Length; i++)
+                {
+                    if (hierarchy.AdvancedDescriptors[i].IsVisible)
+                        DrawActionControl(hierarchy.AdvancedDescriptors[i], component, toolState);
+                }
             }
             else
             {
@@ -5500,77 +5490,81 @@ namespace ASMLite.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawActionControl(AsmLiteWindowAction action, ASMLiteComponent component, AsmLiteToolState toolState)
+        private void DrawActionControl(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component, ASMLiteInstallationState toolState)
         {
-            switch (action)
+            EditorGUI.BeginDisabledGroup(!descriptor.IsEnabled);
+            try
             {
-                case AsmLiteWindowAction.AddPrefab:
-                    if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(40), GUILayout.ExpandWidth(true)))
-                        EditorApplication.delayCall += () => AddPrefabToAvatar();
-                    break;
-                case AsmLiteWindowAction.Rebuild:
-                    if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(40), GUILayout.MinWidth(220), GUILayout.ExpandWidth(true)))
-                    {
-                        var captured = component;
-                        EditorApplication.delayCall += () => BakeAssets(captured);
-                    }
-                    break;
-                case AsmLiteWindowAction.ReturnToPackageManaged:
-                    DrawBakedOnlyReturnToPackageManagedAction();
-                    break;
-                case AsmLiteWindowAction.RemovePrefab:
-                    DrawRemovePrefabAction(component);
-                    break;
-                case AsmLiteWindowAction.Detach:
-                    DrawDetachAction(component);
-                    break;
-                case AsmLiteWindowAction.Vendorize:
-                    DrawVendorizeAction(component, toolState);
-                    break;
-                case AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged:
-                    DrawReturnAttachedVendorizedToPackageManagedAction();
-                    break;
+                switch (descriptor.Execution)
+                {
+                    case AsmLiteWindowActionExecution.AddPrefab:
+                        if (GUILayout.Button(descriptor.Label, GUILayout.Height(40), GUILayout.ExpandWidth(true)))
+                            EditorApplication.delayCall += () => AddPrefabToAvatar();
+                        break;
+                    case AsmLiteWindowActionExecution.Rebuild:
+                        if (GUILayout.Button(descriptor.Label, GUILayout.Height(40), GUILayout.MinWidth(220), GUILayout.ExpandWidth(true)))
+                        {
+                            var captured = component;
+                            EditorApplication.delayCall += () => BakeAssets(captured);
+                        }
+                        break;
+                    case AsmLiteWindowActionExecution.ReturnToPackageManaged:
+                        DrawReturnToPackageManagedAction(descriptor);
+                        break;
+                    case AsmLiteWindowActionExecution.RemovePrefab:
+                        DrawRemovePrefabAction(descriptor, component);
+                        break;
+                    case AsmLiteWindowActionExecution.Detach:
+                        DrawDetachAction(descriptor, component);
+                        break;
+                    case AsmLiteWindowActionExecution.Vendorize:
+                        DrawVendorizeAction(descriptor, component, toolState);
+                        break;
+                }
+            }
+            finally
+            {
+                EditorGUI.EndDisabledGroup();
             }
         }
 
-        private void DrawBakedOnlyReturnToPackageManagedAction()
+        private void DrawReturnToPackageManagedAction(AsmLiteWindowActionDescriptor descriptor)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Return to Package Managed Mode", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Re-attach the editable ASM-Lite prefab and return this avatar to package-managed workflow. " +
-                "Keeps your current avatar content and restores normal ASM-Lite editing.",
-                EditorStyles.wordWrappedMiniLabel);
-            if (GUILayout.Button("Return to Package Managed", GUILayout.Height(32), GUILayout.ExpandWidth(true)))
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            float buttonHeight = descriptor.IsMaintenance ? 22f : 32f;
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(buttonHeight), GUILayout.ExpandWidth(true)))
                 EditorApplication.delayCall += () => ReturnToPackageManaged();
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawRemovePrefabAction(ASMLiteComponent component)
+        private void DrawRemovePrefabAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component)
         {
             var prevColor = GUI.color;
             GUI.color = new Color(1f, 0.45f, 0.45f);
-            bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32), GUILayout.MinWidth(110));
+            bool removeClicked = GUILayout.Button(descriptor.Label, GUILayout.Height(32), GUILayout.MinWidth(110));
             GUI.color = prevColor;
             if (!removeClicked)
                 return;
 
-            bool confirm = EditorUtility.DisplayDialog(
-                "Remove ASM-Lite Prefab",
-                "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
-                "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
-                "Remove", "Cancel");
+            var confirmation = descriptor.Confirmation;
+            bool confirm = !confirmation.Required || EditorUtility.DisplayDialog(
+                confirmation.Title,
+                confirmation.Message,
+                confirmation.ConfirmLabel,
+                confirmation.CancelLabel);
 
             if (confirm)
                 EditorApplication.delayCall += () => RemovePrefab(component);
         }
 
-        private void DrawDetachAction(ASMLiteComponent component)
+        private void DrawDetachAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Detach ASM-Lite (Runtime-safe)", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(DetachDescriptionText, EditorStyles.wordWrappedMiniLabel);
-            if (GUILayout.Button("Detach ASM-Lite", GUILayout.Height(24)))
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(24)))
             {
                 var captured = component;
                 EditorApplication.delayCall += () => DetachAsmLite(captured, vendorizeToAssets: false);
@@ -5578,21 +5572,18 @@ namespace ASMLite.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawVendorizeAction(ASMLiteComponent component, AsmLiteToolState toolState)
+        private void DrawVendorizeAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component, ASMLiteInstallationState toolState)
         {
             EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Vendorize ASM-Lite Payload", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Keep ASM-Lite attached and editable, but mirror generated payload files into Assets/ASM-Lite/<AvatarName> " +
-                "and use those mirrored files instead of package generated assets.",
-                EditorStyles.wordWrappedMiniLabel);
-            if (GUILayout.Button("Vendorize (Keep Attached)", GUILayout.Height(24)))
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(24)))
             {
                 var captured = component;
                 EditorApplication.delayCall += () => VendorizeAsmLite(captured);
             }
 
-            if (toolState == AsmLiteToolState.Vendorized)
+            if (toolState == ASMLiteInstallationState.Vendorized)
             {
                 string currentVendorizedPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
                 if (string.IsNullOrWhiteSpace(currentVendorizedPath))
@@ -5605,30 +5596,10 @@ namespace ASMLite.Editor
             EditorGUILayout.EndVertical();
         }
 
-        private void DrawReturnAttachedVendorizedToPackageManagedAction()
-        {
-            EditorGUILayout.BeginVertical("box");
-            EditorGUILayout.LabelField("Return This Avatar to Package Managed", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Stop using the vendorized payload folder for this attached ASM-Lite component and return to package-managed generated assets.",
-                EditorStyles.wordWrappedMiniLabel);
-            if (GUILayout.Button("Return This Avatar to Package Managed", GUILayout.Height(22)))
-                EditorApplication.delayCall += () => ReturnToPackageManaged();
-            EditorGUILayout.EndVertical();
-        }
-
         // ── Logic ─────────────────────────────────────────────────────────────
 
         // Per-frame component cache: refreshed once per OnGUI call, not once per draw section.
         private int _lastRefreshFrame = -1;
-
-        internal enum AsmLiteToolState
-        {
-            NotInstalled,
-            PackageManaged,
-            Detached,
-            Vendorized,
-        }
 
         internal enum AsmLiteWindowAction
         {
@@ -5643,23 +5614,50 @@ namespace ASMLite.Editor
 
         internal readonly struct AsmLiteActionHierarchy
         {
-            public AsmLiteActionHierarchy(AsmLiteWindowAction[] primaryActions, AsmLiteWindowAction[] advancedActions, bool advancedDisclosureExpanded)
+            public AsmLiteActionHierarchy(AsmLiteWindowActionDescriptor[] descriptors, bool advancedDisclosureExpanded)
             {
-                PrimaryActions = primaryActions ?? Array.Empty<AsmLiteWindowAction>();
-                AdvancedActions = advancedActions ?? Array.Empty<AsmLiteWindowAction>();
+                Descriptors = descriptors ?? Array.Empty<AsmLiteWindowActionDescriptor>();
                 AdvancedDisclosureExpanded = advancedDisclosureExpanded;
+
+                var primaryActions = new List<AsmLiteWindowAction>();
+                var advancedActions = new List<AsmLiteWindowAction>();
+                var primaryDescriptors = new List<AsmLiteWindowActionDescriptor>();
+                var advancedDescriptors = new List<AsmLiteWindowActionDescriptor>();
+
+                for (int i = 0; i < Descriptors.Length; i++)
+                {
+                    var descriptor = Descriptors[i];
+                    if (descriptor.Group == AsmLiteWindowActionGroup.Primary)
+                    {
+                        primaryActions.Add(descriptor.Action);
+                        primaryDescriptors.Add(descriptor);
+                    }
+                    else
+                    {
+                        advancedActions.Add(descriptor.Action);
+                        advancedDescriptors.Add(descriptor);
+                    }
+                }
+
+                PrimaryActions = primaryActions.ToArray();
+                AdvancedActions = advancedActions.ToArray();
+                PrimaryDescriptors = primaryDescriptors.ToArray();
+                AdvancedDescriptors = advancedDescriptors.ToArray();
             }
 
+            public AsmLiteWindowActionDescriptor[] Descriptors { get; }
+            public AsmLiteWindowActionDescriptor[] PrimaryDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] AdvancedDescriptors { get; }
             public AsmLiteWindowAction[] PrimaryActions { get; }
             public AsmLiteWindowAction[] AdvancedActions { get; }
             public bool AdvancedDisclosureExpanded { get; }
-            public bool HasAdvancedActions => AdvancedActions.Length > 0;
+            public bool HasAdvancedActions => AdvancedDescriptors.Length > 0;
 
             public bool HasPrimaryAction(AsmLiteWindowAction action)
             {
-                for (int i = 0; i < PrimaryActions.Length; i++)
+                for (int i = 0; i < PrimaryDescriptors.Length; i++)
                 {
-                    if (PrimaryActions[i] == action)
+                    if (PrimaryDescriptors[i].Action == action)
                         return true;
                 }
 
@@ -5668,12 +5666,35 @@ namespace ASMLite.Editor
 
             public bool HasAdvancedAction(AsmLiteWindowAction action)
             {
-                for (int i = 0; i < AdvancedActions.Length; i++)
+                for (int i = 0; i < AdvancedDescriptors.Length; i++)
                 {
-                    if (AdvancedActions[i] == action)
+                    if (AdvancedDescriptors[i].Action == action)
                         return true;
                 }
 
+                return false;
+            }
+
+            public AsmLiteWindowActionDescriptor GetDescriptor(AsmLiteWindowAction action)
+            {
+                if (TryGetDescriptor(action, out var descriptor))
+                    return descriptor;
+
+                throw new ArgumentOutOfRangeException(nameof(action), action, "Action is not available in this hierarchy.");
+            }
+
+            public bool TryGetDescriptor(AsmLiteWindowAction action, out AsmLiteWindowActionDescriptor descriptor)
+            {
+                for (int i = 0; i < Descriptors.Length; i++)
+                {
+                    if (Descriptors[i].Action == action)
+                    {
+                        descriptor = Descriptors[i];
+                        return true;
+                    }
+                }
+
+                descriptor = default;
                 return false;
             }
         }
@@ -5685,60 +5706,17 @@ namespace ASMLite.Editor
             return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
         }
 
-        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(AsmLiteToolState toolState, bool hasComponent, bool advancedDisclosureExpanded)
+        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(ASMLiteInstallationState toolState, bool hasComponent, bool advancedDisclosureExpanded)
         {
-            if (hasComponent)
-            {
-                var primaryActions = new[] { AsmLiteWindowAction.Rebuild };
-
-                if (toolState == AsmLiteToolState.Vendorized)
-                {
-                    return new AsmLiteActionHierarchy(
-                        primaryActions,
-                        new[]
-                        {
-                            AsmLiteWindowAction.RemovePrefab,
-                            AsmLiteWindowAction.Detach,
-                            AsmLiteWindowAction.Vendorize,
-                            AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged,
-                        },
-                        advancedDisclosureExpanded);
-                }
-
-                return new AsmLiteActionHierarchy(
-                    primaryActions,
-                    new[]
-                    {
-                        AsmLiteWindowAction.RemovePrefab,
-                        AsmLiteWindowAction.Detach,
-                        AsmLiteWindowAction.Vendorize,
-                    },
-                    advancedDisclosureExpanded);
-            }
-
-            if (toolState == AsmLiteToolState.Detached || toolState == AsmLiteToolState.Vendorized)
-            {
-                return new AsmLiteActionHierarchy(
-                    new[] { AsmLiteWindowAction.ReturnToPackageManaged },
-                    Array.Empty<AsmLiteWindowAction>(),
-                    advancedDisclosureExpanded);
-            }
-
-            return new AsmLiteActionHierarchy(
-                new[] { AsmLiteWindowAction.AddPrefab },
-                Array.Empty<AsmLiteWindowAction>(),
-                advancedDisclosureExpanded);
+            return AsmLiteWindowActionModel.Build(toolState, hasComponent, advancedDisclosureExpanded);
         }
 
         internal static bool IsMaintenanceAction(AsmLiteWindowAction action)
         {
-            return action == AsmLiteWindowAction.RemovePrefab
-                || action == AsmLiteWindowAction.Detach
-                || action == AsmLiteWindowAction.Vendorize
-                || action == AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged;
+            return AsmLiteWindowActionModel.IsMaintenanceAction(action);
         }
 
-        private AsmLiteToolState GetOrRefreshToolState(ASMLiteComponent component)
+        private ASMLiteInstallationState GetOrRefreshToolState(ASMLiteComponent component)
         {
             if (_cachedToolState.HasValue)
                 return _cachedToolState.Value;
@@ -5758,131 +5736,9 @@ namespace ASMLite.Editor
                 _discoveredParamCount = -1;
         }
 
-        internal static AsmLiteToolState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
+        internal static ASMLiteInstallationState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
-            if (component != null)
-                return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
-            if (avatar == null)
-                return AsmLiteToolState.NotInstalled;
-            if (HasVendorizedAsmLiteReferences(avatar))
-                return AsmLiteToolState.Vendorized;
-            if (HasAsmLiteRuntimeMarkers(avatar))
-                return AsmLiteToolState.Detached;
-            return AsmLiteToolState.NotInstalled;
-        }
-
-        private static bool HasVendorizedAsmLiteReferences(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            const string vendorPrefix = "Assets/ASM-Lite/";
-
-            string exprPath = avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(exprPath) && exprPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                return true;
-
-            string menuPath = avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu)?.Replace('\\', '/') : string.Empty;
-            if (!string.IsNullOrWhiteSpace(menuPath) && menuPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                return true;
-
-            if (avatar.expressionsMenu != null && avatar.expressionsMenu.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control?.subMenu == null)
-                        continue;
-
-                    string subPath = AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/');
-                    if (!string.IsNullOrWhiteSpace(subPath) && subPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.baseAnimationLayers != null)
-            {
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    var ctrl = avatar.baseAnimationLayers[i].animatorController;
-                    if (!ctrl)
-                        continue;
-
-                    string ctrlPath = AssetDatabase.GetAssetPath(ctrl)?.Replace('\\', '/');
-                    if (!string.IsNullOrWhiteSpace(ctrlPath) && ctrlPath.StartsWith(vendorPrefix, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            var expr = avatar.expressionParameters;
-            if (expr?.parameters != null)
-            {
-                for (int i = 0; i < expr.parameters.Length; i++)
-                {
-                    var p = expr.parameters[i];
-                    if (p == null || string.IsNullOrWhiteSpace(p.name))
-                        continue;
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(p.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.baseAnimationLayers != null)
-            {
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    var ctrl = avatar.baseAnimationLayers[i].animatorController as UnityEditor.Animations.AnimatorController;
-                    if (ctrl == null)
-                        continue;
-
-                    for (int j = 0; j < ctrl.layers.Length; j++)
-                    {
-                        if (ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                            return true;
-                    }
-
-                    for (int j = 0; j < ctrl.parameters.Length; j++)
-                    {
-                        string paramName = ctrl.parameters[j].name;
-                        if (string.IsNullOrWhiteSpace(paramName))
-                            continue;
-                        if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                            || string.Equals(paramName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                            return true;
-                    }
-                }
-            }
-
-            if (avatar.expressionsMenu?.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                        return true;
-
-                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(subPath)
-                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
-                        return true;
-                }
-            }
-
-            return false;
+            return ASMLiteWindowOperations.GetAsmLiteToolState(avatar, component);
         }
 
         private ASMLiteComponent GetOrRefreshComponent()
@@ -5987,133 +5843,34 @@ namespace ASMLite.Editor
                 .ToArray();
         }
 
-        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
-        {
-            if (component == null || component.gameObject == null)
-                return null;
-
-            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                var behavior = behaviors[i];
-                if (behavior == null)
-                    continue;
-
-                var type = behavior.GetType();
-                if (type == null)
-                    continue;
-
-                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    return behavior;
-            }
-
-            return null;
-        }
-
         private static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
         {
-            if (component == null)
-            {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh install-path routing because the ASM-Lite component was null.");
-                return false;
-            }
-
-            if (FindLiveVrcFuryComponent(component) == null)
-            {
-                bool repaired = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(
-                    component.gameObject,
-                    component,
-                    contextLabel + " Auto-Heal");
-                if (!repaired || FindLiveVrcFuryComponent(component) == null)
-                {
-                    Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
-                    return false;
-                }
-
-                Debug.LogWarning($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component was missing on '{component.gameObject.name}'. Live FullController wiring was repaired automatically.");
-            }
-
-            if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))
-            {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh install-path routing on '{component.gameObject.name}'.");
-                return false;
-            }
-
-            var effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
-            if (string.IsNullOrEmpty(effectivePrefix))
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to root on '{component.gameObject.name}'.");
-            else
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to '{effectivePrefix}' on '{component.gameObject.name}'.");
-
-            return true;
+            return ASMLiteWindowOperations.TryRefreshLiveInstallPathPrefix(component, contextLabel);
         }
 
         private static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
         {
-            var result = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
+            return ASMLiteWindowOperations.TryRestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
         }
 
         private static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
         {
-            var backupResult = ASMLiteGeneratedAssetMirrorService.BackupVendorizedFolderForDelete(vendorizedDir);
-            if (!backupResult.Success)
-            {
-                Debug.LogError(backupResult.ToLogString());
-                return false;
-            }
-
-            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedFolderDelete(backupResult);
-            if (!finalizeResult.Success)
-            {
-                Debug.LogError(finalizeResult.ToLogString());
-                return false;
-            }
-
-            return true;
+            return ASMLiteWindowOperations.TryDeleteVendorizedGeneratedAssetsFolder(vendorizedDir);
         }
 
         private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
         {
-            var result = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
-            if (!result.Success)
-            {
-                Debug.LogError(result.ToLogString());
-                vendorizedDir = string.Empty;
-                return false;
-            }
-
-            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(result);
-            if (!finalizeResult.Success)
-            {
-                Debug.LogError(finalizeResult.ToLogString());
-                vendorizedDir = string.Empty;
-                return false;
-            }
-
-            vendorizedDir = result.TargetPath;
-            return true;
+            return ASMLiteWindowOperations.TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out vendorizedDir);
         }
 
         private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
-            var result = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
+            return ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, generatedDir);
         }
 
         internal static bool TryReturnAttachedVendorizedToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
         {
-            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedReturnToPackageManaged(component, avatar);
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
+            return ASMLiteWindowOperations.TryReturnAttachedVendorizedToPackageManaged(component, avatar);
         }
 
         private void VendorizeAsmLite(ASMLiteComponent component, bool requireConfirmation = true, bool showDialogs = true)
@@ -6141,7 +5898,7 @@ namespace ASMLite.Editor
                 return;
             }
 
-            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(component, avatar);
+            var result = ASMLiteWindowOperations.ExecuteAttachedVendorize(component, avatar);
             if (!result.Success)
             {
                 Debug.LogError(result.ToLogString());
@@ -6184,8 +5941,8 @@ namespace ASMLite.Editor
 
             var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
             var result = vendorizeToAssets
-                ? ASMLiteLifecycleTransactionService.ExecuteVendorizeAndDetach(component, avatar)
-                : ASMLiteLifecycleTransactionService.ExecuteDetachToDirectDelivery(component, avatar);
+                ? ASMLiteWindowOperations.ExecuteVendorizeAndDetach(component, avatar)
+                : ASMLiteWindowOperations.ExecuteDetachToDirectDelivery(component, avatar);
             if (!result.Success)
             {
                 Debug.LogError(result.ToLogString());
@@ -6268,7 +6025,7 @@ namespace ASMLite.Editor
             }
 
             var pendingSnapshot = CapturePendingCustomizationSnapshot();
-            var result = ASMLiteLifecycleTransactionService.ExecuteDetachedReturnToPackageManagedRecovery(_selectedAvatar, pendingSnapshot);
+            var result = ASMLiteWindowOperations.ExecuteDetachedReturnToPackageManagedRecovery(_selectedAvatar, pendingSnapshot);
             if (!result.Success)
             {
                 Debug.LogError(result.ToLogString());
@@ -6303,61 +6060,7 @@ namespace ASMLite.Editor
 
         private ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CapturePendingCustomizationSnapshot()
         {
-            return new ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot(
-                _pendingSlotCount,
-                _pendingIconMode,
-                _pendingSelectedGearIndex,
-                _pendingActionIconMode,
-                _pendingCustomSaveIcon,
-                _pendingCustomLoadIcon,
-                _pendingCustomClearIcon,
-                _pendingUseCustomSlotIcons,
-                _pendingCustomIcons,
-                _pendingUseCustomRootIcon,
-                _pendingCustomRootIcon,
-                _pendingUseCustomRootName,
-                _pendingCustomRootName,
-                _pendingCustomPresetNames,
-                _pendingCustomPresetNameFormat,
-                _pendingCustomSaveLabel,
-                _pendingCustomLoadLabel,
-                _pendingCustomClearPresetLabel,
-                _pendingCustomConfirmLabel,
-                _pendingUseCustomInstallPath,
-                _pendingCustomInstallPath,
-                _pendingUseParameterExclusions,
-                _pendingExcludedParameterNames,
-                _pendingUseVendorizedGeneratedAssets,
-                _pendingVendorizedGeneratedAssetsPath);
-        }
-
-        private void ApplyCustomizationSnapshotToPending(ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot snapshot)
-        {
-            _pendingSlotCount = snapshot.SlotCount;
-            _pendingIconMode = snapshot.IconMode;
-            _pendingSelectedGearIndex = snapshot.SelectedGearIndex;
-            _pendingActionIconMode = snapshot.ActionIconMode;
-            _pendingCustomSaveIcon = snapshot.CustomSaveIcon;
-            _pendingCustomLoadIcon = snapshot.CustomLoadIcon;
-            _pendingCustomClearIcon = snapshot.CustomClearIcon;
-            _pendingUseCustomSlotIcons = snapshot.UseCustomSlotIcons;
-            _pendingCustomIcons = CloneTextures(snapshot.CustomIcons);
-            _pendingUseCustomRootIcon = snapshot.UseCustomRootIcon;
-            _pendingCustomRootIcon = snapshot.CustomRootIcon;
-            _pendingUseCustomRootName = snapshot.UseCustomRootName;
-            _pendingCustomRootName = snapshot.CustomRootName;
-            _pendingCustomPresetNames = CloneStrings(snapshot.CustomPresetNames);
-            _pendingCustomPresetNameFormat = snapshot.CustomPresetNameFormat;
-            _pendingCustomSaveLabel = snapshot.CustomSaveLabel;
-            _pendingCustomLoadLabel = snapshot.CustomLoadLabel;
-            _pendingCustomClearPresetLabel = snapshot.CustomClearPresetLabel;
-            _pendingCustomConfirmLabel = snapshot.CustomConfirmLabel;
-            _pendingUseCustomInstallPath = snapshot.UseCustomInstallPath;
-            _pendingCustomInstallPath = snapshot.CustomInstallPath;
-            _pendingUseParameterExclusions = snapshot.UseParameterExclusions;
-            _pendingExcludedParameterNames = SanitizeExcludedParameterNames(snapshot.ExcludedParameterNames);
-            _pendingUseVendorizedGeneratedAssets = snapshot.UseVendorizedGeneratedAssets;
-            _pendingVendorizedGeneratedAssetsPath = snapshot.VendorizedGeneratedAssetsPath;
+            return _customizationDraft.ToComponentSnapshot();
         }
 
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
@@ -6365,8 +6068,7 @@ namespace ASMLite.Editor
             if (component == null)
                 return;
 
-            var snapshot = CapturePendingCustomizationSnapshot();
-            ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(component, snapshot);
+            _customizationDraft.ApplyToComponent(component, "Apply ASM-Lite Pending Customization");
         }
 
         private void CopyComponentCustomizationToPending(ASMLiteComponent component)
@@ -6374,8 +6076,7 @@ namespace ASMLite.Editor
             if (component == null)
                 return;
 
-            var snapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component);
-            ApplyCustomizationSnapshotToPending(snapshot);
+            _customizationDraft.RefreshFromComponent(component);
         }
 
         private static bool TryAdoptInstallPathFromMoveMenu(
@@ -6413,7 +6114,7 @@ namespace ASMLite.Editor
                     return;
             }
 
-            ASMLitePrefabCreator.CreatePrefab();
+            ASMLiteWindowOperations.CreatePrefab();
 
             var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
 
@@ -6440,7 +6141,7 @@ namespace ASMLite.Editor
             if (component != null)
             {
                 CopyPendingCustomizationToComponent(component);
-                if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
+                if (!ASMLiteWindowOperations.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
                 {
                     Debug.LogError("[ASM-Lite] Failed to refresh live FullController wiring on newly added prefab instance.");
                     Undo.DestroyObjectImmediate(instance);
@@ -6476,12 +6177,12 @@ namespace ASMLite.Editor
             // Check for stale prms entry from pre-1.0.5 prefab instances. If present,
             // destroy the old instance and re-add a fresh prefab so the double-path
             // that produces 2 extra synced parameters is removed before baking.
-            if (ASMLitePrefabCreator.HasStalePrmsEntry(component.gameObject))
+            if (ASMLiteWindowOperations.HasStalePrmsEntry(component.gameObject))
             {
                 Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
 
                 // Capture settings before destroying the instance.
-                var migrationSnapshot = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component);
+                var migrationSnapshot = ASMLiteCustomizationDraft.CaptureFromComponent(component).ToComponentSnapshot();
                 Transform savedParent = component.gameObject.transform.parent;
 
                 Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
@@ -6489,7 +6190,7 @@ namespace ASMLite.Editor
 
                 Undo.DestroyObjectImmediate(component.gameObject);
 
-                ASMLitePrefabCreator.CreatePrefab();
+                ASMLiteWindowOperations.CreatePrefab();
                 var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
                 if (prefabAsset == null)
                 {
@@ -6501,9 +6202,9 @@ namespace ASMLite.Editor
                 var newComponent = instance.GetComponent<ASMLiteComponent>();
                 if (newComponent != null)
                 {
-                    ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(newComponent, migrationSnapshot);
+                    ASMLiteCustomizationDraft.FromSnapshot(migrationSnapshot).ApplyToComponent(newComponent, "Rebuild ASM-Lite (migration)");
 
-                    if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
+                    if (!ASMLiteWindowOperations.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
                     {
                         Debug.LogError("[ASM-Lite] Migration rebuild failed to refresh live FullController wiring. Aborting rebuild.");
                         return;
@@ -6982,7 +6683,7 @@ namespace ASMLite.Editor
                 VRCAvatarDescriptor selectedAvatar,
                 ASMLiteComponent component,
                 ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization,
-                AsmLiteToolState toolState,
+                ASMLiteInstallationState toolState,
                 AsmLiteActionHierarchy actionHierarchy)
             {
                 SelectedAvatar = selectedAvatar;
@@ -7023,16 +6724,21 @@ namespace ASMLite.Editor
                 CustomLoadIconFixtureId = LoadIconFixtureId;
                 CustomClearIconFixtureId = ClearIconFixtureId;
                 HasAttachedComponent = component != null;
-                HasPrimaryAction = actionHierarchy.PrimaryActions.Length > 0;
-                PrimaryAction = HasPrimaryAction ? actionHierarchy.PrimaryActions[0] : default;
+                ActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.Descriptors.Clone();
+                PrimaryActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.PrimaryDescriptors.Clone();
+                AdvancedActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.AdvancedDescriptors.Clone();
+                HasPrimaryAction = PrimaryActionDescriptors.Length > 0;
+                PrimaryActionDescriptor = HasPrimaryAction ? PrimaryActionDescriptors[0] : default;
+                PrimaryAction = HasPrimaryAction ? PrimaryActionDescriptor.Action : default;
                 PrimaryActions = (AsmLiteWindowAction[])actionHierarchy.PrimaryActions.Clone();
+                AdvancedActions = (AsmLiteWindowAction[])actionHierarchy.AdvancedActions.Clone();
             }
 
             public VRCAvatarDescriptor SelectedAvatar { get; }
             public ASMLiteComponent Component { get; }
             public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot Customization { get; }
             public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot ComponentCustomization { get; }
-            public AsmLiteToolState ToolState { get; }
+            public ASMLiteInstallationState ToolState { get; }
             public int SlotCount { get; }
             public string IconMode { get; }
             public int SelectedGearIndex { get; }
@@ -7077,8 +6783,13 @@ namespace ASMLite.Editor
             public bool HasAttachedComponent { get; }
             public bool HasComponent => HasAttachedComponent;
             public bool HasPrimaryAction { get; }
+            public AsmLiteWindowActionDescriptor[] ActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] PrimaryActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] AdvancedActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor PrimaryActionDescriptor { get; }
             public AsmLiteWindowAction PrimaryAction { get; }
             public AsmLiteWindowAction[] PrimaryActions { get; }
+            public AsmLiteWindowAction[] AdvancedActions { get; }
         }
 
         internal void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
@@ -7102,11 +6813,11 @@ namespace ASMLite.Editor
                     EditorUtility.SetDirty(component);
                 }
 
-                _pendingSlotCount = slotCount;
+                _customizationDraft.SetSlotCount(slotCount);
                 return;
             }
 
-            _pendingSlotCount = slotCount;
+            _customizationDraft.SetSlotCount(slotCount);
         }
 
         internal void SetInstallPathStateForAutomation(bool useCustomInstallPath, string customInstallPath)
@@ -7119,8 +6830,7 @@ namespace ASMLite.Editor
                 SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
             }
 
-            _pendingUseCustomInstallPath = useCustomInstallPath;
-            _pendingCustomInstallPath = normalized;
+            _customizationDraft.SetInstallPathState(useCustomInstallPath, normalized);
         }
 
         internal void SetParameterBackupExclusionsForAutomation(bool enabled, IEnumerable<string> exactVisibleNames)
@@ -7141,8 +6851,7 @@ namespace ASMLite.Editor
                 SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, normalized);
             }
 
-            _pendingUseCustomRootName = enabled;
-            _pendingCustomRootName = normalized;
+            _customizationDraft.SetRootNameState(enabled, normalized);
         }
 
         internal void SetPresetNameMaskForAutomation(IReadOnlyDictionary<int, string> presetNamesBySlot, bool clearExisting)
@@ -7281,7 +6990,7 @@ namespace ASMLite.Editor
                 ? EnsureSizedTextureArray(ResolveCurrentSlotIconsForAutomation(slotCount), slotCount)
                 : new Texture2D[slotCount];
 
-            _pendingUseCustomSlotIcons = enabled;
+            _customizationDraft.SetCustomIconsEnabled(enabled);
             _pendingCustomIcons = normalizedIcons;
             if (!enabled)
             {
@@ -7336,8 +7045,7 @@ namespace ASMLite.Editor
             if (rootIcon != null)
                 SetCustomIconsEnabledForAutomation(true);
 
-            _pendingUseCustomRootIcon = rootIcon != null;
-            _pendingCustomRootIcon = rootIcon;
+            _customizationDraft.SetRootIcon(rootIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7368,7 +7076,7 @@ namespace ASMLite.Editor
             Texture2D[] slotIcons = ResolveSlotIconFixturesForAutomation(normalizedIds, slotCount);
 
             SetCustomIconsEnabledForAutomation(true);
-            _pendingCustomIcons = slotIcons;
+            _customizationDraft.SetSlotIcons(slotIcons);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7471,14 +7179,7 @@ namespace ASMLite.Editor
                 ? ActionIconMode.Custom
                 : ActionIconMode.Default;
 
-            _pendingUseCustomSlotIcons = true;
-            _pendingCustomIcons = CloneTextures(slotIcons);
-            _pendingUseCustomRootIcon = rootIcon != null;
-            _pendingCustomRootIcon = rootIcon;
-            _pendingActionIconMode = actionIconMode;
-            _pendingCustomSaveIcon = saveIcon;
-            _pendingCustomLoadIcon = loadIcon;
-            _pendingCustomClearIcon = clearIcon;
+            _customizationDraft.SetIconFixtureTextures(rootIcon, slotIcons, saveIcon, loadIcon, clearIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7686,10 +7387,7 @@ namespace ASMLite.Editor
                 SetCustomIconsEnabledForAutomation(true);
 
             ActionIconMode actionIconMode = hasCustomActionIcon ? ActionIconMode.Custom : ActionIconMode.Default;
-            _pendingActionIconMode = actionIconMode;
-            _pendingCustomSaveIcon = saveIcon;
-            _pendingCustomLoadIcon = loadIcon;
-            _pendingCustomClearIcon = clearIcon;
+            _customizationDraft.SetActionIcons(saveIcon, loadIcon, clearIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7804,8 +7502,7 @@ namespace ASMLite.Editor
                     normalizedExcluded);
             }
 
-            _pendingUseParameterExclusions = useParameterExclusions;
-            _pendingExcludedParameterNames = CloneStrings(normalizedExcluded);
+            _customizationDraft.SetParameterExclusions(useParameterExclusions, normalizedExcluded);
             _cachedParamList = null;
             _cachedParamTree = null;
         }
@@ -7820,30 +7517,14 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
             var customization = component
-                ? ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)
+                ? ASMLiteCustomizationDraft.CaptureFromComponent(component).ToComponentSnapshot()
                 : default;
             return CreateCustomizationAutomationSnapshot(component, customization);
         }
 
         internal PendingCustomizationSnapshot GetPendingCustomizationSnapshotForTesting()
         {
-            return new PendingCustomizationSnapshot(
-                _selectedAvatar,
-                _pendingUseCustomRootIcon,
-                _pendingUseCustomRootName,
-                _pendingCustomRootName,
-                NormalizePresetNamesBySlot(_pendingCustomPresetNames, _pendingSlotCount),
-                _pendingCustomSaveLabel,
-                _pendingCustomLoadLabel,
-                _pendingCustomClearPresetLabel,
-                _pendingCustomConfirmLabel,
-                _pendingUseCustomInstallPath,
-                _pendingCustomInstallPath,
-                _pendingUseParameterExclusions,
-                CloneStrings(_pendingExcludedParameterNames),
-                _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>(),
-                _pendingUseVendorizedGeneratedAssets,
-                _pendingVendorizedGeneratedAssetsPath);
+            return _customizationDraft.ToPendingSnapshot(_selectedAvatar);
         }
 
         private static void ValidateAutomationSlotCount(int slotCount)
@@ -7884,9 +7565,7 @@ namespace ASMLite.Editor
                     SetComponentRawString(component, "Clear ASM-Lite Legacy Preset Name Format", ref component.customPresetNameFormat, string.Empty);
             }
 
-            _pendingCustomPresetNames = CloneStrings(normalized);
-            if (clearExisting)
-                _pendingCustomPresetNameFormat = string.Empty;
+            _customizationDraft.SetPresetNames(normalized, clearExisting);
         }
 
         private static string NormalizeActionLabelKey(string key)
@@ -7924,10 +7603,7 @@ namespace ASMLite.Editor
                 SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, confirm);
             }
 
-            _pendingCustomSaveLabel = save;
-            _pendingCustomLoadLabel = load;
-            _pendingCustomClearPresetLabel = clear;
-            _pendingCustomConfirmLabel = confirm;
+            _customizationDraft.SetActionLabels(save, load, clear, confirm);
         }
 
         private CustomizationAutomationSnapshot CreateCustomizationAutomationSnapshot(
@@ -7936,7 +7612,7 @@ namespace ASMLite.Editor
         {
             var toolState = GetOrRefreshToolState(component);
             var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
-            return new CustomizationAutomationSnapshot(
+            return ASMLiteCustomizationDraft.CreateAutomationSnapshot(
                 _selectedAvatar,
                 component,
                 customization,
