@@ -1401,8 +1401,7 @@ namespace ASMLite.Tests.Editor
             }
             else
             {
-                SetPrivateWindowField(window, "_pendingUseParameterExclusions", args.useParameterExclusions);
-                SetPrivateWindowField(window, "_pendingExcludedParameterNames", excludedNames);
+                window.SetParameterBackupExclusionsForAutomation(args.useParameterExclusions, excludedNames);
                 window.Repaint();
             }
 

@@ -9,6 +9,7 @@ namespace ASMLite.Editor
     /// </summary>
     internal static class ASMLiteFullControllerInstallPathHelper
     {
+        internal const string DefaultInstallPrefix = "";
         private const string FullControllerMenuPrefixPath = ASMLiteDriftProbe.MenuPrefixPath;
 
         /// <summary>

@@ -1,6 +1,8 @@
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
+using UnityEngine;
+using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
@@ -87,6 +89,7 @@ namespace ASMLite.Tests.Editor
         public void GeneratedAssetBuildTransaction_ReportsBuilderDiagnosticsWithoutThrowing()
         {
             _ctx.Comp.slotCount = 0;
+            LogAssert.Expect(LogType.Error, "[ASM-Lite] slotCount must be between 1 and 8 (got 0).");
 
             var result = ASMLiteGeneratedAssetBuildTransaction.Execute(_ctx.Comp);
 

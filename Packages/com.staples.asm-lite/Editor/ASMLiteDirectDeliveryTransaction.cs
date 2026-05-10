@@ -154,13 +154,15 @@ namespace ASMLite.Editor
                 }
             }
 
+            string verifyFailureMessage = string.Empty;
+            string verifyFailureContext = string.Empty;
             if (shouldFailForTesting(plan.VerifyFailurePoint)
                 || !ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
                     avatar,
                     plan.ExpectedDetachedState,
                     plan.VendorizedDir,
-                    out string verifyFailureMessage,
-                    out string verifyFailureContext))
+                    out verifyFailureMessage,
+                    out verifyFailureContext))
             {
                 return ASMLiteDirectDeliveryTransactionResult.Fail(
                     ASMLiteLifecycleTransactionStage.Verify,

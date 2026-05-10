@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using ASMLite;
 using UnityEditor;
 using UnityEngine;
@@ -19,11 +18,7 @@ namespace ASMLite.Editor
             if (menu == null)
                 return false;
 
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            return string.Equals(Path.GetFileName(menuPath), "ASMLite_Presets_Menu.asset", StringComparison.Ordinal);
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(AssetDatabase.GetAssetPath(menu));
         }
 
         public static bool IsGeneratedMenuAsset(VRCExpressionsMenu menu)
@@ -31,13 +26,7 @@ namespace ASMLite.Editor
             if (menu == null)
                 return false;
 
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            string fileName = Path.GetFileName(menuPath);
-            return fileName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                && fileName.EndsWith("Menu.asset", StringComparison.Ordinal);
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(AssetDatabase.GetAssetPath(menu));
         }
 
         public static ASMLiteInstallationState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)

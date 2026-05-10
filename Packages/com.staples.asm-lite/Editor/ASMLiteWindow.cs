@@ -4074,34 +4074,12 @@ namespace ASMLite.Editor
 
         private static bool IsAsmLiteGeneratedPresetsMenu(VRCExpressionsMenu menu)
         {
-<<<<<<< HEAD
             return ASMLiteWindowOperations.IsGeneratedPresetsMenu(menu);
-=======
-            if (menu == null)
-                return false;
-
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(menuPath);
->>>>>>> wt/t_a70f630c
         }
 
         private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
         {
-<<<<<<< HEAD
             return ASMLiteWindowOperations.IsGeneratedMenuAsset(menu);
-=======
-            if (menu == null)
-                return false;
-
-            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
-            if (string.IsNullOrWhiteSpace(menuPath))
-                return false;
-
-            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(menuPath);
->>>>>>> wt/t_a70f630c
         }
 
         private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
@@ -5760,19 +5738,7 @@ namespace ASMLite.Editor
 
         internal static ASMLiteInstallationState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
-<<<<<<< HEAD
             return ASMLiteWindowOperations.GetAsmLiteToolState(avatar, component);
-=======
-            if (component != null)
-                return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
-            if (avatar == null)
-                return AsmLiteToolState.NotInstalled;
-            if (ASMLiteGeneratedOwnershipPolicy.HasVendorizedReferences(avatar))
-                return AsmLiteToolState.Vendorized;
-            if (ASMLiteGeneratedOwnershipPolicy.HasRuntimeMarkers(avatar))
-                return AsmLiteToolState.Detached;
-            return AsmLiteToolState.NotInstalled;
->>>>>>> wt/t_a70f630c
         }
 
         private ASMLiteComponent GetOrRefreshComponent()
