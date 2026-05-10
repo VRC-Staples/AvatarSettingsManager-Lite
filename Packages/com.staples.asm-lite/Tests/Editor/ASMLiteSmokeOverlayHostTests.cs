@@ -125,6 +125,31 @@ namespace ASMLite.Tests.Editor
             });
         }
 
+        private static void AddDirectBlendParameterLayer(
+            AnimatorController controller,
+            string layerName,
+            string parameterName)
+        {
+            var stateMachine = new AnimatorStateMachine { name = layerName + "StateMachine" };
+            var state = stateMachine.AddState(layerName + "State");
+            var blendTree = new BlendTree
+            {
+                name = layerName + "BlendTree",
+                blendType = BlendTreeType.Direct,
+            };
+            blendTree.AddChild(new AnimationClip(), 0f);
+            var children = blendTree.children;
+            children[0].directBlendParameter = parameterName;
+            blendTree.children = children;
+            state.motion = blendTree;
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = layerName,
+                defaultWeight = 1f,
+                stateMachine = stateMachine,
+            });
+        }
+
         [Test]
         public void CommandLine_ParsesRequiredSessionAndCatalogPaths()
         {
@@ -625,7 +650,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Av3SaveLoadHarnessSavedSelection_KeepsAnimatorReadOnlyConditionAndBlendParameters()
+        public void Av3SaveLoadHarnessSavedSelection_ExcludesVrcfuryAnimatorConditionAndBlendParameters()
         {
             var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             var controller = new AnimatorController();
@@ -636,6 +661,7 @@ namespace ASMLite.Tests.Editor
                     HarnessParameter(HarnessVrcFuryStableParameterName(4), VRCExpressionParameters.ValueType.Bool, saved: true),
                     HarnessParameter(HarnessVrcFuryStableParameterName(5), VRCExpressionParameters.ValueType.Bool, saved: true),
                     HarnessParameter(HarnessVrcFuryStableParameterName(6), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessVrcFuryStableParameterName(7), VRCExpressionParameters.ValueType.Bool, saved: true),
                 };
                 expressionParameters.parameters = stableVrcFuryParameters;
 
@@ -647,6 +673,10 @@ namespace ASMLite.Tests.Editor
                     controller,
                     "Harness_UserFxBlend",
                     stableVrcFuryParameters[1].name);
+                AddDirectBlendParameterLayer(
+                    controller,
+                    "Harness_UserFxDirectBlend",
+                    stableVrcFuryParameters[2].name);
 
                 var selected = ASMLiteSmokeOverlayHostUnityRuntime.SelectAv3SaveLoadHarnessSavedParameters(
                     expressionParameters,
@@ -659,13 +689,69 @@ namespace ASMLite.Tests.Editor
                     .Select(parameter => parameter.name)
                     .ToArray();
 
-                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[0].name,
-                    "Animator transition conditions read menu parameters; they do not make the parameter animator-owned.");
-                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[1].name,
-                    "Blend tree parameters read menu parameters; they do not make the parameter animator-owned.");
-                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[2].name,
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[0].name,
+                    "VRCFury-generated toggles used as external transition conditions are not stable direct-write AV3 harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[1].name,
+                    "VRCFury-generated toggles used as external blend parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[2].name,
+                    "VRCFury-generated toggles used as direct blend parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[3].name,
                     "VRCFury-created parameters that are not referenced by external animator layers should remain harness targets.");
-                CollectionAssert.IsEmpty(excludedNames);
+                CollectionAssert.AreEquivalent(
+                    new[]
+                    {
+                        stableVrcFuryParameters[0].name,
+                        stableVrcFuryParameters[1].name,
+                        stableVrcFuryParameters[2].name,
+                    },
+                    excludedNames);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(expressionParameters);
+                UnityEngine.Object.DestroyImmediate(controller);
+            }
+        }
+
+        [Test]
+        public void Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded()
+        {
+            var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            var controller = new AnimatorController();
+            try
+            {
+                var drivenParameters = new[]
+                {
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "DrivenBool"), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "DrivenInt"), VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "DrivenFloat"), VRCExpressionParameters.ValueType.Float, saved: true),
+                };
+                var stableParameters = new[]
+                {
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "StableBool"), VRCExpressionParameters.ValueType.Bool, saved: true),
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "StableInt"), VRCExpressionParameters.ValueType.Int, saved: true),
+                    HarnessParameter(HarnessFixtureParameterName(nameof(Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded), "StableFloat"), VRCExpressionParameters.ValueType.Float, saved: true),
+                };
+                expressionParameters.parameters = drivenParameters.Concat(stableParameters).ToArray();
+
+                AddTransitionConditionLayer(controller, "Harness_DrivenBool", drivenParameters[0].name);
+                AddParameterDriverLayer(
+                    controller,
+                    "Harness_DrivenInt",
+                    drivenParameters[1].name,
+                    VRC_AvatarParameterDriver.ChangeType.Set);
+                AddDirectBlendParameterLayer(controller, "Harness_DrivenFloat", drivenParameters[2].name);
+
+                string[] selectedNames = ASMLiteSmokeOverlayHostUnityRuntime.SelectStableDirectWriteAv3SaveLoadHarnessSavedParameters(
+                        expressionParameters,
+                        controller,
+                        maxSampleCount: 3,
+                        out string[] excludedNames)
+                    .Select(parameter => parameter.name)
+                    .ToArray();
+
+                CollectionAssert.AreEquivalent(stableParameters.Select(parameter => parameter.name).ToArray(), selectedNames);
+                CollectionAssert.AreEquivalent(drivenParameters.Select(parameter => parameter.name).ToArray(), excludedNames);
             }
             finally
             {

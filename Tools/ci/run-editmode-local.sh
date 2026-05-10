@@ -1225,7 +1225,7 @@ run_docker_mode() {
     docker_batch_canonical_results_path="$(to_docker_workspace_path "${ASMLITE_BATCH_CANONICAL_RESULTS_PATH}")"
   fi
 
-  RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
+  RUNNER_SCRIPT="$(mktemp "${ARTIFACTS_DIR}/unity-runner.XXXXXX.sh")"
 
   cat > "${RUNNER_SCRIPT}" <<'RUNNER'
 set -euo pipefail

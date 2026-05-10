@@ -1666,11 +1666,11 @@ namespace ASMLite.Tests.Editor
                     return false;
                 }
 
-                var savedParameters = SelectAv3SaveLoadHarnessSavedParameters(avatar.expressionParameters, maxSampleCount: 6);
                 var harnessController = ResolveAv3SaveLoadHarnessAnimatorController(avatar);
-                savedParameters = ExcludeAnimatorDrivenAv3SaveLoadHarnessParameters(
-                    savedParameters,
+                var savedParameters = SelectStableDirectWriteAv3SaveLoadHarnessSavedParameters(
+                    avatar.expressionParameters,
                     harnessController,
+                    maxSampleCount: 6,
                     out string[] excludedAnimatorDrivenParameters);
                 if (savedParameters.Length == 0)
                 {
@@ -1751,12 +1751,57 @@ namespace ASMLite.Tests.Editor
             _av3SaveLoadHarnessAvatarName = string.Empty;
         }
 
+        internal static VRCExpressionParameters.Parameter[] SelectStableDirectWriteAv3SaveLoadHarnessSavedParameters(
+            VRCExpressionParameters expressionParameters,
+            AnimatorController controller,
+            int maxSampleCount,
+            out string[] excludedAnimatorDrivenParameters)
+        {
+            excludedAnimatorDrivenParameters = Array.Empty<string>();
+            var candidates = EnumerateDistinctSupportedAv3SaveLoadHarnessParameters(expressionParameters, saved: true).ToArray();
+            if (candidates.Length == 0)
+                return Array.Empty<VRCExpressionParameters.Parameter>();
+
+            var stableCandidates = candidates;
+            if (controller != null)
+            {
+                var targetNames = new HashSet<string>(candidates.Select(parameter => parameter.name), StringComparer.Ordinal);
+                var externallyDrivenNames = CollectExternallyAnimatorDrivenParameterNames(controller, targetNames);
+                if (externallyDrivenNames.Count > 0)
+                {
+                    excludedAnimatorDrivenParameters = candidates
+                        .Where(parameter => externallyDrivenNames.Contains(parameter.name))
+                        .Select(parameter => parameter.name)
+                        .ToArray();
+                    stableCandidates = candidates
+                        .Where(parameter => !externallyDrivenNames.Contains(parameter.name))
+                        .ToArray();
+                }
+            }
+
+            return SelectAv3SaveLoadHarnessSavedParameters(stableCandidates, maxSampleCount);
+        }
+
         internal static VRCExpressionParameters.Parameter[] SelectAv3SaveLoadHarnessSavedParameters(
             VRCExpressionParameters expressionParameters,
             int maxSampleCount)
         {
-            var sampledParameters = SelectAv3SaveLoadHarnessParameters(expressionParameters, saved: true, maxCount: maxSampleCount);
-            var requiredVrcFuryParameters = SelectVrcFuryCreatedSavedToggleParameters(expressionParameters);
+            return SelectAv3SaveLoadHarnessSavedParameters(
+                EnumerateDistinctSupportedAv3SaveLoadHarnessParameters(expressionParameters, saved: true),
+                maxSampleCount);
+        }
+
+        private static VRCExpressionParameters.Parameter[] SelectAv3SaveLoadHarnessSavedParameters(
+            IEnumerable<VRCExpressionParameters.Parameter> candidates,
+            int maxSampleCount)
+        {
+            var candidateArray = (candidates ?? Enumerable.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => parameter != null && parameter.saved)
+                .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .ToArray();
+            var sampledParameters = SelectAv3SaveLoadHarnessParameters(candidateArray, maxSampleCount);
+            var requiredVrcFuryParameters = SelectVrcFuryCreatedSavedToggleParameters(candidateArray);
             if (requiredVrcFuryParameters.Length == 0)
                 return sampledParameters;
 
@@ -1770,12 +1815,17 @@ namespace ASMLite.Tests.Editor
         internal static VRCExpressionParameters.Parameter[] SelectVrcFuryCreatedSavedToggleParameters(
             VRCExpressionParameters expressionParameters)
         {
-            if (expressionParameters == null)
-                return Array.Empty<VRCExpressionParameters.Parameter>();
+            return SelectVrcFuryCreatedSavedToggleParameters(
+                EnumerateDistinctSupportedAv3SaveLoadHarnessParameters(expressionParameters, saved: true));
+        }
 
-            return (expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
-                .Where(parameter => IsSupportedAv3SaveLoadHarnessParameter(parameter)
+        private static VRCExpressionParameters.Parameter[] SelectVrcFuryCreatedSavedToggleParameters(
+            IEnumerable<VRCExpressionParameters.Parameter> candidates)
+        {
+            return (candidates ?? Enumerable.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => parameter != null
                     && parameter.saved
+                    && IsSupportedAv3SaveLoadHarnessParameter(parameter)
                     && IsVrcFuryCreatedStableToggleParameterName(parameter.name))
                 .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
                 .Select(group => group.First())
@@ -1787,12 +1837,34 @@ namespace ASMLite.Tests.Editor
             bool saved,
             int maxCount)
         {
+            return SelectAv3SaveLoadHarnessParameters(
+                EnumerateDistinctSupportedAv3SaveLoadHarnessParameters(expressionParameters, saved),
+                maxCount);
+        }
+
+        private static IEnumerable<VRCExpressionParameters.Parameter> EnumerateDistinctSupportedAv3SaveLoadHarnessParameters(
+            VRCExpressionParameters expressionParameters,
+            bool saved)
+        {
+            if (expressionParameters == null)
+                return Enumerable.Empty<VRCExpressionParameters.Parameter>();
+
+            return (expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                .Where(parameter => IsSupportedAv3SaveLoadHarnessParameter(parameter) && parameter.saved == saved)
+                .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
+                .Select(group => group.First());
+        }
+
+        private static VRCExpressionParameters.Parameter[] SelectAv3SaveLoadHarnessParameters(
+            IEnumerable<VRCExpressionParameters.Parameter> candidates,
+            int maxCount)
+        {
             maxCount = Math.Max(0, maxCount);
-            if (expressionParameters == null || maxCount == 0)
+            if (maxCount == 0)
                 return Array.Empty<VRCExpressionParameters.Parameter>();
 
-            var candidates = (expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
-                .Where(parameter => IsSupportedAv3SaveLoadHarnessParameter(parameter) && parameter.saved == saved)
+            var candidateArray = (candidates ?? Enumerable.Empty<VRCExpressionParameters.Parameter>())
+                .Where(IsSupportedAv3SaveLoadHarnessParameter)
                 .GroupBy(parameter => parameter.name, StringComparer.Ordinal)
                 .Select(group => group.First())
                 .ToArray();
@@ -1811,7 +1883,7 @@ namespace ASMLite.Tests.Editor
                 {
                     if (selected.Count >= maxCount)
                         break;
-                    var next = candidates.FirstOrDefault(parameter =>
+                    var next = candidateArray.FirstOrDefault(parameter =>
                         parameter.valueType == type
                         && selected.All(existing => !string.Equals(existing.name, parameter.name, StringComparison.Ordinal)));
                     if (next == null)
@@ -1905,6 +1977,12 @@ namespace ASMLite.Tests.Editor
             foreach (var driver in (stateMachine.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                 CollectDrivenParameterNames(driver, targetNames, drivenNames);
 
+            foreach (var transition in stateMachine.anyStateTransitions ?? Array.Empty<AnimatorStateTransition>())
+                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
+
+            foreach (var transition in stateMachine.entryTransitions ?? Array.Empty<AnimatorTransition>())
+                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
+
             foreach (var childState in stateMachine.states ?? Array.Empty<ChildAnimatorState>())
             {
                 var state = childState.state;
@@ -1913,10 +1991,54 @@ namespace ASMLite.Tests.Editor
 
                 foreach (var driver in (state.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                     CollectDrivenParameterNames(driver, targetNames, drivenNames);
+
+                foreach (var transition in state.transitions ?? Array.Empty<AnimatorStateTransition>())
+                    CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
+
+                CollectMotionParameterNames(state.motion, targetNames, drivenNames);
             }
 
             foreach (var childStateMachine in stateMachine.stateMachines ?? Array.Empty<ChildAnimatorStateMachine>())
                 CollectExternallyAnimatorDrivenParameterNames(childStateMachine.stateMachine, targetNames, drivenNames);
+        }
+
+        private static void CollectTransitionConditionParameterNames(
+            AnimatorTransitionBase transition,
+            ISet<string> targetNames,
+            HashSet<string> drivenNames)
+        {
+            if (transition == null || targetNames == null || drivenNames == null)
+                return;
+
+            foreach (var condition in transition.conditions ?? Array.Empty<AnimatorCondition>())
+            {
+                if (!string.IsNullOrWhiteSpace(condition.parameter) && targetNames.Contains(condition.parameter))
+                    drivenNames.Add(condition.parameter);
+            }
+        }
+
+        private static void CollectMotionParameterNames(
+            Motion motion,
+            ISet<string> targetNames,
+            HashSet<string> drivenNames)
+        {
+            if (motion == null || targetNames == null || drivenNames == null)
+                return;
+
+            if (!(motion is BlendTree blendTree))
+                return;
+
+            if (!string.IsNullOrWhiteSpace(blendTree.blendParameter) && targetNames.Contains(blendTree.blendParameter))
+                drivenNames.Add(blendTree.blendParameter);
+            if (!string.IsNullOrWhiteSpace(blendTree.blendParameterY) && targetNames.Contains(blendTree.blendParameterY))
+                drivenNames.Add(blendTree.blendParameterY);
+
+            foreach (var child in blendTree.children)
+            {
+                if (!string.IsNullOrWhiteSpace(child.directBlendParameter) && targetNames.Contains(child.directBlendParameter))
+                    drivenNames.Add(child.directBlendParameter);
+                CollectMotionParameterNames(child.motion, targetNames, drivenNames);
+            }
         }
 
         private static void CollectDrivenParameterNames(

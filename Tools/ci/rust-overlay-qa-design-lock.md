@@ -16,7 +16,7 @@
 - Safe quick setup batch selected by default.
 - Empty selection disables Run and shows `Select at least one suite`.
 - Unknown/synthetic suite IDs rejected.
-- Catalog is single source: `Tools/ci/smoke/suite-catalog.json`.
+- Catalog contract is retained in ASM-Lite for headless/tooling runs at `Tools/ci/smoke/suite-catalog.json`; the migrated VAUST overlay keeps a test fixture copy at `/mnt/f/Workspace/VAUST/fixtures/suite-catalog.json`.
 - Preset chips select batches; they do not filter/hide suite list.
 - Search may filter suite list.
 - If selected suites are hidden by search, show warning count.
@@ -137,3 +137,7 @@
 - Unity host tests only when host behavior changes.
 - Screenshot compare against reference after UI flow changes.
 - Implement via small TDD vertical slices, not rewrite.
+
+## VAUST migration note
+
+The Rust overlay source/lock/tests now live at `/mnt/f/Workspace/VAUST` for the case-correct WSL destination. ASM-Lite wrapper scripts resolve VAUST via `ASMLITE_RUST_OVERLAY_ROOT` (or explicit `ASMLITE_RUST_OVERLAY_BIN` / `ASMLITE_RUST_OVERLAY_MANIFEST`) and retain a legacy `Tools/ci/rust-overlay` fallback during transition. Do not remove ASM-Lite `Tools/ci/smoke` fixtures or Unity smoke host tests; they remain the headless/tooling contract coverage.

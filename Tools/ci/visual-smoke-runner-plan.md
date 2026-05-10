@@ -67,8 +67,10 @@ These decisions were confirmed:
    - lifecycle actions: rebuild/vendorize/detach/return
    - playmode/runtime checks
 10. Canonical avatar name is `Oct25_Dress`.
-11. Rust overlay lives at:
-    - `Tools/ci/rust-overlay`
+11. Rust overlay lives at the VAUST tooling location by default:
+    - `/mnt/f/Workspace/VAUST` (case-correct WSL path)
+    - wrappers may override with `ASMLITE_RUST_OVERLAY_ROOT`, `ASMLITE_RUST_OVERLAY_BIN`, or `ASMLITE_RUST_OVERLAY_MANIFEST`
+    - legacy ASM-Lite fallback remains at `Tools/ci/rust-overlay` during transition
 12. Overlay design should use `design-for-ai` principles.
 
 ---
@@ -190,7 +192,8 @@ Minimum fields:
 Create one shared catalog both Rust and Unity read.
 
 Path:
-- `Tools/ci/smoke/suite-catalog.json`
+- ASM-Lite/headless contract copy: `Tools/ci/smoke/suite-catalog.json`
+- VAUST Rust overlay copy: `/mnt/f/Workspace/VAUST/fixtures/suite-catalog.json`
 
 Why:
 - overlay can render suite list before Unity starts
@@ -299,18 +302,23 @@ Bentwire recommends a polished ship-gate panel:
 
 ### Recommended Rust Crate Layout
 
-- `Tools/ci/rust-overlay/Cargo.toml`
-- `Tools/ci/rust-overlay/src/main.rs`
-- `Tools/ci/rust-overlay/src/app.rs`
-- `Tools/ci/rust-overlay/src/model.rs`
-- `Tools/ci/rust-overlay/src/protocol.rs`
-- `Tools/ci/rust-overlay/src/session.rs`
-- `Tools/ci/rust-overlay/src/unity_launcher.rs`
-- `Tools/ci/rust-overlay/src/event_reader.rs`
-- `Tools/ci/rust-overlay/src/ui_suite_list.rs`
-- `Tools/ci/rust-overlay/src/ui_running.rs`
-- `Tools/ci/rust-overlay/src/ui_results.rs`
-- `Tools/ci/rust-overlay/src/theme.rs`
+VAUST is the canonical Rust overlay home after migration:
+
+- `/mnt/f/Workspace/VAUST/Cargo.toml`
+- `/mnt/f/Workspace/VAUST/Cargo.lock`
+- `/mnt/f/Workspace/VAUST/src/main.rs`
+- `/mnt/f/Workspace/VAUST/src/app.rs`
+- `/mnt/f/Workspace/VAUST/src/model.rs`
+- `/mnt/f/Workspace/VAUST/src/protocol.rs`
+- `/mnt/f/Workspace/VAUST/src/session.rs`
+- `/mnt/f/Workspace/VAUST/src/unity_launcher.rs`
+- `/mnt/f/Workspace/VAUST/src/event_reader.rs`
+- `/mnt/f/Workspace/VAUST/src/ui_suite_list.rs`
+- `/mnt/f/Workspace/VAUST/src/theme.rs`
+- `/mnt/f/Workspace/VAUST/tests/`
+- `/mnt/f/Workspace/VAUST/fixtures/`
+
+ASM-Lite retains `Tools/ci/smoke` and the Unity host/headless tests for tooling CI; `Tools/ci/rust-overlay` is a legacy fallback while wrappers transition.
 
 ---
 
@@ -413,7 +421,8 @@ Verify:
 ### Phase 2 — Rust Overlay Shell
 
 Create:
-- Rust crate under `Tools/ci/rust-overlay`
+- Rust crate under `/mnt/f/Workspace/VAUST`
+- ASM-Lite wrapper fallback to legacy `Tools/ci/rust-overlay` during transition
 - suite list UI
 - theme/layout system
 - Unity launcher process wrapper

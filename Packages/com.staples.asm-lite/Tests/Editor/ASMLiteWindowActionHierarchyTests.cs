@@ -338,11 +338,11 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetAsmLiteToolState_ComponentPresentVendorized_WinsOverAvatarHeuristics()
+        public void ResolveInstallationState_ComponentPresentVendorized_WinsOverAvatarHeuristics()
         {
             _ctx.Comp.useVendorizedGeneratedAssets = true;
 
-            var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp);
+            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, _ctx.Comp);
 
             Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Vendorized, toolState,
                 "Component-present vendorized combinations should resolve explicitly to Vendorized state.");
@@ -384,7 +384,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetAsmLiteToolState_ComponentMissingDetachedDetectedFromRuntimeMarkers()
+        public void ResolveInstallationState_ComponentMissingDetachedDetectedFromRuntimeMarkers()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
             _ctx.Comp = null;
@@ -397,19 +397,19 @@ namespace ASMLite.Tests.Editor
                 saved: false,
                 networkSynced: false);
 
-            var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null);
+            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null);
 
             Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Detached, toolState,
                 "Component-missing avatars with ASM-Lite runtime markers should resolve explicitly to Detached state.");
         }
 
         [Test]
-        public void GetAsmLiteToolState_AvatarSelectedNotInstalled_RemainsExplicit()
+        public void ResolveInstallationState_AvatarSelectedNotInstalled_RemainsExplicit()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
             _ctx.Comp = null;
 
-            var toolState = ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null);
+            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null);
 
             Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.NotInstalled, toolState,
                 "Avatar-selected without component or runtime markers should resolve explicitly to NotInstalled state.");

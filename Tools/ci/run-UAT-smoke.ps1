@@ -20,6 +20,7 @@ $RepoRoot = (Resolve-Path (Join-Path $ScriptDir '../..')).Path
 $ArtifactsDir = Join-Path $RepoRoot 'artifacts'
 $CanonicalProjectPath = Join-Path (Split-Path -Parent $RepoRoot) 'Test Project/TestUnityProject'
 $CanonicalCatalogPath = Join-Path $RepoRoot 'Tools/ci/smoke/suite-catalog.json'
+$DefaultRustOverlayRoot = if ($RepoRoot -match '^/' -or -not [string]::IsNullOrWhiteSpace($env:WSL_DISTRO_NAME)) { '/mnt/f/Workspace/VAUST' } else { 'F:\Workspace\VAUST' }
 
 function Show-Usage {
     @'
@@ -29,6 +30,7 @@ Boots the canonical Rust overlay authority path for ASM-Lite UAT smoke sessions.
 
 Options:
   -h, -Help, --help        Show this help text
+  -SelfTest                Run lightweight wrapper self-tests without Unity or cargo
   -SuiteId <id>[,<id>...]  Select one or more suites for the batch in supplied order
   --suite-id <id>[,<id>...] Same as -SuiteId
 
@@ -40,6 +42,9 @@ Notes:
   - Step sleep is configured in the Rust overlay UI; it defaults off.
   - Enabling step sleep starts at 1.5 seconds and can be changed while no suite is running.
   - This command is a canonical Rust-overlay UAT smoke entrypoint.
+  - Rust overlay resolution order: ASMLITE_RUST_OVERLAY_BIN, ASMLITE_RUST_OVERLAY_MANIFEST,
+    ASMLITE_RUST_OVERLAY_ROOT, /mnt/f/Workspace/VAUST (or F:\Workspace\VAUST on Windows),
+    then legacy Tools/ci/rust-overlay.
 '@ | Write-Host
 }
 
@@ -302,10 +307,70 @@ function Resolve-WslRepoRoot {
     return $null
 }
 
-function Resolve-RustOverlayRunner {
-    $exeCandidate = Join-Path $RepoRoot 'Tools/ci/rust-overlay/bin/asmlite_smoke_overlay.exe'
-    $bareCandidate = Join-Path $RepoRoot 'Tools/ci/rust-overlay/bin/asmlite_smoke_overlay'
+function New-RustOverlayCargoRunner {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ManifestPath,
+        [Parameter(Mandatory = $true)]
+        [string]$LabelManifestPath
+    )
 
+    $script:CargoCommand = Resolve-CargoCommand
+    if ([string]::IsNullOrWhiteSpace($script:CargoCommand)) {
+        throw "error: Rust overlay manifest found at $ManifestPath, but no overlay executable was found and no cargo/cargo.exe is available. Build the VAUST overlay, set ASMLITE_RUST_OVERLAY_BIN, or install Rust."
+    }
+
+    if (Test-CargoToolchain '+stable-x86_64-pc-windows-msvc') {
+        return @{
+            Command = $script:CargoCommand
+            PrefixArgs = @(
+                '+stable-x86_64-pc-windows-msvc',
+                'run',
+                '--manifest-path', $ManifestPath,
+                '--bin', 'asmlite_smoke_overlay',
+                '--'
+            )
+            Label = "cargo +stable-x86_64-pc-windows-msvc run --manifest-path $LabelManifestPath --bin asmlite_smoke_overlay --"
+            Entrypoint = $false
+        }
+    }
+
+    if (Test-CargoToolchain '+stable-x86_64-unknown-linux-gnu') {
+        return @{
+            Command = $script:CargoCommand
+            PrefixArgs = @(
+                '+stable-x86_64-unknown-linux-gnu',
+                'run',
+                '--manifest-path', $ManifestPath,
+                '--bin', 'asmlite_smoke_overlay',
+                '--'
+            )
+            Label = "cargo +stable-x86_64-unknown-linux-gnu run --manifest-path $LabelManifestPath --bin asmlite_smoke_overlay --"
+            Entrypoint = $false
+        }
+    }
+
+    return @{
+        Command = $script:CargoCommand
+        PrefixArgs = @(
+            'run',
+            '--manifest-path', $ManifestPath,
+            '--bin', 'asmlite_smoke_overlay',
+            '--'
+        )
+        Label = "cargo run --manifest-path $LabelManifestPath --bin asmlite_smoke_overlay --"
+        Entrypoint = $false
+    }
+}
+
+function Resolve-RustOverlayRootRunner {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OverlayRoot
+    )
+
+    $exeCandidate = Join-Path $OverlayRoot 'bin/asmlite_smoke_overlay.exe'
+    $bareCandidate = Join-Path $OverlayRoot 'bin/asmlite_smoke_overlay'
     foreach ($candidate in @($exeCandidate, $bareCandidate)) {
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return @{
@@ -317,54 +382,51 @@ function Resolve-RustOverlayRunner {
         }
     }
 
-    $script:CargoCommand = Resolve-CargoCommand
-    if ([string]::IsNullOrWhiteSpace($script:CargoCommand)) {
-        throw 'error: no Windows cargo.exe found and no checked-in Rust overlay executable exists. Install Windows Rust or build Tools/ci/rust-overlay/bin/asmlite_smoke_overlay.exe.'
+    $manifestPath = Join-Path $OverlayRoot 'Cargo.toml'
+    if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+        return New-RustOverlayCargoRunner -ManifestPath $manifestPath -LabelManifestPath $manifestPath
     }
 
-    $manifestPath = Join-Path $RepoRoot 'Tools/ci/rust-overlay/Cargo.toml'
+    return $null
+}
 
-    if (Test-CargoToolchain '+stable-x86_64-pc-windows-msvc') {
-        return @{
-            Command = $script:CargoCommand
-            PrefixArgs = @(
-                '+stable-x86_64-pc-windows-msvc',
-                'run',
-                '--manifest-path', $manifestPath,
-                '--bin', 'asmlite_smoke_overlay',
-                '--'
-            )
-            Label = 'cargo +stable-x86_64-pc-windows-msvc run --manifest-path Tools/ci/rust-overlay/Cargo.toml --bin asmlite_smoke_overlay --'
-            Entrypoint = $false
+function Resolve-RustOverlayRunner {
+    if (-not [string]::IsNullOrWhiteSpace($env:ASMLITE_RUST_OVERLAY_BIN)) {
+        $candidate = $env:ASMLITE_RUST_OVERLAY_BIN
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            return @{
+                Command = $candidate
+                PrefixArgs = @()
+                Label = $candidate
+                Entrypoint = $false
+            }
+        }
+        throw "error: ASMLITE_RUST_OVERLAY_BIN points to a missing overlay executable: $candidate"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:ASMLITE_RUST_OVERLAY_MANIFEST)) {
+        $manifestPath = $env:ASMLITE_RUST_OVERLAY_MANIFEST
+        if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+            throw "error: ASMLITE_RUST_OVERLAY_MANIFEST points to a missing Cargo.toml: $manifestPath"
+        }
+        return New-RustOverlayCargoRunner -ManifestPath $manifestPath -LabelManifestPath $manifestPath
+    }
+
+    $overlayRoots = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:ASMLITE_RUST_OVERLAY_ROOT)) {
+        $overlayRoots += $env:ASMLITE_RUST_OVERLAY_ROOT
+    }
+    $overlayRoots += $DefaultRustOverlayRoot
+    $overlayRoots += (Join-Path $RepoRoot 'Tools/ci/rust-overlay')
+
+    foreach ($overlayRoot in @($overlayRoots)) {
+        $runner = Resolve-RustOverlayRootRunner -OverlayRoot $overlayRoot
+        if ($null -ne $runner) {
+            return $runner
         }
     }
 
-    if (Test-CargoToolchain '+stable-x86_64-unknown-linux-gnu') {
-        return @{
-            Command = $script:CargoCommand
-            PrefixArgs = @(
-                '+stable-x86_64-unknown-linux-gnu',
-                'run',
-                '--manifest-path', $manifestPath,
-                '--bin', 'asmlite_smoke_overlay',
-                '--'
-            )
-            Label = 'cargo +stable-x86_64-unknown-linux-gnu run --manifest-path Tools/ci/rust-overlay/Cargo.toml --bin asmlite_smoke_overlay --'
-            Entrypoint = $false
-        }
-    }
-
-    return @{
-        Command = $script:CargoCommand
-        PrefixArgs = @(
-            'run',
-            '--manifest-path', $manifestPath,
-            '--bin', 'asmlite_smoke_overlay',
-            '--'
-        )
-        Label = 'cargo run --manifest-path Tools/ci/rust-overlay/Cargo.toml --bin asmlite_smoke_overlay --'
-        Entrypoint = $false
-    }
+    throw "error: no Rust overlay executable or Cargo.toml was found. Tried ASMLITE_RUST_OVERLAY_ROOT, $DefaultRustOverlayRoot, and legacy $(Join-Path $RepoRoot 'Tools/ci/rust-overlay'). Set ASMLITE_RUST_OVERLAY_ROOT=/mnt/f/Workspace/VAUST, ASMLITE_RUST_OVERLAY_BIN, or ASMLITE_RUST_OVERLAY_MANIFEST."
 }
 
 function Invoke-SelfTest {
@@ -426,6 +488,90 @@ function Invoke-SelfTest {
     }
     if (-not $rejected) {
         throw 'Unknown suite id validation failed'
+    }
+
+    function Assert-EqualValue {
+        param(
+            [AllowNull()]
+            [object]$Actual,
+            [AllowNull()]
+            [object]$Expected,
+            [Parameter(Mandatory = $true)]
+            [string]$Name
+        )
+
+        if ($Actual -ne $Expected) {
+            throw "$Name failed: expected '$Expected', got '$Actual'"
+        }
+    }
+
+    $previousBin = $env:ASMLITE_RUST_OVERLAY_BIN
+    $previousManifest = $env:ASMLITE_RUST_OVERLAY_MANIFEST
+    $previousRoot = $env:ASMLITE_RUST_OVERLAY_ROOT
+    $previousPath = $env:PATH
+    $previousUserProfile = $env:USERPROFILE
+    $previousDefaultRoot = $script:DefaultRustOverlayRoot
+    $tmpRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("asmlite-overlay-selftest-{0}-{1}" -f $PID, [System.Guid]::NewGuid().ToString('N'))
+
+    try {
+        $explicitRoot = Join-Path $tmpRoot 'explicit-root'
+        $defaultRoot = Join-Path $tmpRoot 'default-root'
+        $legacyRoot = Join-Path $tmpRoot 'legacy-root'
+        $explicitBin = Join-Path $tmpRoot 'explicit-bin/asmlite_smoke_overlay'
+        $explicitManifest = Join-Path $tmpRoot 'explicit-manifest/Cargo.toml'
+
+        $null = New-Item -ItemType Directory -Force -Path $explicitRoot, (Join-Path $defaultRoot 'bin'), (Join-Path $legacyRoot 'bin'), (Split-Path -Parent $explicitBin), (Split-Path -Parent $explicitManifest)
+        $null = New-Item -ItemType File -Force -Path (Join-Path $explicitRoot 'Cargo.toml'), $explicitManifest, (Join-Path $defaultRoot 'bin/asmlite_smoke_overlay'), (Join-Path $legacyRoot 'bin/asmlite_smoke_overlay'), $explicitBin
+
+        $script:DefaultRustOverlayRoot = $defaultRoot
+        $env:PATH = ''
+        $env:USERPROFILE = ''
+
+        $env:ASMLITE_RUST_OVERLAY_BIN = $explicitBin
+        $env:ASMLITE_RUST_OVERLAY_MANIFEST = $explicitManifest
+        $env:ASMLITE_RUST_OVERLAY_ROOT = $explicitRoot
+        $runner = Resolve-RustOverlayRunner
+        Assert-EqualValue -Name 'ASMLITE_RUST_OVERLAY_BIN outranks manifest/root/default' -Actual $runner.Label -Expected $explicitBin
+
+        $env:ASMLITE_RUST_OVERLAY_BIN = ''
+        $env:ASMLITE_RUST_OVERLAY_MANIFEST = $explicitManifest
+        $env:ASMLITE_RUST_OVERLAY_ROOT = $explicitRoot
+        $manifestSelected = $false
+        try {
+            $null = Resolve-RustOverlayRunner
+        }
+        catch {
+            $manifestSelected = $_.Exception.Message.Contains($explicitManifest)
+        }
+        if (-not $manifestSelected) {
+            throw 'ASMLITE_RUST_OVERLAY_MANIFEST did not outrank root/default executable before cargo lookup'
+        }
+
+        $env:ASMLITE_RUST_OVERLAY_BIN = ''
+        $env:ASMLITE_RUST_OVERLAY_MANIFEST = ''
+        $env:ASMLITE_RUST_OVERLAY_ROOT = $explicitRoot
+        $rootManifestSelected = $false
+        $expectedRootManifest = Join-Path $explicitRoot 'Cargo.toml'
+        try {
+            $null = Resolve-RustOverlayRunner
+        }
+        catch {
+            $rootManifestSelected = $_.Exception.Message.Contains($expectedRootManifest)
+        }
+        if (-not $rootManifestSelected) {
+            throw 'ASMLITE_RUST_OVERLAY_ROOT manifest did not outrank default executable before cargo lookup'
+        }
+    }
+    finally {
+        $env:ASMLITE_RUST_OVERLAY_BIN = $previousBin
+        $env:ASMLITE_RUST_OVERLAY_MANIFEST = $previousManifest
+        $env:ASMLITE_RUST_OVERLAY_ROOT = $previousRoot
+        $env:PATH = $previousPath
+        $env:USERPROFILE = $previousUserProfile
+        $script:DefaultRustOverlayRoot = $previousDefaultRoot
+        if (Test-Path -LiteralPath $tmpRoot) {
+            Remove-Item -LiteralPath $tmpRoot -Recurse -Force
+        }
     }
 
     Write-Host 'SelfTest PASS'
