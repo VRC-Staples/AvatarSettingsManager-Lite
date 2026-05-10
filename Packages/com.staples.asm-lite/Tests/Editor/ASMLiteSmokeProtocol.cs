@@ -148,14 +148,11 @@ namespace ASMLite.Tests.Editor
         internal const string HostStateStalled = "stalled";
         internal const string HostStateCrashed = "crashed";
 
-        private static readonly HashSet<string> s_supportedCommandTypes = new HashSet<string>(StringComparer.Ordinal)
+        internal static bool IsSupportedHostState(string state)
         {
-            "launch-session",
-            "run-suite",
-            "review-decision",
-            "abort-run",
-            "shutdown-session",
-        };
+            string normalized = string.IsNullOrWhiteSpace(state) ? string.Empty : state.Trim();
+            return normalized.Length > 0 && s_supportedHostStates.Contains(normalized);
+        }
 
         private static readonly HashSet<string> s_supportedHostStates = new HashSet<string>(StringComparer.Ordinal)
         {
@@ -584,13 +581,13 @@ namespace ASMLite.Tests.Editor
             if (command.commandSeq <= 0)
                 throw new InvalidOperationException("commandSeq must be greater than zero.");
             command.commandType = RequireNonBlank(command.commandType, "commandType");
-            if (!s_supportedCommandTypes.Contains(command.commandType))
+            if (!ASMLiteSmokeCommandRegistry.IsSupported(command.commandType))
                 throw new InvalidOperationException($"commandType '{command.commandType}' is not supported.");
             command.createdAtUtc = RequireNonBlank(command.createdAtUtc, "createdAtUtc");
 
             switch (command.commandType)
             {
-                case "launch-session":
+                case ASMLiteSmokeCommandRegistry.LaunchSession:
                     if (!HasLaunchSessionPayload(command.launchSession))
                         throw new InvalidOperationException("launchSession payload is required for commandType 'launch-session'.");
                     if (HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
@@ -600,7 +597,7 @@ namespace ASMLite.Tests.Editor
                     command.reviewDecision = null;
                     command.abortRun = null;
                     break;
-                case "run-suite":
+                case ASMLiteSmokeCommandRegistry.RunSuite:
                     if (!HasRunSuitePayload(command.runSuite))
                         throw new InvalidOperationException("runSuite payload is required for commandType 'run-suite'.");
                     if (HasLaunchSessionPayload(command.launchSession) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
@@ -610,7 +607,7 @@ namespace ASMLite.Tests.Editor
                     command.reviewDecision = null;
                     command.abortRun = null;
                     break;
-                case "review-decision":
+                case ASMLiteSmokeCommandRegistry.ReviewDecision:
                     if (!HasReviewDecisionPayload(command.reviewDecision))
                         throw new InvalidOperationException("reviewDecision payload is required for commandType 'review-decision'.");
                     if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasAbortRunPayload(command.abortRun))
@@ -620,7 +617,7 @@ namespace ASMLite.Tests.Editor
                     command.runSuite = null;
                     command.abortRun = null;
                     break;
-                case "abort-run":
+                case ASMLiteSmokeCommandRegistry.AbortRun:
                     if (!HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("abortRun payload is required for commandType 'abort-run'.");
                     if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision))
@@ -630,7 +627,7 @@ namespace ASMLite.Tests.Editor
                     command.runSuite = null;
                     command.reviewDecision = null;
                     break;
-                case "shutdown-session":
+                case ASMLiteSmokeCommandRegistry.ShutdownSession:
                     if (HasLaunchSessionPayload(command.launchSession) || HasRunSuitePayload(command.runSuite) || HasReviewDecisionPayload(command.reviewDecision) || HasAbortRunPayload(command.abortRun))
                         throw new InvalidOperationException("shutdown-session command must not include typed payloads.");
                     command.launchSession = null;
@@ -776,7 +773,7 @@ namespace ASMLite.Tests.Editor
             hostState.sessionId = RequireNonBlank(hostState.sessionId, "sessionId");
             hostState.protocolVersion = RequireNonBlank(hostState.protocolVersion, "protocolVersion");
             hostState.state = RequireNonBlank(hostState.state, "state");
-            if (!s_supportedHostStates.Contains(hostState.state))
+            if (!IsSupportedHostState(hostState.state))
                 throw new InvalidOperationException($"state '{hostState.state}' is not supported.");
             hostState.hostVersion = RequireNonBlank(hostState.hostVersion, "hostVersion");
             hostState.unityVersion = RequireNonBlank(hostState.unityVersion, "unityVersion");
@@ -811,7 +808,7 @@ namespace ASMLite.Tests.Editor
             protocolEvent.commandId = RequireNonBlank(protocolEvent.commandId, prefix + " commandId");
             protocolEvent.message = RequireNonBlank(protocolEvent.message, prefix + " message");
             protocolEvent.hostState = NormalizeOptional(protocolEvent.hostState);
-            if (!string.IsNullOrEmpty(protocolEvent.hostState) && !s_supportedHostStates.Contains(protocolEvent.hostState))
+            if (!string.IsNullOrEmpty(protocolEvent.hostState) && !IsSupportedHostState(protocolEvent.hostState))
                 throw new InvalidOperationException(prefix + $" hostState '{protocolEvent.hostState}' is not supported.");
             protocolEvent.runId = NormalizeOptional(protocolEvent.runId);
             protocolEvent.groupId = NormalizeOptional(protocolEvent.groupId);

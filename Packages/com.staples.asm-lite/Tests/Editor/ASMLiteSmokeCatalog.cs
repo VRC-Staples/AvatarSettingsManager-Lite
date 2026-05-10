@@ -301,48 +301,6 @@ namespace ASMLite.Tests.Editor
 
     internal static class ASMLiteSmokeCatalog
     {
-        private static readonly HashSet<string> s_allowedActionTypes = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "open-scene",
-            "open-window",
-            "select-avatar",
-            "add-prefab",
-            "rebuild",
-            "vendorize",
-            "detach",
-            "lifecycle-hygiene-cleanup",
-            "return-to-package-managed",
-            "enter-playmode",
-            "exit-playmode",
-            "run-av3-save-load-harness",
-            "assert-av3-save-load-result",
-            "assert-primary-action",
-            "assert-generated-references-package-managed",
-            "assert-runtime-component-valid",
-            "assert-package-resource-present",
-            "assert-catalog-loads",
-            "assert-window-focused",
-            "close-window",
-            "assert-host-ready",
-            "prelude-recover-context",
-            "assert-no-component",
-            "set-slot-count",
-            "set-install-path-state",
-            "set-root-name-state",
-            "set-preset-name-mask",
-            "set-action-label-mask",
-            "set-icon-mode",
-            "set-gear-color",
-            "set-custom-icons-enabled",
-            "set-root-icon-fixture",
-            "set-slot-icon-mask",
-            "set-action-icon-mask",
-            "assert-parameter-backup-option-present",
-            "set-parameter-backup-state",
-            "assert-pending-customization-snapshot",
-            "assert-attached-customization-snapshot",
-        };
-
         internal static ASMLiteSmokeCatalogDocument LoadCanonical()
         {
             return LoadFromPath(ASMLiteSmokeContractPaths.GetCatalogPath());
@@ -475,8 +433,9 @@ namespace ASMLite.Tests.Editor
             step.label = RequireNonBlank(step.label, path + ".label");
             step.description = RequireNonBlank(step.description, path + ".description");
             step.actionType = RequireNonBlank(step.actionType, path + ".actionType");
-            if (!s_allowedActionTypes.Contains(step.actionType))
+            if (!ASMLiteSmokeActionRegistry.IsSupported(step.actionType))
                 throw new InvalidOperationException($"{path}.actionType '{step.actionType}' is not supported.");
+            step.actionType = ASMLiteSmokeActionRegistry.NormalizeActionType(step.actionType);
             step.args = step.args ?? new ASMLiteSmokeStepArgs();
             step.args.Normalize();
             if (step.args.expectStepFailure)

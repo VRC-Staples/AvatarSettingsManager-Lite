@@ -29,6 +29,23 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void CommandRegistry_documents_protocol_payloads_and_host_dispatch_modes()
+        {
+            CollectionAssert.AreEquivalent(
+                new[] { "launch-session", "run-suite", "review-decision", "abort-run", "shutdown-session" },
+                ASMLiteSmokeCommandRegistry.AllCommandTypes.ToArray());
+
+            ASMLiteSmokeCommandDefinition launch = ASMLiteSmokeCommandRegistry.GetRequired("launch-session");
+            Assert.AreEqual("launchSession", launch.payloadFieldName);
+            Assert.AreEqual(ASMLiteSmokeCommandDispatchMode.StartupOnly, launch.dispatchMode,
+                "launch-session is consumed during host bootstrap; file-poll dispatch should reject a second launch-session command explicitly.");
+
+            CollectionAssert.AreEquivalent(
+                new[] { "run-suite", "review-decision", "abort-run", "shutdown-session" },
+                ASMLiteSmokeCommandRegistry.PolledCommandTypes.ToArray());
+        }
+
+        [Test]
         public void LoadEventFixture_preserves_ordering_and_protocol_fields()
         {
             var events = ASMLiteSmokeProtocol.LoadEventFixture("events.sample.ndjson");

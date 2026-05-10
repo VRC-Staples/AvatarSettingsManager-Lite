@@ -7,6 +7,8 @@ use crate::model::{
 use crate::protocol::{
     load_command_from_str, load_events_from_ndjson_tolerant, to_json as protocol_to_json,
     AbortRunPayload, ReviewDecisionPayload, RunSuitePayload, SmokeProtocolCommand,
+    COMMAND_TYPE_ABORT_RUN, COMMAND_TYPE_LAUNCH_SESSION, COMMAND_TYPE_REVIEW_DECISION,
+    COMMAND_TYPE_RUN_SUITE,
 };
 use crate::session::{
     allocate_next_command_identity, generate_session_id, load_failure_from_str,
@@ -49,7 +51,7 @@ pub fn run_overlay_bootstrap(config: &OverlayBootstrapConfig) -> Result<StartupS
         package_version: "com.staples.asm-lite".to_string(),
         unity_version: "unknown".to_string(),
         global_reset_default: suite_model.global_reset_default.as_str().to_string(),
-        capabilities: vec!["launch-session".to_string()],
+        capabilities: vec![COMMAND_TYPE_LAUNCH_SESSION.to_string()],
     };
 
     write_initial_session_documents(&session_paths, &session_id, &catalog, &metadata)
@@ -480,7 +482,7 @@ pub fn dispatch_review_decision_command(
     }
 
     let (command_seq, command_id) =
-        allocate_next_command_identity(host_state.last_command_seq, "review-decision")
+        allocate_next_command_identity(host_state.last_command_seq, COMMAND_TYPE_REVIEW_DECISION)
             .map_err(|error| format!("failed to allocate review-decision identity: {error}"))?;
 
     let command = SmokeProtocolCommand {
@@ -488,7 +490,7 @@ pub fn dispatch_review_decision_command(
         session_id: host_state.session_id.trim().to_string(),
         command_id: command_id.clone(),
         command_seq,
-        command_type: "review-decision".to_string(),
+        command_type: COMMAND_TYPE_REVIEW_DECISION.to_string(),
         created_at_utc: unix_epoch_seconds_utc(),
         launch_session: None,
         run_suite: None,
@@ -503,7 +505,7 @@ pub fn dispatch_review_decision_command(
     };
 
     let command_path = session_paths
-        .command_path(command_seq, "review-decision", &command_id)
+        .command_path(command_seq, COMMAND_TYPE_REVIEW_DECISION, &command_id)
         .map_err(|error| format!("failed to build review-decision path: {error}"))?;
     write_command_document_atomically(&command_path, &command, true)
         .map_err(|error| format!("failed to write review-decision command: {error}"))?;
@@ -660,7 +662,7 @@ pub fn dispatch_abort_run_command(
     }
 
     let (command_seq, command_id) =
-        allocate_next_command_identity(host_state.last_command_seq, "abort-run")
+        allocate_next_command_identity(host_state.last_command_seq, COMMAND_TYPE_ABORT_RUN)
             .map_err(|error| format!("failed to allocate abort-run identity: {error}"))?;
 
     let command = SmokeProtocolCommand {
@@ -668,7 +670,7 @@ pub fn dispatch_abort_run_command(
         session_id: host_state.session_id.trim().to_string(),
         command_id: command_id.clone(),
         command_seq,
-        command_type: "abort-run".to_string(),
+        command_type: COMMAND_TYPE_ABORT_RUN.to_string(),
         created_at_utc: unix_epoch_seconds_utc(),
         launch_session: None,
         run_suite: None,
@@ -686,7 +688,7 @@ pub fn dispatch_abort_run_command(
     };
 
     let command_path = session_paths
-        .command_path(command_seq, "abort-run", &command_id)
+        .command_path(command_seq, COMMAND_TYPE_ABORT_RUN, &command_id)
         .map_err(|error| format!("failed to build abort-run path: {error}"))?;
     write_command_document_atomically(&command_path, &command, true)
         .map_err(|error| format!("failed to write abort-run command: {error}"))?;
@@ -749,7 +751,7 @@ pub fn dispatch_suite_run_command(
     }
 
     let (command_seq, command_id) =
-        allocate_next_command_identity(host_state.last_command_seq, "run-suite")
+        allocate_next_command_identity(host_state.last_command_seq, COMMAND_TYPE_RUN_SUITE)
             .map_err(|error| format!("failed to allocate run-suite command identity: {error}"))?;
 
     let command = build_run_suite_command(
@@ -763,7 +765,7 @@ pub fn dispatch_suite_run_command(
     );
 
     let command_path = session_paths
-        .command_path(command_seq, "run-suite", &command_id)
+        .command_path(command_seq, COMMAND_TYPE_RUN_SUITE, &command_id)
         .map_err(|error| format!("failed to build command path: {error}"))?;
     write_command_document_atomically(&command_path, &command, true)
         .map_err(|error| format!("failed to write run-suite command: {error}"))?;
@@ -785,7 +787,7 @@ fn build_run_suite_command(
         session_id: session_id.trim().to_string(),
         command_id: command_id.trim().to_string(),
         command_seq,
-        command_type: "run-suite".to_string(),
+        command_type: COMMAND_TYPE_RUN_SUITE.to_string(),
         created_at_utc: unix_epoch_seconds_utc(),
         launch_session: None,
         run_suite: Some(RunSuitePayload {
@@ -1059,7 +1061,7 @@ mod tests {
         assert_eq!(payload.step_sleep_seconds, None);
 
         let command_path = session_paths
-            .command_path(command.command_seq, "run-suite", &command.command_id)
+            .command_path(command.command_seq, COMMAND_TYPE_RUN_SUITE, &command.command_id)
             .expect("command path should build");
         let raw = fs::read_to_string(&command_path).expect("command document should exist");
         assert!(raw.contains("\"suiteId\": \"asm-lite-readiness-check\""));
@@ -1088,7 +1090,7 @@ mod tests {
             .expect_err("running host should reject another run-suite command")
             .contains("host is already running"));
         let command_path = session_paths
-            .command_path(5, "run-suite", "cmd_000005_run-suite")
+            .command_path(5, COMMAND_TYPE_RUN_SUITE, "cmd_000005_run-suite")
             .expect("command path should build");
         assert!(
             !command_path.exists(),
@@ -1134,7 +1136,7 @@ mod tests {
             .expect("run-suite payload should exist");
         assert_eq!(payload.suite_id, "lifecycle-roundtrip");
         let command_path = session_paths
-            .command_path(command.command_seq, "run-suite", &command.command_id)
+            .command_path(command.command_seq, COMMAND_TYPE_RUN_SUITE, &command.command_id)
             .expect("command path should build");
         let raw = fs::read_to_string(&command_path).expect("command document should exist");
         assert!(raw.contains("\"suiteId\": \"lifecycle-roundtrip\""));
@@ -1176,7 +1178,7 @@ mod tests {
         assert_eq!(payload.step_sleep_seconds, Some(2.25));
 
         let command_path = session_paths
-            .command_path(command.command_seq, "run-suite", &command.command_id)
+            .command_path(command.command_seq, COMMAND_TYPE_RUN_SUITE, &command.command_id)
             .expect("command path should build");
         let raw = fs::read_to_string(&command_path).expect("command document should exist");
         assert!(raw.contains("\"stepSleepSeconds\": 2.25"));
@@ -1231,11 +1233,11 @@ mod tests {
         assert_eq!(payload.notes, "operator-review-decision");
 
         let command_path = session_paths
-            .command_path(command.command_seq, "review-decision", &command.command_id)
+            .command_path(command.command_seq, COMMAND_TYPE_REVIEW_DECISION, &command.command_id)
             .expect("command path should build");
         let raw = fs::read_to_string(&command_path).expect("review command should be written");
         let parsed = load_command_from_str(&raw).expect("review command should parse");
-        assert_eq!(parsed.command_type, "review-decision");
+        assert_eq!(parsed.command_type, COMMAND_TYPE_REVIEW_DECISION);
     }
 
     #[test]

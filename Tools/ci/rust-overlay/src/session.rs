@@ -1,7 +1,8 @@
 use crate::catalog::SmokeSuiteCatalog;
 use crate::protocol::{
-    load_events_from_file_tolerant, protocol_fixture_directory, recover_processed_command_ids,
-    to_json as serialize_command_json, SmokeProtocolCommand, SmokeProtocolEvent,
+    is_polled_command_type, load_events_from_file_tolerant, protocol_fixture_directory,
+    recover_processed_command_ids, to_json as serialize_command_json, SmokeProtocolCommand,
+    SmokeProtocolEvent, COMMAND_TYPE_LAUNCH_SESSION, COMMAND_TYPE_RUN_SUITE,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -400,6 +401,12 @@ pub fn allocate_next_command_identity(
     }
 
     let normalized_type = sanitize_identifier(command_type, "commandType")?;
+    if !is_polled_command_type(&normalized_type) {
+        return Err(SessionContractError(format!(
+            "commandType '{normalized_type}' is not accepted by file-poll dispatch."
+        )));
+    }
+
     let next_seq = last_command_seq + 1;
     let command_id = format!("cmd_{next_seq:06}_{normalized_type}");
     Ok((next_seq, command_id))
@@ -1501,7 +1508,7 @@ mod tests {
 
     #[test]
     fn allocate_next_command_identity_increments_sequence_and_formats_command_id() {
-        let (next_seq, command_id) = allocate_next_command_identity(3, "run-suite")
+        let (next_seq, command_id) = allocate_next_command_identity(3, COMMAND_TYPE_RUN_SUITE)
             .expect("command identity should allocate");
         assert_eq!(next_seq, 4);
         assert_eq!(command_id, "cmd_000004_run-suite");
@@ -1509,9 +1516,16 @@ mod tests {
 
     #[test]
     fn allocate_next_command_identity_rejects_negative_last_seq() {
-        let error = allocate_next_command_identity(-1, "run-suite")
+        let error = allocate_next_command_identity(-1, COMMAND_TYPE_RUN_SUITE)
             .expect_err("negative last seq should be rejected");
         assert!(error.to_string().contains("lastCommandSeq"));
+    }
+
+    #[test]
+    fn allocate_next_command_identity_rejects_startup_only_command_types() {
+        let error = allocate_next_command_identity(0, COMMAND_TYPE_LAUNCH_SESSION)
+            .expect_err("startup-only commands should not be allocated as polled commands");
+        assert!(error.to_string().contains("file-poll dispatch"));
     }
 
     #[test]
@@ -1527,7 +1541,7 @@ mod tests {
             package_version: "package-dev".to_string(),
             unity_version: "2022.3.22f1".to_string(),
             global_reset_default: "SceneReload".to_string(),
-            capabilities: vec!["launch-session".to_string()],
+            capabilities: vec![COMMAND_TYPE_LAUNCH_SESSION.to_string()],
         };
 
         let session = write_initial_session_documents(
@@ -1556,7 +1570,7 @@ mod tests {
             package_version: "package-dev".to_string(),
             unity_version: "2022.3.22f1".to_string(),
             global_reset_default: "SceneReload".to_string(),
-            capabilities: vec!["launch-session".to_string()],
+            capabilities: vec![COMMAND_TYPE_LAUNCH_SESSION.to_string()],
         };
 
         write_initial_session_documents(

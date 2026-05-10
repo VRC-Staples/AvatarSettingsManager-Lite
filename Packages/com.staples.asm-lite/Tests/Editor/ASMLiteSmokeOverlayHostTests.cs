@@ -1904,6 +1904,27 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void CommandPolling_RejectsLaunchSessionAsStartupOnly()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000001_launch-session";
+                WriteCommand(context.Paths, BuildLaunchSessionCommand(1, commandId));
+
+                context.Runtime.AdvanceSeconds(1);
+
+                var rejectedEvent = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                    .FirstOrDefault(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal)
+                        && string.Equals(item.eventType, "command-rejected", StringComparison.Ordinal));
+
+                Assert.That(rejectedEvent, Is.Not.Null);
+                Assert.That(rejectedEvent.message, Does.Contain("not accepted by file-poll dispatch"));
+                var hostState = ReadHostState(context.Paths.HostStatePath);
+                Assert.AreEqual(1, hostState.lastCommandSeq);
+            }
+        }
+
+        [Test]
         public void CommandPolling_DoesNotReprocessCommandIdsRecoveredFromEvents()
         {
             using (var context = RunnerTestContext.CreateWithoutStart(exitOnReady: false))
@@ -2545,6 +2566,36 @@ namespace ASMLite.Tests.Editor
             Assert.Fail($"Runner did not return to idle within the expected tick budget. {stateSummary}. Events: {eventSummary}");
         }
 
+        private static ASMLiteSmokeProtocolCommand BuildLaunchSessionCommand(int commandSeq, string commandId)
+        {
+            return new ASMLiteSmokeProtocolCommand
+            {
+                protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
+                sessionId = "phase06",
+                commandId = commandId,
+                commandSeq = commandSeq,
+                commandType = ASMLiteSmokeCommandRegistry.LaunchSession,
+                createdAtUtc = "2026-04-23T00:00:00Z",
+                launchSession = new ASMLiteSmokeLaunchSessionPayload
+                {
+                    catalogVersion = 1,
+                    catalogPath = "Tools/ci/smoke/suite-catalog.json",
+                    catalogSnapshotPath = "suite-catalog.snapshot.json",
+                    projectPath = "Tools/ci/unity-project",
+                    packageVersion = "com.staples.asm-lite",
+                    unityVersion = "2022.3.22f1",
+                    overlayVersion = "overlay-dev",
+                    hostVersion = "host-dev",
+                    globalResetDefault = "SceneReload",
+                    requestedBy = "operator",
+                    capabilities = new[] { ASMLiteSmokeCommandRegistry.LaunchSession },
+                },
+                runSuite = null,
+                reviewDecision = null,
+                abortRun = null,
+            };
+        }
+
         private static ASMLiteSmokeProtocolCommand BuildRunSuiteCommand(int commandSeq, string commandId, string suiteId = "lifecycle-roundtrip")
         {
             return new ASMLiteSmokeProtocolCommand
@@ -2553,7 +2604,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = "phase06",
                 commandId = commandId,
                 commandSeq = commandSeq,
-                commandType = "run-suite",
+                commandType = ASMLiteSmokeCommandRegistry.RunSuite,
                 createdAtUtc = "2026-04-23T00:00:00Z",
                 launchSession = null,
                 runSuite = new ASMLiteSmokeRunSuitePayload
@@ -2583,7 +2634,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = "phase06",
                 commandId = commandId,
                 commandSeq = commandSeq,
-                commandType = "review-decision",
+                commandType = ASMLiteSmokeCommandRegistry.ReviewDecision,
                 createdAtUtc = "2026-04-23T00:00:00Z",
                 launchSession = null,
                 runSuite = null,
@@ -2612,7 +2663,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = "phase06",
                 commandId = commandId,
                 commandSeq = commandSeq,
-                commandType = "abort-run",
+                commandType = ASMLiteSmokeCommandRegistry.AbortRun,
                 createdAtUtc = "2026-04-23T00:00:00Z",
                 launchSession = null,
                 runSuite = null,
@@ -3420,7 +3471,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = "phase06",
                 commandId = commandId,
                 commandSeq = commandSeq,
-                commandType = "shutdown-session",
+                commandType = ASMLiteSmokeCommandRegistry.ShutdownSession,
                 createdAtUtc = "2026-04-23T00:00:00Z",
                 launchSession = null,
                 runSuite = null,
