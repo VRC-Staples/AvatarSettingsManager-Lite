@@ -157,7 +157,7 @@ namespace ASMLite.Editor
                     mirrorDetail: descriptorResult);
             }
 
-            var liveRetargetResult = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, mirrorResult.TargetPath, "Vendorize Transaction Live Retarget");
+            var liveRetargetResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, mirrorResult.TargetPath, "Vendorize Transaction Live Retarget");
             if (!liveRetargetResult.Success)
             {
                 return FailAttachedVendorizeAndRollback(
@@ -298,7 +298,7 @@ namespace ASMLite.Editor
             var originalComponentState = CaptureComponentVendorizedState(component);
             ASMLiteGeneratedAssetMirrorResult deleteBackupResult = null;
 
-            var refreshResult = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiringWithDiagnostics(component.gameObject, component, "Return To Package Managed Transaction Refresh");
+            var refreshResult = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiringWithDiagnostics(component.gameObject, component, "Return To Package Managed Transaction Refresh");
             if (!refreshResult.Success)
             {
                 return ASMLiteLifecycleTransactionResult.Fail(
@@ -333,7 +333,7 @@ namespace ASMLite.Editor
                     mirrorDetail: descriptorResult);
             }
 
-            var liveRetargetResult = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, ASMLiteAssetPaths.GeneratedDir, "Return To Package Managed Transaction Live Retarget");
+            var liveRetargetResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, ASMLiteAssetPaths.GeneratedDir, "Return To Package Managed Transaction Live Retarget");
             if (!liveRetargetResult.Success)
             {
                 return FailAttachedReturnAndRollback(
@@ -886,7 +886,7 @@ namespace ASMLite.Editor
                 PrefabUtility.RecordPrefabInstancePropertyModifications(component);
                 AssetDatabase.SaveAssets();
 
-                var refreshResult = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiringWithDiagnostics(instance, component, "Detached Return Recovery");
+                var refreshResult = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiringWithDiagnostics(instance, component, "Detached Return Recovery");
                 if (!refreshResult.Success)
                 {
                     UnityEngine.Object.DestroyImmediate(instance);
@@ -1116,7 +1116,7 @@ namespace ASMLite.Editor
             bool rollbackAttempted = true;
 
             var restoreDescriptorResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult?.TargetPath ?? string.Empty);
-            var restoreLiveResult = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, ASMLiteAssetPaths.GeneratedDir, "Vendorize Transaction Rollback Live Retarget");
+            var restoreLiveResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, ASMLiteAssetPaths.GeneratedDir, "Vendorize Transaction Rollback Live Retarget");
             ApplyComponentVendorizedState(component, originalComponentState.UseVendorizedGeneratedAssets, originalComponentState.VendorizedGeneratedAssetsPath);
             var rollbackMirrorResult = mirrorResult != null
                 ? ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(mirrorResult)
@@ -1169,7 +1169,7 @@ namespace ASMLite.Editor
                 ? ASMLiteGeneratedAssetMirrorService.RollbackVendorizedFolderDelete(deleteBackupResult)
                 : null;
             var restoreDescriptorResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, vendorizedDir);
-            var restoreLiveResult = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, vendorizedDir, "Return To Package Managed Transaction Rollback Live Retarget");
+            var restoreLiveResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, vendorizedDir, "Return To Package Managed Transaction Rollback Live Retarget");
 
             bool rollbackSucceeded = (rollbackDeleteResult == null || rollbackDeleteResult.Success)
                 && restoreDescriptorResult.Success
@@ -1442,7 +1442,7 @@ namespace ASMLite.Editor
             out string failureMessage,
             out string failureContext)
         {
-            var snapshotResult = ASMLitePrefabCreator.TryCaptureLiveFullControllerReferenceSnapshot(component, "Lifecycle Transaction Verify", out var snapshot);
+            var snapshotResult = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(component, "Lifecycle Transaction Verify", out var snapshot);
             if (!snapshotResult.Success)
             {
                 failureMessage = snapshotResult.Message;
@@ -1831,7 +1831,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            var refreshResult = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiringWithDiagnostics(
+            var refreshResult = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiringWithDiagnostics(
                 component.gameObject,
                 component,
                 contextLabel + " Auto-Heal");

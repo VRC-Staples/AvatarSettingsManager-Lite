@@ -651,7 +651,7 @@ namespace ASMLite.Tests.Editor
             EditorUtility.SetDirty(_ctx.Comp);
             AssetDatabase.SaveAssets();
 
-            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "A56 Setup"),
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "A56 Setup"),
                 "A56: setup should create a live FullController payload before attached-return rollback validation.");
             Assert.IsTrue(ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, vendorizedDir),
                 "A56: setup should retarget live FullController references to vendorized assets before attached-return rollback validation.");

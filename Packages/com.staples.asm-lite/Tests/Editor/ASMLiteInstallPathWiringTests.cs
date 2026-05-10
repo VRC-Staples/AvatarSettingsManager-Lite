@@ -107,7 +107,7 @@ namespace ASMLite.Tests.Editor
             var go = new GameObject("W06_NullComponent");
             try
             {
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(go, null, "W06 Null Component"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(go, null, "W06 Null Component"),
                     "W06: live FullController wiring should fail closed and still complete when no ASM-Lite component is available.");
 
                 var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(go);
@@ -419,7 +419,7 @@ namespace ASMLite.Tests.Editor
                 ctx.Comp.useCustomInstallPath = useCustomInstallPath;
                 ctx.Comp.customInstallPath = customInstallPath;
 
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Install Path Wiring Test"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Install Path Wiring Test"),
                     "Live FullController wiring refresh should succeed for install-path wiring coverage.");
 
                 var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);

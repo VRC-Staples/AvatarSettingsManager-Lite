@@ -5987,29 +5987,6 @@ namespace ASMLite.Editor
                 .ToArray();
         }
 
-        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
-        {
-            if (component == null || component.gameObject == null)
-                return null;
-
-            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                var behavior = behaviors[i];
-                if (behavior == null)
-                    continue;
-
-                var type = behavior.GetType();
-                if (type == null)
-                    continue;
-
-                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    return behavior;
-            }
-
-            return null;
-        }
-
         private static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
         {
             if (component == null)
@@ -6018,13 +5995,13 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (FindLiveVrcFuryComponent(component) == null)
+            if (!ASMLiteFullControllerWiring.HasLiveVrcFuryComponent(component))
             {
-                bool repaired = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(
+                bool repaired = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(
                     component.gameObject,
                     component,
                     contextLabel + " Auto-Heal");
-                if (!repaired || FindLiveVrcFuryComponent(component) == null)
+                if (!repaired || !ASMLiteFullControllerWiring.HasLiveVrcFuryComponent(component))
                 {
                     Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
                     return false;
@@ -6100,7 +6077,7 @@ namespace ASMLite.Editor
 
         private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
-            var result = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
+            var result = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
             if (!result.Success)
                 Debug.LogError(result.ToLogString());
 
@@ -6440,7 +6417,7 @@ namespace ASMLite.Editor
             if (component != null)
             {
                 CopyPendingCustomizationToComponent(component);
-                if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
+                if (!ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
                 {
                     Debug.LogError("[ASM-Lite] Failed to refresh live FullController wiring on newly added prefab instance.");
                     Undo.DestroyObjectImmediate(instance);
@@ -6503,7 +6480,7 @@ namespace ASMLite.Editor
                 {
                     ASMLiteMigrationContinuityService.ApplyCustomizationSnapshot(newComponent, migrationSnapshot);
 
-                    if (!ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
+                    if (!ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
                     {
                         Debug.LogError("[ASM-Lite] Migration rebuild failed to refresh live FullController wiring. Aborting rebuild.");
                         return;

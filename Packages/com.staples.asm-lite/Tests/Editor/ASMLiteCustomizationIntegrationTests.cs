@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
@@ -400,14 +399,7 @@ namespace ASMLite.Tests.Editor
 
         private string ConfigureFullControllerAndReadPrefix(string aid)
         {
-            var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(
-                "ConfigureVRCFuryFullController",
-                BindingFlags.Static | BindingFlags.NonPublic);
-
-            Assert.IsNotNull(configureMethod,
-                $"{aid}: expected ASMLitePrefabCreator.ConfigureVRCFuryFullController private method was not found.");
-
-            Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { _ctx.Comp.gameObject, _ctx.Comp }),
+            Assert.DoesNotThrow(() => ASMLiteFullControllerWiring.ConfigurePrefabRoot(_ctx.Comp.gameObject, _ctx.Comp),
                 $"{aid}: FullController wiring should complete without throwing for combined customization fixture.");
 
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
