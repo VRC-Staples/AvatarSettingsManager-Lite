@@ -167,7 +167,7 @@ namespace ASMLite.Tests.Editor
             var generated = LoadGeneratedParams();
 
             var duplicates = generated
-                .Where(p => p.name != null && p.name.StartsWith("ASMLite_"))
+                .Where(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter)
                 .GroupBy(p => p.name)
                 .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
@@ -189,7 +189,7 @@ namespace ASMLite.Tests.Editor
             var generated = LoadGeneratedParams();
 
             var nonBackupAsmParams = generated
-                .Where(p => p.name != null && p.name.StartsWith("ASMLite_") && !p.name.StartsWith("ASMLite_Bak_"))
+                .Where(p => ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter(p) && !p.name.StartsWith("ASMLite_Bak_"))
                 .Select(p => p.name)
                 .ToList();
 

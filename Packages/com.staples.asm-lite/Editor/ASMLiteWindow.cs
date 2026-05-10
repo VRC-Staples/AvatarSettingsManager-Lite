@@ -3948,7 +3948,7 @@ namespace ASMLite.Editor
                 {
                     if (p == null || string.IsNullOrEmpty(p.name))
                         continue;
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name))
                         continue;
                     if (p.valueType != VRCExpressionParameters.ValueType.Bool
                         && p.valueType != VRCExpressionParameters.ValueType.Int
@@ -3970,7 +3970,7 @@ namespace ASMLite.Editor
                     string paramName = referencedVfParams[i];
                     if (string.IsNullOrWhiteSpace(paramName))
                         continue;
-                    if (paramName.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(paramName))
                         continue;
 
                     names.Add(paramName);
@@ -3989,7 +3989,7 @@ namespace ASMLite.Editor
                     string assigned = assignedGlobals[i];
                     if (string.IsNullOrWhiteSpace(assigned))
                         continue;
-                    if (assigned.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(assigned))
                         continue;
 
                     names.Add(assigned);
@@ -4017,11 +4017,11 @@ namespace ASMLite.Editor
 
                     if (string.IsNullOrWhiteSpace(deterministic))
                         continue;
-                    if (deterministic.StartsWith("ASMLite_", StringComparison.Ordinal))
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(deterministic))
                         continue;
 
                     if (!string.IsNullOrWhiteSpace(candidate.GlobalParam)
-                        && !candidate.GlobalParam.StartsWith("ASMLite_", StringComparison.Ordinal))
+                        && !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(candidate.GlobalParam))
                     {
                         names.Remove(candidate.GlobalParam.Trim());
                     }
@@ -4074,12 +4074,34 @@ namespace ASMLite.Editor
 
         private static bool IsAsmLiteGeneratedPresetsMenu(VRCExpressionsMenu menu)
         {
+<<<<<<< HEAD
             return ASMLiteWindowOperations.IsGeneratedPresetsMenu(menu);
+=======
+            if (menu == null)
+                return false;
+
+            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(menuPath))
+                return false;
+
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(menuPath);
+>>>>>>> wt/t_a70f630c
         }
 
         private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
         {
+<<<<<<< HEAD
             return ASMLiteWindowOperations.IsGeneratedMenuAsset(menu);
+=======
+            if (menu == null)
+                return false;
+
+            string menuPath = AssetDatabase.GetAssetPath(menu)?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(menuPath))
+                return false;
+
+            return ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(menuPath);
+>>>>>>> wt/t_a70f630c
         }
 
         private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
@@ -5738,7 +5760,19 @@ namespace ASMLite.Editor
 
         internal static ASMLiteInstallationState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
+<<<<<<< HEAD
             return ASMLiteWindowOperations.GetAsmLiteToolState(avatar, component);
+=======
+            if (component != null)
+                return component.useVendorizedGeneratedAssets ? AsmLiteToolState.Vendorized : AsmLiteToolState.PackageManaged;
+            if (avatar == null)
+                return AsmLiteToolState.NotInstalled;
+            if (ASMLiteGeneratedOwnershipPolicy.HasVendorizedReferences(avatar))
+                return AsmLiteToolState.Vendorized;
+            if (ASMLiteGeneratedOwnershipPolicy.HasRuntimeMarkers(avatar))
+                return AsmLiteToolState.Detached;
+            return AsmLiteToolState.NotInstalled;
+>>>>>>> wt/t_a70f630c
         }
 
         private ASMLiteComponent GetOrRefreshComponent()

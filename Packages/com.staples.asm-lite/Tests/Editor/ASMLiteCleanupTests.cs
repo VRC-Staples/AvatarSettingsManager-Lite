@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -241,6 +242,245 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
         }
 
+=======
+using NUnit.Framework;
+using UnityEditor;
+using UnityEditor.Animations;
+using UnityEngine;
+using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using ASMLite.Editor;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace ASMLite.Tests.Editor
+{
+    /// <summary>
+    /// A35-A41: Cleanup integration invariants for Remove Prefab flow.
+    /// These tests seed avatar assets via Build(), then verify CleanUpAvatarAssets()
+    /// removes only ASM-Lite generated content while preserving user-owned artifacts.
+    /// </summary>
+    [TestFixture]
+    public class ASMLiteCleanupTests
+    {
+        private AsmLiteTestContext _ctx;
+        private string _cleanupVendorizedAvatarFolder;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            Assert.IsNotNull(_ctx, "A35: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "A35: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx.AvDesc, "A35: fixture did not create VRCAvatarDescriptor.");
+            Assert.IsNotNull(_ctx.Ctrl, "A35: fixture did not create FX AnimatorController.");
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (!string.IsNullOrWhiteSpace(_cleanupVendorizedAvatarFolder)
+                && AssetDatabase.IsValidFolder(_cleanupVendorizedAvatarFolder))
+            {
+                AssetDatabase.DeleteAsset(_cleanupVendorizedAvatarFolder);
+            }
+
+            if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
+                && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
+            {
+                AssetDatabase.DeleteAsset("Assets/ASM-Lite");
+            }
+
+            AssetDatabase.Refresh();
+            _cleanupVendorizedAvatarFolder = null;
+            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+        }
+
+        // ── Helpers ────────────────────────────────────────────────────────────
+
+        private static void AddAvatarParam(AsmLiteTestContext ctx, string name, VRCExpressionParameters.ValueType type, float defaultValue = 0f)
+        {
+            var existing = ctx.ParamsAsset.parameters ?? new VRCExpressionParameters.Parameter[0];
+            var updated = new VRCExpressionParameters.Parameter[existing.Length + 1];
+            existing.CopyTo(updated, 0);
+            updated[existing.Length] = new VRCExpressionParameters.Parameter
+            {
+                name = name,
+                valueType = type,
+                defaultValue = defaultValue,
+                saved = true,
+                networkSynced = true,
+            };
+            ctx.ParamsAsset.parameters = updated;
+            EditorUtility.SetDirty(ctx.ParamsAsset);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteLayers(AsmLiteTestContext ctx, int slotCount)
+        {
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                ctx.Ctrl.AddLayer(new AnimatorControllerLayer
+                {
+                    name = $"ASMLite_Slot{slot}",
+                    defaultWeight = 1f,
+                    stateMachine = new AnimatorStateMachine { name = $"ASMLite_Slot{slot}_SM" }
+                });
+            }
+            EditorUtility.SetDirty(ctx.Ctrl);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteFxParams(AsmLiteTestContext ctx, params string[] paramNames)
+        {
+            ctx.Ctrl.AddParameter("ASMLite_Ctrl", AnimatorControllerParameterType.Int);
+            foreach (var name in paramNames)
+                ctx.Ctrl.AddParameter($"ASMLite_Bak_S1_{name}", AnimatorControllerParameterType.Float);
+            EditorUtility.SetDirty(ctx.Ctrl);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteExprParams(AsmLiteTestContext ctx, params string[] paramNames)
+        {
+            var existing = ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0];
+            var list = new System.Collections.Generic.List<VRCExpressionParameters.Parameter>(existing);
+            list.Add(new VRCExpressionParameters.Parameter { name = "ASMLite_Ctrl", valueType = VRCExpressionParameters.ValueType.Int });
+            foreach (var name in paramNames)
+                list.Add(new VRCExpressionParameters.Parameter { name = $"ASMLite_Bak_S1_{name}", valueType = VRCExpressionParameters.ValueType.Float });
+            ctx.AvDesc.expressionParameters.parameters = list.ToArray();
+            EditorUtility.SetDirty(ctx.AvDesc.expressionParameters);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void SeedLegacyAsmLiteMenu(AsmLiteTestContext ctx)
+        {
+            ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
+            {
+                name = "Settings Manager",
+                type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+            });
+            EditorUtility.SetDirty(ctx.AvDesc.expressionsMenu);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static int BuildOrFail(AsmLiteTestContext ctx, string aid)
+        {
+            int buildResult = ASMLiteBuilder.Build(ctx.Comp);
+            Assert.GreaterOrEqual(buildResult, 0,
+                $"{aid}: Build() failed with result {buildResult}.");
+            return buildResult;
+        }
+
+        private static int CountASMLiteLayers(AnimatorController ctrl)
+            => ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
+
+        private static int CountASMLiteFxParams(AnimatorController ctrl)
+            => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
+
+        private static int CountASMLiteExprParams(VRCExpressionParameters exprParams)
+        {
+            var items = exprParams?.parameters ?? new VRCExpressionParameters.Parameter[0];
+            return items.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
+        }
+
+        private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
+        {
+            if (rootMenu?.controls == null) return 0;
+            return rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+        }
+
+        private static int FindFxLayerIndex(VRCAvatarDescriptor avDesc)
+        {
+            for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
+            {
+                if (avDesc.baseAnimationLayers[i].type == VRCAvatarDescriptor.AnimLayerType.FX)
+                    return i;
+            }
+            return -1;
+        }
+
+        private static string EnsureAssetFolder(string parent, string child)
+        {
+            string candidate = parent + "/" + child;
+            if (!AssetDatabase.IsValidFolder(candidate))
+                AssetDatabase.CreateFolder(parent, child);
+            return candidate;
+        }
+
+        private static string CreateVendorizedMirrorForTest(string avatarName)
+        {
+            string root = EnsureAssetFolder("Assets", "ASM-Lite");
+            string avatarFolder = EnsureAssetFolder(root, avatarName);
+            string generatedFolder = EnsureAssetFolder(avatarFolder, "GeneratedAssets");
+
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.FXController, generatedFolder);
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.ExprParams, generatedFolder);
+            CopyPackageAssetToMirror(ASMLiteAssetPaths.Menu, generatedFolder);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            return generatedFolder;
+        }
+
+        private static int CountMenuAssetsUnderPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || visited == null || !visited.Add(menu))
+                return 0;
+
+            int count = 0;
+            string normalizedPrefix = assetPrefix.Replace('\\', '/').TrimEnd('/');
+            string menuPath = AssetDatabase.GetAssetPath(menu);
+            if (ASMLiteGeneratedOwnershipPolicy.PathStartsWith(menuPath, normalizedPrefix))
+            {
+                count++;
+            }
+
+            if (menu.controls == null)
+                return count;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control?.subMenu == null)
+                    continue;
+
+                count += CountMenuAssetsUnderPrefix(control.subMenu, normalizedPrefix, visited);
+            }
+
+            return count;
+        }
+
+        private void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        {
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp != null ? _ctx.Comp.gameObject : null);
+            Assert.IsNotNull(vf,
+                assertionMessage + " Expected a live VF.Model.VRCFury component on the ASM-Lite object.");
+
+            string normalizedPrefix = expectedPrefix.Replace('\\', '/').TrimEnd('/');
+            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
+            var parametersReference = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
+                vf,
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
+
+            Assert.IsTrue(controllerReference.HasReference,
+                assertionMessage + " Expected a populated FullController FX controller reference.");
+            Assert.IsTrue(menuReference.HasReference,
+                assertionMessage + " Expected a populated FullController menu reference.");
+            Assert.IsTrue(parametersReference.HasReference,
+                assertionMessage + " Expected a populated FullController parameter reference.");
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(controllerReference.AssetPath, normalizedPrefix),
+                assertionMessage + " Expected the FullController FX controller reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(menuReference.AssetPath, normalizedPrefix),
+                assertionMessage + " Expected the FullController menu reference to point at the expected generated-assets prefix.");
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(parametersReference.AssetPath, normalizedPrefix),
+                assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
+        }
+
+>>>>>>> wt/t_a70f630c
         private static int CountMatchingMoveMenuHelpers(VRCAvatarDescriptor avatar, string fromPath, string toPath)
         {
             if (avatar == null)

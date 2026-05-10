@@ -224,11 +224,11 @@ namespace ASMLite.Tests.Editor
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "Keep_A", VRCExpressionParameters.ValueType.Int, 1f);
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "Drop_B", VRCExpressionParameters.ValueType.Float, 0.3f);
 
-            int descriptorFxAsmLayersBefore = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorFxAsmLayersBefore = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             int descriptorExprAsmBefore = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
-                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
             int descriptorSettingsBefore = (_ctx.AvDesc.expressionsMenu.controls ?? new List<VRCExpressionsMenu.Control>())
-                .Count(c => c != null && c.name == ASMLiteBuilder.DefaultRootControlName);
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
 
             ExpectAsmLiteLog(LogType.Log,
                 "[ASM-Lite] Parameter exclusions:",
@@ -281,11 +281,11 @@ namespace ASMLite.Tests.Editor
                     $"A55: disabled exclusion toggle must keep Drop_B backup key ASMLite_Bak_S{slot}_Drop_B in expression schema.");
             }
 
-            int descriptorFxAsmLayersAfter = _ctx.Ctrl.layers.Count(l => l.name != null && l.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+            int descriptorFxAsmLayersAfter = _ctx.Ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             int descriptorExprAsmAfter = (_ctx.AvDesc.expressionParameters.parameters ?? new VRCExpressionParameters.Parameter[0])
-                .Count(p => p != null && p.name != null && p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal));
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
             int descriptorSettingsAfter = (_ctx.AvDesc.expressionsMenu.controls ?? new List<VRCExpressionsMenu.Control>())
-                .Count(c => c != null && c.name == ASMLiteBuilder.DefaultRootControlName);
+                .Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
 
             Assert.AreEqual(descriptorFxAsmLayersBefore, descriptorFxAsmLayersAfter,
                 "A55: Build() should not inject ASMLite layers into fixture descriptor FX controller during disabled-toggle baseline path.");
@@ -446,12 +446,10 @@ namespace ASMLite.Tests.Editor
         }
 
         private static int CountGeneratedFxSchemaKeys(AnimatorController ctrl)
-            => ctrl.parameters.Count(p => p != null && !string.IsNullOrEmpty(p.name)
-                && (p.name == ASMLiteBuilder.CtrlParam || p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal)));
+            => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
 
         private static int CountGeneratedExpressionSchemaKeys(VRCExpressionParameters expr)
-            => expr.parameters.Count(p => p != null && !string.IsNullOrEmpty(p.name)
-                && (p.name == ASMLiteBuilder.CtrlParam || p.name.StartsWith("ASMLite_", System.StringComparison.Ordinal)));
+            => expr.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
 
         private static int CountDuplicateNames(IEnumerable<string> names)
             => names
