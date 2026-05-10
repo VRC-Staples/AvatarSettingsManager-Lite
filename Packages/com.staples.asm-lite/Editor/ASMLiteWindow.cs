@@ -35,8 +35,35 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
-        // Pending slot count: shown before the prefab is added, applied on add.
-        private int _pendingSlotCount = 3;
+        // Pending customization draft: shown before the prefab is added, applied on add,
+        // and refreshed from the selected avatar component when present.
+        private readonly ASMLiteCustomizationDraft _customizationDraft = ASMLiteCustomizationDraft.CreateDefault();
+
+        private int _pendingSlotCount { get => _customizationDraft.SlotCount; set => _customizationDraft.SlotCount = value; }
+        private IconMode _pendingIconMode { get => _customizationDraft.IconMode; set => _customizationDraft.IconMode = value; }
+        private int _pendingSelectedGearIndex { get => _customizationDraft.SelectedGearIndex; set => _customizationDraft.SelectedGearIndex = value; }
+        private bool _pendingUseCustomSlotIcons { get => _customizationDraft.UseCustomSlotIcons; set => _customizationDraft.UseCustomSlotIcons = value; }
+        private Texture2D[] _pendingCustomIcons { get => _customizationDraft.CustomIcons; set => _customizationDraft.CustomIcons = value; }
+        private ActionIconMode _pendingActionIconMode { get => _customizationDraft.ActionIconMode; set => _customizationDraft.ActionIconMode = value; }
+        private Texture2D _pendingCustomSaveIcon { get => _customizationDraft.CustomSaveIcon; set => _customizationDraft.CustomSaveIcon = value; }
+        private Texture2D _pendingCustomLoadIcon { get => _customizationDraft.CustomLoadIcon; set => _customizationDraft.CustomLoadIcon = value; }
+        private Texture2D _pendingCustomClearIcon { get => _customizationDraft.CustomClearIcon; set => _customizationDraft.CustomClearIcon = value; }
+        private bool _pendingUseCustomRootIcon { get => _customizationDraft.UseCustomRootIcon; set => _customizationDraft.UseCustomRootIcon = value; }
+        private Texture2D _pendingCustomRootIcon { get => _customizationDraft.CustomRootIcon; set => _customizationDraft.CustomRootIcon = value; }
+        private bool _pendingUseCustomRootName { get => _customizationDraft.UseCustomRootName; set => _customizationDraft.UseCustomRootName = value; }
+        private string _pendingCustomRootName { get => _customizationDraft.CustomRootName; set => _customizationDraft.CustomRootName = value; }
+        private string[] _pendingCustomPresetNames { get => _customizationDraft.CustomPresetNames; set => _customizationDraft.CustomPresetNames = value; }
+        private string _pendingCustomPresetNameFormat { get => _customizationDraft.CustomPresetNameFormat; set => _customizationDraft.CustomPresetNameFormat = value; }
+        private string _pendingCustomSaveLabel { get => _customizationDraft.CustomSaveLabel; set => _customizationDraft.CustomSaveLabel = value; }
+        private string _pendingCustomLoadLabel { get => _customizationDraft.CustomLoadLabel; set => _customizationDraft.CustomLoadLabel = value; }
+        private string _pendingCustomClearPresetLabel { get => _customizationDraft.CustomClearPresetLabel; set => _customizationDraft.CustomClearPresetLabel = value; }
+        private string _pendingCustomConfirmLabel { get => _customizationDraft.CustomConfirmLabel; set => _customizationDraft.CustomConfirmLabel = value; }
+        private bool _pendingUseCustomInstallPath { get => _customizationDraft.UseCustomInstallPath; set => _customizationDraft.UseCustomInstallPath = value; }
+        private string _pendingCustomInstallPath { get => _customizationDraft.CustomInstallPath; set => _customizationDraft.CustomInstallPath = value; }
+        private bool _pendingUseParameterExclusions { get => _customizationDraft.UseParameterExclusions; set => _customizationDraft.UseParameterExclusions = value; }
+        private string[] _pendingExcludedParameterNames { get => _customizationDraft.ExcludedParameterNames; set => _customizationDraft.ExcludedParameterNames = value; }
+        private bool _pendingUseVendorizedGeneratedAssets { get => _customizationDraft.UseVendorizedGeneratedAssets; set => _customizationDraft.UseVendorizedGeneratedAssets = value; }
+        private string _pendingVendorizedGeneratedAssetsPath { get => _customizationDraft.VendorizedGeneratedAssetsPath; set => _customizationDraft.VendorizedGeneratedAssetsPath = value; }
 
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
@@ -45,43 +72,6 @@ namespace ASMLite.Editor
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
         private int _discoveredParamCount = -1;
-
-        // Pending icon mode: shown before the prefab is added, applied on add.
-        private IconMode _pendingIconMode = IconMode.MultiColor;
-
-        // Pending gear index: shown before the prefab is added, applied on add.
-        private int _pendingSelectedGearIndex = 0;
-
-        // Pending custom slot-icon toggle/icons: shown before prefab is added, applied on add.
-        private bool _pendingUseCustomSlotIcons = false;
-        private Texture2D[] _pendingCustomIcons = new Texture2D[3];
-
-        // Pending action icon mode: shown before the prefab is added, applied on add.
-        private ActionIconMode _pendingActionIconMode = ActionIconMode.Default;
-
-        // Pending custom action icons: used when _pendingActionIconMode is Custom.
-        private Texture2D _pendingCustomSaveIcon;
-        private Texture2D _pendingCustomLoadIcon;
-        private Texture2D _pendingCustomClearIcon;
-
-        // Pending customization scaffold state: copied into new prefab instances
-        // and refreshed from the selected avatar component when present.
-        private bool _pendingUseCustomRootIcon = false;
-        private Texture2D _pendingCustomRootIcon;
-        private bool _pendingUseCustomRootName = false;
-        private string _pendingCustomRootName = string.Empty;
-        private string[] _pendingCustomPresetNames = Array.Empty<string>();
-        private string _pendingCustomPresetNameFormat = string.Empty;
-        private string _pendingCustomSaveLabel = string.Empty;
-        private string _pendingCustomLoadLabel = string.Empty;
-        private string _pendingCustomClearPresetLabel = string.Empty;
-        private string _pendingCustomConfirmLabel = string.Empty;
-        private bool _pendingUseCustomInstallPath = false;
-        private string _pendingCustomInstallPath = string.Empty;
-        private bool _pendingUseParameterExclusions = false;
-        private string[] _pendingExcludedParameterNames = Array.Empty<string>();
-        private bool _pendingUseVendorizedGeneratedAssets;
-        private string _pendingVendorizedGeneratedAssetsPath = string.Empty;
 
         // Icon settings foldouts (hierarchy-style UI groups).
         private bool _iconsRootFoldout = true;
@@ -6173,61 +6163,12 @@ namespace ASMLite.Editor
 
         private ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CapturePendingCustomizationSnapshot()
         {
-            return new ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot(
-                _pendingSlotCount,
-                _pendingIconMode,
-                _pendingSelectedGearIndex,
-                _pendingActionIconMode,
-                _pendingCustomSaveIcon,
-                _pendingCustomLoadIcon,
-                _pendingCustomClearIcon,
-                _pendingUseCustomSlotIcons,
-                _pendingCustomIcons,
-                _pendingUseCustomRootIcon,
-                _pendingCustomRootIcon,
-                _pendingUseCustomRootName,
-                _pendingCustomRootName,
-                _pendingCustomPresetNames,
-                _pendingCustomPresetNameFormat,
-                _pendingCustomSaveLabel,
-                _pendingCustomLoadLabel,
-                _pendingCustomClearPresetLabel,
-                _pendingCustomConfirmLabel,
-                _pendingUseCustomInstallPath,
-                _pendingCustomInstallPath,
-                _pendingUseParameterExclusions,
-                _pendingExcludedParameterNames,
-                _pendingUseVendorizedGeneratedAssets,
-                _pendingVendorizedGeneratedAssetsPath);
+            return _customizationDraft.ToComponentSnapshot();
         }
 
         private void ApplyCustomizationSnapshotToPending(ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot snapshot)
         {
-            _pendingSlotCount = snapshot.SlotCount;
-            _pendingIconMode = snapshot.IconMode;
-            _pendingSelectedGearIndex = snapshot.SelectedGearIndex;
-            _pendingActionIconMode = snapshot.ActionIconMode;
-            _pendingCustomSaveIcon = snapshot.CustomSaveIcon;
-            _pendingCustomLoadIcon = snapshot.CustomLoadIcon;
-            _pendingCustomClearIcon = snapshot.CustomClearIcon;
-            _pendingUseCustomSlotIcons = snapshot.UseCustomSlotIcons;
-            _pendingCustomIcons = CloneTextures(snapshot.CustomIcons);
-            _pendingUseCustomRootIcon = snapshot.UseCustomRootIcon;
-            _pendingCustomRootIcon = snapshot.CustomRootIcon;
-            _pendingUseCustomRootName = snapshot.UseCustomRootName;
-            _pendingCustomRootName = snapshot.CustomRootName;
-            _pendingCustomPresetNames = CloneStrings(snapshot.CustomPresetNames);
-            _pendingCustomPresetNameFormat = snapshot.CustomPresetNameFormat;
-            _pendingCustomSaveLabel = snapshot.CustomSaveLabel;
-            _pendingCustomLoadLabel = snapshot.CustomLoadLabel;
-            _pendingCustomClearPresetLabel = snapshot.CustomClearPresetLabel;
-            _pendingCustomConfirmLabel = snapshot.CustomConfirmLabel;
-            _pendingUseCustomInstallPath = snapshot.UseCustomInstallPath;
-            _pendingCustomInstallPath = snapshot.CustomInstallPath;
-            _pendingUseParameterExclusions = snapshot.UseParameterExclusions;
-            _pendingExcludedParameterNames = SanitizeExcludedParameterNames(snapshot.ExcludedParameterNames);
-            _pendingUseVendorizedGeneratedAssets = snapshot.UseVendorizedGeneratedAssets;
-            _pendingVendorizedGeneratedAssetsPath = snapshot.VendorizedGeneratedAssetsPath;
+            _customizationDraft.ApplySnapshot(snapshot);
         }
 
         private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
@@ -6972,11 +6913,11 @@ namespace ASMLite.Editor
                     EditorUtility.SetDirty(component);
                 }
 
-                _pendingSlotCount = slotCount;
+                _customizationDraft.SetSlotCount(slotCount);
                 return;
             }
 
-            _pendingSlotCount = slotCount;
+            _customizationDraft.SetSlotCount(slotCount);
         }
 
         internal void SetInstallPathStateForAutomation(bool useCustomInstallPath, string customInstallPath)
@@ -6989,8 +6930,7 @@ namespace ASMLite.Editor
                 SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
             }
 
-            _pendingUseCustomInstallPath = useCustomInstallPath;
-            _pendingCustomInstallPath = normalized;
+            _customizationDraft.SetInstallPathState(useCustomInstallPath, normalized);
         }
 
         internal void SetParameterBackupExclusionsForAutomation(bool enabled, IEnumerable<string> exactVisibleNames)
@@ -7011,8 +6951,7 @@ namespace ASMLite.Editor
                 SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, normalized);
             }
 
-            _pendingUseCustomRootName = enabled;
-            _pendingCustomRootName = normalized;
+            _customizationDraft.SetRootNameState(enabled, normalized);
         }
 
         internal void SetPresetNameMaskForAutomation(IReadOnlyDictionary<int, string> presetNamesBySlot, bool clearExisting)
@@ -7151,7 +7090,7 @@ namespace ASMLite.Editor
                 ? EnsureSizedTextureArray(ResolveCurrentSlotIconsForAutomation(slotCount), slotCount)
                 : new Texture2D[slotCount];
 
-            _pendingUseCustomSlotIcons = enabled;
+            _customizationDraft.SetCustomIconsEnabled(enabled);
             _pendingCustomIcons = normalizedIcons;
             if (!enabled)
             {
@@ -7206,8 +7145,7 @@ namespace ASMLite.Editor
             if (rootIcon != null)
                 SetCustomIconsEnabledForAutomation(true);
 
-            _pendingUseCustomRootIcon = rootIcon != null;
-            _pendingCustomRootIcon = rootIcon;
+            _customizationDraft.SetRootIcon(rootIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7238,7 +7176,7 @@ namespace ASMLite.Editor
             Texture2D[] slotIcons = ResolveSlotIconFixturesForAutomation(normalizedIds, slotCount);
 
             SetCustomIconsEnabledForAutomation(true);
-            _pendingCustomIcons = slotIcons;
+            _customizationDraft.SetSlotIcons(slotIcons);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7341,14 +7279,7 @@ namespace ASMLite.Editor
                 ? ActionIconMode.Custom
                 : ActionIconMode.Default;
 
-            _pendingUseCustomSlotIcons = true;
-            _pendingCustomIcons = CloneTextures(slotIcons);
-            _pendingUseCustomRootIcon = rootIcon != null;
-            _pendingCustomRootIcon = rootIcon;
-            _pendingActionIconMode = actionIconMode;
-            _pendingCustomSaveIcon = saveIcon;
-            _pendingCustomLoadIcon = loadIcon;
-            _pendingCustomClearIcon = clearIcon;
+            _customizationDraft.SetIconFixtureTextures(rootIcon, slotIcons, saveIcon, loadIcon, clearIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7556,10 +7487,7 @@ namespace ASMLite.Editor
                 SetCustomIconsEnabledForAutomation(true);
 
             ActionIconMode actionIconMode = hasCustomActionIcon ? ActionIconMode.Custom : ActionIconMode.Default;
-            _pendingActionIconMode = actionIconMode;
-            _pendingCustomSaveIcon = saveIcon;
-            _pendingCustomLoadIcon = loadIcon;
-            _pendingCustomClearIcon = clearIcon;
+            _customizationDraft.SetActionIcons(saveIcon, loadIcon, clearIcon);
 
             var component = GetOrRefreshComponent();
             if (!component)
@@ -7674,8 +7602,7 @@ namespace ASMLite.Editor
                     normalizedExcluded);
             }
 
-            _pendingUseParameterExclusions = useParameterExclusions;
-            _pendingExcludedParameterNames = CloneStrings(normalizedExcluded);
+            _customizationDraft.SetParameterExclusions(useParameterExclusions, normalizedExcluded);
             _cachedParamList = null;
             _cachedParamTree = null;
         }
@@ -7697,23 +7624,7 @@ namespace ASMLite.Editor
 
         internal PendingCustomizationSnapshot GetPendingCustomizationSnapshotForTesting()
         {
-            return new PendingCustomizationSnapshot(
-                _selectedAvatar,
-                _pendingUseCustomRootIcon,
-                _pendingUseCustomRootName,
-                _pendingCustomRootName,
-                NormalizePresetNamesBySlot(_pendingCustomPresetNames, _pendingSlotCount),
-                _pendingCustomSaveLabel,
-                _pendingCustomLoadLabel,
-                _pendingCustomClearPresetLabel,
-                _pendingCustomConfirmLabel,
-                _pendingUseCustomInstallPath,
-                _pendingCustomInstallPath,
-                _pendingUseParameterExclusions,
-                CloneStrings(_pendingExcludedParameterNames),
-                _pendingCustomIcons != null ? (Texture2D[])_pendingCustomIcons.Clone() : Array.Empty<Texture2D>(),
-                _pendingUseVendorizedGeneratedAssets,
-                _pendingVendorizedGeneratedAssetsPath);
+            return _customizationDraft.ToPendingSnapshot(_selectedAvatar);
         }
 
         private static void ValidateAutomationSlotCount(int slotCount)
@@ -7754,9 +7665,7 @@ namespace ASMLite.Editor
                     SetComponentRawString(component, "Clear ASM-Lite Legacy Preset Name Format", ref component.customPresetNameFormat, string.Empty);
             }
 
-            _pendingCustomPresetNames = CloneStrings(normalized);
-            if (clearExisting)
-                _pendingCustomPresetNameFormat = string.Empty;
+            _customizationDraft.SetPresetNames(normalized, clearExisting);
         }
 
         private static string NormalizeActionLabelKey(string key)
@@ -7794,10 +7703,7 @@ namespace ASMLite.Editor
                 SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, confirm);
             }
 
-            _pendingCustomSaveLabel = save;
-            _pendingCustomLoadLabel = load;
-            _pendingCustomClearPresetLabel = clear;
-            _pendingCustomConfirmLabel = confirm;
+            _customizationDraft.SetActionLabels(save, load, clear, confirm);
         }
 
         private CustomizationAutomationSnapshot CreateCustomizationAutomationSnapshot(
@@ -7806,7 +7712,7 @@ namespace ASMLite.Editor
         {
             var toolState = GetOrRefreshToolState(component);
             var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
-            return new CustomizationAutomationSnapshot(
+            return ASMLiteCustomizationDraft.CreateAutomationSnapshot(
                 _selectedAvatar,
                 component,
                 customization,
