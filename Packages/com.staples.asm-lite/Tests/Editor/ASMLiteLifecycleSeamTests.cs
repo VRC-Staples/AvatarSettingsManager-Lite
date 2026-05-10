@@ -72,7 +72,7 @@ namespace ASMLite.Tests.Editor
         {
             bool verified = ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
                 _ctx.AvDesc,
-                ASMLiteWindow.AsmLiteToolState.Detached,
+                ASMLiteInstallationState.Detached,
                 vendorizedDir: string.Empty,
                 out string failureMessage,
                 out string failureContext);

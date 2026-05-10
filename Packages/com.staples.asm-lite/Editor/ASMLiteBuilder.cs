@@ -522,29 +522,6 @@ namespace ASMLite.Editor
                 innerDiagnostic: innerDiagnostic.Success ? null : innerDiagnostic);
         }
 
-        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
-        {
-            if (component == null || component.gameObject == null)
-                return null;
-
-            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                var behavior = behaviors[i];
-                if (behavior == null)
-                    continue;
-
-                var type = behavior.GetType();
-                if (type == null)
-                    continue;
-
-                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    return behavior;
-            }
-
-            return null;
-        }
-
         private static Type FindTypeByFullName(string fullName)
         {
             if (string.IsNullOrEmpty(fullName))
@@ -593,94 +570,12 @@ namespace ASMLite.Editor
 
         private static ASMLiteBuildDiagnosticResult TryEnsureLiveFullControllerAssetWiringWithDiagnostics(ASMLiteComponent component, string contextLabel)
         {
-            if (component == null)
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: "component",
-                    remediation: "Pass a valid ASMLiteComponent before wiring FullController references.");
-            }
-
-            if (!TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " FullController Wiring"))
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: ASMLiteAssetPaths.FXController,
-                    remediation: "Repair the generated FX controller before applying FullController wiring.");
-            }
-
-            var vfComponent = FindLiveVrcFuryComponent(component);
-            if (vfComponent == null)
-            {
-                var refreshResult = ASMLitePrefabCreator.TryRefreshLiveFullControllerWiringWithDiagnostics(
-                    component.gameObject,
-                    component,
-                    contextLabel + " Auto-Heal");
-                if (!refreshResult.Success)
-                    return refreshResult;
-
-                vfComponent = FindLiveVrcFuryComponent(component);
-                if (vfComponent == null)
-                {
-                    return ASMLiteBuildDiagnosticResult.Fail(
-                        code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                        contextPath: "VF.Model.VRCFury",
-                        remediation: "Ensure the VRCFury component exists before applying FullController wiring.");
-                }
-            }
-
-            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
-            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
-            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
-            if (fxController == null || menu == null || parameters == null)
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: ASMLiteAssetPaths.GeneratedDir,
-                    remediation: "Regenerate ASM-Lite package assets before applying FullController wiring.",
-                    message: "[ASM-Lite] Generated ASM-Lite assets are missing; FullController wiring cannot be applied.");
-            }
-
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            var appliedResult = ASMLitePrefabCreator.TryApplyFullControllerAssetReferencesWithDiagnostics(
-                serializedVf,
-                component,
-                fxController,
-                menu,
-                parameters);
-            if (!appliedResult.Success)
-                return appliedResult;
-
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-            return ASMLiteBuildDiagnosticResult.Pass();
+            return ASMLiteFullControllerWiring.TryWirePackageGeneratedAssetsWithDiagnostics(component, contextLabel);
         }
 
         private static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)
         {
-            var vfComponent = FindLiveVrcFuryComponent(component);
-            if (vfComponent == null)
-                return false;
-
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            var prefixProperty = serializedVf.FindProperty("content.menus.Array.data[0].prefix");
-            if (prefixProperty == null)
-                return false;
-
-            prefixProperty.stringValue = string.Empty;
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-
-            if (PrefabUtility.IsPartOfPrefabInstance(vfComponent) && prefixProperty.prefabOverride)
-            {
-                PrefabUtility.RevertPropertyOverride(prefixProperty, InteractionMode.AutomatedAction);
-            }
-
-            return true;
+            return ASMLiteFullControllerWiring.TryClearLiveFullControllerMenuPrefixOverride(component);
         }
 
         internal static bool TryRepairPackageGeneratedFxControllerIfCorrupt(string contextLabel)
@@ -944,25 +839,7 @@ namespace ASMLite.Editor
                         : "Ensure prefab-instance install-path sync can either remove routing helpers or clear stale FullController prefix overrides when no custom install prefix is enabled.");
             }
 
-            var vfComponent = FindLiveVrcFuryComponent(component);
-            if (vfComponent == null)
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
-                    contextPath: "VF.Model.VRCFury",
-                    remediation: "Ensure a live VRCFury component exists before syncing install-prefix wiring.");
-            }
-
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            var prefixResult = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component);
-            if (!prefixResult.Success)
-                return prefixResult;
-
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-            return ASMLiteBuildDiagnosticResult.Pass();
+            return ASMLiteFullControllerWiring.TrySyncLiveMenuPrefixWithDiagnostics(component);
         }
 
         // ─── Private implementation ────────────────────────────────────────────

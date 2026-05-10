@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -45,15 +44,9 @@ namespace ASMLite.Tests.Editor
             {
                 var component = go.AddComponent<ASMLiteComponent>();
 
-                var configureMethod = typeof(ASMLitePrefabCreator).GetMethod(
-                    "ConfigureVRCFuryFullController",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                Assert.IsNotNull(configureMethod,
-                    "Expected ASMLitePrefabCreator.ConfigureVRCFuryFullController private method was not found.");
-
                 LogAssert.Expect(LogType.Log, "[ASM-Lite] FullController menu prefix resolved to empty (custom install path disabled or blank).");
 
-                Assert.DoesNotThrow(() => configureMethod.Invoke(null, new object[] { go, component }),
+                Assert.DoesNotThrow(() => ASMLiteFullControllerWiring.ConfigurePrefabRoot(go, component),
                     "Prefab FullController wiring should not throw for the reflected VRCFury schema.");
 
                 var vf = go.GetComponents<MonoBehaviour>()
@@ -124,7 +117,7 @@ namespace ASMLite.Tests.Editor
                 var serializedVf = new SerializedObject(vf);
                 serializedVf.Update();
 
-                var diagnostic = ASMLitePrefabCreator.TryApplyFullControllerAssetReferencesWithDiagnostics(
+                var diagnostic = ASMLiteFullControllerWiring.TryApplyFullControllerAssetReferencesWithDiagnostics(
                     serializedVf,
                     component,
                     fxController,
@@ -155,11 +148,11 @@ namespace ASMLite.Tests.Editor
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 First Refresh"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 First Refresh"),
                     "W04: first live FullController refresh should succeed for a healthy ASM-Lite object.");
                 AssertSingleCriticalWiringState(ctx.Comp, "W04 first refresh");
 
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 Second Refresh"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 Second Refresh"),
                     "W04: second live FullController refresh should succeed as a no-op on unchanged input.");
                 AssertSingleCriticalWiringState(ctx.Comp, "W04 second refresh");
             }
@@ -175,7 +168,7 @@ namespace ASMLite.Tests.Editor
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 First Refresh"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 First Refresh"),
                     "W05: first live FullController refresh should succeed for repeated-refresh characterization.");
 
                 var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
@@ -184,7 +177,7 @@ namespace ASMLite.Tests.Editor
                     "W05: first refresh should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
                 var firstGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(firstVf, "content.globalParams");
 
-                Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 Second Refresh"),
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 Second Refresh"),
                     "W05: second live FullController refresh should succeed for repeated-refresh characterization.");
 
                 var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);

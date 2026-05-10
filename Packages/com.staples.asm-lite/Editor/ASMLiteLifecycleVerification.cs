@@ -265,7 +265,7 @@ namespace ASMLite.Editor
             out string failureMessage,
             out string failureContext)
         {
-            var snapshotResult = ASMLitePrefabCreator.TryCaptureLiveFullControllerReferenceSnapshot(component, "Lifecycle Transaction Verify", out var snapshot);
+            var snapshotResult = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(component, "Lifecycle Transaction Verify", out var snapshot);
             if (!snapshotResult.Success)
             {
                 failureMessage = snapshotResult.Message;

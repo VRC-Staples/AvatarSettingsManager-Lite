@@ -57,7 +57,7 @@ namespace ASMLite.Editor
 
         public static bool TryRefreshLiveFullControllerWiring(GameObject instance, ASMLiteComponent component, string contextLabel)
         {
-            return ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(instance, component, contextLabel);
+            return ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(instance, component, contextLabel);
         }
 
         public static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
@@ -150,7 +150,7 @@ namespace ASMLite.Editor
 
         public static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
-            var result = ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
+            var result = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
             if (!result.Success)
                 Debug.LogError(result.ToLogString());
 

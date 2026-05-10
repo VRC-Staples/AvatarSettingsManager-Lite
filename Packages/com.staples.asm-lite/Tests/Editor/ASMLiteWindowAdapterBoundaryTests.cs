@@ -15,9 +15,9 @@ namespace ASMLite.Tests.Editor
 
             Assert.That(windowSource, Does.Not.Contain("ASMLiteLifecycleTransactionService."),
                 "The editor window should delegate lifecycle transaction policy through the window operation seam.");
-            Assert.That(windowSource, Does.Not.Contain("ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring"),
+            Assert.That(windowSource, Does.Not.Contain("ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring"),
                 "The editor window should not own FullController refresh policy directly.");
-            Assert.That(windowSource, Does.Not.Contain("ASMLitePrefabCreator.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics"),
+            Assert.That(windowSource, Does.Not.Contain("ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics"),
                 "The editor window should not own FullController retarget policy directly.");
             Assert.That(windowSource, Does.Not.Contain("ASMLitePrefabCreator."),
                 "The editor window should delegate prefab creation and stale-entry detection through the window operation seam.");

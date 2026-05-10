@@ -141,7 +141,7 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"Build should succeed before retargeting live FullController assets. result={buildResult}.");
 
-            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Setup"),
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget validation.");
 
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
@@ -227,7 +227,7 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(initialBuildResult, 0,
                 $"Initial build should succeed before simulating stale FullController parameter wiring. result={initialBuildResult}.");
 
-            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Build Auto-Heal Setup"),
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Build Auto-Heal Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before simulating stale parameter wiring.");
 
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
@@ -278,7 +278,7 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"Build should succeed before validating retarget failure behavior. result={buildResult}.");
 
-            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Missing Wiring Setup"),
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Missing Wiring Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget failure validation.");
 
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
@@ -372,7 +372,7 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"Build should succeed before retarget corruption validation. result={buildResult}.");
 
-            Assert.IsTrue(ASMLitePrefabCreator.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Retarget Corruption Setup"),
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Retarget Corruption Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget corruption validation.");
 
             string controllerPath = ASMLiteAssetPaths.FXController;
