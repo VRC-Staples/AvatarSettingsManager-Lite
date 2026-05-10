@@ -17,6 +17,8 @@ namespace ASMLite.Tests.Editor
     /// FX AnimatorController at ASMLiteAssetPaths.FXController.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteFXControllerTests
     {
         private AsmLiteTestContext _ctx;

@@ -6,6 +6,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLitePrefabContractTests
     {
         [Test]

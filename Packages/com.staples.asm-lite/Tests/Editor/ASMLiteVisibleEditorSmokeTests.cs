@@ -18,6 +18,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("VisibleEditorAutomation")]
     public class ASMLiteVisibleEditorSmokeTests
     {
         private const string OverlayTitle = "ASM-Lite visible smoke test";

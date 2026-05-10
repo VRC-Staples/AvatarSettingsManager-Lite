@@ -8,6 +8,8 @@ using VRC.SDK3.Avatars.Components;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Smoke")]
+    [Category("Headless")]
     public class ASMLiteSmokeSetupFixtureServiceTests
     {
         private AsmLiteTestContext _ctx;

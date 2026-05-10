@@ -11,6 +11,7 @@ namespace ASMLite.Tests.Editor
     /// same assembly family via the test asmdef reference.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteAssetPathsTests
     {
         private const string PackagePrefix = "Packages/com.staples.asm-lite/";

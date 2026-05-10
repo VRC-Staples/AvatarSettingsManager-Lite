@@ -32,6 +32,7 @@ namespace VF.Model.Feature
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLitePrefabWiringTests
     {
         private const string SuiteName = nameof(ASMLitePrefabWiringTests);

@@ -7,6 +7,7 @@ using UnityEngine;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowActionHierarchyTests
     {
         private AsmLiteTestContext _ctx;

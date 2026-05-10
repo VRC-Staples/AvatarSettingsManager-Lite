@@ -13,6 +13,8 @@ using Object = UnityEngine.Object;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteEditorWorkflowAutomationTests
     {
         private const string SuiteName = nameof(ASMLiteEditorWorkflowAutomationTests);

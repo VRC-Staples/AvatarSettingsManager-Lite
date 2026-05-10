@@ -15,6 +15,7 @@ namespace ASMLite.Tests.Editor
     /// These are EditMode tests: no Play mode or asset pipeline required.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteBuilderTests
     {
         // ── Validate() ────────────────────────────────────────────────────────

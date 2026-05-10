@@ -12,6 +12,8 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteCustomizationIntegrationTests
     {
         private AsmLiteTestContext _ctx;

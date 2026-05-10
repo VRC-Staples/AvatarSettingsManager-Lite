@@ -39,6 +39,7 @@ namespace VF.Model.Feature
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowCustomizationTests
     {
         private AsmLiteTestContext _ctx;

@@ -14,6 +14,8 @@ namespace ASMLite.Tests.Editor
     /// descriptor surfaces untouched.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteVRCFuryPipelineTests
     {
         private AsmLiteTestContext _ctx;

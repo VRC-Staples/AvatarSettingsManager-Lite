@@ -11,6 +11,8 @@ namespace ASMLite.Tests.Editor
     /// Asserts icon references from avDesc.expressionsMenu graph, not private helpers.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteIconTests
     {
         private AsmLiteTestContext _ctx;

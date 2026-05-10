@@ -7,6 +7,7 @@ using NUnit.Framework;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowTerminologyTests
     {
         private static readonly Type WindowType = typeof(ASMLite.Editor.ASMLiteWindow);

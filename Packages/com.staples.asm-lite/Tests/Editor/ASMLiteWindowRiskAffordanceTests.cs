@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowRiskAffordanceTests
     {
         [Test]

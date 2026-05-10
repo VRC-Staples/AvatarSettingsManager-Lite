@@ -122,6 +122,84 @@ class SuiteLedgerValidatorTests(unittest.TestCase):
         self.assertIn("placeholder classification", result.stderr)
         self.assertIn("RequiresReview", result.stderr)
 
+    def test_update_replaces_placeholder_classification_with_category_defaults(self) -> None:
+        self.write_test_file(
+            "Packages/com.staples.asm-lite/Tests/Editor/CategoryDefaultTests.cs",
+            """
+            using NUnit.Framework;
+
+            [TestFixture]
+            [Category("Headless")]
+            public sealed class CategoryDefaultTests
+            {
+                [Test]
+                public void HeadlessContract() {}
+
+                [Test]
+                [Category("Integration")]
+                public void MutatesUnityAssets() {}
+            }
+            """,
+        )
+        self.ledger.parent.mkdir(parents=True)
+        self.ledger.write_text(
+            json.dumps({
+                "schemaVersion": 1,
+                "scope": {},
+                "tests": [
+                    {
+                        "file": "Packages/com.staples.asm-lite/Tests/Editor/CategoryDefaultTests.cs",
+                        "class": "CategoryDefaultTests",
+                        "method": "HeadlessContract",
+                        "line": 9,
+                        "attributes": ["TestFixture", 'Category("Headless")', "Test"],
+                        "categories": ["Headless"],
+                        "lane": "needs-classification",
+                        "headlessViability": "review",
+                        "honesty": "needs-review",
+                        "recommendation": "review",
+                        "publicBehaviorClaim": "Headless Contract",
+                        "fixtureDependencies": [],
+                        "assetSceneMutations": "review",
+                        "externalProcessFilesystemEnvUsage": "review",
+                        "runnerFilter": "CategoryDefaultTests.HeadlessContract",
+                        "notes": "",
+                    },
+                    {
+                        "file": "Packages/com.staples.asm-lite/Tests/Editor/CategoryDefaultTests.cs",
+                        "class": "CategoryDefaultTests",
+                        "method": "MutatesUnityAssets",
+                        "line": 13,
+                        "attributes": ["TestFixture", 'Category("Headless")', "Test", 'Category("Integration")'],
+                        "categories": ["Headless", "Integration"],
+                        "lane": "needs-classification",
+                        "headlessViability": "review",
+                        "honesty": "needs-review",
+                        "recommendation": "review",
+                        "publicBehaviorClaim": "Mutates Unity Assets",
+                        "fixtureDependencies": [],
+                        "assetSceneMutations": "review",
+                        "externalProcessFilesystemEnvUsage": "review",
+                        "runnerFilter": "CategoryDefaultTests.MutatesUnityAssets",
+                        "notes": "",
+                    },
+                ],
+            }, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        result = self.run_validator("--update")
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+        ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
+        headless, integration = ledger["tests"]
+        self.assertEqual(headless["lane"], "core-headless")
+        self.assertEqual(headless["headlessViability"], "yes")
+        self.assertEqual(headless["recommendation"], "default-ci")
+        self.assertEqual(integration["lane"], "integration-headless")
+        self.assertEqual(integration["headlessViability"], "review")
+        self.assertEqual(integration["recommendation"], "default-ci-review")
+
     def test_check_detects_inventory_drift_without_update(self) -> None:
         self.write_test_file(
             "Packages/com.staples.asm-lite/Tests/Editor/ExampleTests.cs",

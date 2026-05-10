@@ -17,6 +17,8 @@ using VRC.SDKBase;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Smoke")]
+    [Category("Headless")]
     public class ASMLiteSmokeOverlayHostTests
     {
         private const string RuntimeVrcEmoteParameterName = "VRCEmote";

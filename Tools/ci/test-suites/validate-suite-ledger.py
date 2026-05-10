@@ -288,23 +288,23 @@ def default_human_fields(identity: TestIdentity) -> dict[str, Any]:
 def classify_mechanical(identity: TestIdentity, fields: dict[str, Any]) -> None:
     categories = set(identity.categories)
     file_name = Path(identity.file).name
-    if "Manual" in categories:
+    if "Headless" in categories:
         fields.update({
-            "lane": "manual",
-            "headlessViability": "no",
-            "recommendation": "manual-review",
-        })
-    if "VisibleEditorAutomation" in categories:
-        fields.update({
-            "lane": "visible-manual",
-            "headlessViability": "no",
-            "recommendation": "visible-manual-review",
+            "lane": "core-headless",
+            "headlessViability": "yes",
+            "recommendation": "default-ci",
         })
     if "Integration" in categories:
         fields.update({
             "lane": "integration-headless",
             "headlessViability": "review",
             "recommendation": "default-ci-review",
+        })
+    if "Smoke" in categories and "Headless" in categories:
+        fields.update({
+            "lane": "smoke-protocol-headless",
+            "headlessViability": "yes",
+            "recommendation": "default-ci",
         })
     if file_name in SMOKE_PROTOCOL_FILES:
         fields.update({
@@ -317,6 +317,24 @@ def classify_mechanical(identity: TestIdentity, fields: dict[str, Any]) -> None:
             "lane": "smoke-overlay-host-headless",
             "headlessViability": "yes",
             "recommendation": "default-ci",
+        })
+    if "PlayMode" in categories:
+        fields.update({
+            "lane": "playmode-headless-review",
+            "headlessViability": "review",
+            "recommendation": "playmode-review",
+        })
+    if "VisibleEditorAutomation" in categories:
+        fields.update({
+            "lane": "visible-manual",
+            "headlessViability": "no",
+            "recommendation": "visible-manual-review",
+        })
+    if "Manual" in categories:
+        fields.update({
+            "lane": "manual",
+            "headlessViability": "no",
+            "recommendation": "manual-review",
         })
 
 
@@ -341,7 +359,12 @@ def identity_to_row(identity: TestIdentity, previous: dict[str, Any] | None) -> 
     else:
         defaults = default_human_fields(identity)
         for field in HUMAN_FIELDS:
-            row[field] = previous.get(field, defaults[field])
+            value = previous.get(field, defaults[field])
+            if field in PLACEHOLDER and value == PLACEHOLDER[field]:
+                value = defaults[field]
+            elif field in ("assetSceneMutations", "externalProcessFilesystemEnvUsage") and value == "review":
+                value = defaults[field]
+            row[field] = value
     return row
 
 

@@ -11,6 +11,8 @@ namespace ASMLite.Tests.Editor
     /// generated menu asset (ASMLiteAssetPaths.Menu).
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteMenuTests
     {
         private AsmLiteTestContext _ctx;

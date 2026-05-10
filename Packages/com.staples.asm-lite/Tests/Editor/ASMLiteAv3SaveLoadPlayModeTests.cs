@@ -57,6 +57,7 @@ namespace ASMLite.Tests.Editor
     }
 
     [TestFixture]
+    [Category("PlayMode")]
     public class ASMLiteAv3SaveLoadPlayModeTests
     {
         private const string TestAvatarName = "ASMLite_AV3_SaveLoad_P0_Avatar";

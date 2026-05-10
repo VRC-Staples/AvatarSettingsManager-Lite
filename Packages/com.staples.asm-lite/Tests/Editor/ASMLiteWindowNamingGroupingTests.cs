@@ -8,6 +8,7 @@ using NUnit.Framework;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteWindowNamingGroupingTests
     {
         private const string ExpectedFallbackGuidance =

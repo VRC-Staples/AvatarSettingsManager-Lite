@@ -17,6 +17,8 @@ namespace ASMLite.Tests.Editor
     /// removes only ASM-Lite generated content while preserving user-owned artifacts.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteCleanupTests
     {
         private AsmLiteTestContext _ctx;

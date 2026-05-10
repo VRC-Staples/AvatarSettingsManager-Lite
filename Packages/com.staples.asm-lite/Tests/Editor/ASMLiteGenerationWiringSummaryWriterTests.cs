@@ -5,6 +5,7 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
+    [Category("Headless")]
     public class ASMLiteGenerationWiringSummaryWriterTests
     {
         [Test]

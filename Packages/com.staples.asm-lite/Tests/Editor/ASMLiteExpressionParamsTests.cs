@@ -15,6 +15,8 @@ namespace ASMLite.Tests.Editor
     /// delivery source for VRCFury FullController wiring.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteExpressionParamsTests
     {
         private AsmLiteTestContext _ctx;

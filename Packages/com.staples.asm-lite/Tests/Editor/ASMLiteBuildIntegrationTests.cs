@@ -16,6 +16,8 @@ namespace ASMLite.Tests.Editor
     /// repeated-build idempotency against generated FX/params/menu assets.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteBuildIntegrationTests
     {
         private const string SuiteName = nameof(ASMLiteBuildIntegrationTests);

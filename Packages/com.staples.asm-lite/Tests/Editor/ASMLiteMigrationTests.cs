@@ -24,6 +24,8 @@ namespace ASMLite.Tests.Editor
     /// verifying duplicate collapse while preserving one delivery component.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteMigrationTests
     {
         private AsmLiteTestContext _ctx;

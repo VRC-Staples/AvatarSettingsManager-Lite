@@ -10,6 +10,7 @@ namespace ASMLite.Tests.Editor
     /// match the window dropdown ordering.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteComponentTests
     {
         // ── Default field values ──────────────────────────────────────────────

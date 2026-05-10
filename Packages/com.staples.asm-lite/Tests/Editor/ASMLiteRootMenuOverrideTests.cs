@@ -11,6 +11,8 @@ namespace ASMLite.Tests.Editor
     /// Verifies effective-name resolution against the generated menu asset.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLiteRootMenuOverrideTests
     {
         private AsmLiteTestContext _ctx;

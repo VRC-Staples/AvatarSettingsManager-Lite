@@ -13,6 +13,7 @@ namespace ASMLite.Tests.Editor
     /// Pure in-memory: no AssetDatabase, no integration category.
     /// </summary>
     [TestFixture]
+    [Category("Headless")]
     public class ASMLiteParameterDiscoveryTests
     {
         private GameObject _go;

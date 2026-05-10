@@ -7,6 +7,8 @@ using NUnit.Framework;
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Smoke")]
+    [Category("Headless")]
     public class ASMLiteSmokeProtocolTests
     {
         [Test]

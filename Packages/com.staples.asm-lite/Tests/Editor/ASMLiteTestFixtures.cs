@@ -3044,6 +3044,7 @@ namespace ASMLite.Tests.Editor
     }
 
     [TestFixture]
+    [Category("Headless")]
     internal sealed class ASMLiteVisibleAutomationCommandLineTests
     {
         [TestCase(null, AsmLiteVisibleAutomationMode.Editor)]
