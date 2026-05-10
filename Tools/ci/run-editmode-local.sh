@@ -10,6 +10,7 @@ PROJECT_PATH="${REPO_ROOT}/${PROJECT_REL_PATH}"
 PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
 CANONICAL_BATCH_RUNS_JSON_REL_PATH="Tools/ci/editmode-batch-runs.json"
 CANONICAL_BATCH_RUNS_JSON_PATH="${REPO_ROOT}/${CANONICAL_BATCH_RUNS_JSON_REL_PATH}"
+VERIFY_RESULTS_SCRIPT="${REPO_ROOT}/Tools/ci/verify-unity-editmode-results.py"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 COVERAGE_DIR="${REPO_ROOT}/CodeCoverage"
 DOTENV_FILE="${REPO_ROOT}/.env"
@@ -1341,6 +1342,25 @@ RUNNER
   return "${docker_run_exit}"
 }
 
+verify_editmode_results_exit() {
+  local unity_exit_code="$1"
+  local python_bin verifier_exit=0
+
+  if [[ "${EDITMODE_RUNNER_MODE}" == "local" && "${EDITMODE_LOCAL_EXECUTION_STYLE}" == "visible_smoke" ]]; then
+    return "${unity_exit_code}"
+  fi
+
+  python_bin="$(ensure_python_bin)"
+  set +e
+  "${python_bin}" "${VERIFY_RESULTS_SCRIPT}" \
+    --unity-exit-code "${unity_exit_code}" \
+    --results "${EDITMODE_RESULTS_PATH}" \
+    --log "${EDITMODE_LOG_PATH}"
+  verifier_exit=$?
+  set -e
+  return "${verifier_exit}"
+}
+
 print_artifact_summary() {
   if [[ -f "${EDITMODE_LOG_PATH}" ]]; then
     echo "done: ${EDITMODE_LOG_PATH#"${REPO_ROOT}/"}"
@@ -1408,6 +1428,7 @@ acquire_run_lock
 trap cleanup EXIT INT TERM HUP
 
 run_exit=0
+verify_exit=0
 case "${EDITMODE_RUNNER_MODE}" in
   docker)
     if [[ "${EDITMODE_LOCAL_EXECUTION_STYLE}" != "headless" ]]; then
@@ -1425,5 +1446,7 @@ if [[ "${run_exit}" -eq 124 ]]; then
   echo "error: EditMode run timed out after ${RUN_TIMEOUT_SECONDS}s (set RUN_TIMEOUT_SECONDS to adjust)." >&2
 fi
 
+verify_editmode_results_exit "${run_exit}" || verify_exit=$?
+
 print_artifact_summary
-exit "${run_exit}"
+exit "${verify_exit}"
