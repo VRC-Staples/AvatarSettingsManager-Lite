@@ -570,6 +570,294 @@
       "notes": ""
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
+      "line": 347,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Build Canonical Results Document Accepts Test Suite Root Documents From Unity Batch Callbacks",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
+      "line": 315,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Build Canonical Results Document Merges Completed Runs Into Canonical NUnit Output",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
+      "line": 281,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Build Canonical Results Document Uses Nested Assembly Metrics When Unity Wrappers Report Zero Totals",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter",
+      "line": 68,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Build Execution Filters When No Selectors Provided Returns Single Default Edit Mode Filter",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
+      "line": 209,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Build Session State From Command Line Uses Explicit Cli Arguments For Batch Transport",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "CanonicalBatchPlan_ExcludesBatchRunnerSelfTests",
+      "line": 86,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Canonical Batch Plan Excludes Batch Runner Self Tests",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.CanonicalBatchPlan_ExcludesBatchRunnerSelfTests",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
+      "line": 185,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Convert Raw Xml Object To Document Uses Outer Xml Property When To String Is Not Xml",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
+      "line": 197,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Convert Raw Xml Object To Document Uses Write To When Available",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors",
+      "line": 28,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Normalize Run Uses Explicit Filters And Appends Legacy Selectors",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection",
+      "line": 57,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Normalize Run When No Selectors Provided Leaves Filters Empty And Reports No Selection",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
+      "line": 386,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Restore From Session State Requeues Active Run And Loads Completed Results From Disk",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
+      "line": 138,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "ci-runner-contract-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "targeted-ci-contract",
+      "publicBehaviorClaim": "Wrap Result Document With Result Metrics Uses Child Result Metrics When Top Level Adaptor Reports Zero Counts",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "temp-files-and-session-state",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
+      "notes": "Batch runner contract tests are headless but intentionally excluded from the active canonical batch runner plan to avoid self-callback state coupling."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
@@ -9475,483 +9763,6 @@
       "notes": ""
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "line": 3581,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Build Canonical Results Document Accepts Test Suite Root Documents From Unity Batch Callbacks",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "line": 3549,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Build Canonical Results Document Merges Completed Runs Into Canonical NUnit Output",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "line": 3515,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Build Canonical Results Document Uses Nested Assembly Metrics When Unity Wrappers Report Zero Totals",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter",
-      "line": 3302,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Build Execution Filters When No Selectors Provided Returns Single Default Edit Mode Filter",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "line": 3443,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Build Session State From Command Line Uses Explicit Cli Arguments For Batch Transport",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "CanonicalBatchPlan_ExcludesBatchRunnerSelfTests",
-      "line": 3320,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Canonical Batch Plan Excludes Batch Runner Self Tests",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.CanonicalBatchPlan_ExcludesBatchRunnerSelfTests",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "line": 3419,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Convert Raw Xml Object To Document Uses Outer Xml Property When To String Is Not Xml",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "line": 3431,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Convert Raw Xml Object To Document Uses Write To When Available",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors",
-      "line": 3262,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Normalize Run Uses Explicit Filters And Appends Legacy Selectors",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection",
-      "line": 3291,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Normalize Run When No Selectors Provided Leaves Filters Empty And Reports No Selection",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "line": 3620,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Restore From Session State Requeues Active Run And Loads Completed Results From Disk",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteBatchTestRunnerTests",
-      "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "line": 3372,
-      "attributes": [
-        "TestFixture",
-        "Test"
-      ],
-      "categories": [],
-      "lane": "needs-classification",
-      "headlessViability": "review",
-      "honesty": "needs-review",
-      "recommendation": "review",
-      "publicBehaviorClaim": "Wrap Result Document With Result Metrics Uses Child Result Metrics When Top Level Adaptor Reports Zero Counts",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteBatchTestRunnerTests.WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
-      "line": 3192,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Result Document Uses Launch Unity Case Name For Launch Unity Runs",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
-      "line": 3158,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Result Document Uses Legacy Visible Smoke Fixture Name For Editor Mode",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
-      "line": 3224,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Result Document Uses Play Mode Fixture Name For Play Mode Runs",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted",
-      "line": 3087,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parse Configuration Defaults To Click Me Scene And Oct25 Dress Avatar When Target Args Are Omitted",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted",
-      "line": 3066,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parse Configuration Defaults To Editor Mode When Mode Arg Is Omitted",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText",
-      "line": 3140,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parse Configuration Prefers Explicit Mode Argument Over Selector Text",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ParseConfiguration_UsesExplicitStepDelayArgument_WhenProvided",
-      "line": 3103,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parse Configuration Uses Explicit Step Delay Argument When Provided",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_UsesExplicitStepDelayArgument_WhenProvided",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ParseConfiguration_UsesSelectorToInferInitialModeAndStage",
-      "line": 3121,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parse Configuration Uses Selector To Infer Initial Mode And Stage",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_UsesSelectorToInferInitialModeAndStage",
-      "notes": ""
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteTestFixtures.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode",
-      "line": 3060,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "TestCase(null, AsmLiteVisibleAutomationMode.Editor)",
-        "TestCase(\"\", AsmLiteVisibleAutomationMode.Editor)",
-        "TestCase(\"ASMLiteVisibleEditorSmokeTests\", AsmLiteVisibleAutomationMode.Editor)",
-        "TestCase(\"editor\", AsmLiteVisibleAutomationMode.Editor)",
-        "TestCase(\"playmode\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"ASMLiteVisiblePlayModeSmoke\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"runtime-review\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"VisibleRuntimeHarness\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"launch-unity\", AsmLiteVisibleAutomationMode.LaunchUnity)",
-        "TestCase(\"LaunchUnity\", AsmLiteVisibleAutomationMode.LaunchUnity)"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "needs-review",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Resolve Mode Selector Maps Selectors To Expected Visible Automation Mode",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "review",
-      "externalProcessFilesystemEnvUsage": "review",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode",
-      "notes": ""
-    },
-    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
       "method": "TB01_SanitizePathToken_NormalizesMalformedInput",
@@ -10619,6 +10430,231 @@
       "externalProcessFilesystemEnvUsage": "review",
       "runnerFilter": "ASMLiteVRCFuryPipelineTests.VF07_Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy",
       "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
+      "line": 169,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Result Document Uses Launch Unity Case Name For Launch Unity Runs",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
+      "line": 135,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Result Document Uses Legacy Visible Smoke Fixture Name For Editor Mode",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
+      "line": 201,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Result Document Uses Play Mode Fixture Name For Play Mode Runs",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted",
+      "line": 64,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Parse Configuration Defaults To Click Me Scene And Oct25 Dress Avatar When Target Args Are Omitted",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted",
+      "line": 43,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Parse Configuration Defaults To Editor Mode When Mode Arg Is Omitted",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText",
+      "line": 117,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Parse Configuration Prefers Explicit Mode Argument Over Selector Text",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ParseConfiguration_UsesExplicitStepDelayArgument_WhenProvided",
+      "line": 80,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Parse Configuration Uses Explicit Step Delay Argument When Provided",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_UsesExplicitStepDelayArgument_WhenProvided",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ParseConfiguration_UsesSelectorToInferInitialModeAndStage",
+      "line": 98,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Parse Configuration Uses Selector To Infer Initial Mode And Stage",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ParseConfiguration_UsesSelectorToInferInitialModeAndStage",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleAutomationCommandLineTests.cs",
+      "class": "ASMLiteVisibleAutomationCommandLineTests",
+      "method": "ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode",
+      "line": 37,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(null, AsmLiteVisibleAutomationMode.Editor)",
+        "TestCase(\"\", AsmLiteVisibleAutomationMode.Editor)",
+        "TestCase(\"ASMLiteVisibleEditorSmokeTests\", AsmLiteVisibleAutomationMode.Editor)",
+        "TestCase(\"editor\", AsmLiteVisibleAutomationMode.Editor)",
+        "TestCase(\"playmode\", AsmLiteVisibleAutomationMode.PlayMode)",
+        "TestCase(\"ASMLiteVisiblePlayModeSmoke\", AsmLiteVisibleAutomationMode.PlayMode)",
+        "TestCase(\"runtime-review\", AsmLiteVisibleAutomationMode.PlayMode)",
+        "TestCase(\"VisibleRuntimeHarness\", AsmLiteVisibleAutomationMode.PlayMode)",
+        "TestCase(\"launch-unity\", AsmLiteVisibleAutomationMode.LaunchUnity)",
+        "TestCase(\"LaunchUnity\", AsmLiteVisibleAutomationMode.LaunchUnity)"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "ok",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Resolve Mode Selector Maps Selectors To Expected Visible Automation Mode",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "filesystem-path-arguments-only",
+      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode",
+      "notes": "Command-line parser/result-document contracts are headless; visible Unity interaction remains covered by separate visible automation suites."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/ASMLiteVisibleEditorSmokeTests.cs",
