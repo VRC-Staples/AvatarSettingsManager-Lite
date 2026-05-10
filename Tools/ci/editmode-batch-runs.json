@@ -44,7 +44,37 @@
     {
       "name": "editmode-integration",
       "resultFile": "editmode-integration-results.xml",
-      "categoryNames": ["Integration"]
+      "categoryNames": [
+        "Integration"
+      ]
+    },
+    {
+      "name": "editmode-smoke-protocol",
+      "resultFile": "editmode-smoke-protocol-results.xml",
+      "filters": [
+        {
+          "groupNames": [
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolCompatibilityTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeCatalogTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeRunExecutorTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeAtomicIoTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeArtifactPathsTests(?:\\.|$)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "editmode-smoke-overlay-host",
+      "resultFile": "editmode-smoke-overlay-host-results.xml",
+      "filters": [
+        {
+          "groupNames": [
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeOverlayHostTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeSetupFixtureServiceTests(?:\\.|$)"
+          ]
+        }
+      ]
     }
   ]
 }
