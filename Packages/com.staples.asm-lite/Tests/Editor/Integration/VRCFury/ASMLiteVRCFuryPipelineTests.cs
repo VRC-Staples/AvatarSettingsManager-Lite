@@ -18,14 +18,39 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteVRCFuryPipelineTests
     {
+        private const string SuiteName = nameof(ASMLiteVRCFuryPipelineTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceVRCFuryAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
             ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
             ASMLiteToggleNameBroker.ClearPendingRestoreState();
             ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+            _sourceVRCFuryAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(
+                SuiteName,
+                SourceVRCFuryFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "VF01: fixture creation returned null context.");
         }
@@ -33,10 +58,28 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteToggleNameBroker.ClearPendingRestoreState();
-            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            try
+            {
+                ASMLiteToggleNameBroker.ClearPendingRestoreState();
+                ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceVRCFuryAssetsBaseline?.AssertUnchanged(SuiteName);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _sourceVRCFuryAssetsBaseline = null;
+                _ctx = null;
+            }
         }
+
+        private static string[] SourceVRCFuryFixturePaths()
+            => new[]
+            {
+                ASMLiteAssetPaths.Prefab,
+            };
 
         private static AnimatorController LoadGeneratedController(string aid)
         {
