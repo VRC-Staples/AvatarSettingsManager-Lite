@@ -2193,8 +2193,38 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
-      "method": "FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak",
+      "method": "FixtureIsolationScope_Dispose_WhenAnotherFixtureAvatarIsStillRegistered_DoesNotReportFixtureRootAsSceneLeak",
       "line": 15,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes-fixture-isolated",
+      "honesty": "fixture-isolation-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fixture Isolation Scope Dispose When Another Fixture Avatar Is Still Registered Does Not Report Fixture Root As Scene Leak",
+      "fixtureDependencies": [
+        "fixture isolation scope",
+        "registered concurrent test avatar fixtures",
+        "Unity editor AssetDatabase/selection/scene state"
+      ],
+      "assetSceneMutations": "intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity editor selection/open-scene state and AssetDatabase fixture roots",
+      "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Dispose_WhenAnotherFixtureAvatarIsStillRegistered_DoesNotReportFixtureRootAsSceneLeak",
+      "notes": "Sentinel coverage for concurrent fixture avatar teardown; the first fixture is torn down while a second registered fixture root remains live."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
+      "class": "ASMLiteFixtureIsolationContractTests",
+      "method": "FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak",
+      "line": 42,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2223,7 +2253,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup",
-      "line": 91,
+      "line": 118,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2252,7 +2282,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak",
-      "line": 42,
+      "line": 69,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2281,7 +2311,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection",
-      "line": 65,
+      "line": 92,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",

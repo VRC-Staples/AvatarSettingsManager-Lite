@@ -342,6 +342,11 @@ namespace ASMLite.Tests.Editor
             return isolationScope;
         }
 
+        internal static bool IsRegisteredFixtureAvatarRootId(int instanceId)
+        {
+            return s_fixtureIsolationScopes.ContainsKey(instanceId);
+        }
+
         public static void ResetGeneratedExprParams()
         {
             var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);

@@ -115,6 +115,7 @@ namespace ASMLite.Tests.Editor
             var currentSceneRootPathsById = CaptureSceneRootPathsById();
             var leakedSceneRoots = currentSceneRootPathsById
                 .Where(pair => !_baselineSceneRootPathsById.ContainsKey(pair.Key))
+                .Where(pair => !ASMLiteTestFixtures.IsRegisteredFixtureAvatarRootId(pair.Key))
                 .Select(pair => pair.Value)
                 .Where(path => !string.IsNullOrEmpty(path))
                 .OrderBy(path => path, StringComparer.Ordinal)

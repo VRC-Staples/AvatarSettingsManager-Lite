@@ -12,6 +12,33 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteFixtureIsolationContractTests
     {
         [Test]
+        public void FixtureIsolationScope_Dispose_WhenAnotherFixtureAvatarIsStillRegistered_DoesNotReportFixtureRootAsSceneLeak()
+        {
+            AsmLiteTestContext first = null;
+            AsmLiteTestContext second = null;
+
+            try
+            {
+                first = ASMLiteTestFixtures.CreateTestAvatar();
+                second = ASMLiteTestFixtures.CreateTestAvatar();
+                second.AvatarGo.name = "ConcurrentFixtureAvatar";
+
+                var firstAvatar = first.AvatarGo;
+                Assert.DoesNotThrow(() => ASMLiteTestFixtures.TearDownTestAvatar(firstAvatar));
+                first = null;
+                Assert.IsTrue(second.AvatarGo != null,
+                    "Concurrent fixture avatar should remain live until its own teardown.");
+            }
+            finally
+            {
+                if (first?.AvatarGo != null)
+                    ASMLiteTestFixtures.TearDownTestAvatar(first.AvatarGo);
+                if (second?.AvatarGo != null)
+                    ASMLiteTestFixtures.TearDownTestAvatar(second.AvatarGo);
+            }
+        }
+
+        [Test]
         public void FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak()
         {
             AsmLiteFixtureIsolationScope scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak));
