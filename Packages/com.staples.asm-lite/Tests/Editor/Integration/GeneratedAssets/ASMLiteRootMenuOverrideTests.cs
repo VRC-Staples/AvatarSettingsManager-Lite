@@ -15,11 +15,36 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteRootMenuOverrideTests
     {
+        private const string SuiteName = nameof(ASMLiteRootMenuOverrideTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceIconAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+            _sourceIconAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(
+                SuiteName,
+                ASMLiteGeneratedAssetTestIsolation.BuiltInIconFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "R081: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "R081: fixture did not create ASMLiteComponent.");
@@ -28,7 +53,19 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            try
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceIconAssetsBaseline?.AssertUnchanged(SuiteName);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _sourceIconAssetsBaseline = null;
+                _ctx = null;
+            }
         }
 
         private VRCExpressionsMenu.Control BuildAndGetRootControl(string aid)

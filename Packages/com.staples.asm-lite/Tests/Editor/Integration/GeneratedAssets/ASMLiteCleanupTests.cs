@@ -22,11 +22,17 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteCleanupTests
     {
         private AsmLiteTestContext _ctx;
-        private string _cleanupVendorizedAvatarFolder;
+        private readonly List<string> _ownedVendorizedAvatarFolders = new List<string>();
+        private bool _asmLiteRootExistedBeforeTest;
+        private PackageGeneratedAssetsSnapshot _packageGeneratedAssetsSnapshot;
 
         [SetUp]
         public void SetUp()
         {
+            _ownedVendorizedAvatarFolders.Clear();
+            _asmLiteRootExistedBeforeTest = AssetDatabase.IsValidFolder("Assets/ASM-Lite");
+            _packageGeneratedAssetsSnapshot = PackageGeneratedAssetsSnapshot.Capture(ASMLiteAssetPaths.GeneratedDir);
+
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A35: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A35: fixture did not create ASMLiteComponent.");
@@ -37,21 +43,18 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            if (!string.IsNullOrWhiteSpace(_cleanupVendorizedAvatarFolder)
-                && AssetDatabase.IsValidFolder(_cleanupVendorizedAvatarFolder))
+            try
             {
-                AssetDatabase.DeleteAsset(_cleanupVendorizedAvatarFolder);
+                DeleteOwnedVendorizedAvatarFolders();
+                _packageGeneratedAssetsSnapshot?.Restore();
             }
-
-            if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
-                && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
+            finally
             {
-                AssetDatabase.DeleteAsset("Assets/ASM-Lite");
+                _packageGeneratedAssetsSnapshot = null;
+                _ownedVendorizedAvatarFolders.Clear();
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _ctx = null;
             }
-
-            AssetDatabase.Refresh();
-            _cleanupVendorizedAvatarFolder = null;
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
@@ -165,10 +168,10 @@ namespace ASMLite.Tests.Editor
             return candidate;
         }
 
-        private static string CreateVendorizedMirrorForTest(string avatarName)
+        private string CreateVendorizedMirrorForTest(string avatarName, string aid)
         {
             string root = EnsureAssetFolder("Assets", "ASM-Lite");
-            string avatarFolder = EnsureAssetFolder(root, avatarName);
+            string avatarFolder = CreateUniqueOwnedAvatarFolder(root, avatarName, aid);
             string generatedFolder = EnsureAssetFolder(avatarFolder, "GeneratedAssets");
 
             CopyPackageAssetToMirror(ASMLiteAssetPaths.FXController, generatedFolder);
@@ -178,6 +181,43 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return generatedFolder;
+        }
+
+        private string CreateUniqueOwnedAvatarFolder(string root, string avatarName, string aid)
+        {
+            string prefix = SanitizePathFragment(string.IsNullOrWhiteSpace(aid)
+                ? avatarName
+                : $"{aid}_{avatarName}");
+
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                string folderName = $"{prefix}_{System.Guid.NewGuid():N}";
+                folderName = folderName.Substring(0, System.Math.Min(folderName.Length, prefix.Length + 9));
+                string folderPath = root + "/" + folderName;
+                if (AssetDatabase.IsValidFolder(folderPath))
+                    continue;
+
+                AssetDatabase.CreateFolder(root, folderName);
+                _ownedVendorizedAvatarFolders.Add(folderPath);
+                return folderPath;
+            }
+
+            Assert.Fail($"{aid}: could not allocate a unique test-owned vendorized avatar folder under '{root}'.");
+            return null;
+        }
+
+        private static string SanitizePathFragment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "CleanupAvatar";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var chars = value
+                .Trim()
+                .Select(c => invalid.Contains(c) ? '_' : c)
+                .ToArray();
+            string sanitized = new string(chars);
+            return string.IsNullOrWhiteSpace(sanitized) ? "CleanupAvatar" : sanitized;
         }
 
         private static int CountMenuAssetsUnderPrefix(VRCExpressionsMenu menu, string assetPrefix, HashSet<VRCExpressionsMenu> visited)
@@ -253,27 +293,81 @@ namespace ASMLite.Tests.Editor
         private static void CopyPackageAssetToMirror(string sourceAssetPath, string targetFolder)
         {
             string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
-            AssetDatabase.DeleteAsset(destinationPath);
+            Assert.IsFalse(AssetDatabase.LoadMainAssetAtPath(destinationPath) != null || AssetDatabase.IsValidFolder(destinationPath),
+                $"Expected test-owned mirror destination '{destinationPath}' to be empty before copying package asset '{sourceAssetPath}'.");
             Assert.IsTrue(AssetDatabase.CopyAsset(sourceAssetPath, destinationPath),
                 $"Expected to copy '{sourceAssetPath}' to '{destinationPath}' for vendorized cleanup regression setup.");
         }
 
-        private static void DeleteVendorizedAvatarFolderIfPresent(string generatedAssetsFolder)
+        private string CreateUserOwnedSentinelAsset(string avatarFolder, string fileName)
+        {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(avatarFolder),
+                "Expected a test-owned avatar folder before creating a user-owned sentinel asset.");
+            string assetPath = avatarFolder + "/" + fileName;
+            var sentinel = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            sentinel.controls = new List<VRCExpressionsMenu.Control>
+            {
+                new VRCExpressionsMenu.Control
+                {
+                    name = "User Owned Sentinel",
+                    type = VRCExpressionsMenu.Control.ControlType.Button,
+                }
+            };
+            AssetDatabase.CreateAsset(sentinel, assetPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            return assetPath;
+        }
+
+        private void DeleteVendorizedAvatarFolderIfPresent(string generatedAssetsFolder)
         {
             if (string.IsNullOrWhiteSpace(generatedAssetsFolder))
                 return;
 
             string avatarFolder = Path.GetDirectoryName(generatedAssetsFolder)?.Replace('\\', '/');
-            if (!string.IsNullOrWhiteSpace(avatarFolder) && AssetDatabase.IsValidFolder(avatarFolder))
-                AssetDatabase.DeleteAsset(avatarFolder);
+            DeleteOwnedVendorizedAvatarFolder(avatarFolder);
+            PruneOwnedAsmLiteRootIfEmpty();
+            AssetDatabase.Refresh();
+        }
+
+        private void DeleteOwnedVendorizedAvatarFolders()
+        {
+            foreach (string avatarFolder in _ownedVendorizedAvatarFolders
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Distinct()
+                .OrderByDescending(path => path.Length)
+                .ToArray())
+            {
+                DeleteOwnedVendorizedAvatarFolder(avatarFolder);
+            }
+
+            PruneOwnedAsmLiteRootIfEmpty();
+            AssetDatabase.Refresh();
+        }
+
+        private void DeleteOwnedVendorizedAvatarFolder(string avatarFolder)
+        {
+            if (string.IsNullOrWhiteSpace(avatarFolder))
+                return;
+
+            string normalized = avatarFolder.Replace('\\', '/').TrimEnd('/');
+            if (!_ownedVendorizedAvatarFolders.Contains(normalized))
+                _ownedVendorizedAvatarFolders.Add(normalized);
+
+            if (AssetDatabase.IsValidFolder(normalized))
+                AssetDatabase.DeleteAsset(normalized);
+        }
+
+        private void PruneOwnedAsmLiteRootIfEmpty()
+        {
+            if (_asmLiteRootExistedBeforeTest)
+                return;
 
             if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
                 && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
             {
                 AssetDatabase.DeleteAsset("Assets/ASM-Lite");
             }
-
-            AssetDatabase.Refresh();
         }
 
         // ── A35 ────────────────────────────────────────────────────────────────
@@ -556,8 +650,9 @@ namespace ASMLite.Tests.Editor
             AddAvatarParam(_ctx, "A55_Int", VRCExpressionParameters.ValueType.Int);
             BuildOrFail(_ctx, "A55");
 
-            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName);
-            _cleanupVendorizedAvatarFolder = "Assets/ASM-Lite/" + avatarName;
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "A55");
+            string vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedDir)?.Replace('\\', '/');
+            string userOwnedSiblingAsset = CreateUserOwnedSentinelAsset(vendorizedAvatarFolder, "A55_UserOwnedSibling.asset");
 
             Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedDir),
                 $"A55: setup failure, expected vendorized folder '{vendorizedDir}' to exist before return-to-managed cleanup.");
@@ -598,8 +693,10 @@ namespace ASMLite.Tests.Editor
                 "A55: return-to-managed should clear the tracked vendorized folder path after cleanup.");
             Assert.IsFalse(AssetDatabase.IsValidFolder(vendorizedDir),
                 $"A55: return-to-managed should delete the vendorized GeneratedAssets folder '{vendorizedDir}'.");
-            Assert.IsFalse(AssetDatabase.IsValidFolder(_cleanupVendorizedAvatarFolder),
-                $"A55: return-to-managed should prune the now-empty avatar vendorized folder '{_cleanupVendorizedAvatarFolder}'.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedAvatarFolder),
+                $"A55: return-to-managed should preserve avatar vendorized folder '{vendorizedAvatarFolder}' while user-owned sibling assets remain.");
+            Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(userOwnedSiblingAsset),
+                $"A55: return-to-managed should preserve user-owned sibling asset '{userOwnedSiblingAsset}' while deleting only the mirrored GeneratedAssets folder.");
             Assert.AreEqual(ASMLiteAssetPaths.ExprParams,
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
                 "A55: return-to-managed should restore avatar expression parameters back to package-managed generated assets.");
@@ -627,8 +724,7 @@ namespace ASMLite.Tests.Editor
             AddAvatarParam(_ctx, "A56_Int", VRCExpressionParameters.ValueType.Int);
             BuildOrFail(_ctx, "A56");
 
-            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName);
-            _cleanupVendorizedAvatarFolder = "Assets/ASM-Lite/" + avatarName;
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "A56");
 
             _ctx.Comp.useVendorizedGeneratedAssets = true;
             _ctx.Comp.vendorizedGeneratedAssetsPath = vendorizedDir;
@@ -843,5 +939,121 @@ namespace ASMLite.Tests.Editor
                 Object.DestroyImmediate(otherAvatarGo);
             }
         }
+        private sealed class PackageGeneratedAssetsSnapshot
+        {
+            private readonly string _rootFolder;
+            private readonly bool _rootFolderExisted;
+            private readonly byte[] _rootMetaBytes;
+            private readonly Dictionary<string, byte[]> _files;
+            private readonly HashSet<string> _directories;
+
+            private PackageGeneratedAssetsSnapshot(
+                string rootFolder,
+                bool rootFolderExisted,
+                byte[] rootMetaBytes,
+                Dictionary<string, byte[]> files,
+                HashSet<string> directories)
+            {
+                _rootFolder = rootFolder;
+                _rootFolderExisted = rootFolderExisted;
+                _rootMetaBytes = rootMetaBytes;
+                _files = files;
+                _directories = directories;
+            }
+
+            public static PackageGeneratedAssetsSnapshot Capture(string rootFolder)
+            {
+                var files = new Dictionary<string, byte[]>(System.StringComparer.Ordinal);
+                var directories = new HashSet<string>(System.StringComparer.Ordinal) { string.Empty };
+                bool rootFolderExisted = Directory.Exists(rootFolder);
+                string rootMetaPath = rootFolder + ".meta";
+                byte[] rootMetaBytes = File.Exists(rootMetaPath) ? File.ReadAllBytes(rootMetaPath) : null;
+
+                if (rootFolderExisted)
+                {
+                    foreach (string directory in Directory.GetDirectories(rootFolder, "*", SearchOption.AllDirectories))
+                    {
+                        directories.Add(ToRelativePath(rootFolder, directory));
+                    }
+
+                    foreach (string file in Directory.GetFiles(rootFolder, "*", SearchOption.AllDirectories))
+                    {
+                        files[ToRelativePath(rootFolder, file)] = File.ReadAllBytes(file);
+                    }
+                }
+
+                return new PackageGeneratedAssetsSnapshot(rootFolder, rootFolderExisted, rootMetaBytes, files, directories);
+            }
+
+            public void Restore()
+            {
+                string rootMetaPath = _rootFolder + ".meta";
+
+                if (!_rootFolderExisted)
+                {
+                    if (Directory.Exists(_rootFolder))
+                        Directory.Delete(_rootFolder, recursive: true);
+                    if (File.Exists(rootMetaPath))
+                        File.Delete(rootMetaPath);
+                    AssetDatabase.Refresh();
+                    return;
+                }
+
+                if (!Directory.Exists(_rootFolder))
+                    Directory.CreateDirectory(_rootFolder);
+
+                if (_rootMetaBytes != null)
+                    File.WriteAllBytes(rootMetaPath, _rootMetaBytes);
+                else if (File.Exists(rootMetaPath))
+                    File.Delete(rootMetaPath);
+
+                foreach (string file in Directory.GetFiles(_rootFolder, "*", SearchOption.AllDirectories))
+                {
+                    string relativePath = ToRelativePath(_rootFolder, file);
+                    if (!_files.ContainsKey(relativePath))
+                        File.Delete(file);
+                }
+
+                foreach (string relativeDirectory in _directories.OrderBy(path => path.Length))
+                {
+                    string directoryPath = string.IsNullOrEmpty(relativeDirectory)
+                        ? _rootFolder
+                        : Path.Combine(_rootFolder, relativeDirectory.Replace('/', Path.DirectorySeparatorChar));
+                    if (!Directory.Exists(directoryPath))
+                        Directory.CreateDirectory(directoryPath);
+                }
+
+                foreach (var file in _files)
+                {
+                    string filePath = Path.Combine(_rootFolder, file.Key.Replace('/', Path.DirectorySeparatorChar));
+                    string directoryPath = Path.GetDirectoryName(filePath);
+                    if (!string.IsNullOrWhiteSpace(directoryPath) && !Directory.Exists(directoryPath))
+                        Directory.CreateDirectory(directoryPath);
+                    File.WriteAllBytes(filePath, file.Value);
+                }
+
+                foreach (string directory in Directory.GetDirectories(_rootFolder, "*", SearchOption.AllDirectories)
+                    .OrderByDescending(path => path.Length))
+                {
+                    string relativePath = ToRelativePath(_rootFolder, directory);
+                    if (!_directories.Contains(relativePath) && Directory.GetFileSystemEntries(directory).Length == 0)
+                        Directory.Delete(directory);
+                }
+
+                AssetDatabase.Refresh();
+            }
+
+            private static string ToRelativePath(string rootFolder, string path)
+            {
+                string root = Path.GetFullPath(rootFolder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+                string fullPath = Path.GetFullPath(path);
+                if (fullPath.StartsWith(root, System.StringComparison.Ordinal))
+                    return fullPath.Substring(root.Length).Replace('\\', '/');
+                return path.Replace('\\', '/');
+            }
+        }
+
+
     }
 }

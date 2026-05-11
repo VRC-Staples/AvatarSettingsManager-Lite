@@ -16,12 +16,37 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteCustomizationIntegrationTests
     {
+        private const string SuiteName = nameof(ASMLiteCustomizationIntegrationTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceIconAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
             ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+            _sourceIconAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(
+                SuiteName,
+                ASMLiteGeneratedAssetTestIsolation.BuiltInIconFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A53: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A53: fixture did not create ASMLiteComponent.");
@@ -30,14 +55,25 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
-            _ctx = null;
+            try
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceIconAssetsBaseline?.AssertUnchanged(SuiteName);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _sourceIconAssetsBaseline = null;
+                _ctx = null;
+            }
         }
 
         [Test, Category("Integration")]
         public void A53_CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix()
         {
-            var customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[4], "A53");
+            var customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[4], "A53", "CustomRoot");
 
             _ctx.Comp.slotCount = 3;
             _ctx.Comp.useCustomSlotIcons = true;
@@ -138,7 +174,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  Repeatable Root  ";
             _ctx.Comp.useCustomRootIcon = false;
-            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[0], "A54");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[0], "A54", "CustomRoot");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "  Avatars/Repeatable  ";
             _ctx.Comp.useParameterExclusions = true;
@@ -209,7 +245,7 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts()
         {
-            var staleIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[7], "A55");
+            var staleIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[7], "A55", "StaleRoot");
             var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "A55");
 
             _ctx.Comp.slotCount = 2;
@@ -312,7 +348,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = " Enabled First Pass ";
             _ctx.Comp.useCustomRootIcon = false;
-            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[2], "A56");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[2], "A56", "EnabledRoot");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = " Avatars/EnabledFirstPass ";
             _ctx.Comp.useParameterExclusions = true;
@@ -329,7 +365,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.customRootName = " stale disabled name ";
             _ctx.Comp.useCustomSlotIcons = false;
             _ctx.Comp.useCustomRootIcon = true;
-            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "A56");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[6], "A56", "StaleRoot");
             _ctx.Comp.useCustomInstallPath = false;
             _ctx.Comp.customInstallPath = " stale/disabled/prefix ";
             _ctx.Comp.useParameterExclusions = false;
@@ -446,6 +482,9 @@ namespace ASMLite.Tests.Editor
                 $"{aid}: expected icon asset at '{path}' but LoadAssetAtPath returned null.");
             return icon;
         }
+
+        private static Texture2D CopyIconFixtureOrFail(string path, string aid, string label)
+            => ASMLiteGeneratedAssetTestIsolation.CopyIconFixtureOrFail(path, aid, label);
 
         private static int CountGeneratedFxSchemaKeys(AnimatorController ctrl)
             => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
