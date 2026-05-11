@@ -51,11 +51,30 @@ namespace ASMLite.Tests.Editor
         internal const string TempDir = "Assets/ASMLiteTests_Temp";
         private static readonly List<ASMLiteGenerationWiringFailure> s_recordedGenerationWiringFailures = new List<ASMLiteGenerationWiringFailure>();
         private static readonly object s_recordedGenerationWiringFailuresLock = new object();
-        private static readonly Dictionary<int, AsmLiteFixtureIsolationScope> s_fixtureIsolationScopes = new Dictionary<int, AsmLiteFixtureIsolationScope>();
+        private static readonly Dictionary<int, FixtureIsolationRegistration> s_fixtureIsolationRegistrations = new Dictionary<int, FixtureIsolationRegistration>();
+
+        private sealed class FixtureIsolationRegistration
+        {
+            internal FixtureIsolationRegistration(AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
+            {
+                Scope = scope;
+                GeneratedAssetPaths = new HashSet<string>(generatedAssetPaths ?? Array.Empty<string>(), StringComparer.Ordinal);
+            }
+
+            internal AsmLiteFixtureIsolationScope Scope { get; }
+            internal HashSet<string> GeneratedAssetPaths { get; }
+        }
 
         public static AsmLiteTestContext CreateTestAvatar()
         {
             var isolationScope = AsmLiteFixtureIsolationScope.Capture(nameof(CreateTestAvatar));
+            var fixtureGeneratedAssetPaths = new[]
+            {
+                TempDir,
+                TempDir + "/TestFX.controller",
+                TempDir + "/TestParams.asset",
+                TempDir + "/TestMenu.asset",
+            };
 
             // Create temp directory (guard against already existing)
             if (!AssetDatabase.IsValidFolder(TempDir))
@@ -125,7 +144,7 @@ namespace ASMLite.Tests.Editor
                 MenuAsset = menuAsset,
                 FixtureIsolationScope = isolationScope
             };
-            RegisterFixtureIsolationScope(avatarGo, isolationScope);
+            RegisterFixtureIsolationScope(avatarGo, isolationScope, fixtureGeneratedAssetPaths);
             return context;
         }
 
@@ -321,12 +340,12 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static void RegisterFixtureIsolationScope(GameObject avatarGo, AsmLiteFixtureIsolationScope scope)
+        private static void RegisterFixtureIsolationScope(GameObject avatarGo, AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
         {
             if (avatarGo == null || scope == null)
                 return;
 
-            s_fixtureIsolationScopes[avatarGo.GetInstanceID()] = scope;
+            s_fixtureIsolationRegistrations[avatarGo.GetInstanceID()] = new FixtureIsolationRegistration(scope, generatedAssetPaths);
         }
 
         private static AsmLiteFixtureIsolationScope UnregisterFixtureIsolationScope(GameObject avatarGo)
@@ -335,16 +354,25 @@ namespace ASMLite.Tests.Editor
                 return null;
 
             var key = avatarGo.GetInstanceID();
-            if (!s_fixtureIsolationScopes.TryGetValue(key, out var isolationScope))
+            if (!s_fixtureIsolationRegistrations.TryGetValue(key, out var registration))
                 return null;
 
-            s_fixtureIsolationScopes.Remove(key);
-            return isolationScope;
+            s_fixtureIsolationRegistrations.Remove(key);
+            return registration.Scope;
         }
 
         internal static bool IsRegisteredFixtureAvatarRootId(int instanceId)
         {
-            return s_fixtureIsolationScopes.ContainsKey(instanceId);
+            return s_fixtureIsolationRegistrations.ContainsKey(instanceId);
+        }
+
+        internal static bool IsRegisteredFixtureGeneratedAssetPath(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
+                return false;
+
+            return s_fixtureIsolationRegistrations.Values.Any(registration =>
+                registration.GeneratedAssetPaths.Contains(assetPath));
         }
 
         public static void ResetGeneratedExprParams()

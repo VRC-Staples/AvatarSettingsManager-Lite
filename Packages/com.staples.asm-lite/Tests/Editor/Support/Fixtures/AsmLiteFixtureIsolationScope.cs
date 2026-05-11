@@ -101,6 +101,7 @@ namespace ASMLite.Tests.Editor
                 .Where(pair => !_baselineAssetPathsByGuid.ContainsKey(pair.Key))
                 .Select(pair => pair.Value)
                 .Where(path => !string.IsNullOrEmpty(path))
+                .Where(path => !ASMLiteTestFixtures.IsRegisteredFixtureGeneratedAssetPath(path))
                 .OrderBy(path => path, StringComparer.Ordinal)
                 .ToArray();
 
