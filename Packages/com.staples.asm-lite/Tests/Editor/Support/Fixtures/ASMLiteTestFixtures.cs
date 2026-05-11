@@ -48,12 +48,34 @@ namespace ASMLite.Tests.Editor
      /// </summary>
     public static class ASMLiteTestFixtures
     {
-        private const string TempDir = "Assets/ASMLiteTests_Temp";
+        internal const string TempDir = "Assets/ASMLiteTests_Temp";
         private static readonly List<ASMLiteGenerationWiringFailure> s_recordedGenerationWiringFailures = new List<ASMLiteGenerationWiringFailure>();
         private static readonly object s_recordedGenerationWiringFailuresLock = new object();
+        private static readonly Dictionary<int, FixtureIsolationRegistration> s_fixtureIsolationRegistrations = new Dictionary<int, FixtureIsolationRegistration>();
+
+        private sealed class FixtureIsolationRegistration
+        {
+            internal FixtureIsolationRegistration(AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
+            {
+                Scope = scope;
+                GeneratedAssetPaths = new HashSet<string>(generatedAssetPaths ?? Array.Empty<string>(), StringComparer.Ordinal);
+            }
+
+            internal AsmLiteFixtureIsolationScope Scope { get; }
+            internal HashSet<string> GeneratedAssetPaths { get; }
+        }
 
         public static AsmLiteTestContext CreateTestAvatar()
         {
+            var isolationScope = AsmLiteFixtureIsolationScope.Capture(nameof(CreateTestAvatar));
+            var fixtureGeneratedAssetPaths = new[]
+            {
+                TempDir,
+                TempDir + "/TestFX.controller",
+                TempDir + "/TestParams.asset",
+                TempDir + "/TestMenu.asset",
+            };
+
             // Create temp directory (guard against already existing)
             if (!AssetDatabase.IsValidFolder(TempDir))
                 AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
@@ -112,15 +134,18 @@ namespace ASMLite.Tests.Editor
             compGo.transform.SetParent(avatarGo.transform);
             var comp = compGo.AddComponent<ASMLiteComponent>();
 
-            return new AsmLiteTestContext
+            var context = new AsmLiteTestContext
             {
                 AvatarGo = avatarGo,
                 AvDesc = avDesc,
                 Comp = comp,
                 Ctrl = ctrl,
                 ParamsAsset = paramsAsset,
-                MenuAsset = menuAsset
+                MenuAsset = menuAsset,
+                FixtureIsolationScope = isolationScope
             };
+            RegisterFixtureIsolationScope(avatarGo, isolationScope, fixtureGeneratedAssetPaths);
+            return context;
         }
 
         public static void AddExpressionParam(
@@ -301,10 +326,53 @@ namespace ASMLite.Tests.Editor
 
         public static void TearDownTestAvatar(GameObject avatarGo)
         {
-            AssetDatabase.DeleteAsset(TempDir);
-            AssetDatabase.Refresh();
-            if (avatarGo != null)
-                UnityEngine.Object.DestroyImmediate(avatarGo);
+            var isolationScope = UnregisterFixtureIsolationScope(avatarGo);
+            try
+            {
+                AssetDatabase.DeleteAsset(TempDir);
+                AssetDatabase.Refresh();
+                if (avatarGo != null)
+                    UnityEngine.Object.DestroyImmediate(avatarGo);
+            }
+            finally
+            {
+                isolationScope?.Dispose();
+            }
+        }
+
+        private static void RegisterFixtureIsolationScope(GameObject avatarGo, AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
+        {
+            if (avatarGo == null || scope == null)
+                return;
+
+            s_fixtureIsolationRegistrations[avatarGo.GetInstanceID()] = new FixtureIsolationRegistration(scope, generatedAssetPaths);
+        }
+
+        private static AsmLiteFixtureIsolationScope UnregisterFixtureIsolationScope(GameObject avatarGo)
+        {
+            if (avatarGo == null)
+                return null;
+
+            var key = avatarGo.GetInstanceID();
+            if (!s_fixtureIsolationRegistrations.TryGetValue(key, out var registration))
+                return null;
+
+            s_fixtureIsolationRegistrations.Remove(key);
+            return registration.Scope;
+        }
+
+        internal static bool IsRegisteredFixtureAvatarRootId(int instanceId)
+        {
+            return s_fixtureIsolationRegistrations.ContainsKey(instanceId);
+        }
+
+        internal static bool IsRegisteredFixtureGeneratedAssetPath(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath))
+                return false;
+
+            return s_fixtureIsolationRegistrations.Values.Any(registration =>
+                registration.GeneratedAssetPaths.Contains(assetPath));
         }
 
         public static void ResetGeneratedExprParams()
@@ -389,6 +457,7 @@ namespace ASMLite.Tests.Editor
         public AnimatorController Ctrl;
         public VRCExpressionParameters ParamsAsset;
         public VRCExpressionsMenu MenuAsset;
+        internal AsmLiteFixtureIsolationScope FixtureIsolationScope;
     }
 
     public enum AsmLiteVisibleAutomationMode
