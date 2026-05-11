@@ -67,25 +67,13 @@ class SuiteLedgerValidatorTests(unittest.TestCase):
             }
             """,
         )
-        self.write_test_file(
-            "Tools/ci/rust-overlay/AccidentalUnityTests.cs",
-            """
-            using NUnit.Framework;
-            public sealed class AccidentalUnityTests
-            {
-                [Test]
-                public void MustNotEnterLedger() {}
-            }
-            """,
-        )
-
         result = self.run_validator("--update")
 
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
         self.assertEqual(ledger["schemaVersion"], 1)
         self.assertEqual(ledger["scope"]["include"], ["Packages/com.staples.asm-lite/Tests/**/*.cs"])
-        self.assertIn("Tools/ci/rust-overlay/**", ledger["scope"]["exclude"])
+        self.assertNotIn("exclude", ledger["scope"])
         identities = [(row["file"], row["class"], row["method"]) for row in ledger["tests"]]
         self.assertEqual(identities, sorted(identities))
         self.assertEqual([row["method"] for row in ledger["tests"]], [

@@ -86,7 +86,7 @@
     },
     {
       "id": "smoke-protocol-headless",
-      "description": "C#/Unity smoke protocol, catalog, JSON/event, atomic IO, artifact path, and executor contract tests. Rust overlay tests are excluded from this map.",
+      "description": "C#/Unity smoke protocol, catalog, JSON/event, atomic IO, artifact path, and executor contract tests.",
       "defaultCi": true,
       "headless": "yes",
       "testFiles": [
@@ -112,12 +112,11 @@
             ]
           }
         ]
-      },
-      "parityValidator": "Tools/ci/verify-smoke-protocol-parity.py"
+      }
     },
     {
       "id": "smoke-overlay-host-headless",
-      "description": "C#/Unity editor host/application tests that exercise smoke host behavior in batch/headless Unity, independent of the Rust overlay.",
+      "description": "C#/Unity editor host/application tests that exercise smoke host behavior in batch/headless Unity, independent of external visible tooling.",
       "defaultCi": true,
       "headless": "yes",
       "testFiles": [

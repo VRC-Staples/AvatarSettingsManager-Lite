@@ -5,9 +5,6 @@
     "include": [
       "Packages/com.staples.asm-lite/Tests/**/*.cs"
     ],
-    "exclude": [
-      "Tools/ci/rust-overlay/**"
-    ],
     "sort": [
       "file",
       "class",

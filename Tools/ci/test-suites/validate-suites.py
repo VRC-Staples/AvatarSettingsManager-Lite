@@ -146,11 +146,6 @@ def assert_smoke_membership(groups: dict[str, dict[str, Any]], errors: list[str]
                 f"{group_id} testFiles must be {expected}; found {actual}"
             )
 
-    for group_id, group in groups.items():
-        for path in string_list(group.get("testFiles")):
-            if normalize_slashes(path).startswith("Tools/ci/rust-overlay/"):
-                errors.append(f"{group_id} must not include Rust overlay test path: {path}")
-
 
 def expected_batch_runs(default_ids: list[str], groups: dict[str, dict[str, Any]], errors: list[str]) -> list[dict[str, Any]]:
     runs: list[dict[str, Any]] = []
@@ -253,13 +248,6 @@ def assert_smoke_catalog_parity(
     visible_group = groups.get("visible-manual", {})
     if visible_group.get("smokeCatalogPath") != SMOKE_CATALOG_PATH:
         errors.append(f"visible-manual smokeCatalogPath must be {SMOKE_CATALOG_PATH}")
-
-    protocol_group = groups.get("smoke-protocol-headless", {})
-    parity_validator = protocol_group.get("parityValidator")
-    if parity_validator != "Tools/ci/verify-smoke-protocol-parity.py":
-        errors.append("smoke-protocol-headless must reference Tools/ci/verify-smoke-protocol-parity.py")
-    elif not (repo_root / parity_validator).is_file():
-        errors.append(f"missing smoke protocol parity validator: {parity_validator}")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

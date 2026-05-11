@@ -101,7 +101,6 @@ def suites_document() -> dict[str, object]:
                 "headless": "yes",
                 "testFiles": SMOKE_PROTOCOL_FILES,
                 "batchRun": runs_by_name["editmode-smoke-protocol"],
-                "parityValidator": "Tools/ci/verify-smoke-protocol-parity.py",
             },
             {
                 "id": "smoke-overlay-host-headless",
@@ -136,7 +135,6 @@ class ValidateSuitesTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         (self.root / "Tools/ci/test-suites").mkdir(parents=True)
         (self.root / "Tools/ci/smoke").mkdir(parents=True)
-        (self.root / "Tools/ci/verify-smoke-protocol-parity.py").write_text("#!/usr/bin/env python3\n", encoding="utf-8")
         self.suites_path = self.root / "Tools/ci/test-suites/suites.json"
         self.batch_path = self.root / "Tools/ci/editmode-batch-runs.json"
         self.catalog_path = self.root / "Tools/ci/smoke/suite-catalog.json"

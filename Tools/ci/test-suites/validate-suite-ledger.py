@@ -14,7 +14,6 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 DEFAULT_INCLUDE = "Packages/com.staples.asm-lite/Tests/**/*.cs"
-RUST_OVERLAY_EXCLUDE = "Tools/ci/rust-overlay/**"
 LEDGER_PATH = "Tools/ci/test-suite-ledger.json"
 PLACEHOLDER = {
     "lane": "needs-classification",
@@ -216,8 +215,6 @@ def inventory_tests(repo_root: Path) -> list[TestIdentity]:
         return []
     rows: list[TestIdentity] = []
     for path in sorted(package_tests.rglob("*.cs")):
-        if RUST_OVERLAY_EXCLUDE.removesuffix("/**") in normalize_slashes(path.relative_to(repo_root)):
-            continue
         source = path.read_text(encoding="utf-8-sig")
         rel = normalize_slashes(path.relative_to(repo_root))
         rows.extend(inventory_tests_in_source(rel, source))
@@ -374,7 +371,6 @@ def expected_document(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "scope": {
             "description": "Unity C# NUnit/EditMode tests inventoried under the ASM-Lite package tests tree.",
             "include": [DEFAULT_INCLUDE],
-            "exclude": [RUST_OVERLAY_EXCLUDE],
             "sort": ["file", "class", "method"],
         },
         "tests": rows,

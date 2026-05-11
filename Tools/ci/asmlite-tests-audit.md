@@ -5,7 +5,6 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 ## Scope and policy
 
 - Scope: Unity C# NUnit/EditMode tests under `Packages/com.staples.asm-lite/Tests/**/*.cs`.
-- Excluded from this audit: `Tools/ci/rust-overlay/**`.
 - Test assembly definition policy: keep the single existing test asmdef in this pass.
 - No tests were deleted, renamed, or quarantined by this audit pass.
 - Default headless CI lanes remain `contract`, `core-headless`, `integration-headless`, `smoke-protocol-headless`, and `smoke-overlay-host-headless`.
@@ -29,7 +28,7 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 | `integration-headless` | yes | yes | 116 | 14 | Fixture-heavy Unity EditMode integration with per-test package/temp fixture restoration, source-fixture immutability checks, and fixture isolation sentinels for concurrent roots plus generated asset, scene, selection, and open-scene contamination. |
 | `runner-selftest-headless` | no | yes | 12 | 1 | Batch runner self-tests are headless but intentionally excluded from the default runner batch to avoid self-selection. |
 | `smoke-protocol-headless` | yes | yes | 45 | 6 | Protocol, catalog, artifact, and atomic IO contracts for the visible smoke transport. |
-| `smoke-overlay-host-headless` | yes | yes | 87 | 2 | Unity editor host behavior for smoke commands, run headlessly without the Rust overlay. |
+| `smoke-overlay-host-headless` | yes | yes | 87 | 2 | Unity editor host behavior for smoke commands, run headlessly without external visible tooling. |
 | `visible-manual` | no | no | 8 | 1 | Rendered editor/operator smoke flow. Requires visible Unity/editor state and remains manual. |
 | `playmode-headless-review` | no | conditional | 6 | 1 | AV3/runtime PlayMode coverage; separate runtime lane required before default CI inclusion. |
 
@@ -636,8 +635,7 @@ All 12 former `yes-fixture-isolated` classes have completed cleanup review and n
 
 ## Legacy visible overlay execution cleanup
 
-- Keep Rust overlay tests under `Tools/ci/rust-overlay/**` out of this C#/Unity audit.
-- The legacy visible overlay execution path should remain manual until a follow-up explicitly removes/replaces the legacy launcher path and proves protocol parity through the headless smoke protocol and overlay-host lanes.
+- Visible operator execution should remain manual until a follow-up replaces the legacy launcher path and proves coverage through the headless smoke protocol and overlay-host lanes.
 - `ASMLiteVisibleAutomationCommandLineTests` is headless parser/result-document coverage only; it is not evidence that rendered visible overlay execution is headless-safe.
 
 ## Validation commands for this audit
@@ -645,7 +643,6 @@ All 12 former `yes-fixture-isolated` classes have completed cleanup review and n
 Run after edits:
 
 ```bash
-python3 Tools/ci/verify-smoke-protocol-parity.py
 bash Tools/ci/run-visible-smoke-local.sh --self-test
 python3 Tools/ci/test-suites/validate-suite-ledger.py
 python3 Tools/ci/test-suites/validate-suites.py

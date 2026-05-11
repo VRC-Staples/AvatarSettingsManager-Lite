@@ -804,7 +804,7 @@ parse_args() {
         shift 2
         ;;
       --visible-overlay-state-path|--visible-overlay-ack-path|-asmliteVisibleAutomationExternalOverlayStatePath|-asmliteVisibleAutomationExternalOverlayAckPath)
-        echo "error: legacy python overlay transport removed; use Tools/ci/run-visible-smoke-local.sh or Tools/ci/run-UAT-smoke.sh canonical rust-overlay commands." >&2
+        echo "error: legacy external visible transport removed; use Tools/ci/run-visible-smoke-local.sh --editor-smoke or --playmode-smoke." >&2
         exit 2
         ;;
       -h|--help)
@@ -943,7 +943,7 @@ run_local_visible_smoke_mode() {
   echo "note: running local visible Unity editor smoke flow with ${UNITY_EXECUTABLE}"
 
   if [[ -n "${ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH:-}" || -n "${ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH:-}" ]]; then
-    echo "error: legacy python overlay transport removed; unset ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH / ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH and use canonical rust-overlay wrappers." >&2
+    echo "error: legacy external visible transport removed; unset ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_STATE_PATH / ASMLITE_VISIBLE_SMOKE_EXTERNAL_OVERLAY_ACK_PATH." >&2
     exit 2
   fi
 

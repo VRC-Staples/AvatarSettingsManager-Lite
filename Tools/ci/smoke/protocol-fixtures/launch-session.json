@@ -12,7 +12,7 @@
     "projectPath": "Tools/ci/unity-project",
     "packageVersion": "1.0.9",
     "unityVersion": "2022.3.22f1",
-    "overlayVersion": "rust-overlay-dev",
+    "overlayVersion": "overlay-dev",
     "hostVersion": "unity-host-dev",
     "globalResetDefault": "SceneReload",
     "requestedBy": "operator",
