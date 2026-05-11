@@ -41,7 +41,6 @@ node_modules/
 .next/
 dist/
 build/
-Tools/ci/rust-overlay/target/
 __pycache__/
 *.pyc
 .pytest_cache/
