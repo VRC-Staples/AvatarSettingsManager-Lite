@@ -2191,6 +2191,122 @@
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
+      "class": "ASMLiteFixtureIsolationContractTests",
+      "method": "FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak",
+      "line": 15,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes-fixture-isolated",
+      "honesty": "fixture-isolation-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fixture Isolation Scope Dispose When Generated Asset Appears Under Fixture Roots Reports Generated Asset Leak",
+      "fixtureDependencies": [
+        "fixture isolation scope",
+        "Unity editor AssetDatabase/selection/scene state"
+      ],
+      "assetSceneMutations": "intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity editor selection/open-scene state and AssetDatabase fixture roots",
+      "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak",
+      "notes": "Sentinel coverage for fixture contamination detection; tests intentionally contaminate state and clean up in finally blocks."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
+      "class": "ASMLiteFixtureIsolationContractTests",
+      "method": "FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup",
+      "line": 91,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes-fixture-isolated",
+      "honesty": "fixture-isolation-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fixture Isolation Scope Dispose When Open Scenes Change Reports Open Scene Leak And Restores Setup",
+      "fixtureDependencies": [
+        "fixture isolation scope",
+        "Unity editor AssetDatabase/selection/scene state"
+      ],
+      "assetSceneMutations": "intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity editor selection/open-scene state and AssetDatabase fixture roots",
+      "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup",
+      "notes": "Sentinel coverage for fixture contamination detection; tests intentionally contaminate state and clean up in finally blocks."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
+      "class": "ASMLiteFixtureIsolationContractTests",
+      "method": "FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak",
+      "line": 42,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes-fixture-isolated",
+      "honesty": "fixture-isolation-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fixture Isolation Scope Dispose When Scene Object Survives Teardown Reports Scene Object Leak",
+      "fixtureDependencies": [
+        "fixture isolation scope",
+        "Unity editor AssetDatabase/selection/scene state"
+      ],
+      "assetSceneMutations": "intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity editor selection/open-scene state and AssetDatabase fixture roots",
+      "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak",
+      "notes": "Sentinel coverage for fixture contamination detection; tests intentionally contaminate state and clean up in finally blocks."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
+      "class": "ASMLiteFixtureIsolationContractTests",
+      "method": "FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection",
+      "line": 65,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes-fixture-isolated",
+      "honesty": "fixture-isolation-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fixture Isolation Scope Dispose When Selection Changes Reports Selection Leak And Restores Selection",
+      "fixtureDependencies": [
+        "fixture isolation scope",
+        "Unity editor AssetDatabase/selection/scene state"
+      ],
+      "assetSceneMutations": "intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity editor selection/open-scene state and AssetDatabase fixture roots",
+      "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection",
+      "notes": "Sentinel coverage for fixture contamination detection; tests intentionally contaminate state and clean up in finally blocks."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
       "class": "ASMLiteIconTests",
       "method": "A51_MultiColor_UsesPerSlotGearIconBySlotIndex",

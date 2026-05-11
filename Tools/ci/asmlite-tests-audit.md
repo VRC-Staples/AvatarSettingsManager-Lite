@@ -14,9 +14,9 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 
 ## Inventory summary
 
-- Total in-scope test methods classified: **498**
-- Total test classes classified: **49**
-- Methods currently recommended for default CI: **471**
+- Total in-scope test methods classified: **502**
+- Total test classes classified: **50**
+- Methods currently recommended for default CI: **475**
 - Methods explicitly manual/review-only: **14**
 - Headless/default-CI selection gaps called out for follow-up: **1**
 
@@ -26,7 +26,7 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 |---|---:|---|---:|---:|---|
 | `contract` | yes | yes | 1 | 1 | Pinned prefab/controller generated-reference contract; gates the smallest high-value generated asset reference invariant. |
 | `core-headless` | yes | yes | 228 | 25 | Fast unit and model contracts selected by class filters or explicit Headless category. |
-| `integration-headless` | yes | yes-fixture-isolated | 111 | 13 | Fixture-heavy Unity EditMode integration. Honest when asset/scene mutations are isolated and cleaned up. |
+| `integration-headless` | yes | yes-fixture-isolated | 115 | 14 | Fixture-heavy Unity EditMode integration. Honest when asset/scene mutations are isolated and cleaned up; fixture isolation sentinels cover asset, scene object, selection, and open-scene contamination. |
 | `runner-selftest-headless` | no | yes | 12 | 1 | Batch runner self-tests are headless but intentionally excluded from the default runner batch to avoid self-selection. |
 | `smoke-protocol-headless` | yes | yes | 45 | 6 | Protocol, catalog, artifact, and atomic IO contracts for the visible smoke transport. |
 | `smoke-overlay-host-headless` | yes | yes | 87 | 2 | Unity editor host behavior for smoke commands, run headlessly without the Rust overlay. |
@@ -38,7 +38,7 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 | Recommendation | Methods | Meaning |
 |---|---:|---|
 | `add-integration-category-or-default-ci-filter` | 1 | Headless integration coverage is viable but current default filters intentionally miss it until a follow-up confirms category/filter policy. |
-| `default-ci` | 471 | Selected by the current canonical default CI suite map or category filters. |
+| `default-ci` | 475 | Selected by the current canonical default CI suite map or category filters. |
 | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | 12 | Headless runner self-tests are intentionally outside default CI batch invocations. |
 | `manual-or-separate-playmode-lane` | 6 | PlayMode/runtime coverage should run only under a dedicated runtime lane. |
 | `manual-visible-smoke-only` | 8 | Requires visible editor/operator execution; not headless CI. |
@@ -50,6 +50,7 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 | `ASMLiteEditorWorkflowAutomationTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/EditorWorkflow/ASMLiteEditorWorkflowAutomationTests.cs` | 15 | `integration-headless` (15) | `yes-fixture-isolated` (15) | `editor-workflow-integration-coverage` (15) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (15) |
 | `ASMLiteSceneAcquisitionRegressionTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/EditorWorkflow/ASMLiteSceneAcquisitionRegressionTests.cs` | 2 | `integration-headless` (2) | `yes-fixture-isolated` (2) | `editor-workflow-integration-coverage` (2) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (2) |
 | `ASMLiteBuildIntegrationTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs` | 10 | `integration-headless` (10) | `yes-fixture-isolated` (10) | `generated-asset-integration-coverage` (10) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (10) |
+| `ASMLiteFixtureIsolationContractTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs` | 4 | `integration-headless` (4) | `yes-fixture-isolated` (4) | `fixture-isolation-contract-coverage` (4) | Fixture isolation sentinels intentionally contaminate generated assets, scene roots, selection, and open scenes, then clean up in `finally` blocks. | `default-ci` (4) |
 | `ASMLiteCleanupTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs` | 14 | `integration-headless` (14) | `yes-fixture-isolated` (14) | `generated-asset-integration-coverage` (14) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (14) |
 | `ASMLiteCustomizationIntegrationTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs` | 4 | `integration-headless` (4) | `yes-fixture-isolated` (4) | `generated-asset-integration-coverage` (4) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (4) |
 | `ASMLiteExpressionParamsTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs` | 11 | `integration-headless` (11) | `yes-fixture-isolated` (11) | `generated-asset-integration-coverage` (11) | Fixture mutation is acceptable only with cleanup/isolation. | `default-ci` (11) |
@@ -97,6 +98,11 @@ Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
 | `ASMLiteVisibleEditorSmokeTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleEditorSmokeTests.cs` | 8 | `visible-manual` (8) | `no` (8) | `visible-operator-flow-coverage` (8) | Visible/manual only; do not fold into default headless CI. | `manual-visible-smoke-only` (8) |
 | `ASMLiteAv3SaveLoadPlayModeTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs` | 6 | `playmode-headless-review` (6) | `conditional-playmode-not-default-ci` (6) | `playmode-runtime-manual-review` (6) | PlayMode/runtime fixture requirements need a separate lane. | `manual-or-separate-playmode-lane` (6) |
 
+## Fixture isolation slice
+
+- Checklist status: fixture isolation scope, shared fixture wiring, sentinel tests, and ledger updates restored on this reviewable branch.
+- Verification note: cheap validators are expected to run in this slice; targeted Unity EditMode remains credential-gated when `UNITY_EMAIL` is unavailable.
+
 ## Method-level ledger mirror
 
 This table mirrors the classified ledger fields so the markdown artifact is reviewable without opening JSON.
@@ -130,6 +136,10 @@ This table mirrors the classified ledger fields so the markdown artifact is revi
 | `ASMLiteBuildIntegrationTests` | `A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs:508` |
 | `ASMLiteBuildIntegrationTests` | `A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs:546` |
 | `ASMLiteBuildIntegrationTests` | `A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs:594` |
+| `ASMLiteFixtureIsolationContractTests` | `FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak` | `integration-headless` | `yes-fixture-isolated` | `fixture-isolation-contract-coverage` | `default-ci` | intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup / Unity editor selection/open-scene state and AssetDatabase fixture roots | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs:15` |
+| `ASMLiteFixtureIsolationContractTests` | `FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup` | `integration-headless` | `yes-fixture-isolated` | `fixture-isolation-contract-coverage` | `default-ci` | intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup / Unity editor selection/open-scene state and AssetDatabase fixture roots | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs:91` |
+| `ASMLiteFixtureIsolationContractTests` | `FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak` | `integration-headless` | `yes-fixture-isolated` | `fixture-isolation-contract-coverage` | `default-ci` | intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup / Unity editor selection/open-scene state and AssetDatabase fixture roots | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs:42` |
+| `ASMLiteFixtureIsolationContractTests` | `FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection` | `integration-headless` | `yes-fixture-isolated` | `fixture-isolation-contract-coverage` | `default-ci` | intentionally-mutates-generated-assets-selection-and-scenes-with-cleanup / Unity editor selection/open-scene state and AssetDatabase fixture roots | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs:65` |
 | `ASMLiteCleanupTests` | `A35_Cleanup_RemovesASMLiteFxlayers` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs:282` |
 | `ASMLiteCleanupTests` | `A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs:302` |
 | `ASMLiteCleanupTests` | `A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam` | `integration-headless` | `yes-fixture-isolated` | `generated-asset-integration-coverage` | `default-ci` | mutates-generated-asset-fixtures-with-cleanup / Unity AssetDatabase generated assets | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs:322` |
