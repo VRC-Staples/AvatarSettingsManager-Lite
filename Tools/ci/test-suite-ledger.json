@@ -1234,7 +1234,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
       "class": "ASMLiteCustomizationIntegrationTests",
       "method": "A53_CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
-      "line": 38,
+      "line": 74,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1255,16 +1255,16 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteCustomizationIntegrationTests.A53_CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
       "class": "ASMLiteCustomizationIntegrationTests",
       "method": "A54_CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
-      "line": 134,
+      "line": 170,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1285,16 +1285,16 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteCustomizationIntegrationTests.A54_CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
       "class": "ASMLiteCustomizationIntegrationTests",
       "method": "A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
-      "line": 210,
+      "line": 246,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1315,16 +1315,16 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteCustomizationIntegrationTests.A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
       "class": "ASMLiteCustomizationIntegrationTests",
       "method": "A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
-      "line": 308,
+      "line": 344,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1345,10 +1345,10 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteCustomizationIntegrationTests.A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
@@ -2194,7 +2194,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
       "class": "ASMLiteIconTests",
       "method": "A51_MultiColor_UsesPerSlotGearIconBySlotIndex",
-      "line": 95,
+      "line": 136,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2215,16 +2215,16 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteIconTests.A51_MultiColor_UsesPerSlotGearIconBySlotIndex",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
       "class": "ASMLiteIconTests",
       "method": "A52_SameColor_UsesSelectedGearIconAcrossAllSlots",
-      "line": 116,
+      "line": 157,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2245,16 +2245,16 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteIconTests.A52_SameColor_UsesSelectedGearIconAcrossAllSlots",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
       "class": "ASMLiteIconTests",
       "method": "A53_Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
-      "line": 137,
+      "line": 178,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2275,10 +2275,10 @@
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-generated-asset-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
       "runnerFilter": "ASMLiteIconTests.A53_Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Fixture isolation cleaned: package GeneratedAssets baseline is restored around each test, custom icon inputs are copied under Assets/ASMLiteTests_Temp and deleted after each test, and source package icon assets are asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",

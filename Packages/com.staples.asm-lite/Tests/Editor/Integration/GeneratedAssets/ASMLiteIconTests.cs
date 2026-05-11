@@ -15,11 +15,37 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteIconTests
     {
+        private const string SuiteName = nameof(ASMLiteIconTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceIconAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+            _sourceIconAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(
+                SuiteName,
+                ASMLiteGeneratedAssetTestIsolation.BuiltInIconFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A51: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A51: fixture did not create ASMLiteComponent.");
@@ -31,7 +57,19 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            try
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceIconAssetsBaseline?.AssertUnchanged(SuiteName);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _sourceIconAssetsBaseline = null;
+                _ctx = null;
+            }
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
@@ -89,6 +127,9 @@ namespace ASMLite.Tests.Editor
             return icon;
         }
 
+        private static Texture2D CopyIconFixtureOrFail(string path, string aid, string label)
+            => ASMLiteGeneratedAssetTestIsolation.CopyIconFixtureOrFail(path, aid, label);
+
         // ── A51 ────────────────────────────────────────────────────────────────
 
         [Test, Category("Integration")]
@@ -141,7 +182,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useCustomSlotIcons = true;
 
             var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "A53");
-            var customSlot1 = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[5], "A53");
+            var customSlot1 = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[5], "A53", "CustomSlot1");
 
             _ctx.Comp.customIcons = new Texture2D[]
             {
