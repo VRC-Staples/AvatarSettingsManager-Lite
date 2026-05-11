@@ -28,11 +28,37 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteMigrationTests
     {
+        private const string SuiteName = nameof(ASMLiteMigrationTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceMigrationAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+            _sourceMigrationAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(
+                SuiteName,
+                SourceMigrationFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A42: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A42: fixture did not create ASMLiteComponent.");
@@ -42,8 +68,26 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            try
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceMigrationAssetsBaseline?.AssertUnchanged(SuiteName);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _sourceMigrationAssetsBaseline = null;
+                _ctx = null;
+            }
         }
+
+        private static string[] SourceMigrationFixturePaths()
+            => new[]
+            {
+                ASMLiteAssetPaths.Prefab,
+            };
 
         private static string FullNameOrNull(Component c)
             => c == null ? "<null>" : c.GetType().FullName ?? "<null>";

@@ -2824,7 +2824,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A42_Migration_CollapsesDuplicateVRCFuryTypeNameMatches",
-      "line": 106,
+      "line": 150,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2842,18 +2842,21 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Migration Collapses Duplicate VRCFury Type Name Matches",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A42_Migration_CollapsesDuplicateVRCFuryTypeNameMatches",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A43_Migration_PreservesNonTargetComponentsInMixedSet",
-      "line": 142,
+      "line": 186,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2871,18 +2874,21 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Migration Preserves Non Target Components In Mixed Set",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A43_Migration_PreservesNonTargetComponentsInMixedSet",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A44_Migration_NullComponent_DoesNotThrow",
-      "line": 177,
+      "line": 221,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2900,18 +2906,21 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Migration Null Component Does Not Throw",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A44_Migration_NullComponent_DoesNotThrow",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A45_Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove",
-      "line": 186,
+      "line": 230,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2929,18 +2938,21 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Migration Repeated Calls Are Idempotent And Do Not Over Remove",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A45_Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A55_RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts",
-      "line": 222,
+      "line": 266,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2958,18 +2970,21 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Rebuild Prep Mixed Legacy State Removes Only Obsolete Artifacts",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A55_RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs",
       "class": "ASMLiteMigrationTests",
       "method": "A56_DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup",
-      "line": 329,
+      "line": 373,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2987,12 +3002,15 @@
       "recommendation": "default-ci",
       "publicBehaviorClaim": "Detach Recover Cycle Preserves Legacy Continuity And Selective Cleanup",
       "fixtureDependencies": [
-        "migration fixture assets"
+        "migration fixture assets",
+        "package generated asset fixtures",
+        "package prefab fixture",
+        "test avatar descriptor"
       ],
-      "assetSceneMutations": "mutates-migration-prefab-fixtures-with-cleanup",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteMigrationTests.A56_DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "notes": "Package GeneratedAssets are restored around each method; temp migration avatar assets are deleted after each method; package prefab fixture is asserted unchanged."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
