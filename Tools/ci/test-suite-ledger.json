@@ -514,7 +514,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
-      "line": 257,
+      "line": 285,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -544,7 +544,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts",
-      "line": 297,
+      "line": 325,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -574,7 +574,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema",
-      "line": 338,
+      "line": 366,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -604,7 +604,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged",
-      "line": 363,
+      "line": 391,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -634,7 +634,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces",
-      "line": 401,
+      "line": 429,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -664,7 +664,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema",
-      "line": 508,
+      "line": 536,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -694,7 +694,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups",
-      "line": 546,
+      "line": 574,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -724,7 +724,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203",
-      "line": 594,
+      "line": 622,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -754,7 +754,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs",
-      "line": 438,
+      "line": 466,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -784,7 +784,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
       "class": "ASMLiteBuildIntegrationTests",
       "method": "A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly",
-      "line": 461,
+      "line": 489,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -814,7 +814,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A35_Cleanup_RemovesASMLiteFxlayers",
-      "line": 282,
+      "line": 376,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -844,7 +844,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam",
-      "line": 302,
+      "line": 396,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -874,7 +874,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam",
-      "line": 322,
+      "line": 416,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -904,7 +904,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A38_Cleanup_RemovesSettingsManagerRootControl",
-      "line": 342,
+      "line": 436,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -934,7 +934,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A38b_Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference",
-      "line": 360,
+      "line": 454,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -964,7 +964,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A39_Cleanup_PreservesUserOwnedFxParamsAndMenuEntries",
-      "line": 389,
+      "line": 483,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -994,7 +994,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A40_Cleanup_NullAvatarDescriptor_DoesNotThrow",
-      "line": 457,
+      "line": 551,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1024,7 +1024,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A41_Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams",
-      "line": 466,
+      "line": 560,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1054,7 +1054,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps",
-      "line": 517,
+      "line": 611,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1084,7 +1084,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder",
-      "line": 551,
+      "line": 645,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1114,7 +1114,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A56_ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState",
-      "line": 622,
+      "line": 719,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1144,7 +1144,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A57_DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab",
-      "line": 696,
+      "line": 792,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1174,7 +1174,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A57b_DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry",
-      "line": 749,
+      "line": 845,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1204,7 +1204,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
       "class": "ASMLiteCleanupTests",
       "method": "A58_VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName",
-      "line": 810,
+      "line": 906,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1354,7 +1354,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A19_ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset",
-      "line": 92,
+      "line": 123,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1384,7 +1384,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A20_BackupParams_HaveLocalOnlyFlags_InGeneratedAsset",
-      "line": 115,
+      "line": 146,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1414,7 +1414,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A21_LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset",
-      "line": 138,
+      "line": 169,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1444,7 +1444,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A22_GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild",
-      "line": 161,
+      "line": 192,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1474,7 +1474,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A23_GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls",
-      "line": 185,
+      "line": 216,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1504,7 +1504,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A24_StaleGeneratedCtrlShape_IsNormalizedOnBuild",
-      "line": 220,
+      "line": 251,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1534,7 +1534,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A25_LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved",
-      "line": 266,
+      "line": 297,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1564,7 +1564,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A26_MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset",
-      "line": 300,
+      "line": 331,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1594,7 +1594,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A27B_LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState",
-      "line": 423,
+      "line": 454,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1624,7 +1624,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A27_LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths",
-      "line": 386,
+      "line": 417,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1654,7 +1654,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
       "class": "ASMLiteExpressionParamsTests",
       "method": "A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset",
-      "line": 458,
+      "line": 489,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1684,7 +1684,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A05_Build_CreatesCorrectNumberOfASMLiteLayers",
-      "line": 97,
+      "line": 128,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1714,7 +1714,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A06_EachSlotLayer_HasFourStates",
-      "line": 112,
+      "line": 143,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1744,7 +1744,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A07_EachSlotLayer_DefaultStateIsIdle",
-      "line": 130,
+      "line": 161,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1774,7 +1774,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A08_AllStates_WriteDefaultValuesIsFalse",
-      "line": 149,
+      "line": 180,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1804,7 +1804,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A09_IdleTransitions_UseCorrectEncodedValues",
-      "line": 170,
+      "line": 201,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1834,7 +1834,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A10_SaveDriver_HasCorrectCopyEntries",
-      "line": 214,
+      "line": 245,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1864,7 +1864,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A11_LoadDriver_HasCorrectCopyEntries",
-      "line": 242,
+      "line": 273,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1894,7 +1894,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A12_ResetDriver_HasCorrectCopyEntries",
-      "line": 270,
+      "line": 301,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1924,7 +1924,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A13_AllDrivers_EndWithSetCtrlToZero",
-      "line": 303,
+      "line": 334,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1954,7 +1954,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A14_AllDrivers_HaveLocalOnlyTrue",
-      "line": 331,
+      "line": 362,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1984,7 +1984,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A15_CtrlParameters_ContainAllExpectedEntries",
-      "line": 353,
+      "line": 384,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2014,7 +2014,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A16_DuplicateAvatarParam_OnlyOneEntryInCtrlParameters",
-      "line": 376,
+      "line": 407,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2044,7 +2044,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A17_PreExistingDuplicateASMLiteParams_DrainedBeforeBuild",
-      "line": 399,
+      "line": 430,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2074,7 +2074,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A18_DefParam_HasCorrectDefaultValues",
-      "line": 432,
+      "line": 463,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2104,7 +2104,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams",
-      "line": 487,
+      "line": 518,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2134,7 +2134,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches",
-      "line": 522,
+      "line": 553,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2164,7 +2164,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
       "class": "ASMLiteFXControllerTests",
       "method": "A21_ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries",
-      "line": 554,
+      "line": 585,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2284,7 +2284,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A26_RootContainsSingleSettingsManagerSubmenu",
-      "line": 130,
+      "line": 161,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2314,7 +2314,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A27_PresetsMenuCountAndNamesMatchSlotCount",
-      "line": 139,
+      "line": 170,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2344,7 +2344,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A28_EachSlotMenuHasSaveLoadClearWithExpectedControlTypes",
-      "line": 155,
+      "line": 186,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2374,7 +2374,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A29_SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue",
-      "line": 187,
+      "line": 218,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2404,7 +2404,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A30_LoadControlIsDirectButtonNotSubmenu",
-      "line": 217,
+      "line": 248,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2434,7 +2434,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots",
-      "line": 241,
+      "line": 272,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2464,7 +2464,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots",
-      "line": 285,
+      "line": 316,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2494,7 +2494,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild",
-      "line": 326,
+      "line": 357,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2524,7 +2524,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
       "class": "ASMLiteMenuTests",
       "method": "A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper",
-      "line": 361,
+      "line": 392,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2554,7 +2554,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R080_CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
-      "line": 152,
+      "line": 189,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2584,7 +2584,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R080_CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled",
-      "line": 126,
+      "line": 163,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2614,7 +2614,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R080_DefaultRootIcon_WhenCustomIconsDisabled",
-      "line": 113,
+      "line": 150,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2644,7 +2644,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R081_CustomRootName_UsesTrimmedValue_WhenEnabled",
-      "line": 75,
+      "line": 112,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2674,7 +2674,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R081_DefaultRootName_WhenCustomToggleDisabled",
-      "line": 64,
+      "line": 101,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2704,7 +2704,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R081_RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName",
-      "line": 97,
+      "line": 134,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2734,7 +2734,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R081_WhitespaceCustomName_FallsBackToDefault_WhenEnabled",
-      "line": 86,
+      "line": 123,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2764,7 +2764,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R084_CustomRootIconFallback_WhenCustomIconsEnabledButNull",
-      "line": 139,
+      "line": 176,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2794,7 +2794,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
       "class": "ASMLiteRootMenuOverrideTests",
       "method": "R084_RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon",
-      "line": 171,
+      "line": 208,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",

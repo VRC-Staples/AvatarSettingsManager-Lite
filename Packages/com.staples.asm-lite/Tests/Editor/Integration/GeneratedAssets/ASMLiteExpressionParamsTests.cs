@@ -19,22 +19,53 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteExpressionParamsTests
     {
+        private const string SuiteName = nameof(ASMLiteExpressionParamsTests);
+        private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
+            ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
             ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
             ASMLiteToggleNameBroker.ClearPendingRestoreState();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
         }
 
         [TearDown]
         public void TearDown()
         {
-            ASMLiteToggleNameBroker.ClearPendingRestoreState();
-            ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx.AvatarGo);
+            try
+            {
+                ASMLiteToggleNameBroker.ClearPendingRestoreState();
+                ASMLiteToggleNameBroker.ResetLatestEnrollmentStateForTests();
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
+                _testGeneratedAssetsBaseline = null;
+                _ctx = null;
+            }
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────

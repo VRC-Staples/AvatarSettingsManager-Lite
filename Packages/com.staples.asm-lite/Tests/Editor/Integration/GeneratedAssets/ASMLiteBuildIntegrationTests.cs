@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
@@ -21,12 +23,29 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteBuildIntegrationTests
     {
         private const string SuiteName = nameof(ASMLiteBuildIntegrationTests);
+        private static ASMLiteGeneratedAssetsFolderSnapshot s_classGeneratedAssetsBaseline;
+        private ASMLiteGeneratedAssetsFolderSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
+
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
+        {
+            s_classGeneratedAssetsBaseline = ASMLiteGeneratedAssetsFolderSnapshot.Capture(SuiteName);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            s_classGeneratedAssetsBaseline?.Restore();
+            s_classGeneratedAssetsBaseline = null;
+        }
 
         [SetUp]
         public void SetUp()
         {
+            s_classGeneratedAssetsBaseline?.Restore();
             ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetsFolderSnapshot.Capture(SuiteName);
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             Assert.IsNotNull(_ctx, "A46: fixture creation returned null context.");
             Assert.IsNotNull(_ctx.Comp, "A46: fixture did not create ASMLiteComponent.");
@@ -40,7 +59,16 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            try
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            }
+            finally
+            {
+                (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
+                _testGeneratedAssetsBaseline = null;
+                _ctx = null;
+            }
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
@@ -632,5 +660,75 @@ namespace ASMLite.Tests.Editor
                 "A53: nested DRIFT diagnostics should expose the exact failing schema path.");
         }
 
+    }
+
+    internal sealed class ASMLiteGeneratedAssetsFolderSnapshot
+    {
+        private readonly Dictionary<string, byte[]> _filesByRelativePath;
+
+        private ASMLiteGeneratedAssetsFolderSnapshot(Dictionary<string, byte[]> filesByRelativePath)
+        {
+            _filesByRelativePath = filesByRelativePath;
+        }
+
+        internal static ASMLiteGeneratedAssetsFolderSnapshot Capture(string suiteName)
+        {
+            string fullFolderPath = ToFullFolderPath();
+            Assert.IsTrue(Directory.Exists(fullFolderPath),
+                $"{suiteName}: generated asset folder is missing at '{ASMLiteAssetPaths.GeneratedDir}'.");
+
+            var filesByRelativePath = Directory
+                .GetFiles(fullFolderPath, "*", SearchOption.AllDirectories)
+                .ToDictionary(
+                    filePath => ToRelativePath(fullFolderPath, filePath),
+                    File.ReadAllBytes,
+                    StringComparer.Ordinal);
+
+            return new ASMLiteGeneratedAssetsFolderSnapshot(filesByRelativePath);
+        }
+
+        internal void Restore()
+        {
+            string fullFolderPath = ToFullFolderPath();
+            if (Directory.Exists(fullFolderPath))
+            {
+                foreach (string filePath in Directory.GetFiles(fullFolderPath, "*", SearchOption.AllDirectories))
+                    File.Delete(filePath);
+
+                foreach (string directoryPath in Directory.GetDirectories(fullFolderPath, "*", SearchOption.AllDirectories)
+                             .OrderByDescending(path => path.Length))
+                {
+                    if (!Directory.EnumerateFileSystemEntries(directoryPath).Any())
+                        Directory.Delete(directoryPath);
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(fullFolderPath);
+            }
+
+            foreach (var file in _filesByRelativePath)
+            {
+                string targetPath = Path.Combine(fullFolderPath, file.Key.Replace('/', Path.DirectorySeparatorChar));
+                string targetDirectory = Path.GetDirectoryName(targetPath);
+                if (!string.IsNullOrEmpty(targetDirectory))
+                    Directory.CreateDirectory(targetDirectory);
+                File.WriteAllBytes(targetPath, file.Value);
+            }
+
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+        }
+
+        private static string ToFullFolderPath()
+            => Path.GetFullPath(ASMLiteAssetPaths.GeneratedDir);
+
+        private static string ToRelativePath(string fullFolderPath, string filePath)
+        {
+            string normalizedFolder = Path.GetFullPath(fullFolderPath)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            string normalizedFile = Path.GetFullPath(filePath);
+            return normalizedFile.Substring(normalizedFolder.Length).Replace(Path.DirectorySeparatorChar, '/');
+        }
     }
 }
