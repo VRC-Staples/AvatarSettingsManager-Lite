@@ -643,7 +643,7 @@ All 12 former `yes-fixture-isolated` classes have completed cleanup review and n
 Run after edits:
 
 ```bash
-bash Tools/ci/run-visible-smoke-local.sh --self-test
+bash Tools/ci/bin/run-visible-smoke-local.sh --self-test
 python3 Tools/ci/test-suites/validate-suite-ledger.py
 python3 Tools/ci/test-suites/validate-suites.py
 ```

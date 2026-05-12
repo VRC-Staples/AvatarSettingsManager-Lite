@@ -51,7 +51,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 Run this once after cloning to enable repository hooks:
 
 ```bash
-bash Tools/ci/setup-git-hooks.sh
+bash Tools/ci/bin/setup-git-hooks.sh
 ```
 
 The hooks block commits that use banned personal identity metadata or blocked co-author trailers. CI also enforces the same checks on push and pull request.
@@ -149,7 +149,7 @@ The distributable package lives in `Packages/com.staples.asm-lite/`. Open the pr
 Run contributor EditMode validation through the canonical command:
 
 ```bash
-Tools/ci/run-editmode-local.sh
+Tools/ci/bin/run-editmode-local.sh
 ```
 
 No-arg execution uses the repo-owned Unity project at `Tools/ci/unity-project` and the shared batch plan at `Tools/ci/test-suites/editmode-batch-runs.json`.
@@ -161,13 +161,10 @@ Expected canonical artifacts from the default run:
 - `artifacts/editmode.log`
 - `artifacts/asmlite-generation-wiring-summary.json`
 
-For contributor validation, `Tools/ci/run-editmode-local.sh` remains the only required full test path before pushing changes.
+For contributor validation, `Tools/ci/bin/run-editmode-local.sh` remains the only required full test path before pushing changes.
 
-Optional local-only helpers (canonical Rust-overlay visual smoke path):
-- `Tools/ci/run-visible-smoke-local.sh` (interactive/local visible smoke entrypoint)
-- `Tools/ci/run-UAT-smoke.sh` (UAT-flavored visible smoke entrypoint)
-
-Both helpers use the Rust overlay transport contract. Legacy Python state/ack overlay transport is no longer part of canonical contributor workflow.
+Optional local-only helper:
+- `Tools/ci/bin/run-visible-smoke-local.sh` (interactive/local visible smoke entrypoint)
 
 ---
 

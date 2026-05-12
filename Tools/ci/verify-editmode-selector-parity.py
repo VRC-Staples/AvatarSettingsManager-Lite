@@ -62,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--local-script",
-        help="Optional path to Tools/ci/run-editmode-local.sh for Wave 2 parity checks",
+        help="Optional path to Tools/ci/bin/run-editmode-local.sh for Wave 2 parity checks",
     )
     parser.add_argument(
         "--expected-project",

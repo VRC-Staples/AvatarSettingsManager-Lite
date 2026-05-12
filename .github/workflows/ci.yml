@@ -174,8 +174,8 @@ jobs:
           PACKAGE_PATH: Packages/com.staples.asm-lite
           CI_PROJECT_PATH: Tools/ci/unity-project
         run: |
-          chmod +x Tools/ci/generate-csproj.sh
-          Tools/ci/generate-csproj.sh
+          chmod +x Tools/ci/bin/generate-csproj.sh
+          Tools/ci/bin/generate-csproj.sh
 
       - name: Compile assemblies
         run: |

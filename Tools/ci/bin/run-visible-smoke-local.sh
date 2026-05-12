@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 CANONICAL_PROJECT_PATH="${REPO_ROOT}/Tools/ci/unity-project"
 RUN_EDITMODE_SCRIPT="${SCRIPT_DIR}/run-editmode-local.sh"
 FIXED_DELAY_SECONDS="1.5"
@@ -13,7 +13,7 @@ TEST_FILTER=""
 
 usage() {
   cat <<'EOF'
-Usage: Tools/ci/run-visible-smoke-local.sh [options]
+Usage: Tools/ci/bin/run-visible-smoke-local.sh [options]
 
 Visible smoke options:
   --editor-smoke            Run the visible editor smoke selector (default)

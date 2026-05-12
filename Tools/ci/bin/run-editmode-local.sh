@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 WORKSPACE_ROOT="$(cd "${REPO_ROOT}/.." && pwd)"
 REPO_DIR_NAME="$(basename "${REPO_ROOT}")"
 PROJECT_REL_PATH="Tools/ci/unity-project"
@@ -166,7 +166,7 @@ build_lock_wait_message() {
 
 usage() {
   cat <<'EOF'
-Usage: Tools/ci/run-editmode-local.sh [options]
+Usage: Tools/ci/bin/run-editmode-local.sh [options]
 
 Run Unity EditMode tests using either Docker (default) or a locally installed Unity editor.
 
@@ -804,7 +804,7 @@ parse_args() {
         shift 2
         ;;
       --visible-overlay-state-path|--visible-overlay-ack-path|-asmliteVisibleAutomationExternalOverlayStatePath|-asmliteVisibleAutomationExternalOverlayAckPath)
-        echo "error: legacy external visible transport removed; use Tools/ci/run-visible-smoke-local.sh --editor-smoke or --playmode-smoke." >&2
+        echo "error: legacy external visible transport removed; use Tools/ci/bin/run-visible-smoke-local.sh --editor-smoke or --playmode-smoke." >&2
         exit 2
         ;;
       -h|--help)
