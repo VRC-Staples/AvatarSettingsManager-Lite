@@ -12,7 +12,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CHECKER = REPO_ROOT / "Tools/ci/validators/check-required-statuses.py"
-REQUIRED_CHECKS = REPO_ROOT / "Tools/ci/release-required-checks.json"
+REQUIRED_CHECKS = REPO_ROOT / "Tools/ci/config/release-required-checks.json"
 
 
 def load_checker_module():

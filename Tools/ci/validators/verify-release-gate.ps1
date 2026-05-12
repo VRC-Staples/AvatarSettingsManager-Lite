@@ -43,14 +43,14 @@ Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{4}permissions:\s*$.*?^\s{6}checks:\s*re
 
 # --- Gate job ordering and invariant checker wiring ---
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Checkout\s*$.*?^\s{6}-\s*name:\s*Verify\s+release\s+gate\s+invariants\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?^\s{6}-\s*name:\s*Validate\s+compile\s+and\s+lint\s+checks\s+for\s+release\s+SHA\s*$' "Invariant failed: gate job must run checkout -> invariant checker -> compatibility evaluation -> required-check polling in order."
-Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Verify\s+release\s+gate\s+invariants\s*$.*?^\s{8}run:\s*pwsh\s+-File\s+Tools/ci/verify-release-gate\.ps1\s*$' "Invariant failed: gate job must execute pwsh -File Tools/ci/verify-release-gate.ps1."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Verify\s+release\s+gate\s+invariants\s*$.*?^\s{8}run:\s*pwsh\s+-File\s+Tools/ci/validators/verify-release-gate\.ps1\s*$' "Invariant failed: gate job must execute pwsh -File Tools/ci/validators/verify-release-gate.ps1."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Evaluate\s+compatibility\s+contract\s*\(enforced\)\s*$.*?--mode\s+release.*?--contract\s+compatibility\.contract\.json' "Invariant failed: gate job must run enforced compatibility evaluation."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Append\s+compatibility\s+summary\s*$.*?^\s{8}if:\s*always\(\)\s*$' "Invariant failed: gate job must append compatibility markdown summary with if: always()."
 
 # --- Gate job: exact-SHA helper wiring + shared required-check source ---
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?Tools/ci/validators/check-required-statuses\.py' "Invariant failed: gate job must invoke Tools/ci/validators/check-required-statuses.py."
-Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--required-checks\s+Tools/ci/release-required-checks\.json' "Invariant failed: gate job must read shared aliases from Tools/ci/release-required-checks.json."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--required-checks\s+Tools/ci/config/release-required-checks\.json' "Invariant failed: gate job must read shared aliases from Tools/ci/config/release-required-checks.json."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--github-token-env\s+GITHUB_TOKEN' "Invariant failed: gate job must pass --github-token-env GITHUB_TOKEN to helper."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--max-wait-seconds\s+1800' "Invariant failed: gate job must keep 1800s max wait for required-check polling."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--poll-interval-seconds\s+20' "Invariant failed: gate job must keep 20s polling interval for required-check polling."
@@ -58,7 +58,7 @@ Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--repo\s+"\$\{\{\s*github\.repository\s*\}\
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--sha\s+"\$TARGET_SHA"' "Invariant failed: gate helper invocation must evaluate TARGET_SHA."
 
 if ($content -match '(?s)required_checks\s*=\s*\{') {
-  $failures.Add("Invariant failed: release workflow still contains inline required_checks map; use Tools/ci/release-required-checks.json via helper.")
+  $failures.Add("Invariant failed: release workflow still contains inline required_checks map; use Tools/ci/config/release-required-checks.json via helper.")
 }
 
 # --- Build job: must depend on both setup AND gate (fail-closed) ---

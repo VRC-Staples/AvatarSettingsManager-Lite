@@ -59,7 +59,7 @@ jobs:
           python3 Tools/ci/validators/check-required-statuses.py \
             --repo "${{ github.repository }}" \
             --sha "$TARGET_SHA" \
-            --required-checks Tools/ci/release-required-checks.json \
+            --required-checks Tools/ci/config/release-required-checks.json \
             --github-token-env GITHUB_TOKEN \
             --max-wait-seconds 1800 \
             --poll-interval-seconds 20
