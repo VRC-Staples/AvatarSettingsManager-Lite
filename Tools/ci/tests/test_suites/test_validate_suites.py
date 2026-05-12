@@ -225,6 +225,34 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must be excluded from default CI", result.stderr)
 
+    def test_fails_when_code_uses_segmented_old_editmode_batch_path(self) -> None:
+        source_path = self.root / "Packages/com.staples.asm-lite/Tests/Editor/StaleBatchPathTests.cs"
+        source_path.parent.mkdir(parents=True)
+        source_path.write_text(
+            """
+            using System.IO;
+
+            public sealed class StaleBatchPathTests
+            {
+                public void ReadsOldPath()
+                {
+                    string path = Path.Combine(
+                        repoRoot,
+                        "Tools",
+                        "ci",
+                        "editmode-batch-runs.json");
+                }
+            }
+            """,
+            encoding="utf-8",
+        )
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("stale EditMode batch plan path reference", result.stderr)
+        self.assertIn("Tools/ci/test-suites/editmode-batch-runs.json", result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

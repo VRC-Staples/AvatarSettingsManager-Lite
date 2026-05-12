@@ -3292,7 +3292,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "line": 347,
+      "line": 343,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3318,7 +3318,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "line": 315,
+      "line": 311,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3344,7 +3344,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "line": 281,
+      "line": 277,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3396,7 +3396,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "line": 209,
+      "line": 205,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3448,7 +3448,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "line": 185,
+      "line": 181,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3474,7 +3474,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "line": 197,
+      "line": 193,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3552,7 +3552,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "line": 386,
+      "line": 382,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3578,7 +3578,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "line": 138,
+      "line": 134,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",

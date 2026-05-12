@@ -85,11 +85,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void CanonicalBatchPlan_ExcludesBatchRunnerSelfTests()
         {
-            string batchRunsPath = Path.Combine(
-                ASMLiteSmokeContractPaths.GetRepositoryRootPath(),
-                "Tools",
-                "ci",
-                "editmode-batch-runs.json");
+            string batchRunsPath = ASMLiteSmokeContractPaths.GetEditModeBatchRunsPath();
             string json = File.ReadAllText(batchRunsPath, Encoding.UTF8);
 
             StringAssert.DoesNotContain("ASMLiteBatchTestRunnerTests", json,

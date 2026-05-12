@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -12,7 +14,36 @@ from typing import Any
 
 SUITES_PATH = "Tools/ci/test-suites/suites.json"
 EDITMODE_BATCH_RUNS_PATH = "Tools/ci/test-suites/editmode-batch-runs.json"
+STALE_EDITMODE_BATCH_RUNS_PATH = "/".join(("Tools", "ci", "editmode-batch-runs.json"))
 SMOKE_CATALOG_PATH = "Tools/ci/smoke/suite-catalog.json"
+
+REFERENCE_SCAN_EXTENSIONS = {
+    ".cs",
+    ".py",
+    ".ps1",
+    ".sh",
+    ".yaml",
+    ".yml",
+}
+REFERENCE_SCAN_IGNORED_DIRS = {
+    ".audits",
+    ".git",
+    ".planning",
+    ".venv",
+    "__pycache__",
+    "artifacts",
+    "build",
+    "CodeCoverage",
+    "dist",
+    "Library",
+    "Logs",
+    "node_modules",
+    "obj",
+    "Temp",
+    "target",
+}
+PATH_COMBINE_CALL_RE = re.compile(r"Path\.Combine\s*\((.*?)\)\s*;", re.DOTALL)
+STRING_LITERAL_RE = re.compile(r'"((?:\\.|[^"\\])*)"')
 
 REQUIRED_GROUP_IDS = (
     "contract",
@@ -50,6 +81,56 @@ def repo_root_from_script() -> Path:
 
 def normalize_slashes(value: str) -> str:
     return value.replace("\\", "/")
+
+
+def iter_reference_files(repo_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for current_dir, dirnames, filenames in os.walk(repo_root):
+        dirnames[:] = [name for name in dirnames if name not in REFERENCE_SCAN_IGNORED_DIRS]
+        current_path = Path(current_dir)
+        for filename in filenames:
+            path = current_path / filename
+            if path.suffix in REFERENCE_SCAN_EXTENSIONS:
+                files.append(path)
+    return sorted(files)
+
+
+def line_number_at(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
+
+def path_combine_uses_old_editmode_batch_path(call_args: str) -> bool:
+    segments = [match.group(1) for match in STRING_LITERAL_RE.finditer(call_args)]
+    stale_segments = ["Tools", "ci", "editmode-batch-runs.json"]
+    return any(segments[index:index + len(stale_segments)] == stale_segments for index in range(len(segments)))
+
+
+def assert_no_stale_editmode_batch_path_references(repo_root: Path, errors: list[str]) -> None:
+    for path in iter_reference_files(repo_root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError as exc:
+            errors.append(f"failed to scan {path}: {exc}")
+            continue
+
+        relative = path.relative_to(repo_root).as_posix()
+        exact_offset = text.find(STALE_EDITMODE_BATCH_RUNS_PATH)
+        if exact_offset >= 0:
+            errors.append(
+                f"stale EditMode batch plan path reference in {relative}:{line_number_at(text, exact_offset)}; "
+                f"use {EDITMODE_BATCH_RUNS_PATH}"
+            )
+
+        if path.suffix != ".cs":
+            continue
+        for match in PATH_COMBINE_CALL_RE.finditer(text):
+            if path_combine_uses_old_editmode_batch_path(match.group(1)):
+                errors.append(
+                    f"stale EditMode batch plan path reference in {relative}:{line_number_at(text, match.start())}; "
+                    f"use {EDITMODE_BATCH_RUNS_PATH}"
+                )
 
 
 def load_json(path: Path, label: str, errors: list[str]) -> dict[str, Any]:
@@ -282,6 +363,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_smoke_membership(groups, errors)
         assert_batch_parity(suites, editmode_batch_runs, groups, errors)
         assert_smoke_catalog_parity(repo_root, suites, smoke_catalog, groups, errors)
+    assert_no_stale_editmode_batch_path_references(repo_root, errors)
 
     if errors:
         for message in errors:
