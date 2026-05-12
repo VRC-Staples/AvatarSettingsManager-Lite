@@ -24,7 +24,7 @@ All notable changes to ASM-Lite are documented here.
 - Parameter exclusions now expand across VRCFury toggle mapping pairs (original global name + assigned deterministic name) so either-side exclusion behaves consistently.
 - Updated README editor workflow docs to reflect detach/vendorize/package-managed action set and current release automation behavior.
 - Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
-- Local CI-equivalent EditMode runner (`Tools/ci/run-editmode-local.sh`) now supports `.env` defaults for Unity credential/license variables, adds local-only Docker Desktop credential helper shim behavior, and enforces bounded timeout handling to fail fast on hangs.
+- Local CI-equivalent EditMode runner (`Tools/ci/bin/run-editmode-local.sh`) now supports `.env` defaults for Unity credential/license variables, adds local-only Docker Desktop credential helper shim behavior, and enforces bounded timeout handling to fail fast on hangs.
 
 ### Fixed
 
