@@ -631,7 +631,7 @@ All 12 former `yes-fixture-isolated` classes have completed cleanup review and n
 - No weak tests had sufficient evidence for deletion in this pass.
 - No flaky tests had a reproduced failure requiring `[Category("QuarantinedFlaky")]` in this pass.
 - No test renames were performed in this pass; the ledger now records any public-behavior mismatch as a recommendation/note instead of hiding it.
-- If a later pass deletes or quarantines a test, update both `Tools/ci/test-suite-ledger.json` and this markdown with the rationale plus covered-by/replacement notes.
+- If a later pass deletes or quarantines a test, update both `Tools/ci/test-suites/test-suite-ledger.json` and this markdown with the rationale plus covered-by/replacement notes.
 
 ## Legacy visible overlay execution cleanup
 

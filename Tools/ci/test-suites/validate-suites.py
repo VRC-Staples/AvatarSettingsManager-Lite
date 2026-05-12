@@ -11,7 +11,7 @@ from typing import Any
 
 
 SUITES_PATH = "Tools/ci/test-suites/suites.json"
-EDITMODE_BATCH_RUNS_PATH = "Tools/ci/editmode-batch-runs.json"
+EDITMODE_BATCH_RUNS_PATH = "Tools/ci/test-suites/editmode-batch-runs.json"
 SMOKE_CATALOG_PATH = "Tools/ci/smoke/suite-catalog.json"
 
 REQUIRED_GROUP_IDS = (

@@ -152,7 +152,7 @@ Run contributor EditMode validation through the canonical command:
 Tools/ci/run-editmode-local.sh
 ```
 
-No-arg execution uses the repo-owned Unity project at `Tools/ci/unity-project` and the shared batch plan at `Tools/ci/editmode-batch-runs.json`.
+No-arg execution uses the repo-owned Unity project at `Tools/ci/unity-project` and the shared batch plan at `Tools/ci/test-suites/editmode-batch-runs.json`.
 
 Expected canonical artifacts from the default run:
 - `artifacts/editmode-results.xml`

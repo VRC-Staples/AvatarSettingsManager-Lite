@@ -14,7 +14,7 @@ from typing import Any
 
 SCHEMA_VERSION = 1
 DEFAULT_INCLUDE = "Packages/com.staples.asm-lite/Tests/**/*.cs"
-LEDGER_PATH = "Tools/ci/test-suite-ledger.json"
+LEDGER_PATH = "Tools/ci/test-suites/test-suite-ledger.json"
 PLACEHOLDER = {
     "lane": "needs-classification",
     "headlessViability": "review",

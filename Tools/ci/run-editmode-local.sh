@@ -8,7 +8,7 @@ REPO_DIR_NAME="$(basename "${REPO_ROOT}")"
 PROJECT_REL_PATH="Tools/ci/unity-project"
 PROJECT_PATH="${REPO_ROOT}/${PROJECT_REL_PATH}"
 PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
-CANONICAL_BATCH_RUNS_JSON_REL_PATH="Tools/ci/editmode-batch-runs.json"
+CANONICAL_BATCH_RUNS_JSON_REL_PATH="Tools/ci/test-suites/editmode-batch-runs.json"
 CANONICAL_BATCH_RUNS_JSON_PATH="${REPO_ROOT}/${CANONICAL_BATCH_RUNS_JSON_REL_PATH}"
 VERIFY_RESULTS_SCRIPT="${REPO_ROOT}/Tools/ci/validators/verify-unity-editmode-results.py"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
@@ -215,7 +215,7 @@ Docker mode keeps the existing CI-style activation/return flow and requires
 UNITY_EMAIL, UNITY_PASSWORD, plus UNITY_SERIAL or UNITY_LICENSE_SECRET/UNITY_LICENSE_FILE.
 
 When --test-filter is not supplied and no ASMLITE_BATCH_RUNS_JSON/ASMLITE_BATCH_RUNS_JSON_PATH
-override is set, the run defaults to Tools/ci/editmode-batch-runs.json.
+override is set, the run defaults to Tools/ci/test-suites/editmode-batch-runs.json.
 
 Local mode assumes an already activated Unity installation unless --manage-license
 (or LOCAL_UNITY_MANAGE_LICENSE=1) is provided.

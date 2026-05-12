@@ -136,7 +136,7 @@ class ValidateSuitesTests(unittest.TestCase):
         (self.root / "Tools/ci/test-suites").mkdir(parents=True)
         (self.root / "Tools/ci/smoke").mkdir(parents=True)
         self.suites_path = self.root / "Tools/ci/test-suites/suites.json"
-        self.batch_path = self.root / "Tools/ci/editmode-batch-runs.json"
+        self.batch_path = self.root / "Tools/ci/test-suites/editmode-batch-runs.json"
         self.catalog_path = self.root / "Tools/ci/smoke/suite-catalog.json"
         self.write_json(self.suites_path, suites_document())
         self.write_json(self.batch_path, batch_runs())

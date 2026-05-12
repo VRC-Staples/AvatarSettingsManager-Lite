@@ -42,7 +42,7 @@ TOGGLE_BROKER_ANCHOR = (
     "TB13_Enrollment_PreReservedDescriptorNamesAreSkippedWithoutBlockingUniqueAssignments"
 )
 VISIBLE_SMOKE_FIXTURE = "ASMLiteVisibleEditorSmokeTests"
-CANONICAL_PLAN_LITERAL = "Tools/ci/editmode-batch-runs.json"
+CANONICAL_PLAN_LITERAL = "Tools/ci/test-suites/editmode-batch-runs.json"
 CANONICAL_RESULTS_LITERAL = "artifacts/editmode-results.xml"
 EDITMODE_JOB_NAME = "name: EditMode Tests"
 
@@ -53,7 +53,7 @@ def parse_args() -> argparse.Namespace:
             "Fail-closed parity validator for the canonical Wave 1 EditMode selector split."
         )
     )
-    parser.add_argument("--plan", required=True, help="Path to Tools/ci/editmode-batch-runs.json")
+    parser.add_argument("--plan", required=True, help="Path to Tools/ci/test-suites/editmode-batch-runs.json")
     parser.add_argument("--ci-workflow", required=True, help="Path to .github/workflows/ci.yml")
     parser.add_argument(
         "--tests-root",

@@ -22,7 +22,7 @@ class SuiteLedgerValidatorTests(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.tests_dir = self.root / "Packages/com.staples.asm-lite/Tests/Editor"
         self.tests_dir.mkdir(parents=True)
-        self.ledger = self.root / "Tools/ci/test-suite-ledger.json"
+        self.ledger = self.root / "Tools/ci/test-suites/test-suite-ledger.json"
 
     def run_validator(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
