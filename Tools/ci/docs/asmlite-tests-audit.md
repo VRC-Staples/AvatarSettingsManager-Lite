@@ -1,6 +1,6 @@
 # ASM-Lite Tests Honesty and Viability Audit
 
-Canonical artifact: `Tools/ci/asmlite-tests-audit.md`.
+Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 
 ## Scope and policy
 
