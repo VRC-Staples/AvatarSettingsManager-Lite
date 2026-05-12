@@ -55,7 +55,7 @@ jobs:
         id: evaluate-compatibility
         run: |
           set -euo pipefail
-          python3 Tools/ci/evaluate-compatibility-contract.py \
+          python3 Tools/ci/validators/evaluate-compatibility-contract.py \
             --mode ci \
             --contract compatibility.contract.json \
             --output-json /tmp/compatibility-contract-report.json \
@@ -101,12 +101,12 @@ jobs:
 
       - name: Validate required-check alias config
         run: |
-          python3 Tools/ci/check-required-statuses.py \
+          python3 Tools/ci/validators/check-required-statuses.py \
             --required-checks Tools/ci/release-required-checks.json \
             --validate-config-only
 
       - name: Run required-check status helper tests
-        run: python3 Tools/ci/tests/test_check_required_statuses.py
+        run: python3 Tools/ci/tests/validators/test_check_required_statuses.py
 
       - name: Validate test suite map parity
         run: python3 Tools/ci/test-suites/validate-suites.py
@@ -390,7 +390,7 @@ jobs:
           UNITY_RUN_EXIT=$?
           set -e
 
-          python3 Tools/ci/verify-unity-editmode-results.py \
+          python3 Tools/ci/validators/verify-unity-editmode-results.py \
             --unity-exit-code "${UNITY_RUN_EXIT}" \
             --results artifacts/editmode-results.xml \
             --log artifacts/editmode.log

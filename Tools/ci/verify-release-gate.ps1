@@ -49,7 +49,7 @@ Assert-Regex '(?ms)^\s{2}gate:\s*$.*?^\s{6}-\s*name:\s*Append\s+compatibility\s+
 
 # --- Gate job: exact-SHA helper wiring + shared required-check source ---
 Assert-Regex '(?m)^\s+TARGET_SHA:\s*\$\{\{\s*github\.sha\s*\}\}\s*$' 'Invariant failed: gate job must evaluate checks for the exact release SHA via TARGET_SHA: ${{ github.sha }}.'
-Assert-Regex '(?ms)^\s{2}gate:\s*$.*?Tools/ci/check-required-statuses\.py' "Invariant failed: gate job must invoke Tools/ci/check-required-statuses.py."
+Assert-Regex '(?ms)^\s{2}gate:\s*$.*?Tools/ci/validators/check-required-statuses\.py' "Invariant failed: gate job must invoke Tools/ci/validators/check-required-statuses.py."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--required-checks\s+Tools/ci/release-required-checks\.json' "Invariant failed: gate job must read shared aliases from Tools/ci/release-required-checks.json."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--github-token-env\s+GITHUB_TOKEN' "Invariant failed: gate job must pass --github-token-env GITHUB_TOKEN to helper."
 Assert-Regex '(?ms)^\s{2}gate:\s*$.*?--max-wait-seconds\s+1800' "Invariant failed: gate job must keep 1800s max wait for required-check polling."

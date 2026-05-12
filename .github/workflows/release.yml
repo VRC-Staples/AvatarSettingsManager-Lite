@@ -181,7 +181,7 @@ jobs:
       - name: Evaluate compatibility contract (enforced)
         run: |
           set -euo pipefail
-          python3 Tools/ci/evaluate-compatibility-contract.py \
+          python3 Tools/ci/validators/evaluate-compatibility-contract.py \
             --mode release \
             --contract compatibility.contract.json \
             --output-json /tmp/compatibility-contract-report.json \
@@ -205,7 +205,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python3 Tools/ci/check-required-statuses.py \
+          python3 Tools/ci/validators/check-required-statuses.py \
             --repo "${{ github.repository }}" \
             --sha "$TARGET_SHA" \
             --required-checks Tools/ci/release-required-checks.json \

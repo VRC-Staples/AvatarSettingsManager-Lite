@@ -56,7 +56,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          python3 Tools/ci/check-required-statuses.py \
+          python3 Tools/ci/validators/check-required-statuses.py \
             --repo "${{ github.repository }}" \
             --sha "$TARGET_SHA" \
             --required-checks Tools/ci/release-required-checks.json \

@@ -9,8 +9,8 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-VERIFIER = REPO_ROOT / "Tools/ci/verify-unity-editmode-results.py"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+VERIFIER = REPO_ROOT / "Tools/ci/validators/verify-unity-editmode-results.py"
 
 
 PASSING_XML = """<?xml version=\"1.0\" encoding=\"utf-8\"?>

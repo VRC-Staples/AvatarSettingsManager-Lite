@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for Tools/ci/check-required-statuses.py."""
+"""Tests for Tools/ci/validators/check-required-statuses.py."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-CHECKER = REPO_ROOT / "Tools/ci/check-required-statuses.py"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+CHECKER = REPO_ROOT / "Tools/ci/validators/check-required-statuses.py"
 REQUIRED_CHECKS = REPO_ROOT / "Tools/ci/release-required-checks.json"
 
 

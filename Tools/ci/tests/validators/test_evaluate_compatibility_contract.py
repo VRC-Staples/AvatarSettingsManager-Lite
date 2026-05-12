@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for Tools/ci/evaluate-compatibility-contract.py."""
+"""Tests for Tools/ci/validators/evaluate-compatibility-contract.py."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-EVALUATOR = REPO_ROOT / "Tools/ci/evaluate-compatibility-contract.py"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+EVALUATOR = REPO_ROOT / "Tools/ci/validators/evaluate-compatibility-contract.py"
 
 
 def load_evaluator_module():
