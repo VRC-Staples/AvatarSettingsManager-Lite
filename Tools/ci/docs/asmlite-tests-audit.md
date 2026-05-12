@@ -102,6 +102,119 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | `ASMLiteVisibleEditorSmokeTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleEditorSmokeTests.cs` | 8 | `visible-manual` (8) | `no` (8) | `visible-operator-flow-coverage` (8) | Visible/manual only; do not fold into default headless CI. | `manual-visible-smoke-only` (8) |
 | `ASMLiteAv3SaveLoadPlayModeTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs` | 6 | `playmode-headless-review` (6) | `conditional-playmode-not-default-ci` (6) | `playmode-runtime-manual-review` (6) | PlayMode/runtime fixture requirements need a separate lane. | `manual-or-separate-playmode-lane` (6) |
 
+## Tools/ci cleanup report
+
+Audit basis:
+
+- Active content search found no workflow, runner, README, or script references to the removed root-level `Tools/ci/verify-*` helpers or `Tools/ci/bin/setup-git-hooks.sh`; remaining mentions are historical changelog entries and this audit section.
+- `python3 Tools/ci/test-suites/validate-suites.py` passed.
+- `python3 Tools/ci/test-suites/validate-suite-ledger.py` passed with **503** classified Unity C# test methods.
+- Suite validator unit tests passed: **5/5** `test_validate_suites`, **4/4** `test_validate_suite_ledger`.
+
+### Removed / keep removed
+
+| File | Former purpose | Current consumer | Still needed? | Replacement / follow-up |
+|---|---|---|---|---|
+| `Tools/ci/verify-editmode-selector-parity.py` | Fail-closed Wave 1 check that `editmode-batch-runs.json`, `.github/workflows/ci.yml`, local runner defaults, and selected fixture/method anchors stayed in parity. | None found. | No. Keep removed. | `Tools/ci/test-suites/suites.json` + `validate-suites.py` now own suite-map parity. Long-term: make the Unity runner consume `suites.json` directly so generated batch JSON stops being a second source. |
+| `Tools/ci/verify-m010-contract-tests.py` | Post-run NUnit XML gate for milestone anchor IDs `TB13`-`TB19`, `A26`, `A27`, `VF06`. | None found. | No. Keep removed. | Brittle with the proposed removal of coded ID prefixes from test method names. If milestone gates return, express them as suite/ledger metadata, not method-name tokens. |
+| `Tools/ci/verify-shadow-project-hygiene.ps1` | Checked shadow Unity project lock/version parity and required tracked VRChat SDK DLLs. | None found. | Not as a dead root helper. Keep removed. | If this invariant still matters, move the check into an active validator job or fold it into `validate-suites.py` / release-gate invariants. |
+| `Tools/ci/bin/setup-git-hooks.sh` | Local opt-in installer for repo git hooks. | None found. | No. Removed per maintainer preference. | Keep server-side/CI identity guard as source of truth; do not rely on local hook install state. |
+
+### Long-term investigation items
+
+| Item | Why investigate | Likely direction | Risk / open question |
+|---|---|---|---|
+| Make `suites.json` the only suite-selection source | Runner still consumes `Tools/ci/test-suites/editmode-batch-runs.json`; `suites.json` says validator keeps the two in parity. That is better than old ad hoc verifiers, but still duplicate state. | Teach `ASMLiteBatchTestRunner` to read `suites.json` groups/runs directly, or generate batch runs as a build artifact instead of tracked source. | Need preserve local runner overrides and result filenames without making Unity-side JSON parsing too fragile. |
+| Split runtime/PlayMode review from Editor/EditMode tests | `ASMLiteAv3SaveLoadPlayModeTests` lives under `Tests/Editor` and appears as EditMode-runner coverage while entering PlayMode internally. This matches current mechanics but reads wrong in the test runner. | Create `Tests/PlayMode` asmdef/runner lane for true runtime AV3 save/load tests; leave pure command-line/config/document tests in Editor headless fixtures with non-PlayMode names. | AV3/VRC fixtures depend on Editor setup APIs. Need determine what can move to PlayMode assembly vs what remains editor-hosted setup. |
+
+## Test naming/category cleanup audit
+
+### Findings
+
+- Naming inventory from `test-suite-ledger.json`: **503** methods, **50** classes.
+- Disjoint naming signals: **150** coded-ID prefixes (`A05_`, `TB13_`, `VF06_`, etc.), **51** snake_case methods, **12** names/classes containing `PlayMode`, **7** very long names over 95 chars.
+- Main runner confusion: `ASMLiteAv3SaveLoadPlayModeTests` is under `Packages/com.staples.asm-lite/Tests/Editor/...`, tagged `Category("PlayMode")`, and includes `[UnityTest]` cases that call `EnterPlayMode()`. It should either be a real PlayMode assembly lane or renamed as editor-hosted runtime review.
+- Current categories are mostly coarse and useful: `Headless`, `Integration`, `Smoke`, `VisibleEditorAutomation`, `Manual`, `PlayMode`. Problem is not category count; problem is category/assembly mismatch plus method-name ID noise.
+
+### Proposed naming rule
+
+Use one human-readable NUnit display pattern everywhere:
+
+`Subject_WhenCondition_ExpectedOutcome`
+
+Rules:
+
+- Remove coded milestone IDs from method names. Preserve traceability in suite ledger metadata, comments near grouped tests, or assertion messages only when useful.
+- Avoid snake_case in C# test method names; use PascalCase segments separated by underscores.
+- Avoid `PlayMode` in names/categories unless the test is in a PlayMode lane or the subject is literally a serialized/result field named PlayMode.
+- Keep class names capability-oriented: `ASMLite<Area><Kind>Tests`, where `<Kind>` is `Tests`, `IntegrationTests`, `SmokeTests`, `RuntimeTests`, or `ManualTests`.
+- Prefer one behavior per method, but merge repeated generated-asset micro-tests when one fixture build is repeated only to inspect adjacent fields.
+
+### Category / lane arrangement matrix
+
+| Current lane/category | Keep? | Proposed arrangement | Notes |
+|---|---:|---|---|
+| `core-headless` / `Headless` | yes | Fast Editor unit/contract tests. Class filters from `suites.json`; source category stays `Headless` only. | Good default CI lane. Remove method ID prefixes for readability. |
+| `integration-headless` / `Headless` + `Integration` | yes | Fixture-heavy Editor integration tests. Keep `Integration` source category; runner selects category. | Good lane. Add missing category/filter for `ASMLitePrefabWiringTests.W02...` only after lane policy decision. |
+| `contract` | yes | Keep tiny pinned contract lane. | Consider renaming method `Prefab_UsesGeneratedAssetReferences_ForFullController` without `T02_`. |
+| `runner-selftest-headless` | yes, non-default | Keep runner self-tests excluded from default batches. | Avoid self-selection. Names mostly okay. |
+| `smoke-protocol-headless` / `Smoke` + `Headless` | yes | Protocol/catalog/transport contracts. Convert snake_case method names to PascalCase display names. | Good lane; naming style only. |
+| `smoke-overlay-host-headless` / `Smoke` + `Headless` | yes | Headless host behavior tests. Remove incidental `PlayMode` wording where not required. | Not real visible or PlayMode runner coverage. |
+| `visible-manual` / `VisibleEditorAutomation` | yes, manual | Keep rendered editor/operator suite manual. | Good honesty boundary. |
+| `playmode-headless-review` / `PlayMode` + optional `Manual` | rename/split | Move actual `[UnityTest] EnterPlayMode()` cases to `Tests/PlayMode` and keep `PlayMode`; keep config/default/diagnostic tests in Editor under `Headless` without `PlayMode` in class name. | Highest-priority naming/category fix. |
+
+### Proposed class/file matrix
+
+| Current class/file | Current issue | Proposed class/file/category | Action |
+|---|---|---|---|
+| `Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs` | Editor assembly + `Category("PlayMode")`; method names use `P0/P2/P3/P5`; mixes runtime, manual UAT, and config parsing. | Split into `Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs` (`PlayMode`), `Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs` (`PlayMode`,`Manual`), and `Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs` (`Headless`). | Split/update. |
+| `Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs` | Large 74-method class; several names say `PlayMode` for string/result behavior, not runner mode. | Keep class/lane, but rename incidental names to `Runtime` or `VisibleRuntimeMode` where possible. Optionally split command-line/config, runtime facade, command executor into partial classes/files. | Rename/split optional. |
+| `Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs` | Dense fixture mutation names. | Keep class; shorten repeated `Mutation_...Restores...` names to `FixtureService_<Condition>_<Expected>`. | Rename only. |
+| `Smoke/Protocol/*Tests.cs` | 51 snake_case methods across protocol/catalog/atomic/executor tests. | Keep files/categories; convert methods to PascalCase segments, e.g. `AtomicWrite_ReplacesExistingJsonDocumentAtomically`. | Rename only. |
+| `Integration/GeneratedAssets/ASMLiteFXControllerTests.cs` | 17 `A##_` names; adjacent micro-tests rebuild same fixture to inspect layer shape. | `ASMLiteFxControllerGenerationIntegrationTests`; remove IDs. Consider merging layer-count/state/default/write-defaults into `GeneratedSlotLayers_HaveExpectedStateMachineShape`. | Rename + selective merge. |
+| `Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs` | 10 `A##_` names. | `ASMLiteGeneratedAssetBuildIntegrationTests`; remove IDs. | Rename. |
+| `Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs` | 11 `A##_` names. | `ASMLiteExpressionParameterGenerationIntegrationTests`; remove IDs. | Rename. |
+| `Integration/GeneratedAssets/ASMLiteMenuTests.cs` | 9 `A##_` names. | `ASMLiteMenuGenerationIntegrationTests`; remove IDs. | Rename; consider merging adjacent root/preset/menu-shape checks if setup is identical. |
+| `Integration/GeneratedAssets/ASMLiteCleanupTests.cs` | 12 `A##_` names. | `ASMLiteGeneratedAssetCleanupIntegrationTests`; remove IDs. | Rename. |
+| `Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs` | 9 `R080/R081` names. | `ASMLiteRootMenuOverrideIntegrationTests`; remove IDs. | Rename; keep method grouping by root name vs root icon. |
+| `Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs` | 7 `VF##_` names. | `ASMLiteVrcFuryPipelineIntegrationTests`; remove IDs. | Rename. |
+| `Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | `W##_` names; one core-headless anchor inside integration folder. | Split pure stale-PRMS/core predicate into unit/core class or tag/filter it deliberately. Remove IDs. | Split/update. |
+| `Unit/Core/ASMLiteToggleBrokerTests.cs` | 19 `TB##_` names. | Keep class; remove IDs. If traceability needed, add ledger metadata. | Rename. |
+| `Unit/Core/ASMLiteParameterDiscoveryTests.cs` | 12 `A##_` names in unit lane. | Keep class; remove IDs. | Rename. |
+| `Unit/Core/ASMLiteInstallPathWiringTests.cs` | 8 `W##_` names. | Keep class; remove IDs. | Rename. |
+| `Unit/Core/ASMLiteBuilderTests.cs`, `ASMLiteAssetPathsTests.cs`, `ASMLiteComponentTests.cs`, `ASMLitePrefabContractTests.cs` | Mixed one-off `P##_`/`T##_` names. | Keep classes; remove IDs and use behavior names. | Rename. |
+| `Unit/Core/ASMLiteIconFixtureRegistryTests.cs` | snake_case methods. | Keep class; PascalCase method names. | Rename. |
+| `Unit/Window/*Tests.cs` | Mostly readable; a few very long names. | Keep classes; shorten long cases by moving detail into assertion messages. | Minor rename. |
+
+### Method rename examples
+
+| Current method | Proposed method |
+|---|---|
+| `A05_Build_CreatesCorrectNumberOfASMLiteLayers` | `Build_CreatesSlotLayerForEachConfiguredSlot` |
+| `A06_EachSlotLayer_HasFourStates` | `GeneratedSlotLayers_HaveExpectedStateCount` |
+| `A08_AllStates_WriteDefaultValuesIsFalse` | `GeneratedStates_DisableWriteDefaults` |
+| `A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces` | `RepeatedBuild_KeepsGeneratedAssetsStable` |
+| `TB13_Enrollment_PreReservedDescriptorNamesAreSkippedWithoutBlockingUniqueAssignments` | `Enrollment_SkipsReservedDescriptorNamesWithoutBlockingUniqueAssignments` |
+| `VF06_Build_UsesVrcFuryBrokerNamesWithoutDuplicatingDescriptorParams` | `Build_UsesVrcFuryBrokerNamesWithoutDuplicatingDescriptorParams` |
+| `Known_fixture_ids_resolve_to_existing_package_textures` | `KnownFixtureIds_ResolveToExistingPackageTextures` |
+| `AtomicWrite_interrupted_promote_keeps_previous_json_visible` | `AtomicWrite_WhenPromoteIsInterrupted_KeepsPreviousJsonVisible` |
+| `LoadCanonical_includes_manual_playmode_av3_save_load_suite` | `LoadCanonical_IncludesManualAv3SaveLoadRuntimeSuite` |
+| `UnityRuntime_NormalizesPlayModeCloneAvatarNames` | `UnityRuntime_NormalizesClonedAvatarNames` |
+| `BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns` | `BuildResultDocument_UsesRuntimeFixtureName_ForRuntimeReviewRuns` |
+| `P0_Av3Runtime_ExposesSavedUnsavedAndControlParameters_AfterPlayModeStart` | `Av3Runtime_AfterEnteringPlayMode_ExposesSavedUnsavedAndControlParameters` |
+| `P3_ExternalUat_OperatorSelectedRealAvatar_RestoresSafeSavedSubsetAndPreservesUnsavedMetadataSubset` | `ExternalUatAvatar_RestoresSavedSubsetAndPreservesUnsavedMetadata` |
+
+### Combine / trim / update candidates
+
+| Area | Candidate | Recommendation |
+|---|---|---|
+| FX controller generated asset tests | `A05`-`A09` each rebuild then inspect adjacent layer/state invariants. | Combine into 1-2 shape tests if runtime is painful; otherwise keep separate but remove IDs. |
+| Menu generated asset tests | Root menu, preset count/name, slot menu control shape, confirm/reset submenu shape. | Keep distinct if failures are common; combine only repeated trivial menu-shape asserts that share identical setup. |
+| AV3 save/load runtime tests | Runtime availability, core invariant, external UAT, fuzz config all in one class. | Split by lane, not trim. Config/default parsing belongs in Editor unit tests; runtime invariant belongs in PlayMode; UAT/fuzz remains manual. |
+| Smoke protocol/catalog tests | Catalog metadata/default parsing names are verbose and snake_case. | Rename only; do not trim. These guard the visible smoke protocol. |
+| Overlay host tests | 74 methods in one class. | Consider file/class split by subject (`CommandLine`, `RuntimeFacade`, `CommandExecutor`, `RecoverySignals`) for runner readability; keep lane unchanged. |
+| Window model tests | A few names encode too many UI conditions. | Shorten method names; move detailed condition list into assert messages or helper variable names. |
+
 ## Method-level ledger mirror
 
 This table mirrors the classified ledger fields so the markdown artifact is reviewable without opening JSON.

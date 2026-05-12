@@ -48,13 +48,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 
 ### Developer Git Identity Guard
 
-Run this once after cloning to enable repository hooks:
-
-```bash
-bash Tools/ci/bin/setup-git-hooks.sh
-```
-
-The hooks block commits that use banned personal identity metadata or blocked co-author trailers. CI also enforces the same checks on push and pull request.
+CI blocks commits that use banned personal identity metadata or blocked co-author trailers on push and pull request.
 
 ---
 
