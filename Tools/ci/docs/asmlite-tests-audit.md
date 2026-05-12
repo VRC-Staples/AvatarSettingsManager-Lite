@@ -4,6 +4,22 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 
 ## Scope and policy
 
+### Grill decisions
+
+- Keep this document as the combined canonical audit plus future cleanup backlog; do not split the current backlog into a separate plan unless the backlog grows beyond audit-review usability.
+- Deleted-helper stale-reference policy: active workflow/runner/README/script references must be zero; historical changelog entries and this audit's self-references are allowed when explicitly labeled historical/audit context.
+- Test rename compatibility rule: CLR method/class renames are allowed only when suite selectors, generated/validated ledger metadata, and any duplicated batch-run selectors are updated in the same commit.
+- Validation gate: local cleanup commits must run the Python suite-map and ledger validators; Unity execution is optional locally when unavailable and should be covered by CI or explicit manual follow-up.
+- Implementation commit granularity: use vertical slices by lane/area, with required validators run after each commit-sized slice.
+- Backlog priority: resolve the PlayMode/runtime lane mismatch before broad naming-only cleanup.
+- PlayMode lane direction: add a true PlayMode asmdef for runtime-safe tests, while leaving editor-hosted config/review coverage in Editor tests under clearer runtime-review naming.
+- Ledger mirror policy: keep the current method-level mirror for now, but add a follow-up to generate it from ledger data instead of maintaining it by hand.
+- Shadow-project hygiene policy: treat the old shadow-project invariant as obsolete; no follow-up unless a shadow project returns.
+- Coded-ID policy: after renaming tests, drop old milestone IDs entirely instead of preserving them in method names, comments, assertions, or ledger metadata.
+- `ASMLitePrefabWiringTests.W02...` gap direction: delete or merge the stale-PRMS predicate into prefab wiring integration coverage instead of preserving it as a separate core-headless selector.
+- Suite-source unification timing: after the PlayMode split, make `suites.json` the runner source of truth before broad rename waves.
+- Visible boundary: keep rendered visible/editor smoke tests manual-only, while command-line/result-document harness tests remain headless default-CI coverage.
+
 - Scope: Unity C# NUnit/EditMode tests under `Packages/com.staples.asm-lite/Tests/**/*.cs`.
 - Test assembly definition policy: keep the single existing test asmdef in this pass.
 - No tests were deleted, renamed, or quarantined by this audit pass.
@@ -117,7 +133,7 @@ Audit basis:
 |---|---|---|---|---|
 | `Tools/ci/verify-editmode-selector-parity.py` | Fail-closed Wave 1 check that `editmode-batch-runs.json`, `.github/workflows/ci.yml`, local runner defaults, and selected fixture/method anchors stayed in parity. | None found. | No. Keep removed. | `Tools/ci/test-suites/suites.json` + `validate-suites.py` now own suite-map parity. Long-term: make the Unity runner consume `suites.json` directly so generated batch JSON stops being a second source. |
 | `Tools/ci/verify-m010-contract-tests.py` | Post-run NUnit XML gate for milestone anchor IDs `TB13`-`TB19`, `A26`, `A27`, `VF06`. | None found. | No. Keep removed. | Brittle with the proposed removal of coded ID prefixes from test method names. If milestone gates return, express them as suite/ledger metadata, not method-name tokens. |
-| `Tools/ci/verify-shadow-project-hygiene.ps1` | Checked shadow Unity project lock/version parity and required tracked VRChat SDK DLLs. | None found. | Not as a dead root helper. Keep removed. | If this invariant still matters, move the check into an active validator job or fold it into `validate-suites.py` / release-gate invariants. |
+| `Tools/ci/verify-shadow-project-hygiene.ps1` | Checked shadow Unity project lock/version parity and required tracked VRChat SDK DLLs. | None found. | Not as a dead root helper. Keep removed. | Treat as obsolete; no follow-up unless a shadow project returns. |
 | `Tools/ci/bin/setup-git-hooks.sh` | Local opt-in installer for repo git hooks. | None found. | No. Removed per maintainer preference. | Keep server-side/CI identity guard as source of truth; do not rely on local hook install state. |
 
 ### Long-term investigation items
@@ -126,6 +142,7 @@ Audit basis:
 |---|---|---|---|
 | Make `suites.json` the only suite-selection source | Runner still consumes `Tools/ci/test-suites/editmode-batch-runs.json`; `suites.json` says validator keeps the two in parity. That is better than old ad hoc verifiers, but still duplicate state. | Teach `ASMLiteBatchTestRunner` to read `suites.json` groups/runs directly, or generate batch runs as a build artifact instead of tracked source. | Need preserve local runner overrides and result filenames without making Unity-side JSON parsing too fragile. |
 | Split runtime/PlayMode review from Editor/EditMode tests | `ASMLiteAv3SaveLoadPlayModeTests` lives under `Tests/Editor` and appears as EditMode-runner coverage while entering PlayMode internally. This matches current mechanics but reads wrong in the test runner. | Create `Tests/PlayMode` asmdef/runner lane for true runtime AV3 save/load tests; leave pure command-line/config/document tests in Editor headless fixtures with non-PlayMode names. | AV3/VRC fixtures depend on Editor setup APIs. Need determine what can move to PlayMode assembly vs what remains editor-hosted setup. |
+| Generate the markdown method-level ledger mirror | The current method mirror is reviewable but large and manually maintained; future renames will otherwise require duplicate hand edits. | Add a generator that emits the method mirror from `test-suite-ledger.json` or the same source model used by `validate-suite-ledger.py`. | Need preserve audit readability without making the markdown artifact noisy or hard to diff. |
 
 ## Test naming/category cleanup audit
 
@@ -144,7 +161,7 @@ Use one human-readable NUnit display pattern everywhere:
 
 Rules:
 
-- Remove coded milestone IDs from method names. Preserve traceability in suite ledger metadata, comments near grouped tests, or assertion messages only when useful.
+- Remove coded milestone IDs from method names and do not preserve the old IDs elsewhere after the rename pass.
 - Avoid snake_case in C# test method names; use PascalCase segments separated by underscores.
 - Avoid `PlayMode` in names/categories unless the test is in a PlayMode lane or the subject is literally a serialized/result field named PlayMode.
 - Keep class names capability-oriented: `ASMLite<Area><Kind>Tests`, where `<Kind>` is `Tests`, `IntegrationTests`, `SmokeTests`, `RuntimeTests`, or `ManualTests`.
@@ -178,7 +195,7 @@ Rules:
 | `Integration/GeneratedAssets/ASMLiteCleanupTests.cs` | 12 `A##_` names. | `ASMLiteGeneratedAssetCleanupIntegrationTests`; remove IDs. | Rename. |
 | `Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs` | 9 `R080/R081` names. | `ASMLiteRootMenuOverrideIntegrationTests`; remove IDs. | Rename; keep method grouping by root name vs root icon. |
 | `Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs` | 7 `VF##_` names. | `ASMLiteVrcFuryPipelineIntegrationTests`; remove IDs. | Rename. |
-| `Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | `W##_` names; one core-headless anchor inside integration folder. | Split pure stale-PRMS/core predicate into unit/core class or tag/filter it deliberately. Remove IDs. | Split/update. |
+| `Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | `W##_` names; one core-headless anchor inside integration folder. | Delete or merge the stale-PRMS predicate into prefab wiring integration coverage; remove IDs from remaining prefab wiring tests. | Merge/delete `W02`, then rename remaining coverage. |
 | `Unit/Core/ASMLiteToggleBrokerTests.cs` | 19 `TB##_` names. | Keep class; remove IDs. If traceability needed, add ledger metadata. | Rename. |
 | `Unit/Core/ASMLiteParameterDiscoveryTests.cs` | 12 `A##_` names in unit lane. | Keep class; remove IDs. | Rename. |
 | `Unit/Core/ASMLiteInstallPathWiringTests.cs` | 8 `W##_` names. | Keep class; remove IDs. | Rename. |
