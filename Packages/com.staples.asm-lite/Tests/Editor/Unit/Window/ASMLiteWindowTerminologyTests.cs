@@ -18,7 +18,7 @@ namespace ASMLite.Tests.Editor
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
 
         [Test]
-        public void AlwaysVisibleCopy_UsesPresetTerminologyAcrossSettingsPreviewAndCustomizeSurfaces()
+        public void AlwaysVisibleCopy_UsesPresetTerminology()
         {
             var copy = GetAllCopy("NotInstalled", hasComponent: false).ToArray();
 

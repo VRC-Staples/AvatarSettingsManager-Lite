@@ -11340,6 +11340,84 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
       "class": "ASMLiteWindowActionHierarchyTests",
+      "method": "AttachedCustomizationSnapshot_ExposesSharedActionDescriptors",
+      "line": 294,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Attached Customization Snapshot Exposes Shared Action Descriptors",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.AttachedCustomizationSnapshot_ExposesSharedActionDescriptors",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
+      "class": "ASMLiteWindowActionHierarchyTests",
+      "method": "BuildActionHierarchyContract_AttachedExposesActionDescriptors",
+      "line": 84,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Action Hierarchy Contract Attached Exposes Action Descriptors",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_AttachedExposesActionDescriptors",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
+      "class": "ASMLiteWindowActionHierarchyTests",
+      "method": "BuildActionHierarchyContract_AttachedSplitsActionGroups",
+      "line": 57,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Action Hierarchy Contract Attached Splits Action Groups",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_AttachedSplitsActionGroups",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
+      "class": "ASMLiteWindowActionHierarchyTests",
       "method": "BuildActionHierarchyContract_AvatarSelectedNotInstalled_StaysExplicit",
       "line": 265,
       "attributes": [
@@ -11418,32 +11496,6 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
       "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "BuildActionHierarchyContract_ComponentPresentVendorized_ExpandedAdvancedMakesMaintenanceVisible",
-      "line": 200,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Action Hierarchy Contract Component Present Vendorized Expanded Advanced Makes Maintenance Visible",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_ComponentPresentVendorized_ExpandedAdvancedMakesMaintenanceVisible",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
-      "class": "ASMLiteWindowActionHierarchyTests",
       "method": "BuildActionHierarchyContract_ComponentPresentVendorized_StaysExplicit",
       "line": 166,
       "attributes": [
@@ -11470,8 +11522,8 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
       "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "BuildActionHierarchyContract_PackageManagedAttached_ExposesRichActionDescriptors",
-      "line": 84,
+      "method": "BuildActionHierarchyContract_ExpandedAdvancedShowsMaintenance",
+      "line": 200,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11484,39 +11536,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Action Hierarchy Contract Package Managed Attached Exposes Rich Action Descriptors",
+      "publicBehaviorClaim": "Build Action Hierarchy Contract Expanded Advanced Shows Maintenance",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_PackageManagedAttached_ExposesRichActionDescriptors",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
-      "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "BuildActionHierarchyContract_PackageManagedAttached_SplitsPrimaryAndAdvancedCorrectly",
-      "line": 57,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Action Hierarchy Contract Package Managed Attached Splits Primary And Advanced Correctly",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_PackageManagedAttached_SplitsPrimaryAndAdvancedCorrectly",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.BuildActionHierarchyContract_ExpandedAdvancedShowsMaintenance",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -11548,7 +11574,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
       "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "GetActionHierarchyContract_NoComponent_ReusesCachedToolStateUntilExplicitInvalidation",
+      "method": "GetActionHierarchyContract_ReusesCachedToolState",
       "line": 353,
       "attributes": [
         "TestFixture",
@@ -11562,39 +11588,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Action Hierarchy Contract No Component Reuses Cached Tool State Until Explicit Invalidation",
+      "publicBehaviorClaim": "Get Action Hierarchy Contract Reuses Cached Tool State",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.GetActionHierarchyContract_NoComponent_ReusesCachedToolStateUntilExplicitInvalidation",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
-      "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "GetAttachedCustomizationSnapshotForAutomation_ExposesActionDescriptorsFromSharedModel",
-      "line": 294,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Attached Customization Snapshot For Automation Exposes Action Descriptors From Shared Model",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.GetAttachedCustomizationSnapshotForAutomation_ExposesActionDescriptorsFromSharedModel",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.GetActionHierarchyContract_ReusesCachedToolState",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -11626,33 +11626,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
       "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "ResolveInstallationState_ComponentMissingDetachedDetectedFromRuntimeMarkers",
-      "line": 388,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Resolve Installation State Component Missing Detached Detected From Runtime Markers",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.ResolveInstallationState_ComponentMissingDetachedDetectedFromRuntimeMarkers",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
-      "class": "ASMLiteWindowActionHierarchyTests",
-      "method": "ResolveInstallationState_ComponentPresentVendorized_WinsOverAvatarHeuristics",
+      "method": "ResolveInstallationState_ComponentStateWinsOverHeuristics",
       "line": 342,
       "attributes": [
         "TestFixture",
@@ -11666,13 +11640,39 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Resolve Installation State Component Present Vendorized Wins Over Avatar Heuristics",
+      "publicBehaviorClaim": "Resolve Installation State Component State Wins Over Heuristics",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowActionHierarchyTests.ResolveInstallationState_ComponentPresentVendorized_WinsOverAvatarHeuristics",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.ResolveInstallationState_ComponentStateWinsOverHeuristics",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
+      "class": "ASMLiteWindowActionHierarchyTests",
+      "method": "ResolveInstallationState_RuntimeMarkersDetectDetached",
+      "line": 388,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Resolve Installation State Runtime Markers Detect Detached",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowActionHierarchyTests.ResolveInstallationState_RuntimeMarkersDetectDetached",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -11699,7 +11699,7 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_DoesNotOwnLifecycleOrFullControllerPolicy",
-      "notes": "Selected by default CI through the core-headless class filter."
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
@@ -11725,7 +11725,7 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_KeepsExtractedPresenterSeamsAsPrimaryPolicyOwners",
-      "notes": "Selected by default CI through the core-headless class filter."
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
@@ -11751,7 +11751,7 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_RefreshesReadonlyCustomizationDraftWithoutReassignment",
-      "notes": "Selected by default CI through the core-headless class filter."
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
@@ -12147,7 +12147,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically",
+      "method": "ParameterBackupAutomation_ExactNamesNormalizeAndDisable",
       "line": 934,
       "attributes": [
         "TestFixture",
@@ -12161,19 +12161,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation Exact Names Normalizes Preserves First Seen Order And Can Disable Deterministically",
+      "publicBehaviorClaim": "Parameter Backup Automation Exact Names Normalize And Disable",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactNamesNormalizeAndDisable",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder",
+      "method": "ParameterBackupAutomation_ExactVisibleNamesPreserveOrder",
       "line": 818,
       "attributes": [
         "TestFixture",
@@ -12187,19 +12187,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation Exact Visible Names Normalizes And Preserves First Seen Order",
+      "publicBehaviorClaim": "Parameter Backup Automation Exact Visible Names Preserve Order",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_ExactVisibleNamesPreserveOrder",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_FirstTwoVisiblePreset_StoresFirstTwoVisibleOptions",
+      "method": "ParameterBackupAutomation_FirstTwoPresetStoresVisibleOptions",
       "line": 790,
       "attributes": [
         "TestFixture",
@@ -12213,19 +12213,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation First Two Visible Preset Stores First Two Visible Options",
+      "publicBehaviorClaim": "Parameter Backup Automation First Two Preset Stores Visible Options",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_FirstTwoVisiblePreset_StoresFirstTwoVisibleOptions",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_FirstTwoPresetStoresVisibleOptions",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_NoneExcludedPreset_EnablesCustomizationWithEmptyExclusions",
+      "method": "ParameterBackupAutomation_NonePresetEnablesEmptyExclusions",
       "line": 738,
       "attributes": [
         "TestFixture",
@@ -12239,19 +12239,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation None Excluded Preset Enables Customization With Empty Exclusions",
+      "publicBehaviorClaim": "Parameter Backup Automation None Preset Enables Empty Exclusions",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_NoneExcludedPreset_EnablesCustomizationWithEmptyExclusions",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_NonePresetEnablesEmptyExclusions",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
-      "method": "ParameterBackupAutomation_PresetId_EnablesExclusionsAndSurfacesNormalizedSnapshotFields",
+      "method": "ParameterBackupAutomation_PresetIdNormalizesSnapshots",
       "line": 875,
       "attributes": [
         "TestFixture",
@@ -12265,13 +12265,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Parameter Backup Automation Preset Id Enables Exclusions And Surfaces Normalized Snapshot Fields",
+      "publicBehaviorClaim": "Parameter Backup Automation Preset Id Normalizes Snapshots",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_PresetId_EnablesExclusionsAndSurfacesNormalizedSnapshotFields",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.ParameterBackupAutomation_PresetIdNormalizesSnapshots",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -12461,6 +12461,58 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
+      "method": "VisibleBackupOptions_IncludeReferencedParameterAssets",
+      "line": 1031,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Visible Backup Options Include Referenced Parameter Assets",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.VisibleBackupOptions_IncludeReferencedParameterAssets",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
+      "class": "ASMLiteWindowCustomizationTests",
+      "method": "VisibleBackupOptions_PreferDeterministicToggleAlias",
+      "line": 994,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Visible Backup Options Prefer Deterministic Toggle Alias",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.VisibleBackupOptions_PreferDeterministicToggleAlias",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
+      "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleInstallPathOptions_ExcludeAsmLitePresetsBranchAcrossRootNameReloads",
       "line": 1161,
       "attributes": [
@@ -12560,58 +12612,6 @@
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowCustomizationTests.VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
-      "class": "ASMLiteWindowCustomizationTests",
-      "method": "VisibleParameterBackupOptions_IncludeVrcFuryReferencedParameterAssets_PreBake",
-      "line": 1031,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Visible Parameter Backup Options Include Vrc Fury Referenced Parameter Assets Pre Bake",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.VisibleParameterBackupOptions_IncludeVrcFuryReferencedParameterAssets_PreBake",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
-      "class": "ASMLiteWindowCustomizationTests",
-      "method": "VisibleParameterBackupOptions_PreferDeterministicToggleAlias_OverLegacySourceName",
-      "line": 994,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Visible Parameter Backup Options Prefer Deterministic Toggle Alias Over Legacy Source Name",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowCustomizationTests.VisibleParameterBackupOptions_PreferDeterministicToggleAlias_OverLegacySourceName",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -12725,7 +12725,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowRiskAffordanceTests.cs",
       "class": "ASMLiteWindowRiskAffordanceTests",
-      "method": "AttachedAvatar_MaintenanceActions_AreAdvancedOnlyWhilePrimaryFlowStaysRecommended",
+      "method": "AttachedAvatar_MaintenanceActionsStayAdvanced",
       "line": 44,
       "attributes": [
         "TestFixture",
@@ -12739,13 +12739,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Attached Avatar Maintenance Actions Are Advanced Only While Primary Flow Stays Recommended",
+      "publicBehaviorClaim": "Attached Avatar Maintenance Actions Stay Advanced",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowRiskAffordanceTests.AttachedAvatar_MaintenanceActions_AreAdvancedOnlyWhilePrimaryFlowStaysRecommended",
+      "runnerFilter": "ASMLiteWindowRiskAffordanceTests.AttachedAvatar_MaintenanceActionsStayAdvanced",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -12829,59 +12829,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
       "class": "ASMLiteWindowStatusPanelTests",
-      "method": "BuildStatusPanelSnapshot_AttachedImportPendingAndToggleCollisions_ExposesMultipleConditionalWarnings",
-      "line": 128,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Status Panel Snapshot Attached Import Pending And Toggle Collisions Exposes Multiple Conditional Warnings",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_AttachedImportPendingAndToggleCollisions_ExposesMultipleConditionalWarnings",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
-      "class": "ASMLiteWindowStatusPanelTests",
-      "method": "BuildStatusPanelSnapshot_AttachedMissingExpressionParameters_ExposesWarningDetail",
-      "line": 104,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "window-model-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Status Panel Snapshot Attached Missing Expression Parameters Exposes Warning Detail",
-      "fixtureDependencies": [
-        "window model fixtures"
-      ],
-      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_AttachedMissingExpressionParameters_ExposesWarningDetail",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
-      "class": "ASMLiteWindowStatusPanelTests",
-      "method": "BuildStatusPanelSnapshot_DetachedOrVendorizedWithoutComponent_UsesBakedOnlyGuidance",
+      "method": "BuildStatusPanelSnapshot_BakedOnlyStatesUseGuidance",
       "line": 39,
       "attributes": [
         "TestFixture",
@@ -12895,19 +12843,45 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Status Panel Snapshot Detached Or Vendorized Without Component Uses Baked Only Guidance",
+      "publicBehaviorClaim": "Build Status Panel Snapshot Baked Only States Use Guidance",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_DetachedOrVendorizedWithoutComponent_UsesBakedOnlyGuidance",
+      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_BakedOnlyStatesUseGuidance",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
       "class": "ASMLiteWindowStatusPanelTests",
-      "method": "BuildStatusPanelSnapshot_MalformedPackageManagedWithoutComponent_HasNoExtraDetails",
+      "method": "BuildStatusPanelSnapshot_ImportAndCollisionWarningsStack",
+      "line": 128,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Status Panel Snapshot Import And Collision Warnings Stack",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_ImportAndCollisionWarningsStack",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
+      "class": "ASMLiteWindowStatusPanelTests",
+      "method": "BuildStatusPanelSnapshot_MalformedInputHasNoExtraDetails",
       "line": 11,
       "attributes": [
         "TestFixture",
@@ -12921,19 +12895,45 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Status Panel Snapshot Malformed Package Managed Without Component Has No Extra Details",
+      "publicBehaviorClaim": "Build Status Panel Snapshot Malformed Input Has No Extra Details",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_MalformedPackageManagedWithoutComponent_HasNoExtraDetails",
+      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_MalformedInputHasNoExtraDetails",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
       "class": "ASMLiteWindowStatusPanelTests",
-      "method": "BuildStatusPanelSnapshot_NotInstalledWithoutComponent_UsesWarningOnboardingGuidance",
+      "method": "BuildStatusPanelSnapshot_MissingParametersExposeWarning",
+      "line": 104,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "window-model-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Status Panel Snapshot Missing Parameters Expose Warning",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_MissingParametersExposeWarning",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs",
+      "class": "ASMLiteWindowStatusPanelTests",
+      "method": "BuildStatusPanelSnapshot_NotInstalledUsesOnboardingWarning",
       "line": 79,
       "attributes": [
         "TestFixture",
@@ -12947,19 +12947,19 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Status Panel Snapshot Not Installed Without Component Uses Warning Onboarding Guidance",
+      "publicBehaviorClaim": "Build Status Panel Snapshot Not Installed Uses Onboarding Warning",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_NotInstalledWithoutComponent_UsesWarningOnboardingGuidance",
+      "runnerFilter": "ASMLiteWindowStatusPanelTests.BuildStatusPanelSnapshot_NotInstalledUsesOnboardingWarning",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowTerminologyTests.cs",
       "class": "ASMLiteWindowTerminologyTests",
-      "method": "AlwaysVisibleCopy_UsesPresetTerminologyAcrossSettingsPreviewAndCustomizeSurfaces",
+      "method": "AlwaysVisibleCopy_UsesPresetTerminology",
       "line": 21,
       "attributes": [
         "TestFixture",
@@ -12973,13 +12973,13 @@
       "headlessViability": "yes",
       "honesty": "window-model-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Always Visible Copy Uses Preset Terminology Across Settings Preview And Customize Surfaces",
+      "publicBehaviorClaim": "Always Visible Copy Uses Preset Terminology",
       "fixtureDependencies": [
         "window model fixtures"
       ],
       "assetSceneMutations": "none-or-in-memory-window-model-fixtures",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteWindowTerminologyTests.AlwaysVisibleCopy_UsesPresetTerminologyAcrossSettingsPreviewAndCustomizeSurfaces",
+      "runnerFilter": "ASMLiteWindowTerminologyTests.AlwaysVisibleCopy_UsesPresetTerminology",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {

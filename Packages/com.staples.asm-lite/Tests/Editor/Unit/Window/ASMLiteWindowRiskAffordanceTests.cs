@@ -41,7 +41,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void AttachedAvatar_MaintenanceActions_AreAdvancedOnlyWhilePrimaryFlowStaysRecommended()
+        public void AttachedAvatar_MaintenanceActionsStayAdvanced()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();

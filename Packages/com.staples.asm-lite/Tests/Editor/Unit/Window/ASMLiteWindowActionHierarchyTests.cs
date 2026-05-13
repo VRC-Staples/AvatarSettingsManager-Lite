@@ -54,7 +54,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildActionHierarchyContract_PackageManagedAttached_SplitsPrimaryAndAdvancedCorrectly()
+        public void BuildActionHierarchyContract_AttachedSplitsActionGroups()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
                 ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
@@ -81,7 +81,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildActionHierarchyContract_PackageManagedAttached_ExposesRichActionDescriptors()
+        public void BuildActionHierarchyContract_AttachedExposesActionDescriptors()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
                 ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
@@ -197,20 +197,20 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildActionHierarchyContract_ComponentPresentVendorized_ExpandedAdvancedMakesMaintenanceVisible()
+        public void BuildActionHierarchyContract_ExpandedAdvancedShowsMaintenance()
         {
-            var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
+            var componentPresentVendorizedExpandedAdvanced = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
                 ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 hasComponent: true,
                 advancedDisclosureExpanded: true);
 
-            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
+            Assert.True(IsActionVisible(componentPresentVendorizedExpandedAdvanced, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
                 "Expanded Advanced disclosure must surface Remove for attached avatars.");
-            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
+            Assert.True(IsActionVisible(componentPresentVendorizedExpandedAdvanced, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
                 "Expanded Advanced disclosure must surface Detach for attached avatars.");
-            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
+            Assert.True(IsActionVisible(componentPresentVendorizedExpandedAdvanced, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
                 "Expanded Advanced disclosure must surface Vendorize for attached avatars.");
-            Assert.True(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged),
+            Assert.True(IsActionVisible(componentPresentVendorizedExpandedAdvanced, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged),
                 "Expanded Advanced disclosure must surface attached vendorized return controls.");
         }
 
@@ -291,7 +291,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetAttachedCustomizationSnapshotForAutomation_ExposesActionDescriptorsFromSharedModel()
+        public void AttachedCustomizationSnapshot_ExposesSharedActionDescriptors()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
@@ -339,7 +339,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ResolveInstallationState_ComponentPresentVendorized_WinsOverAvatarHeuristics()
+        public void ResolveInstallationState_ComponentStateWinsOverHeuristics()
         {
             _ctx.Comp.useVendorizedGeneratedAssets = true;
 
@@ -350,7 +350,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void GetActionHierarchyContract_NoComponent_ReusesCachedToolStateUntilExplicitInvalidation()
+        public void GetActionHierarchyContract_ReusesCachedToolState()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
             _ctx.Comp = null;
@@ -385,7 +385,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ResolveInstallationState_ComponentMissingDetachedDetectedFromRuntimeMarkers()
+        public void ResolveInstallationState_RuntimeMarkersDetectDetached()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
             _ctx.Comp = null;

@@ -735,7 +735,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_NoneExcludedPreset_EnablesCustomizationWithEmptyExclusions()
+        public void ParameterBackupAutomation_NonePresetEnablesEmptyExclusions()
         {
             var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
@@ -787,7 +787,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_FirstTwoVisiblePreset_StoresFirstTwoVisibleOptions()
+        public void ParameterBackupAutomation_FirstTwoPresetStoresVisibleOptions()
         {
             var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
@@ -815,7 +815,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_ExactVisibleNames_NormalizesAndPreservesFirstSeenOrder()
+        public void ParameterBackupAutomation_ExactVisibleNamesPreserveOrder()
         {
             var referencedParams = SeedParameterBackupPresetVisibleOptions(_ctx);
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
@@ -872,7 +872,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_PresetId_EnablesExclusionsAndSurfacesNormalizedSnapshotFields()
+        public void ParameterBackupAutomation_PresetIdNormalizesSnapshots()
         {
             var limbRoot = new GameObject("FixtureSource");
             limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
@@ -931,7 +931,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParameterBackupAutomation_ExactNames_NormalizesPreservesFirstSeenOrderAndCanDisableDeterministically()
+        public void ParameterBackupAutomation_ExactNamesNormalizeAndDisable()
         {
             ASMLiteTestFixtures.SetExpressionParams(_ctx,
                 new VRCExpressionParameters.Parameter
@@ -991,7 +991,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void VisibleParameterBackupOptions_PreferDeterministicToggleAlias_OverLegacySourceName()
+        public void VisibleBackupOptions_PreferDeterministicToggleAlias()
         {
             const string legacySource = "VF300_Clothing/Rezz";
 
@@ -1028,7 +1028,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void VisibleParameterBackupOptions_IncludeVrcFuryReferencedParameterAssets_PreBake()
+        public void VisibleBackupOptions_IncludeReferencedParameterAssets()
         {
             var mediaRoot = new GameObject("Media");
             mediaRoot.transform.SetParent(_ctx.AvatarGo.transform, false);

@@ -8,7 +8,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteWindowStatusPanelTests
     {
         [Test]
-        public void BuildStatusPanelSnapshot_MalformedPackageManagedWithoutComponent_HasNoExtraDetails()
+        public void BuildStatusPanelSnapshot_MalformedInputHasNoExtraDetails()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
@@ -36,7 +36,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildStatusPanelSnapshot_DetachedOrVendorizedWithoutComponent_UsesBakedOnlyGuidance()
+        public void BuildStatusPanelSnapshot_BakedOnlyStatesUseGuidance()
         {
             var detached = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteInstallationState.Detached,
@@ -76,7 +76,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildStatusPanelSnapshot_NotInstalledWithoutComponent_UsesWarningOnboardingGuidance()
+        public void BuildStatusPanelSnapshot_NotInstalledUsesOnboardingWarning()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
@@ -101,7 +101,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildStatusPanelSnapshot_AttachedMissingExpressionParameters_ExposesWarningDetail()
+        public void BuildStatusPanelSnapshot_MissingParametersExposeWarning()
         {
             var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
@@ -125,9 +125,9 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildStatusPanelSnapshot_AttachedImportPendingAndToggleCollisions_ExposesMultipleConditionalWarnings()
+        public void BuildStatusPanelSnapshot_ImportAndCollisionWarningsStack()
         {
-            var snapshot = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
+            var attachedImportPendingWithToggleCollisions = BuildSnapshot(new ASMLite.Editor.ASMLiteWindow.StatusPanelSnapshotInput(
                 ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
                 hasComponent: true,
                 slotCount: 3,
@@ -139,16 +139,16 @@ namespace ASMLite.Tests.Editor
                 toggleBrokerPreflightCollisionAdjustments: 2,
                 toggleBrokerCandidateCollisionAdjustments: 1));
 
-            Assert.That(snapshot.DetailEntries.Select(d => d.Text),
+            Assert.That(attachedImportPendingWithToggleCollisions.DetailEntries.Select(d => d.Text),
                 Contains.Item("⚠ Avatar parameter data is still importing in Unity. Please wait a moment."));
-            Assert.That(snapshot.DetailEntries.Select(d => d.Text),
+            Assert.That(attachedImportPendingWithToggleCollisions.DetailEntries.Select(d => d.Text),
                 Contains.Item("[Toggle Broker] Last setup reserved 5 name(s) and auto-adjusted conflicting names: preflight=2, intra-candidate=1."));
 
-            Assert.AreEqual(2, snapshot.DetailEntries.Count(d => d.Severity == ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning),
+            Assert.AreEqual(2, attachedImportPendingWithToggleCollisions.DetailEntries.Count(d => d.Severity == ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning),
                 "Import-pending plus collision branch should emit two warning details.");
             Assert.AreEqual(
                 ASMLite.Editor.ASMLiteWindow.StatusDetailSeverity.Warning,
-                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(snapshot));
+                ASMLite.Editor.ASMLiteWindow.GetCombinedStatusSeverity(attachedImportPendingWithToggleCollisions));
         }
 
         [Test]
