@@ -11,7 +11,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeArtifactPathsTests
     {
         [Test]
-        public void SessionLayout_paths_follow_canonical_contract()
+        public void SessionLayout_PathsFollowCanonicalContract()
         {
             string sessionRoot = Path.Combine(Path.GetTempPath(), "asmlite-smoke-artifacts", Guid.NewGuid().ToString("N"));
             var sessionPaths = ASMLiteSmokeArtifactPaths.FromSessionRoot(sessionRoot);
@@ -28,7 +28,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Naming_is_lexically_sortable_ascii_and_windows_safe()
+        public void Naming_IsLexicallySortableAsciiAndWindowsSafe()
         {
             string sessionRoot = Path.Combine(Path.GetTempPath(), "asmlite-smoke-artifacts", Guid.NewGuid().ToString("N"));
             var sessionPaths = ASMLiteSmokeArtifactPaths.FromSessionRoot(sessionRoot);
@@ -48,7 +48,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Result_and_failure_fixtures_keep_relative_artifacts_under_session_root()
+        public void ResultAndFailureFixtures_KeepRelativeArtifactsUnderSessionRoot()
         {
             var resultDocument = ASMLiteSmokeArtifactPaths.LoadResultFixture("result.sample.json");
             var failureDocument = ASMLiteSmokeArtifactPaths.LoadFailureFixture("failure.sample.json");

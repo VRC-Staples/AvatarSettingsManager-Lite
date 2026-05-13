@@ -12,7 +12,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeProtocolTests
     {
         [Test]
-        public void LoadCommandFixtures_round_trip_preserves_required_fields()
+        public void LoadCommandFixtures_RoundTripPreservesRequiredFields()
         {
             var launch = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("launch-session.json"));
             var runSuite = RoundTrip(ASMLiteSmokeProtocol.LoadCommandFixture("run-suite.json"));
@@ -31,7 +31,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CommandRegistry_documents_protocol_payloads_and_host_dispatch_modes()
+        public void CommandRegistry_DocumentsProtocolPayloadsAndHostDispatchModes()
         {
             CollectionAssert.AreEquivalent(
                 new[] { "launch-session", "run-suite", "review-decision", "abort-run", "shutdown-session" },
@@ -48,7 +48,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadEventFixture_preserves_ordering_and_protocol_fields()
+        public void LoadEventFixture_PreservesOrderingAndProtocolFields()
         {
             var events = ASMLiteSmokeProtocol.LoadEventFixture("events.sample.ndjson");
 
@@ -65,7 +65,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCommandFromJson_rejects_missing_protocol_version()
+        public void LoadCommandFromJson_RejectsMissingProtocolVersion()
         {
             string rawJson = LoadFixtureJson("launch-session.json").Replace("\"protocolVersion\": \"1.0.0\",\n", string.Empty, StringComparison.Ordinal);
 
@@ -74,7 +74,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCommandFromJson_rejects_missing_typed_payload_for_command_type()
+        public void LoadCommandFromJson_RejectsMissingTypedPayloadForCommandType()
         {
             string rawJson = LoadFixtureJson("run-suite.json").Replace(
                 "\"runSuite\": {\n    \"suiteId\": \"lifecycle-roundtrip\",\n    \"requestedBy\": \"operator\",\n    \"requestedResetDefault\": \"FullPackageRebuild\",\n    \"reason\": \"operator-selected\"\n  }",
@@ -86,7 +86,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void RecoverProcessedCommandIds_ignores_session_lifecycle_and_host_health_events()
+        public void RecoverProcessedCommandIds_IgnoresSessionLifecycleAndHostHealthEvents()
         {
             var events = new[]
             {

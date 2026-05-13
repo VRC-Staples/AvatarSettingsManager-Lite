@@ -14,7 +14,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeAtomicIoTests
     {
         [Test]
-        public void AtomicWrite_replaces_existing_json_document_atomically()
+        public void AtomicWrite_ReplacesExistingJsonDocumentAtomically()
         {
             WithSessionPaths(paths =>
             {
@@ -31,7 +31,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void AtomicWrite_interrupted_promote_keeps_previous_json_visible()
+        public void AtomicWrite_WhenPromoteIsInterrupted_KeepsPreviousJsonVisible()
         {
             WithSessionPaths(paths =>
             {
@@ -56,7 +56,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void AtomicWrite_retries_when_target_file_is_temporarily_locked()
+        public void AtomicWrite_RetriesWhenTargetFileIsTemporarilyLocked()
         {
             WithSessionPaths(paths =>
             {
@@ -92,7 +92,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void EventLog_tolerates_truncated_final_ndjson_line()
+        public void EventLog_ToleratesTruncatedFinalNdjsonLine()
         {
             WithSessionPaths(paths =>
             {
@@ -109,7 +109,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ReplayRecovery_derives_processed_command_ids_from_event_log_without_duplicates()
+        public void ReplayRecovery_DerivesProcessedCommandIdsFromEventLogWithoutDuplicates()
         {
             WithSessionPaths(paths =>
             {

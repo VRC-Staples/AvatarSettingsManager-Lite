@@ -9,7 +9,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeProtocolCompatibilityTests
     {
         [Test]
-        public void ValidStartup_exact_protocol_match_allows_run_suite_acceptance()
+        public void ValidStartup_ExactProtocolMatchAllowsRunSuiteAcceptance()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var session = ASMLiteSmokeProtocol.LoadSessionFixture("session.valid.json");
@@ -30,7 +30,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void MismatchStartup_emits_protocol_error_contract_and_blocks_startup()
+        public void MismatchStartup_EmitsProtocolErrorContractAndBlocksStartup()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var mismatchSession = ASMLiteSmokeProtocol.LoadSessionFixture("session.protocol-mismatch.json");
@@ -54,7 +54,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void PostMismatch_run_suite_command_is_rejected_while_host_state_is_protocol_error()
+        public void PostMismatch_RunSuiteCommandIsRejectedWhileHostStateIsProtocolError()
         {
             var hostState = ASMLiteSmokeProtocol.LoadHostStateFixture("host-state.protocol-error.json");
             var runSuiteCommand = ASMLiteSmokeProtocol.LoadCommandFixture("run-suite.json");

@@ -6311,7 +6311,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeArtifactPathsTests.cs",
       "class": "ASMLiteSmokeArtifactPathsTests",
-      "method": "Naming_is_lexically_sortable_ascii_and_windows_safe",
+      "method": "Naming_IsLexicallySortableAsciiAndWindowsSafe",
       "line": 31,
       "attributes": [
         "TestFixture",
@@ -6327,19 +6327,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Naming is lexically sortable ascii and windows safe",
+      "publicBehaviorClaim": "Naming Is Lexically Sortable Ascii And Windows Safe",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.Naming_is_lexically_sortable_ascii_and_windows_safe",
+      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.Naming_IsLexicallySortableAsciiAndWindowsSafe",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeArtifactPathsTests.cs",
       "class": "ASMLiteSmokeArtifactPathsTests",
-      "method": "Result_and_failure_fixtures_keep_relative_artifacts_under_session_root",
+      "method": "ResultAndFailureFixtures_KeepRelativeArtifactsUnderSessionRoot",
       "line": 51,
       "attributes": [
         "TestFixture",
@@ -6355,19 +6355,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Result and failure fixtures keep relative artifacts under session root",
+      "publicBehaviorClaim": "Result And Failure Fixtures Keep Relative Artifacts Under Session Root",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.Result_and_failure_fixtures_keep_relative_artifacts_under_session_root",
+      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.ResultAndFailureFixtures_KeepRelativeArtifactsUnderSessionRoot",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeArtifactPathsTests.cs",
       "class": "ASMLiteSmokeArtifactPathsTests",
-      "method": "SessionLayout_paths_follow_canonical_contract",
+      "method": "SessionLayout_PathsFollowCanonicalContract",
       "line": 14,
       "attributes": [
         "TestFixture",
@@ -6383,47 +6383,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Session Layout paths follow canonical contract",
+      "publicBehaviorClaim": "Session Layout Paths Follow Canonical Contract",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.SessionLayout_paths_follow_canonical_contract",
+      "runnerFilter": "ASMLiteSmokeArtifactPathsTests.SessionLayout_PathsFollowCanonicalContract",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
       "class": "ASMLiteSmokeAtomicIoTests",
-      "method": "AtomicWrite_interrupted_promote_keeps_previous_json_visible",
-      "line": 34,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Atomic Write interrupted promote keeps previous json visible",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_interrupted_promote_keeps_previous_json_visible",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
-      "class": "ASMLiteSmokeAtomicIoTests",
-      "method": "AtomicWrite_replaces_existing_json_document_atomically",
+      "method": "AtomicWrite_ReplacesExistingJsonDocumentAtomically",
       "line": 17,
       "attributes": [
         "TestFixture",
@@ -6439,19 +6411,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Atomic Write replaces existing json document atomically",
+      "publicBehaviorClaim": "Atomic Write Replaces Existing Json Document Atomically",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_replaces_existing_json_document_atomically",
+      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_ReplacesExistingJsonDocumentAtomically",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
       "class": "ASMLiteSmokeAtomicIoTests",
-      "method": "AtomicWrite_retries_when_target_file_is_temporarily_locked",
+      "method": "AtomicWrite_RetriesWhenTargetFileIsTemporarilyLocked",
       "line": 59,
       "attributes": [
         "TestFixture",
@@ -6467,831 +6439,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Atomic Write retries when target file is temporarily locked",
+      "publicBehaviorClaim": "Atomic Write Retries When Target File Is Temporarily Locked",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_retries_when_target_file_is_temporarily_locked",
+      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_RetriesWhenTargetFileIsTemporarilyLocked",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
       "class": "ASMLiteSmokeAtomicIoTests",
-      "method": "EventLog_tolerates_truncated_final_ndjson_line",
-      "line": 95,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Event Log tolerates truncated final ndjson line",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeAtomicIoTests.EventLog_tolerates_truncated_final_ndjson_line",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
-      "class": "ASMLiteSmokeAtomicIoTests",
-      "method": "ReplayRecovery_derives_processed_command_ids_from_event_log_without_duplicates",
-      "line": 112,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Replay Recovery derives processed command ids from event log without duplicates",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeAtomicIoTests.ReplayRecovery_derives_processed_command_ids_from_event_log_without_duplicates",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "ActionRegistry_covers_every_canonical_catalog_step",
-      "line": 15,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Action Registry covers every canonical catalog step",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.ActionRegistry_covers_every_canonical_catalog_step",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_exhaustive_suites_start_with_recover_context_prelude",
-      "line": 664,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical exhaustive suites start with recover context prelude",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_exhaustive_suites_start_with_recover_context_prelude",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_manual_playmode_av3_save_load_suite",
-      "line": 98,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes manual playmode av3 save load suite",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_manual_playmode_av3_save_load_suite",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_phase05_avatar_discovery_selection_suite",
-      "line": 225,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes phase05 avatar discovery selection suite",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_phase05_avatar_discovery_selection_suite",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_phase06_scaffold_existing_state_suites",
-      "line": 305,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes phase06 scaffold existing state suites",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_phase06_scaffold_existing_state_suites",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_phase07a_safe_negative_diagnostics_suite",
-      "line": 417,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes phase07a safe negative diagnostics suite",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_phase07a_safe_negative_diagnostics_suite",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_phase08_destructive_recovery_reset_suite",
-      "line": 472,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes phase08 destructive recovery reset suite",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_phase08_destructive_recovery_reset_suite",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_includes_phase1_prebuild_slot_path_and_name_matrices",
-      "line": 522,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical includes phase1 prebuild slot path and name matrices",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_includes_phase1_prebuild_slot_path_and_name_matrices",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_moves_window_launch_smoke_into_default_setup_suite",
-      "line": 173,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical moves window launch smoke into default setup suite",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_moves_window_launch_smoke_into_default_setup_suite",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_parses_suite_metadata_for_default_presets_and_destructive_gating",
-      "line": 136,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical parses suite metadata for default presets and destructive gating",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_parses_suite_metadata_for_default_presets_and_destructive_gating",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_preserves_expected_group_order_and_fixture_metadata",
-      "line": 63,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical preserves expected group order and fixture metadata",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_preserves_expected_group_order_and_fixture_metadata",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadCanonical_splits_generated_asset_recovery_and_reference_ownership_suites",
-      "line": 352,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Canonical splits generated asset recovery and reference ownership suites",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_splits_generated_asset_recovery_and_reference_ownership_suites",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_allows_omitted_step_args_as_empty_typed_args",
-      "line": 868,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json allows omitted step args as empty typed args",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_allows_omitted_step_args_as_empty_typed_args",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_allows_phase1_action_tokens_and_snapshot_step_args",
-      "line": 735,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json allows phase1 action tokens and snapshot step args",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_allows_phase1_action_tokens_and_snapshot_step_args",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_deserializes_typed_step_args",
-      "line": 702,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json deserializes typed step args",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_deserializes_typed_step_args",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_blank_group_ids",
-      "line": 889,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects blank group ids",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_blank_group_ids",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_blank_preset_groups",
-      "line": 693,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects blank preset groups",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_blank_preset_groups",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_duplicate_suite_ids",
-      "line": 898,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects duplicate suite ids",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_duplicate_suite_ids",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_empty_step_arrays",
-      "line": 916,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects empty step arrays",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_empty_step_arrays",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_expected_failure_without_code_and_text",
-      "line": 880,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects expected failure without code and text",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_expected_failure_without_code_and_text",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_malformed_phase1_args_with_field_specific_paths",
-      "line": 808,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects malformed phase1 args with field specific paths",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_malformed_phase1_args_with_field_specific_paths",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_unknown_action_types",
-      "line": 907,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects unknown action types",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_unknown_action_types",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "LoadFromJson_rejects_unknown_suite_metadata_values",
-      "line": 684,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load From Json rejects unknown suite metadata values",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_rejects_unknown_suite_metadata_values",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
-      "class": "ASMLiteSmokeCatalogTests",
-      "method": "NormalizedStepCommand_applies_fixture_defaults_without_mutating_action_identity",
-      "line": 33,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Normalized Step Command applies fixture defaults without mutating action identity",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeCatalogTests.NormalizedStepCommand_applies_fixture_defaults_without_mutating_action_identity",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
-      "class": "ASMLiteSmokeProtocolCompatibilityTests",
-      "method": "MismatchStartup_emits_protocol_error_contract_and_blocks_startup",
-      "line": 33,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Mismatch Startup emits protocol error contract and blocks startup",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.MismatchStartup_emits_protocol_error_contract_and_blocks_startup",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
-      "class": "ASMLiteSmokeProtocolCompatibilityTests",
-      "method": "PostMismatch_run_suite_command_is_rejected_while_host_state_is_protocol_error",
-      "line": 57,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Post Mismatch run suite command is rejected while host state is protocol error",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.PostMismatch_run_suite_command_is_rejected_while_host_state_is_protocol_error",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
-      "class": "ASMLiteSmokeProtocolCompatibilityTests",
-      "method": "ValidStartup_exact_protocol_match_allows_run_suite_acceptance",
-      "line": 12,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Smoke\")",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Smoke",
-        "Headless"
-      ],
-      "lane": "smoke-protocol-headless",
-      "headlessViability": "yes",
-      "honesty": "protocol-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Valid Startup exact protocol match allows run suite acceptance",
-      "fixtureDependencies": [
-        "smoke protocol JSON/catalog fixtures"
-      ],
-      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
-      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.ValidStartup_exact_protocol_match_allows_run_suite_acceptance",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
-      "class": "ASMLiteSmokeProtocolTests",
-      "method": "CommandRegistry_documents_protocol_payloads_and_host_dispatch_modes",
+      "method": "AtomicWrite_WhenPromoteIsInterrupted_KeepsPreviousJsonVisible",
       "line": 34,
       "attributes": [
         "TestFixture",
@@ -7307,19 +6467,75 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Command Registry documents protocol payloads and host dispatch modes",
+      "publicBehaviorClaim": "Atomic Write When Promote Is Interrupted Keeps Previous Json Visible",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.CommandRegistry_documents_protocol_payloads_and_host_dispatch_modes",
+      "runnerFilter": "ASMLiteSmokeAtomicIoTests.AtomicWrite_WhenPromoteIsInterrupted_KeepsPreviousJsonVisible",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
-      "class": "ASMLiteSmokeProtocolTests",
-      "method": "LoadCommandFixtures_round_trip_preserves_required_fields",
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
+      "class": "ASMLiteSmokeAtomicIoTests",
+      "method": "EventLog_ToleratesTruncatedFinalNdjsonLine",
+      "line": 95,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Event Log Tolerates Truncated Final Ndjson Line",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeAtomicIoTests.EventLog_ToleratesTruncatedFinalNdjsonLine",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeAtomicIoTests.cs",
+      "class": "ASMLiteSmokeAtomicIoTests",
+      "method": "ReplayRecovery_DerivesProcessedCommandIdsFromEventLogWithoutDuplicates",
+      "line": 112,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Replay Recovery Derives Processed Command Ids From Event Log Without Duplicates",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeAtomicIoTests.ReplayRecovery_DerivesProcessedCommandIdsFromEventLogWithoutDuplicates",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "ActionRegistry_CoversEveryCanonicalCatalogStep",
       "line": 15,
       "attributes": [
         "TestFixture",
@@ -7335,19 +6551,803 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Command Fixtures round trip preserves required fields",
+      "publicBehaviorClaim": "Action Registry Covers Every Canonical Catalog Step",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFixtures_round_trip_preserves_required_fields",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.ActionRegistry_CoversEveryCanonicalCatalogStep",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_ExhaustiveSuitesStartWithRecoverContextPrelude",
+      "line": 664,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Exhaustive Suites Start With Recover Context Prelude",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_ExhaustiveSuitesStartWithRecoverContextPrelude",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesManualAv3SaveLoadRuntimeSuite",
+      "line": 98,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Manual Av3 Save Load Runtime Suite",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesManualAv3SaveLoadRuntimeSuite",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesPhase05AvatarDiscoverySelectionSuite",
+      "line": 225,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Phase05 Avatar Discovery Selection Suite",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesPhase05AvatarDiscoverySelectionSuite",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesPhase06ScaffoldExistingStateSuites",
+      "line": 305,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Phase06 Scaffold Existing State Suites",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesPhase06ScaffoldExistingStateSuites",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesPhase07aSafeNegativeDiagnosticsSuite",
+      "line": 417,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Phase07a Safe Negative Diagnostics Suite",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesPhase07aSafeNegativeDiagnosticsSuite",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesPhase08DestructiveRecoveryResetSuite",
+      "line": 472,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Phase08 Destructive Recovery Reset Suite",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesPhase08DestructiveRecoveryResetSuite",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_IncludesPhase1PrebuildSlotPathAndNameMatrices",
+      "line": 522,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Includes Phase1 Prebuild Slot Path And Name Matrices",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_IncludesPhase1PrebuildSlotPathAndNameMatrices",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_MovesWindowLaunchSmokeIntoDefaultSetupSuite",
+      "line": 173,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Moves Window Launch Smoke Into Default Setup Suite",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_MovesWindowLaunchSmokeIntoDefaultSetupSuite",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_ParsesSuiteMetadataForDefaultPresetsAndDestructiveGating",
+      "line": 136,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Parses Suite Metadata For Default Presets And Destructive Gating",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_ParsesSuiteMetadataForDefaultPresetsAndDestructiveGating",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_PreservesExpectedGroupOrderAndFixtureMetadata",
+      "line": 63,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Preserves Expected Group Order And Fixture Metadata",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_PreservesExpectedGroupOrderAndFixtureMetadata",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadCanonical_SplitsGeneratedAssetRecoveryAndReferenceOwnershipSuites",
+      "line": 352,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Canonical Splits Generated Asset Recovery And Reference Ownership Suites",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadCanonical_SplitsGeneratedAssetRecoveryAndReferenceOwnershipSuites",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_AllowsOmittedStepArgsAsEmptyTypedArgs",
+      "line": 868,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Allows Omitted Step Args As Empty Typed Args",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_AllowsOmittedStepArgsAsEmptyTypedArgs",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_AllowsPhase1ActionTokensAndSnapshotStepArgs",
+      "line": 735,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Allows Phase1 Action Tokens And Snapshot Step Args",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_AllowsPhase1ActionTokensAndSnapshotStepArgs",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_DeserializesTypedStepArgs",
+      "line": 702,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Deserializes Typed Step Args",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_DeserializesTypedStepArgs",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsBlankGroupIds",
+      "line": 889,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Blank Group Ids",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsBlankGroupIds",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsBlankPresetGroups",
+      "line": 693,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Blank Preset Groups",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsBlankPresetGroups",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsDuplicateSuiteIds",
+      "line": 898,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Duplicate Suite Ids",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsDuplicateSuiteIds",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsEmptyStepArrays",
+      "line": 916,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Empty Step Arrays",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsEmptyStepArrays",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsExpectedFailureWithoutCodeAndText",
+      "line": 880,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Expected Failure Without Code And Text",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsExpectedFailureWithoutCodeAndText",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsMalformedPhase1ArgsWithFieldSpecificPaths",
+      "line": 808,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Malformed Phase1 Args With Field Specific Paths",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsMalformedPhase1ArgsWithFieldSpecificPaths",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsUnknownActionTypes",
+      "line": 907,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Unknown Action Types",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsUnknownActionTypes",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "LoadFromJson_RejectsUnknownSuiteMetadataValues",
+      "line": 684,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load From Json Rejects Unknown Suite Metadata Values",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.LoadFromJson_RejectsUnknownSuiteMetadataValues",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeCatalogTests.cs",
+      "class": "ASMLiteSmokeCatalogTests",
+      "method": "NormalizedStepCommand_AppliesFixtureDefaultsWithoutMutatingActionIdentity",
+      "line": 33,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Normalized Step Command Applies Fixture Defaults Without Mutating Action Identity",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeCatalogTests.NormalizedStepCommand_AppliesFixtureDefaultsWithoutMutatingActionIdentity",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
+      "class": "ASMLiteSmokeProtocolCompatibilityTests",
+      "method": "MismatchStartup_EmitsProtocolErrorContractAndBlocksStartup",
+      "line": 33,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Mismatch Startup Emits Protocol Error Contract And Blocks Startup",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.MismatchStartup_EmitsProtocolErrorContractAndBlocksStartup",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
+      "class": "ASMLiteSmokeProtocolCompatibilityTests",
+      "method": "PostMismatch_RunSuiteCommandIsRejectedWhileHostStateIsProtocolError",
+      "line": 57,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Post Mismatch Run Suite Command Is Rejected While Host State Is Protocol Error",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.PostMismatch_RunSuiteCommandIsRejectedWhileHostStateIsProtocolError",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolCompatibilityTests.cs",
+      "class": "ASMLiteSmokeProtocolCompatibilityTests",
+      "method": "ValidStartup_ExactProtocolMatchAllowsRunSuiteAcceptance",
+      "line": 12,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Valid Startup Exact Protocol Match Allows Run Suite Acceptance",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeProtocolCompatibilityTests.ValidStartup_ExactProtocolMatchAllowsRunSuiteAcceptance",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
       "class": "ASMLiteSmokeProtocolTests",
-      "method": "LoadCommandFromJson_rejects_missing_protocol_version",
+      "method": "CommandRegistry_DocumentsProtocolPayloadsAndHostDispatchModes",
+      "line": 34,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Command Registry Documents Protocol Payloads And Host Dispatch Modes",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.CommandRegistry_DocumentsProtocolPayloadsAndHostDispatchModes",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
+      "class": "ASMLiteSmokeProtocolTests",
+      "method": "LoadCommandFixtures_RoundTripPreservesRequiredFields",
+      "line": 15,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-protocol-headless",
+      "headlessViability": "yes",
+      "honesty": "protocol-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Command Fixtures Round Trip Preserves Required Fields",
+      "fixtureDependencies": [
+        "smoke protocol JSON/catalog fixtures"
+      ],
+      "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFixtures_RoundTripPreservesRequiredFields",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
+      "class": "ASMLiteSmokeProtocolTests",
+      "method": "LoadCommandFromJson_RejectsMissingProtocolVersion",
       "line": 68,
       "attributes": [
         "TestFixture",
@@ -7363,19 +7363,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Command From Json rejects missing protocol version",
+      "publicBehaviorClaim": "Load Command From Json Rejects Missing Protocol Version",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFromJson_rejects_missing_protocol_version",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFromJson_RejectsMissingProtocolVersion",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
       "class": "ASMLiteSmokeProtocolTests",
-      "method": "LoadCommandFromJson_rejects_missing_typed_payload_for_command_type",
+      "method": "LoadCommandFromJson_RejectsMissingTypedPayloadForCommandType",
       "line": 77,
       "attributes": [
         "TestFixture",
@@ -7391,19 +7391,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Command From Json rejects missing typed payload for command type",
+      "publicBehaviorClaim": "Load Command From Json Rejects Missing Typed Payload For Command Type",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFromJson_rejects_missing_typed_payload_for_command_type",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadCommandFromJson_RejectsMissingTypedPayloadForCommandType",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
       "class": "ASMLiteSmokeProtocolTests",
-      "method": "LoadEventFixture_preserves_ordering_and_protocol_fields",
+      "method": "LoadEventFixture_PreservesOrderingAndProtocolFields",
       "line": 51,
       "attributes": [
         "TestFixture",
@@ -7419,19 +7419,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Event Fixture preserves ordering and protocol fields",
+      "publicBehaviorClaim": "Load Event Fixture Preserves Ordering And Protocol Fields",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadEventFixture_preserves_ordering_and_protocol_fields",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.LoadEventFixture_PreservesOrderingAndProtocolFields",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeProtocolTests.cs",
       "class": "ASMLiteSmokeProtocolTests",
-      "method": "RecoverProcessedCommandIds_ignores_session_lifecycle_and_host_health_events",
+      "method": "RecoverProcessedCommandIds_IgnoresSessionLifecycleAndHostHealthEvents",
       "line": 89,
       "attributes": [
         "TestFixture",
@@ -7447,19 +7447,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Recover Processed Command Ids ignores session lifecycle and host health events",
+      "publicBehaviorClaim": "Recover Processed Command Ids Ignores Session Lifecycle And Host Health Events",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeProtocolTests.RecoverProcessedCommandIds_ignores_session_lifecycle_and_host_health_events",
+      "runnerFilter": "ASMLiteSmokeProtocolTests.RecoverProcessedCommandIds_IgnoresSessionLifecycleAndHostHealthEvents",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeRunExecutorTests.cs",
       "class": "ASMLiteSmokeRunExecutorTests",
-      "method": "Execute_expected_failure_fails_when_diagnostic_code_or_text_is_wrong",
+      "method": "Execute_ExpectedFailureFailsWhenDiagnosticCodeOrTextIsWrong",
       "line": 45,
       "attributes": [
         "TestFixture",
@@ -7475,19 +7475,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Execute expected failure fails when diagnostic code or text is wrong",
+      "publicBehaviorClaim": "Execute Expected Failure Fails When Diagnostic Code Or Text Is Wrong",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_expected_failure_fails_when_diagnostic_code_or_text_is_wrong",
+      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_ExpectedFailureFailsWhenDiagnosticCodeOrTextIsWrong",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeRunExecutorTests.cs",
       "class": "ASMLiteSmokeRunExecutorTests",
-      "method": "Execute_expected_failure_fails_when_step_succeeds_unexpectedly",
+      "method": "Execute_ExpectedFailureFailsWhenStepSucceedsUnexpectedly",
       "line": 29,
       "attributes": [
         "TestFixture",
@@ -7503,19 +7503,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Execute expected failure fails when step succeeds unexpectedly",
+      "publicBehaviorClaim": "Execute Expected Failure Fails When Step Succeeds Unexpectedly",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_expected_failure_fails_when_step_succeeds_unexpectedly",
+      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_ExpectedFailureFailsWhenStepSucceedsUnexpectedly",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeRunExecutorTests.cs",
       "class": "ASMLiteSmokeRunExecutorTests",
-      "method": "Execute_expected_failure_passes_when_diagnostic_code_and_text_match",
+      "method": "Execute_ExpectedFailurePassesWhenDiagnosticCodeAndTextMatch",
       "line": 13,
       "attributes": [
         "TestFixture",
@@ -7531,19 +7531,19 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Execute expected failure passes when diagnostic code and text match",
+      "publicBehaviorClaim": "Execute Expected Failure Passes When Diagnostic Code And Text Match",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_expected_failure_passes_when_diagnostic_code_and_text_match",
+      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_ExpectedFailurePassesWhenDiagnosticCodeAndTextMatch",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/Protocol/ASMLiteSmokeRunExecutorTests.cs",
       "class": "ASMLiteSmokeRunExecutorTests",
-      "method": "Execute_regular_step_failure_still_fails_without_expected_diagnostic_args",
+      "method": "Execute_RegularStepFailureStillFailsWithoutExpectedDiagnosticArgs",
       "line": 62,
       "attributes": [
         "TestFixture",
@@ -7559,13 +7559,13 @@
       "headlessViability": "yes",
       "honesty": "protocol-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Execute regular step failure still fails without expected diagnostic args",
+      "publicBehaviorClaim": "Execute Regular Step Failure Still Fails Without Expected Diagnostic Args",
       "fixtureDependencies": [
         "smoke protocol JSON/catalog fixtures"
       ],
       "assetSceneMutations": "temporary-smoke-protocol-artifacts-only",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_regular_step_failure_still_fails_without_expected_diagnostic_args",
+      "runnerFilter": "ASMLiteSmokeRunExecutorTests.Execute_RegularStepFailureStillFailsWithoutExpectedDiagnosticArgs",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {

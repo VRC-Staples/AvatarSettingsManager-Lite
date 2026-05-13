@@ -10,7 +10,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeRunExecutorTests
     {
         [Test]
-        public void Execute_expected_failure_passes_when_diagnostic_code_and_text_match()
+        public void Execute_ExpectedFailurePassesWhenDiagnosticCodeAndTextMatch()
         {
             var catalog = BuildSingleStepCatalog(expectStepFailure: true);
             var result = ASMLiteSmokeRunExecutor.Execute(
@@ -26,7 +26,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Execute_expected_failure_fails_when_step_succeeds_unexpectedly()
+        public void Execute_ExpectedFailureFailsWhenStepSucceedsUnexpectedly()
         {
             var catalog = BuildSingleStepCatalog(expectStepFailure: true);
             var result = ASMLiteSmokeRunExecutor.Execute(
@@ -42,7 +42,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Execute_expected_failure_fails_when_diagnostic_code_or_text_is_wrong()
+        public void Execute_ExpectedFailureFailsWhenDiagnosticCodeOrTextIsWrong()
         {
             var catalog = BuildSingleStepCatalog(expectStepFailure: true);
             var result = ASMLiteSmokeRunExecutor.Execute(
@@ -59,7 +59,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Execute_regular_step_failure_still_fails_without_expected_diagnostic_args()
+        public void Execute_RegularStepFailureStillFailsWithoutExpectedDiagnosticArgs()
         {
             var catalog = BuildSingleStepCatalog(expectStepFailure: false);
             var result = ASMLiteSmokeRunExecutor.Execute(

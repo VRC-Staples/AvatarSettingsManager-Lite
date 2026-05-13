@@ -12,7 +12,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeCatalogTests
     {
         [Test]
-        public void ActionRegistry_covers_every_canonical_catalog_step()
+        public void ActionRegistry_CoversEveryCanonicalCatalogStep()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             string[] canonicalActions = catalog.groups
@@ -30,7 +30,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void NormalizedStepCommand_applies_fixture_defaults_without_mutating_action_identity()
+        public void NormalizedStepCommand_AppliesFixtureDefaultsWithoutMutatingActionIdentity()
         {
             var step = new ASMLiteSmokeStepDefinition
             {
@@ -60,7 +60,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_preserves_expected_group_order_and_fixture_metadata()
+        public void LoadCanonical_PreservesExpectedGroupOrderAndFixtureMetadata()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
 
@@ -95,7 +95,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_manual_playmode_av3_save_load_suite()
+        public void LoadCanonical_IncludesManualAv3SaveLoadRuntimeSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             ASMLiteSmokeGroupDefinition runtimeGroup = catalog.groups.Single(group => group.groupId == "playmode-runtime");
@@ -133,7 +133,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_parses_suite_metadata_for_default_presets_and_destructive_gating()
+        public void LoadCanonical_ParsesSuiteMetadataForDefaultPresetsAndDestructiveGating()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
@@ -170,7 +170,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_moves_window_launch_smoke_into_default_setup_suite()
+        public void LoadCanonical_MovesWindowLaunchSmokeIntoDefaultSetupSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
@@ -222,7 +222,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase05_avatar_discovery_selection_suite()
+        public void LoadCanonical_IncludesPhase05AvatarDiscoverySelectionSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
@@ -302,7 +302,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase06_scaffold_existing_state_suites()
+        public void LoadCanonical_IncludesPhase06ScaffoldExistingStateSuites()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -349,7 +349,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_splits_generated_asset_recovery_and_reference_ownership_suites()
+        public void LoadCanonical_SplitsGeneratedAssetRecoveryAndReferenceOwnershipSuites()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -414,7 +414,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase07a_safe_negative_diagnostics_suite()
+        public void LoadCanonical_IncludesPhase07aSafeNegativeDiagnosticsSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -469,7 +469,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase08_destructive_recovery_reset_suite()
+        public void LoadCanonical_IncludesPhase08DestructiveRecoveryResetSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -519,7 +519,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_includes_phase1_prebuild_slot_path_and_name_matrices()
+        public void LoadCanonical_IncludesPhase1PrebuildSlotPathAndNameMatrices()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -661,7 +661,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_exhaustive_suites_start_with_recover_context_prelude()
+        public void LoadCanonical_ExhaustiveSuitesStartWithRecoverContextPrelude()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var exhaustiveSuites = catalog.groups
@@ -681,7 +681,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_unknown_suite_metadata_values()
+        public void LoadFromJson_RejectsUnknownSuiteMetadataValues()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"risk\": \"safe\"", "\"risk\": \"maybe\"", StringComparison.Ordinal);
 
@@ -690,7 +690,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_blank_preset_groups()
+        public void LoadFromJson_RejectsBlankPresetGroups()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"quick-default\"", "\"   \"", StringComparison.Ordinal);
 
@@ -699,7 +699,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_deserializes_typed_step_args()
+        public void LoadFromJson_DeserializesTypedStepArgs()
         {
             string rawJson = BuildSingleStepCatalogJson(
                 "\"args\": { "
@@ -732,7 +732,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_allows_phase1_action_tokens_and_snapshot_step_args()
+        public void LoadFromJson_AllowsPhase1ActionTokensAndSnapshotStepArgs()
         {
             string[] phase1Actions =
             {
@@ -805,7 +805,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_malformed_phase1_args_with_field_specific_paths()
+        public void LoadFromJson_RejectsMalformedPhase1ArgsWithFieldSpecificPaths()
         {
             var slotCountException = Assert.Throws<InvalidOperationException>(() => ASMLiteSmokeCatalog.LoadFromJson(
                 BuildSingleStepCatalogJson("\"args\": { \"slotCount\": 0 }\n", "set-slot-count")));
@@ -865,7 +865,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_allows_omitted_step_args_as_empty_typed_args()
+        public void LoadFromJson_AllowsOmittedStepArgsAsEmptyTypedArgs()
         {
             var catalog = ASMLiteSmokeCatalog.LoadFromJson(BuildSingleStepCatalogJson(argsJson: null));
             var args = catalog.groups[0].suites[0].cases[0].steps[0].args;
@@ -877,7 +877,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_expected_failure_without_code_and_text()
+        public void LoadFromJson_RejectsExpectedFailureWithoutCodeAndText()
         {
             string rawJson = BuildSingleStepCatalogJson("\"args\": { \"expectStepFailure\": true, \"expectedDiagnosticCode\": \"SETUP_SCENE_MISSING\" }\n");
 
@@ -886,7 +886,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_blank_group_ids()
+        public void LoadFromJson_RejectsBlankGroupIds()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"groupId\": \"editor-window\"", "\"groupId\": \"   \"", StringComparison.Ordinal);
 
@@ -895,7 +895,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_duplicate_suite_ids()
+        public void LoadFromJson_RejectsDuplicateSuiteIds()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"suiteId\": \"lifecycle-roundtrip\"", "\"suiteId\": \"setup-scene-avatar\"", StringComparison.Ordinal);
 
@@ -904,7 +904,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_unknown_action_types()
+        public void LoadFromJson_RejectsUnknownActionTypes()
         {
             string rawJson = LoadCanonicalCatalogJson().Replace("\"actionType\": \"open-window\"", "\"actionType\": \"mystery-action\"", StringComparison.Ordinal);
 
@@ -913,7 +913,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadFromJson_rejects_empty_step_arrays()
+        public void LoadFromJson_RejectsEmptyStepArrays()
         {
             const string rawJson = "{\n"
                 + "  \"catalogVersion\": 1,\n"
