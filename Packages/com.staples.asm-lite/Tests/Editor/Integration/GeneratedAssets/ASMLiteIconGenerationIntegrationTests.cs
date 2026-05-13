@@ -136,13 +136,13 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 4;
             _ctx.Comp.iconMode = IconMode.MultiColor;
 
-            var presetsMenu = BuildAndGetPresetsMenu("Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema");
+            var presetsMenu = BuildAndGetPresetsMenu("MultiColor_UsesPerSlotGearIconBySlotIndex");
 
             for (int slot = 1; slot <= _ctx.Comp.slotCount; slot++)
             {
                 string expectedPath = ASMLiteAssetPaths.GearIconPaths[slot - 1];
-                var expectedIcon = LoadIconOrFail(expectedPath, "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema");
-                var actualIcon = GetPresetSlotIconOrFail(presetsMenu, slot, "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema");
+                var expectedIcon = LoadIconOrFail(expectedPath, "MultiColor_UsesPerSlotGearIconBySlotIndex");
+                var actualIcon = GetPresetSlotIconOrFail(presetsMenu, slot, "MultiColor_UsesPerSlotGearIconBySlotIndex");
 
                 Assert.AreSame(expectedIcon, actualIcon,
                     $"MultiColor_UsesPerSlotGearIconBySlotIndex: slot {slot} icon mismatch for MultiColor mode. expectedPath='{expectedPath}', expected='{expectedIcon?.name ?? "<null>"}', actual='{actualIcon?.name ?? "<null>"}'.");
@@ -157,12 +157,12 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.selectedGearIndex = 3;
 
             string expectedPath = ASMLiteAssetPaths.GearIconPaths[_ctx.Comp.selectedGearIndex];
-            var expectedIcon = LoadIconOrFail(expectedPath, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
-            var presetsMenu = BuildAndGetPresetsMenu("RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
+            var expectedIcon = LoadIconOrFail(expectedPath, "SameColor_UsesSelectedGearIconAcrossAllSlots");
+            var presetsMenu = BuildAndGetPresetsMenu("SameColor_UsesSelectedGearIconAcrossAllSlots");
 
             for (int slot = 1; slot <= _ctx.Comp.slotCount; slot++)
             {
-                var actualIcon = GetPresetSlotIconOrFail(presetsMenu, slot, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
+                var actualIcon = GetPresetSlotIconOrFail(presetsMenu, slot, "SameColor_UsesSelectedGearIconAcrossAllSlots");
                 Assert.AreSame(expectedIcon, actualIcon,
                     $"SameColor_UsesSelectedGearIconAcrossAllSlots: slot {slot} icon mismatch for SameColor mode. selectedGearIndex={_ctx.Comp.selectedGearIndex}, expectedPath='{expectedPath}', expected='{expectedIcon?.name ?? "<null>"}', actual='{actualIcon?.name ?? "<null>"}'.");
             }
@@ -175,8 +175,8 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.iconMode = IconMode.Custom;
             _ctx.Comp.useCustomSlotIcons = true;
 
-            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
-            var customSlot1 = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[5], "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203", "CustomSlot1");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange");
+            var customSlot1 = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[5], "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange", "CustomSlot1");
 
             _ctx.Comp.customIcons = new Texture2D[]
             {
@@ -184,11 +184,11 @@ namespace ASMLite.Tests.Editor
                 null,
             };
 
-            var presetsMenu = BuildAndGetPresetsMenu("Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
+            var presetsMenu = BuildAndGetPresetsMenu("Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange");
 
-            var slot1Icon = GetPresetSlotIconOrFail(presetsMenu, 1, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
-            var slot2Icon = GetPresetSlotIconOrFail(presetsMenu, 2, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
-            var slot4Icon = GetPresetSlotIconOrFail(presetsMenu, 4, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
+            var slot1Icon = GetPresetSlotIconOrFail(presetsMenu, 1, "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange");
+            var slot2Icon = GetPresetSlotIconOrFail(presetsMenu, 2, "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange");
+            var slot4Icon = GetPresetSlotIconOrFail(presetsMenu, 4, "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange");
 
             Assert.AreSame(customSlot1, slot1Icon,
                 $"Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange: slot 1 should use custom icon reference. expected='{customSlot1?.name ?? "<null>"}', actual='{slot1Icon?.name ?? "<null>"}'.");

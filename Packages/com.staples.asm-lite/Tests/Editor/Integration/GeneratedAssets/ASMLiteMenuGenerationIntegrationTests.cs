@@ -158,30 +158,30 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void RootContainsSingleSettingsManagerSubmenu()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset");
-            _ = GetSettingsManagerControl(rootMenu, "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset");
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "RootContainsSingleSettingsManagerSubmenu");
+            _ = GetSettingsManagerControl(rootMenu, "RootContainsSingleSettingsManagerSubmenu");
         }
 
         [Test, Category("Integration")]
         public void PresetsMenuCountAndNamesMatchSlotCount()
         {
             const int slotCount = 2;
-            var rootMenu = BuildAndGetRootMenu(slotCount, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
-            var presetsMenu = GetPresetsMenu(rootMenu, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
+            var rootMenu = BuildAndGetRootMenu(slotCount, "PresetsMenuCountAndNamesMatchSlotCount");
+            var presetsMenu = GetPresetsMenu(rootMenu, "PresetsMenuCountAndNamesMatchSlotCount");
 
             Assert.AreEqual(slotCount, presetsMenu.controls.Count,
                 "PresetsMenuCountAndNamesMatchSlotCount: presets menu control count must equal slotCount.");
 
             for (int slot = 1; slot <= slotCount; slot++)
-                _ = GetPresetControl(presetsMenu, slot, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
+                _ = GetPresetControl(presetsMenu, slot, "PresetsMenuCountAndNamesMatchSlotCount");
         }
 
         [Test, Category("Integration")]
         public void EachSlotMenuHasSaveLoadClearWithExpectedControlTypes()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset");
-            var presetsMenu = GetPresetsMenu(rootMenu, "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset");
-            var slotMenu = GetPresetControl(presetsMenu, 1, "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset").subMenu;
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes");
+            var presetsMenu = GetPresetsMenu(rootMenu, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes");
+            var slotMenu = GetPresetControl(presetsMenu, 1, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes").subMenu;
 
             Assert.IsNotNull(slotMenu.controls, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: slot menu controls list is null.");
             Assert.AreEqual(3, slotMenu.controls.Count,

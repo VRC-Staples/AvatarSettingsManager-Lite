@@ -491,7 +491,7 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset");
+            var genCtrl = LoadGeneratedController("FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams");
             var ctrlParamEntries = genCtrl.parameters
                 .Where(p => p.name == "ASMLite_Ctrl")
                 .ToList();
@@ -524,7 +524,7 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("BackupParams_HaveLocalOnlyFlags_InGeneratedAsset");
+            var genCtrl = LoadGeneratedController("SlotLayers_DoNotUseAnyStateSafeBoolBranches");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -564,7 +564,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, buildResult,
                 "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Build() should return only non-excluded discovered params.");
 
-            var genCtrl = LoadGeneratedController("LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset");
+            var genCtrl = LoadGeneratedController("ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries");
             var allNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
 
             Assert.IsTrue(allNames.Contains("KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded live param should remain declared in FX params.");

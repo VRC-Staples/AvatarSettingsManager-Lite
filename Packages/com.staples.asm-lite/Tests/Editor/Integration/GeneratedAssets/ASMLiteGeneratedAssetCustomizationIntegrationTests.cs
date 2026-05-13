@@ -73,7 +73,7 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix()
         {
-            var customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[4], "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203", "CustomRoot");
+            var customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[4], "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix", "CustomRoot");
 
             _ctx.Comp.slotCount = 3;
             _ctx.Comp.useCustomSlotIcons = true;
@@ -161,7 +161,7 @@ namespace ASMLite.Tests.Editor
             ExpectAsmLiteLog(LogType.Log,
                 "[ASM-Lite] FullController menu prefix resolved",
                 "Avatars/Integrated");
-            string serializedPrefix = ConfigureFullControllerAndReadPrefix("Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203");
+            string serializedPrefix = ConfigureFullControllerAndReadPrefix("CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix");
             Assert.AreEqual("Avatars/Integrated", serializedPrefix,
                 "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: combined fixture should serialize trimmed custom install path to FullController menu prefix.");
         }
@@ -174,7 +174,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  Repeatable Root  ";
             _ctx.Comp.useCustomRootIcon = false;
-            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[0], "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs", "CustomRoot");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[0], "CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe", "CustomRoot");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = "  Avatars/Repeatable  ";
             _ctx.Comp.useParameterExclusions = true;
@@ -245,8 +245,8 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts()
         {
-            var staleIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[7], "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly", "StaleRoot");
-            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly");
+            var staleIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[7], "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts", "StaleRoot");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts");
 
             _ctx.Comp.slotCount = 2;
             _ctx.Comp.useCustomSlotIcons = false;
@@ -335,7 +335,7 @@ namespace ASMLite.Tests.Editor
             ExpectAsmLiteLog(LogType.Log,
                 "[ASM-Lite] FullController menu prefix resolved",
                 "empty");
-            string serializedPrefix = ConfigureFullControllerAndReadPrefix("Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly");
+            string serializedPrefix = ConfigureFullControllerAndReadPrefix("AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts");
             Assert.AreEqual(string.Empty, serializedPrefix,
                 "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled custom install path toggle must serialize empty FullController prefix even when stale path text exists.");
         }
@@ -348,7 +348,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = " Enabled First Pass ";
             _ctx.Comp.useCustomRootIcon = false;
-            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[2], "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState", "EnabledRoot");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[2], "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild", "EnabledRoot");
             _ctx.Comp.useCustomInstallPath = true;
             _ctx.Comp.customInstallPath = " Avatars/EnabledFirstPass ";
             _ctx.Comp.useParameterExclusions = true;
@@ -365,7 +365,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.customRootName = " stale disabled name ";
             _ctx.Comp.useCustomSlotIcons = false;
             _ctx.Comp.useCustomRootIcon = true;
-            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[6], "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState", "StaleRoot");
+            _ctx.Comp.customRootIcon = CopyIconFixtureOrFail(ASMLiteAssetPaths.GearIconPaths[6], "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild", "StaleRoot");
             _ctx.Comp.useCustomInstallPath = false;
             _ctx.Comp.customInstallPath = " stale/disabled/prefix ";
             _ctx.Comp.useParameterExclusions = false;
