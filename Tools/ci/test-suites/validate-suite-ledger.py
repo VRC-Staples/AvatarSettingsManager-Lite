@@ -15,6 +15,11 @@ from typing import Any
 SCHEMA_VERSION = 1
 DEFAULT_INCLUDE = "Packages/com.staples.asm-lite/Tests/**/*.cs"
 LEDGER_PATH = "Tools/ci/test-suites/test-suite-ledger.json"
+AUDIT_DOC_PATH = "Tools/ci/docs/asmlite-tests-audit.md"
+MIRROR_HEADING = "## Method-level ledger mirror"
+MIRROR_INTRO = "This table mirrors the classified ledger fields so the markdown artifact is reviewable without opening JSON."
+MIRROR_HEADER = "| Class | Method | Lane | Headless | Honesty | Recommendation | Mutations / external usage | Reference |"
+MIRROR_DIVIDER = "|---|---|---|---|---|---|---|---|"
 PLACEHOLDER = {
     "lane": "needs-classification",
     "headlessViability": "review",
@@ -408,6 +413,85 @@ def write_ledger(path: Path, document: dict[str, Any]) -> None:
     path.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
+def markdown_cell(value: Any) -> str:
+    text = str(value if value is not None else "")
+    return text.replace("\n", "<br>").replace("|", "\\|")
+
+
+def code_cell(value: Any) -> str:
+    return f"`{markdown_cell(value)}`"
+
+
+def mirror_reference(row: dict[str, Any]) -> str:
+    file = str(row.get("file", ""))
+    line = row.get("line", "")
+    return f"{file}:{line}" if line != "" else file
+
+
+def mirror_mutation_summary(row: dict[str, Any]) -> str:
+    asset_scene = row.get("assetSceneMutations", "")
+    external = row.get("externalProcessFilesystemEnvUsage", "")
+    return f"{markdown_cell(asset_scene)} / {markdown_cell(external)}"
+
+
+def render_method_mirror_table(document: dict[str, Any]) -> str:
+    lines = [MIRROR_HEADER, MIRROR_DIVIDER]
+    rows = [row for row in document.get("tests", []) if isinstance(row, dict)]
+    for row in sorted(rows, key=row_key):
+        lines.append("| " + " | ".join([
+            code_cell(row.get("class", "")),
+            code_cell(row.get("method", "")),
+            code_cell(row.get("lane", "")),
+            code_cell(row.get("headlessViability", "")),
+            code_cell(row.get("honesty", "")),
+            code_cell(row.get("recommendation", "")),
+            mirror_mutation_summary(row),
+            code_cell(mirror_reference(row)),
+        ]) + " |")
+    return "\n".join(lines) + "\n"
+
+
+def render_method_mirror_section(document: dict[str, Any]) -> str:
+    return f"{MIRROR_HEADING}\n\n{MIRROR_INTRO}\n\n{render_method_mirror_table(document)}"
+
+
+def method_mirror_bounds(text: str) -> tuple[int, int]:
+    start = text.find(MIRROR_HEADING)
+    if start < 0:
+        raise ValueError(f"{MIRROR_HEADING!r} section not found")
+    next_section = re.search(r"(?m)^## ", text[start + len(MIRROR_HEADING):])
+    if next_section is None:
+        return start, len(text)
+    return start, start + len(MIRROR_HEADING) + next_section.start()
+
+
+def current_method_mirror_section(audit_doc: Path) -> str:
+    try:
+        text = audit_doc.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise ValueError(f"audit doc not found: {audit_doc}") from exc
+    start, end = method_mirror_bounds(text)
+    return text[start:end].rstrip() + "\n"
+
+
+def write_method_mirror_section(audit_doc: Path, document: dict[str, Any]) -> None:
+    replacement = render_method_mirror_section(document).rstrip() + "\n\n"
+    try:
+        text = audit_doc.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise ValueError(f"audit doc not found: {audit_doc}") from exc
+    start, end = method_mirror_bounds(text)
+    audit_doc.write_text(text[:start] + replacement + text[end:].lstrip("\n"), encoding="utf-8")
+
+
+def check_method_mirror(audit_doc: Path, document: dict[str, Any]) -> list[str]:
+    expected = render_method_mirror_section(document).rstrip() + "\n"
+    actual = current_method_mirror_section(audit_doc)
+    if actual == expected:
+        return []
+    return ["checked-in method mirror does not match test-suite-ledger.json"]
+
+
 def drift_messages(actual: dict[str, Any], expected: dict[str, Any]) -> list[str]:
     messages: list[str] = []
     actual_rows = {row_key(row): row for row in actual.get("tests", []) if isinstance(row, dict)}
@@ -458,7 +542,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=repo_root_from_script(), help="Repository root to inventory.")
     parser.add_argument("--ledger", type=Path, default=None, help="Ledger path. Defaults under the repository root.")
+    parser.add_argument("--audit-doc", type=Path, default=None, help="Audit markdown path. Defaults under the repository root.")
     parser.add_argument("--update", action="store_true", help="Rewrite the ledger with current generated inventory rows.")
+    parser.add_argument("--update-mirror", action="store_true", help="Rewrite the audit method-level mirror from the ledger.")
+    parser.add_argument("--check-mirror", action="store_true", help="Fail when the audit method-level mirror is stale.")
     return parser.parse_args(argv)
 
 
@@ -466,6 +553,24 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     repo_root = args.repo_root.resolve()
     ledger_path = args.ledger.resolve() if args.ledger is not None else repo_root / LEDGER_PATH
+    audit_doc = args.audit_doc.resolve() if args.audit_doc is not None else repo_root / AUDIT_DOC_PATH
+    if args.update_mirror or args.check_mirror:
+        try:
+            actual = load_ledger(ledger_path)
+            if args.update_mirror:
+                write_method_mirror_section(audit_doc, actual)
+                print(f"method mirror updated: {len(actual['tests'])} ledger rows written to {audit_doc.relative_to(repo_root) if audit_doc.is_relative_to(repo_root) else audit_doc}")
+                return 0
+            mirror_drift = check_method_mirror(audit_doc, actual)
+        except ValueError as exc:
+            return fail(str(exc))
+        if mirror_drift:
+            for message in mirror_drift:
+                print(f"method mirror drift: {message}", file=sys.stderr)
+            print("Run Tools/ci/test-suites/validate-suite-ledger.py --update-mirror after reviewing ledger mirror changes.", file=sys.stderr)
+            return 1
+        print(f"method mirror ok: {len(actual['tests'])} ledger rows mirrored")
+        return 0
     try:
         expected = build_updated_document(repo_root, ledger_path)
         if args.update:
