@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using NUnit.Framework;
 
-namespace ASMLite.Tests.Editor
+namespace ASMLite.Tests.PlayMode
 {
     internal static class ASMLiteAv3SaveLoadAssertions
     {

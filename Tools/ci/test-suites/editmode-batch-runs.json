@@ -34,6 +34,7 @@
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
+            "^ASMLite\\.Tests\\.Editor\\.ASMLiteAv3SaveLoadConfigurationTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowAdapterBoundaryTests(?:\\.|$)",
             "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",

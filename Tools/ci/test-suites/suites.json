@@ -54,6 +54,7 @@
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteAv3SaveLoadConfigurationTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowAdapterBoundaryTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",
@@ -138,11 +139,12 @@
     },
     {
       "id": "playmode-headless-review",
-      "description": "PlayMode/runtime suites are discoverable for review but excluded from default CI until runner policy avoids runSynchronously and fixture requirements are settled.",
+      "description": "PlayMode/runtime suites are discoverable for review in a dedicated PlayMode assembly and excluded from default CI until runner policy avoids runSynchronously and fixture requirements are settled.",
       "defaultCi": false,
       "headless": "review",
       "testFiles": [
-        "ASMLiteAv3SaveLoadPlayModeTests.cs"
+        "ASMLiteAv3SaveLoadRuntimeTests.cs",
+        "ASMLiteAv3SaveLoadManualTests.cs"
       ],
       "smokeCatalogSuiteIds": [
         "playmode-runtime-validation",

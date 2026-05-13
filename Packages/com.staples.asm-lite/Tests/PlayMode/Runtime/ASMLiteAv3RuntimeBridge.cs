@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace ASMLite.Tests.Editor
+namespace ASMLite.Tests.PlayMode
 {
     internal static class ASMLiteAv3RuntimeBridge
     {
@@ -16,7 +16,7 @@ namespace ASMLite.Tests.Editor
 
         private const BindingFlags InstanceBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const BindingFlags StaticBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-        private const string EmulatorObjectName = "ASMLite_AV3_SaveLoad_P0_Emulator";
+        private const string EmulatorObjectName = "ASMLite_AV3_SaveLoad_Runtime_Emulator";
 
         internal static RuntimeTypeResolution ResolveRuntimeType(
             string fullTypeName = ExpectedRuntimeTypeName,
@@ -70,7 +70,7 @@ namespace ASMLite.Tests.Editor
 
             if (avatar == null)
             {
-                diagnostic = "P0: Cannot capture AV3 parameters because the avatar GameObject is null.";
+                diagnostic = "Runtime: Cannot capture AV3 parameters because the avatar GameObject is null.";
                 return false;
             }
 
@@ -78,7 +78,7 @@ namespace ASMLite.Tests.Editor
                 ?? avatar.GetComponentsInChildren(resolution.Type, includeInactive: true).FirstOrDefault();
             if (runtime == null)
             {
-                diagnostic = $"P0: Avatar '{avatar.name}' does not yet have AV3 runtime component {ExpectedRuntimeTypeName}.";
+                diagnostic = $"Runtime: Avatar '{avatar.name}' does not yet have AV3 runtime component {ExpectedRuntimeTypeName}.";
                 return false;
             }
 
@@ -91,7 +91,7 @@ namespace ASMLite.Tests.Editor
             CaptureListParameterNames(runtime, "Floats", names);
 
             snapshot = new ParameterSnapshot(names);
-            diagnostic = $"P0: Captured {names.Count} AV3 runtime parameter name(s).";
+            diagnostic = $"Runtime: Captured {names.Count} AV3 runtime parameter name(s).";
             return names.Count > 0;
         }
 
@@ -111,7 +111,7 @@ namespace ASMLite.Tests.Editor
 
             if (avatar == null)
             {
-                diagnostic = "P1: Cannot locate AV3 runtime because the avatar GameObject is null.";
+                diagnostic = "Runtime: Cannot locate AV3 runtime because the avatar GameObject is null.";
                 return false;
             }
 
@@ -120,11 +120,11 @@ namespace ASMLite.Tests.Editor
 
             if (runtime == null)
             {
-                diagnostic = $"P1: Avatar '{avatar.name}' does not yet have AV3 runtime component {ExpectedRuntimeTypeName}.";
+                diagnostic = $"Runtime: Avatar '{avatar.name}' does not yet have AV3 runtime component {ExpectedRuntimeTypeName}.";
                 return false;
             }
 
-            diagnostic = $"P1: Found AV3 runtime component {ExpectedRuntimeTypeName} on avatar '{avatar.name}'.";
+            diagnostic = $"Runtime: Found AV3 runtime component {ExpectedRuntimeTypeName} on avatar '{avatar.name}'.";
             return true;
         }
 
@@ -144,7 +144,7 @@ namespace ASMLite.Tests.Editor
 
             if (!TryGetRuntimeParameter(runtime, name, type, out var parameter))
             {
-                diagnostic = $"P1: AV3 runtime parameter '{name}' of type {type} was not found.";
+                diagnostic = $"Runtime: AV3 runtime parameter '{name}' of type {type} was not found.";
                 return false;
             }
 
@@ -158,7 +158,7 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 bool parameter '{name}' did not expose bool field 'value'.";
+                    diagnostic = $"Runtime: AV3 bool parameter '{name}' did not expose bool field 'value'.";
                     return false;
 
                 case ASMLiteAv3ParameterType.Int:
@@ -169,7 +169,7 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 int parameter '{name}' did not expose int field 'value'.";
+                    diagnostic = $"Runtime: AV3 int parameter '{name}' did not expose int field 'value'.";
                     return false;
 
                 case ASMLiteAv3ParameterType.Float:
@@ -180,11 +180,11 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 float parameter '{name}' did not expose float member 'exportedValue'.";
+                    diagnostic = $"Runtime: AV3 float parameter '{name}' did not expose float member 'exportedValue'.";
                     return false;
 
                 default:
-                    diagnostic = $"P1: Unsupported AV3 parameter type '{type}' for '{name}'.";
+                    diagnostic = $"Runtime: Unsupported AV3 parameter type '{type}' for '{name}'.";
                     return false;
             }
         }
@@ -197,7 +197,7 @@ namespace ASMLite.Tests.Editor
         {
             if (!TryGetRuntimeParameter(runtime, name, value.Type, out var parameter))
             {
-                diagnostic = $"P1: AV3 runtime parameter '{name}' of type {value.Type} was not found for write.";
+                diagnostic = $"Runtime: AV3 runtime parameter '{name}' of type {value.Type} was not found for write.";
                 return false;
             }
 
@@ -210,7 +210,7 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 bool parameter '{name}' did not accept write to field 'value'.";
+                    diagnostic = $"Runtime: AV3 bool parameter '{name}' did not accept write to field 'value'.";
                     return false;
 
                 case ASMLiteAv3ParameterType.Int:
@@ -220,7 +220,7 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 int parameter '{name}' did not accept write to field 'value'.";
+                    diagnostic = $"Runtime: AV3 int parameter '{name}' did not accept write to field 'value'.";
                     return false;
 
                 case ASMLiteAv3ParameterType.Float:
@@ -237,11 +237,11 @@ namespace ASMLite.Tests.Editor
                         return true;
                     }
 
-                    diagnostic = $"P1: AV3 float parameter '{name}' did not accept write to member 'exportedValue' or 'value'.";
+                    diagnostic = $"Runtime: AV3 float parameter '{name}' did not accept write to member 'exportedValue' or 'value'.";
                     return false;
 
                 default:
-                    diagnostic = $"P1: Unsupported AV3 parameter type '{value.Type}' for '{name}'.";
+                    diagnostic = $"Runtime: Unsupported AV3 parameter type '{value.Type}' for '{name}'.";
                     return false;
             }
         }
@@ -289,7 +289,7 @@ namespace ASMLite.Tests.Editor
         private static RuntimeTypeResolution ResolveType(string fullTypeName, string assemblyName)
         {
             if (string.IsNullOrEmpty(fullTypeName))
-                return RuntimeTypeResolution.Missing(fullTypeName, assemblyName, "P0: AV3 runtime type name was empty.");
+                return RuntimeTypeResolution.Missing(fullTypeName, assemblyName, "Runtime: AV3 runtime type name was empty.");
 
             Type resolved = null;
             var typeSpec = string.IsNullOrEmpty(assemblyName) ? fullTypeName : fullTypeName + ", " + assemblyName;
@@ -301,7 +301,7 @@ namespace ASMLite.Tests.Editor
             catch (Exception ex)
             {
                 return RuntimeTypeResolution.Missing(fullTypeName, assemblyName,
-                    $"P0: AV3 runtime reflection failed while resolving '{typeSpec}': {ex.GetType().Name}: {ex.Message}");
+                    $"Runtime: AV3 runtime reflection failed while resolving '{typeSpec}': {ex.GetType().Name}: {ex.Message}");
             }
 
             if (resolved == null)
@@ -337,14 +337,14 @@ namespace ASMLite.Tests.Editor
             if (resolved == null)
             {
                 return RuntimeTypeResolution.Missing(fullTypeName, assemblyName,
-                    $"P0: Optional AV3 runtime type '{fullTypeName}' was not found in assembly '{assemblyName}'. "
+                    $"Runtime: Optional AV3 runtime type '{fullTypeName}' was not found in assembly '{assemblyName}'. "
                     + "Install/resolve Lyuma Av3Emulator for the play-mode visibility spike; ASM-Lite tests intentionally avoid a hard asmdef reference.");
             }
 
             if (!typeof(Component).IsAssignableFrom(resolved))
             {
                 return RuntimeTypeResolution.Missing(fullTypeName, assemblyName,
-                    $"P0: Resolved AV3 runtime type '{fullTypeName}' from assembly '{resolved.Assembly.GetName().Name}', but it is not a Unity Component.");
+                    $"Runtime: Resolved AV3 runtime type '{fullTypeName}' from assembly '{resolved.Assembly.GetName().Name}', but it is not a Unity Component.");
             }
 
             return RuntimeTypeResolution.Available(resolved, fullTypeName, assemblyName);
@@ -537,7 +537,7 @@ namespace ASMLite.Tests.Editor
             {
                 var resolvedAssembly = type != null ? type.Assembly.GetName().Name : string.Empty;
                 return new RuntimeTypeResolution(type, fullTypeName, assemblyName,
-                    $"P0: Resolved optional AV3 runtime type '{fullTypeName}' from assembly '{resolvedAssembly}'.");
+                    $"Runtime: Resolved optional AV3 runtime type '{fullTypeName}' from assembly '{resolvedAssembly}'.");
             }
 
             internal static RuntimeTypeResolution Missing(string fullTypeName, string assemblyName, string diagnostic)

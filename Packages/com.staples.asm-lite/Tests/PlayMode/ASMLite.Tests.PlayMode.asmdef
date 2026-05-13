@@ -1,0 +1,25 @@
+{
+    "name": "ASMLite.Tests.PlayMode",
+    "rootNamespace": "ASMLite.Tests.PlayMode",
+    "references": [
+        "ASMLite",
+        "ASMLite.Editor",
+        "ASMLite.Tests.Editor",
+        "VRC.SDKBase",
+        "VRC.SDK3A",
+        "VRC.SDK3A.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

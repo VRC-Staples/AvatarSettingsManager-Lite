@@ -8,16 +8,16 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
-namespace ASMLite.Tests.Editor
+namespace ASMLite.Tests.PlayMode
 {
-    internal enum ASMLiteAv3ParameterType
+    public enum ASMLiteAv3ParameterType
     {
         Bool,
         Int,
         Float,
     }
 
-    internal readonly struct ASMLiteAv3ParameterDescriptor
+    public readonly struct ASMLiteAv3ParameterDescriptor
     {
         internal ASMLiteAv3ParameterDescriptor(string name, ASMLiteAv3ParameterType type)
         {

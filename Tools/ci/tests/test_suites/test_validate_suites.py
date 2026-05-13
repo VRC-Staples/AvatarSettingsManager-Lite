@@ -113,8 +113,8 @@ def suites_document() -> dict[str, object]:
                 "id": "playmode-headless-review",
                 "defaultCi": False,
                 "headless": "review",
-                "testFiles": ["ASMLiteAv3SaveLoadPlayModeTests.cs"],
-                "smokeCatalogSuiteIds": ["playmode-runtime-validation"],
+                "testFiles": ["ASMLiteAv3SaveLoadRuntimeTests.cs", "ASMLiteAv3SaveLoadManualTests.cs"],
+                "smokeCatalogSuiteIds": ["playmode-runtime-validation", "playmode-save-load-av3"],
             },
             {
                 "id": "visible-manual",
@@ -156,7 +156,10 @@ class ValidateSuitesTests(unittest.TestCase):
                     },
                     {
                         "groupId": "playmode-runtime",
-                        "suites": [{"suiteId": "playmode-runtime-validation", "requiresPlayMode": True}],
+                        "suites": [
+                            {"suiteId": "playmode-runtime-validation", "requiresPlayMode": True},
+                            {"suiteId": "playmode-save-load-av3", "requiresPlayMode": True},
+                        ],
                     },
                 ],
             },

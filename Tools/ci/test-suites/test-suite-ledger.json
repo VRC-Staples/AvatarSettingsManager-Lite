@@ -13550,10 +13550,181 @@
       "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P0_Av3Runtime_ExposesSavedUnsavedAndControlParameters_AfterPlayModeStart",
-      "line": 174,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs",
+      "class": "ASMLiteAv3SaveLoadConfigurationTests",
+      "method": "ExternalUatSelection_DefaultsToManualOptInDiagnostic",
+      "line": 46,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "editor-runtime-review-configuration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "External Uat Selection Defaults To Manual Opt In Diagnostic",
+      "fixtureDependencies": [
+        "command-line argument reader",
+        "environment variable reader",
+        "AV3 runtime type name"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "synthetic command-line/environment parsing only; no filesystem writes",
+      "runnerFilter": "ASMLiteAv3SaveLoadConfigurationTests.ExternalUatSelection_DefaultsToManualOptInDiagnostic",
+      "notes": "Headless configuration/default diagnostic coverage split from the PlayMode runtime assembly."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs",
+      "class": "ASMLiteAv3SaveLoadConfigurationTests",
+      "method": "FuzzReplayConfig_DefaultsToLocalOptInDisabledDiagnostic",
+      "line": 56,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "editor-runtime-review-configuration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fuzz Replay Config Defaults To Local Opt In Disabled Diagnostic",
+      "fixtureDependencies": [
+        "command-line argument reader",
+        "environment variable reader",
+        "AV3 runtime type name"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "synthetic command-line/environment parsing only; no filesystem writes",
+      "runnerFilter": "ASMLiteAv3SaveLoadConfigurationTests.FuzzReplayConfig_DefaultsToLocalOptInDisabledDiagnostic",
+      "notes": "Headless configuration/default diagnostic coverage split from the PlayMode runtime assembly."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs",
+      "class": "ASMLiteAv3SaveLoadConfigurationTests",
+      "method": "FuzzReplayConfig_ParsesReplayableSeedAndIterationsFromCommandLineBeforeEnvironment",
+      "line": 69,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "editor-runtime-review-configuration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Fuzz Replay Config Parses Replayable Seed And Iterations From Command Line Before Environment",
+      "fixtureDependencies": [
+        "command-line argument reader",
+        "environment variable reader",
+        "AV3 runtime type name"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "synthetic command-line/environment parsing only; no filesystem writes",
+      "runnerFilter": "ASMLiteAv3SaveLoadConfigurationTests.FuzzReplayConfig_ParsesReplayableSeedAndIterationsFromCommandLineBeforeEnvironment",
+      "notes": "Headless configuration/default diagnostic coverage split from the PlayMode runtime assembly."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs",
+      "class": "ASMLiteAv3SaveLoadConfigurationTests",
+      "method": "RuntimeBridge_MissingRuntimeDiagnostic_NamesExpectedAv3AssemblyAndType",
+      "line": 34,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "editor-runtime-review-configuration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Runtime Bridge Missing Runtime Diagnostic Names Expected Av3 Assembly And Type",
+      "fixtureDependencies": [
+        "command-line argument reader",
+        "environment variable reader",
+        "AV3 runtime type name"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "synthetic command-line/environment parsing only; no filesystem writes",
+      "runnerFilter": "ASMLiteAv3SaveLoadConfigurationTests.RuntimeBridge_MissingRuntimeDiagnostic_NamesExpectedAv3AssemblyAndType",
+      "notes": "Headless configuration/default diagnostic coverage split from the PlayMode runtime assembly."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs",
+      "class": "ASMLiteAv3SaveLoadManualTests",
+      "method": "ExternalUatAvatar_RestoresSavedSubsetAndPreservesUnsavedMetadata",
+      "line": 17,
+      "attributes": [
+        "TestFixture",
+        "Category(\"PlayMode\")",
+        "Category(\"Manual\")",
+        "UnityTest"
+      ],
+      "categories": [
+        "PlayMode",
+        "Manual"
+      ],
+      "lane": "manual",
+      "headlessViability": "no",
+      "honesty": "playmode-manual-operator-coverage",
+      "recommendation": "manual-playmode-review",
+      "publicBehaviorClaim": "External Uat Avatar Restores Saved Subset And Preserves Unsaved Metadata",
+      "fixtureDependencies": [
+        "operator-selected avatar prefab fixture",
+        "AV3 emulator runtime fixture"
+      ],
+      "assetSceneMutations": "manual-playmode-avatar-fixture",
+      "externalProcessFilesystemEnvUsage": "operator-provided avatar prefab path/name/max-parameter command-line or environment values plus Unity PlayMode runtime state",
+      "runnerFilter": "ASMLiteAv3SaveLoadManualTests.ExternalUatAvatar_RestoresSavedSubsetAndPreservesUnsavedMetadata",
+      "notes": "Manual-only external UAT coverage; requires an operator-selected prefab fixture and never scans the project for avatars."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs",
+      "class": "ASMLiteAv3SaveLoadManualTests",
+      "method": "FuzzReplay_SaveLoadSlot1_ExercisesReplayableScaleCoverage",
+      "line": 44,
+      "attributes": [
+        "TestFixture",
+        "Category(\"PlayMode\")",
+        "Category(\"Manual\")",
+        "UnityTest"
+      ],
+      "categories": [
+        "PlayMode",
+        "Manual"
+      ],
+      "lane": "manual",
+      "headlessViability": "no",
+      "honesty": "playmode-manual-operator-coverage",
+      "recommendation": "manual-playmode-review",
+      "publicBehaviorClaim": "Fuzz Replay Save Load Slot1 Exercises Replayable Scale Coverage",
+      "fixtureDependencies": [
+        "local opt-in fuzz seed and iteration configuration",
+        "canonical avatar fixture",
+        "AV3 emulator runtime fixture"
+      ],
+      "assetSceneMutations": "manual-playmode-avatar-fixture",
+      "externalProcessFilesystemEnvUsage": "local opt-in fuzz seed/iteration command-line or environment values plus Unity PlayMode runtime state",
+      "runnerFilter": "ASMLiteAv3SaveLoadManualTests.FuzzReplay_SaveLoadSlot1_ExercisesReplayableScaleCoverage",
+      "notes": "Manual-only replayable fuzz/scale coverage; disabled by default unless seed/iteration inputs are provided."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
+      "class": "ASMLiteAv3SaveLoadRuntimeTests",
+      "method": "Av3Runtime_AfterEnteringPlayMode_ExposesSavedUnsavedAndControlParameters",
+      "line": 16,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
@@ -13564,154 +13735,44 @@
       ],
       "lane": "playmode-headless-review",
       "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "Av3 Runtime Exposes Saved Unsaved And Control Parameters After Play Mode Start",
+      "honesty": "playmode-runtime-review",
+      "recommendation": "separate-playmode-lane",
+      "publicBehaviorClaim": "Av3 Runtime After Entering Play Mode Exposes Saved Unsaved And Control Parameters",
       "fixtureDependencies": [
         "canonical avatar fixture",
-        "AV3 runtime fixture"
+        "AV3 emulator runtime fixture"
       ],
       "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P0_Av3Runtime_ExposesSavedUnsavedAndControlParameters_AfterPlayModeStart",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
+      "externalProcessFilesystemEnvUsage": "Unity PlayMode runtime state plus generated test assets under Assets/ASMLiteTests_Temp",
+      "runnerFilter": "ASMLiteAv3SaveLoadRuntimeTests.Av3Runtime_AfterEnteringPlayMode_ExposesSavedUnsavedAndControlParameters",
+      "notes": "Dedicated PlayMode assembly coverage; excluded from default headless CI until runner policy and fixture requirements are settled."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P0_RuntimeBridge_MissingRuntimeDiagnostic_NamesExpectedAv3AssemblyAndType",
-      "line": 162,
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
+      "class": "ASMLiteAv3SaveLoadRuntimeTests",
+      "method": "Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed",
+      "line": 56,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
-        "Test"
+        "UnityTest"
       ],
       "categories": [
         "PlayMode"
       ],
       "lane": "playmode-headless-review",
       "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "Runtime Bridge Missing Runtime Diagnostic Names Expected Av3 Assembly And Type",
+      "honesty": "playmode-runtime-review",
+      "recommendation": "separate-playmode-lane",
+      "publicBehaviorClaim": "Av3 Save Load Slot1 Restores Saved And Preserves Unsaved Parameters For Seed",
       "fixtureDependencies": [
         "canonical avatar fixture",
-        "AV3 runtime fixture"
+        "AV3 emulator runtime fixture"
       ],
       "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P0_RuntimeBridge_MissingRuntimeDiagnostic_NamesExpectedAv3AssemblyAndType",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P3_ExternalUatSelection_DefaultsToManualOptInDiagnostic",
-      "line": 262,
-      "attributes": [
-        "TestFixture",
-        "Category(\"PlayMode\")",
-        "Test"
-      ],
-      "categories": [
-        "PlayMode"
-      ],
-      "lane": "playmode-headless-review",
-      "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "External Uat Selection Defaults To Manual Opt In Diagnostic",
-      "fixtureDependencies": [
-        "canonical avatar fixture",
-        "AV3 runtime fixture"
-      ],
-      "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P3_ExternalUatSelection_DefaultsToManualOptInDiagnostic",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P3_ExternalUat_OperatorSelectedRealAvatar_RestoresSafeSavedSubsetAndPreservesUnsavedMetadataSubset",
-      "line": 235,
-      "attributes": [
-        "TestFixture",
-        "Category(\"PlayMode\")",
-        "UnityTest",
-        "Category(\"Manual\")"
-      ],
-      "categories": [
-        "PlayMode",
-        "Manual"
-      ],
-      "lane": "playmode-headless-review",
-      "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "External Uat Operator Selected Real Avatar Restores Safe Saved Subset And Preserves Unsaved Metadata Subset",
-      "fixtureDependencies": [
-        "canonical avatar fixture",
-        "AV3 runtime fixture"
-      ],
-      "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P3_ExternalUat_OperatorSelectedRealAvatar_RestoresSafeSavedSubsetAndPreservesUnsavedMetadataSubset",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P5_FuzzReplayConfig_DefaultsToLocalOptInDisabledDiagnostic",
-      "line": 307,
-      "attributes": [
-        "TestFixture",
-        "Category(\"PlayMode\")",
-        "Test"
-      ],
-      "categories": [
-        "PlayMode"
-      ],
-      "lane": "playmode-headless-review",
-      "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "Fuzz Replay Config Defaults To Local Opt In Disabled Diagnostic",
-      "fixtureDependencies": [
-        "canonical avatar fixture",
-        "AV3 runtime fixture"
-      ],
-      "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P5_FuzzReplayConfig_DefaultsToLocalOptInDisabledDiagnostic",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/PlayModeManual/ASMLiteAv3SaveLoadPlayModeTests.cs",
-      "class": "ASMLiteAv3SaveLoadPlayModeTests",
-      "method": "P5_FuzzReplayConfig_ParsesReplayableSeedAndIterationsFromCommandLineBeforeEnvironment",
-      "line": 320,
-      "attributes": [
-        "TestFixture",
-        "Category(\"PlayMode\")",
-        "Test"
-      ],
-      "categories": [
-        "PlayMode"
-      ],
-      "lane": "playmode-headless-review",
-      "headlessViability": "conditional-playmode-not-default-ci",
-      "honesty": "playmode-runtime-manual-review",
-      "recommendation": "manual-or-separate-playmode-lane",
-      "publicBehaviorClaim": "Fuzz Replay Config Parses Replayable Seed And Iterations From Command Line Before Environment",
-      "fixtureDependencies": [
-        "canonical avatar fixture",
-        "AV3 runtime fixture"
-      ],
-      "assetSceneMutations": "canonical-avatar-playmode-fixture",
-      "externalProcessFilesystemEnvUsage": "Unity playmode runtime state",
-      "runnerFilter": "ASMLiteAv3SaveLoadPlayModeTests.P5_FuzzReplayConfig_ParsesReplayableSeedAndIterationsFromCommandLineBeforeEnvironment",
-      "notes": "Excluded from default headless CI by policy; run manually or in a dedicated runtime lane."
+      "externalProcessFilesystemEnvUsage": "Unity PlayMode runtime state plus generated test assets under Assets/ASMLiteTests_Temp",
+      "runnerFilter": "ASMLiteAv3SaveLoadRuntimeTests.Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed",
+      "notes": "Dedicated PlayMode assembly coverage; excluded from default headless CI until runner policy and fixture requirements are settled."
     }
   ]
 }
