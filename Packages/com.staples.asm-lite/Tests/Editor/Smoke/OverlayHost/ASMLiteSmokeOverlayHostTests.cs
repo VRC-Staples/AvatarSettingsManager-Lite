@@ -227,7 +227,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void UnityRuntime_NormalizesPlayModeCloneAvatarNames()
+        public void UnityRuntime_NormalizesClonedAvatarNames()
         {
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("Oct25_Dress (Clone)"));
             Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" Oct25_Dress (Clone) (Clone) "));
@@ -1275,7 +1275,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringPlaymode()
+        public void UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringRuntimeMode()
         {
             GameObject avatarObject = null;
             try
@@ -1300,7 +1300,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void UnityRuntime_RejectsMissingComponentOutsidePlaymode()
+        public void UnityRuntime_RejectsMissingComponentOutsideRuntimeMode()
         {
             GameObject avatarObject = null;
             try
@@ -2149,7 +2149,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CommandPolling_RunSuite_ExecutesPlaymodeSuiteInSingleSession()
+        public void CommandPolling_RunSuite_ExecutesRuntimeTransitionSuiteInSingleSession()
         {
             using (var context = RunnerTestContext.Create(exitOnReady: false))
             {

@@ -4481,7 +4481,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
-      "method": "CommandPolling_RunSuite_ExecutesPlaymodeSuiteInSingleSession",
+      "method": "CommandPolling_RunSuite_ExecutesRuntimeTransitionSuiteInSingleSession",
       "line": 2152,
       "attributes": [
         "TestFixture",
@@ -4497,14 +4497,14 @@
       "headlessViability": "yes",
       "honesty": "headless-smoke-host-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Command Polling Run Suite Executes Playmode Suite In Single Session",
+      "publicBehaviorClaim": "Command Polling Run Suite Executes Runtime Transition Suite In Single Session",
       "fixtureDependencies": [
         "smoke host runtime",
         "canonical smoke scene/avatar fixture"
       ],
       "assetSceneMutations": "fixture-scene-and-smoke-host-state-isolated",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeOverlayHostTests.CommandPolling_RunSuite_ExecutesPlaymodeSuiteInSingleSession",
+      "runnerFilter": "ASMLiteSmokeOverlayHostTests.CommandPolling_RunSuite_ExecutesRuntimeTransitionSuiteInSingleSession",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -5267,7 +5267,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
-      "method": "UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringPlaymode",
+      "method": "UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringRuntimeMode",
       "line": 1278,
       "attributes": [
         "TestFixture",
@@ -5283,14 +5283,14 @@
       "headlessViability": "yes",
       "honesty": "headless-smoke-host-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Unity Runtime Accepts Editor Only Component Stripped During Playmode",
+      "publicBehaviorClaim": "Unity Runtime Accepts Editor Only Component Stripped During Runtime Mode",
       "fixtureDependencies": [
         "smoke host runtime",
         "canonical smoke scene/avatar fixture"
       ],
       "assetSceneMutations": "fixture-scene-and-smoke-host-state-isolated",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringPlaymode",
+      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringRuntimeMode",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -5789,7 +5789,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
-      "method": "UnityRuntime_NormalizesPlayModeCloneAvatarNames",
+      "method": "UnityRuntime_NormalizesClonedAvatarNames",
       "line": 230,
       "attributes": [
         "TestFixture",
@@ -5805,14 +5805,14 @@
       "headlessViability": "yes",
       "honesty": "headless-smoke-host-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Unity Runtime Normalizes Play Mode Clone Avatar Names",
+      "publicBehaviorClaim": "Unity Runtime Normalizes Cloned Avatar Names",
       "fixtureDependencies": [
         "smoke host runtime",
         "canonical smoke scene/avatar fixture"
       ],
       "assetSceneMutations": "fixture-scene-and-smoke-host-state-isolated",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_NormalizesPlayModeCloneAvatarNames",
+      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_NormalizesClonedAvatarNames",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -5876,7 +5876,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
-      "method": "UnityRuntime_RejectsMissingComponentOutsidePlaymode",
+      "method": "UnityRuntime_RejectsMissingComponentOutsideRuntimeMode",
       "line": 1303,
       "attributes": [
         "TestFixture",
@@ -5892,14 +5892,14 @@
       "headlessViability": "yes",
       "honesty": "headless-smoke-host-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Unity Runtime Rejects Missing Component Outside Playmode",
+      "publicBehaviorClaim": "Unity Runtime Rejects Missing Component Outside Runtime Mode",
       "fixtureDependencies": [
         "smoke host runtime",
         "canonical smoke scene/avatar fixture"
       ],
       "assetSceneMutations": "fixture-scene-and-smoke-host-state-isolated",
       "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-artifacts",
-      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_RejectsMissingComponentOutsidePlaymode",
+      "runnerFilter": "ASMLiteSmokeOverlayHostTests.UnityRuntime_RejectsMissingComponentOutsideRuntimeMode",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
