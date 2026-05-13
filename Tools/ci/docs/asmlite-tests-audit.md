@@ -20,19 +20,20 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 - Suite-source unification timing: after the PlayMode split, make `suites.json` the runner source of truth before broad rename waves.
 - Visible boundary: keep rendered visible/editor smoke tests manual-only, while command-line/result-document harness tests remain headless default-CI coverage.
 
-- Scope: Unity C# NUnit/EditMode tests under `Packages/com.staples.asm-lite/Tests/**/*.cs`.
-- Test assembly definition policy: keep the single existing test asmdef in this pass.
-- No tests were deleted, renamed, or quarantined by this audit pass.
+- Scope: Unity C# NUnit/EditMode and PlayMode tests under `Packages/com.staples.asm-lite/Tests/**/*.cs`.
+- Test assembly definition policy: keep Editor tests in the existing Editor test assembly and keep true runtime PlayMode coverage in `Packages/com.staples.asm-lite/Tests/PlayMode/ASMLite.Tests.PlayMode.asmdef`.
+- Slice 1 moved and renamed AV3 save/load coverage: command-line/config/default diagnostics now live in Editor `RuntimeReview`, while runtime/manual AV3 cases live in `Tests/PlayMode/Runtime`.
+- No tests were deleted or quarantined by this audit pass; the PlayMode split intentionally moved and renamed the AV3 save/load classes/methods with suite selectors and ledger metadata updated in the same slice.
 - Default headless CI lanes remain `contract`, `core-headless`, `integration-headless`, `smoke-protocol-headless`, and `smoke-overlay-host-headless`.
-- Visible editor/operator flows stay in `visible-manual`; PlayMode/runtime coverage stays in `playmode-headless-review` until runner policy and fixture requirements are settled.
+- Visible editor/operator flows stay in `visible-manual`; PlayMode runtime review stays in `playmode-headless-review`; opt-in external AV3 UAT/fuzz cases stay in the separate `manual` lane.
 - Unity exit 133 from native teardown is not a product failure when valid NUnit XML reports zero failed tests and logs contain only the known teardown assertion.
 
 ## Inventory summary
 
-- Total in-scope test methods classified: **503**
-- Total test classes classified: **50**
-- Methods currently recommended for default CI: **476**
-- Methods explicitly manual/review-only: **14**
+- Total in-scope test methods classified: **505**
+- Total test classes classified: **52**
+- Methods currently recommended for default CI: **480**
+- Methods explicitly manual/review-only or otherwise outside default CI: **25**
 - Headless/default-CI selection gaps called out for follow-up: **1**
 
 ## Headless and manual lane policy
@@ -40,23 +41,25 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | Lane | Default CI | Headless policy | Methods | Classes | Policy / honesty note |
 |---|---:|---|---:|---:|---|
 | `contract` | yes | yes | 1 | 1 | Pinned prefab/controller generated-reference contract; gates the smallest high-value generated asset reference invariant. |
-| `core-headless` | yes | yes | 228 | 25 | Fast unit and model contracts selected by class filters or explicit Headless category. |
+| `core-headless` | yes | yes | 232 | 26 | Fast unit and model contracts selected by class filters or explicit Headless category, including Editor-only AV3 runtime-review configuration diagnostics. |
 | `integration-headless` | yes | yes | 116 | 14 | Fixture-heavy Unity EditMode integration with per-test package/temp fixture restoration, source-fixture immutability checks, and fixture isolation sentinels for concurrent roots plus generated asset, scene, selection, and open-scene contamination. |
 | `runner-selftest-headless` | no | yes | 12 | 1 | Batch runner self-tests are headless but intentionally excluded from the default runner batch to avoid self-selection. |
 | `smoke-protocol-headless` | yes | yes | 45 | 6 | Protocol, catalog, artifact, and atomic IO contracts for the visible smoke transport. |
 | `smoke-overlay-host-headless` | yes | yes | 87 | 2 | Unity editor host behavior for smoke commands, run headlessly without external visible tooling. |
 | `visible-manual` | no | no | 8 | 1 | Rendered editor/operator smoke flow. Requires visible Unity/editor state and remains manual. |
-| `playmode-headless-review` | no | conditional | 6 | 1 | AV3/runtime PlayMode coverage; separate runtime lane required before default CI inclusion. |
+| `manual` | no | no | 2 | 1 | External AV3 UAT and fuzz replay cases require explicit operator/local fixture inputs and are review-only. |
+| `playmode-headless-review` | no | conditional | 2 | 1 | Runtime AV3 PlayMode coverage now lives in the dedicated PlayMode assembly and remains excluded from default CI until fixture/runner policy is settled. |
 
 ## Recommendation counts
 
 | Recommendation | Methods | Meaning |
 |---|---:|---|
 | `add-integration-category-or-default-ci-filter` | 1 | Headless integration coverage is viable but current default filters intentionally miss it until a follow-up confirms category/filter policy. |
-| `default-ci` | 476 | Selected by the current canonical default CI suite map or category filters. |
+| `default-ci` | 480 | Selected by the current canonical default CI suite map or category filters. |
 | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | 12 | Headless runner self-tests are intentionally outside default CI batch invocations. |
-| `manual-or-separate-playmode-lane` | 6 | PlayMode/runtime coverage should run only under a dedicated runtime lane. |
+| `manual-playmode-review` | 2 | External AV3 UAT/fuzz replay coverage requires explicit operator/local fixture inputs and remains manual review-only. |
 | `manual-visible-smoke-only` | 8 | Requires visible editor/operator execution; not headless CI. |
+| `separate-playmode-lane` | 2 | Runtime PlayMode coverage is isolated in the dedicated PlayMode lane and is not selected by default CI. |
 
 ## Class-level audit
 
@@ -120,14 +123,26 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | `ASMLiteAv3SaveLoadManualTests` | `Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs` | 2 | `manual` (2) | `no` (2) | `playmode-manual-operator-coverage` (2) | Manual external UAT/fuzz replay coverage requires explicit operator or local fixture inputs. | `manual-playmode-review` (2) |
 | `ASMLiteAv3SaveLoadRuntimeTests` | `Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs` | 2 | `playmode-headless-review` (2) | `conditional-playmode-not-default-ci` (2) | `playmode-runtime-review` (2) | Dedicated PlayMode assembly coverage; excluded from default CI until fixture/runner policy is settled. | `separate-playmode-lane` (2) |
 
+## Slice task lists
+
+- Slice 1 PlayMode/runtime lane split: complete.
+  - Added the dedicated `Tests/PlayMode` assembly for runtime-safe AV3 save/load coverage.
+  - Moved true `[UnityTest]` / `EnterPlayMode()` AV3 runtime cases into `Packages/com.staples.asm-lite/Tests/PlayMode/Runtime`.
+  - Moved command-line/default diagnostics into the Editor `RuntimeReview` fixture and kept those methods in the default-CI `core-headless` lane.
+  - Split opt-in external AV3 UAT and fuzz replay cases into the review-only `manual` lane.
+- Remaining audit backlog:
+  - Make `suites.json` the single suite-selection source or generate tracked runner batch JSON from it.
+  - Generate the markdown method-level ledger mirror from `test-suite-ledger.json` before broad rename waves.
+  - Continue naming cleanup by lane after the PlayMode split, updating selectors and ledger metadata in the same slice.
+
 ## Tools/ci cleanup report
 
 Audit basis:
 
 - Active content search found no workflow, runner, README, or script references to the removed root-level `Tools/ci/verify-*` helpers or `Tools/ci/bin/setup-git-hooks.sh`; remaining mentions are historical changelog entries and this audit section.
 - `python3 Tools/ci/test-suites/validate-suites.py` passed.
-- `python3 Tools/ci/test-suites/validate-suite-ledger.py` passed with **503** classified Unity C# test methods.
-- Suite validator unit tests passed: **5/5** `test_validate_suites`, **4/4** `test_validate_suite_ledger`.
+- `python3 Tools/ci/test-suites/validate-suite-ledger.py` passed with **505** classified Unity C# test methods.
+- Full `Tools/ci/tests` unittest discovery passed for the suite validators and related coverage.
 
 ### Removed / keep removed
 
