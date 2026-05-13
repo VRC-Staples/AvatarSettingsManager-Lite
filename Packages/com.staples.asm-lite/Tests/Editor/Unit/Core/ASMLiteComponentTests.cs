@@ -121,10 +121,10 @@ namespace ASMLite.Tests.Editor
             Object.DestroyImmediate(go);
         }
 
-        // ── P09: customIcons default ──────────────────────────────────────────
+        // ── customIcons default ──────────────────────────────────────────
 
         [Test]
-        public void P09_CustomIcons_DefaultIsEmptyArray_NotNull()
+        public void CustomIcons_DefaultIsEmptyArray_NotNull()
         {
             var go = new GameObject("TestAvatar");
             var component = go.AddComponent<ASMLiteComponent>();

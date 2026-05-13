@@ -20,9 +20,9 @@ namespace ASMLite.Tests.Editor
     {
         // ── Validate() ────────────────────────────────────────────────────────
 
-        // P07: null component -- must not throw NullReferenceException
+        // null component -- must not throw NullReferenceException
         [Test]
-        public void P07_Validate_NullComponent_ReturnsError_NotNullReferenceException()
+        public void Validate_NullComponent_ReturnsError_NotNullReferenceException()
         {
             string result = null;
             Assert.DoesNotThrow(() => result = ASMLiteBuilder.Validate(null),
@@ -282,11 +282,11 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleA"), "Current backup key should be present");
         }
 
-        // ── P01-P06: BuildBackupParamNamesWithLegacyPreservation edge cases ──
+        // ── BuildBackupParamNamesWithLegacyPreservation edge cases ──
 
-        // P01: slot decrease -- S3/S4 legacy backups preserved when slotCount drops to 2
+        // slot decrease -- S3/S4 legacy backups preserved when slotCount drops to 2
         [Test]
-        public void P01_BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved()
+        public void BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved()
         {
             var avatarParamNames = new List<string> { "Hat", "Hue" };
             var existingNames = new[]
@@ -323,9 +323,9 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
         }
 
-        // P02: null existingParamNames -- first build, no prior asset
+        // null existingParamNames -- first build, no prior asset
         [Test]
-        public void P02_BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly()
+        public void BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly()
         {
             var avatarParamNames = new List<string> { "ToggleHat", "HairHue" };
 
@@ -341,9 +341,9 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S2_HairHue"));
         }
 
-        // P03: empty existingParamNames array -- same as first build, no crash
+        // empty existingParamNames array -- same as first build, no crash
         [Test]
-        public void P03_BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly()
+        public void BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly()
         {
             var avatarParamNames = new List<string> { "ToggleHat" };
 
@@ -356,9 +356,9 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleHat"));
         }
 
-        // P04: duplicate names in existingParamNames -- result must deduplicate
+        // duplicate names in existingParamNames -- result must deduplicate
         [Test]
-        public void P04_BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped()
+        public void BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped()
         {
             var avatarParamNames = new List<string> { "Hat" };
             // Stale asset contains the same entry twice.
@@ -381,9 +381,9 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(0, dupeCount, "Result must not contain any duplicate names");
         }
 
-        // P05: empty avatarParamNames -- avatar has no expression params
+        // empty avatarParamNames -- avatar has no expression params
         [Test]
-        public void P05_BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty()
+        public void BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty()
         {
             var avatarParamNames = new List<string>();
             var existingNames = new[]
@@ -404,10 +404,10 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_OldParam"), "Legacy backup must be preserved even with empty avatar params");
         }
 
-        // P06: mixed collision -- legacy backups that match the current schema are not duplicated;
+        // mixed collision -- legacy backups that match the current schema are not duplicated;
         //      legacy backups for removed params (not in current schema) are appended.
         [Test]
-        public void P06_BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates()
+        public void BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates()
         {
             var avatarParamNames = new List<string> { "ActiveParam" };
             var existingNames = new[]
@@ -436,7 +436,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void P07_BuildBackupParamNames_MalformedLegacyBackups_AreExcluded()
+        public void BuildBackupParamNames_MalformedLegacyBackups_AreExcluded()
         {
             var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
                 slotCount: 1,
@@ -459,7 +459,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void P08_BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs()
+        public void BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs()
         {
             var avatarParams = new List<VRCExpressionParameters.Parameter>
             {

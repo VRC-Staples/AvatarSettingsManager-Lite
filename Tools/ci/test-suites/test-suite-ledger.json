@@ -7571,6 +7571,30 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteAssetPathsTests.cs",
       "class": "ASMLiteAssetPathsTests",
+      "method": "ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension",
+      "line": 150,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Action Icon Paths Are Non Empty Have Package Prefix And Png Extension",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteAssetPathsTests.ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteAssetPathsTests.cs",
+      "class": "ASMLiteAssetPathsTests",
       "method": "AllCriticalPaths_StartWithPackagePrefix",
       "line": 110,
       "attributes": [
@@ -7907,30 +7931,6 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteAssetPathsTests.cs",
       "class": "ASMLiteAssetPathsTests",
-      "method": "P08_ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension",
-      "line": 150,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Action Icon Paths Are Non Empty Have Package Prefix And Png Extension",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteAssetPathsTests.P08_ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteAssetPathsTests.cs",
-      "class": "ASMLiteAssetPathsTests",
       "method": "Prefab_PathEndsWithPrefabExtension",
       "line": 141,
       "attributes": [
@@ -7979,6 +7979,30 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
       "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs",
+      "line": 462,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Name Plan Reports Mapped Unmatched And Malformed Aliases Without Duplicate Outputs",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
       "method": "BuildBackupParamNamesWithLegacyPreservation_IgnoresLegacyControlParams",
       "line": 264,
       "attributes": [
@@ -8022,6 +8046,174 @@
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNamesWithLegacyPreservation_KeepsLegacyBackups_OnSlotExpansion",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped",
+      "line": 361,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Duplicates In Existing Result Is Deduped",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty",
+      "line": 386,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Empty Avatar Param Names Returns Legacy Only Or Empty",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly",
+      "line": 346,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Empty Existing Param Names Returns Current Schema Only",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_MalformedLegacyBackups_AreExcluded",
+      "line": 439,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Malformed Legacy Backups Are Excluded",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_MalformedLegacyBackups_AreExcluded",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates",
+      "line": 410,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Mixed Collision Current Schema Wins No Duplicates",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly",
+      "line": 328,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Null Existing Param Names Returns Current Schema Only",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
+      "class": "ASMLiteBuilderTests",
+      "method": "BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved",
+      "line": 289,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Backup Param Names Slot Decrease Legacy Slot Backups Preserved",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteBuilderTests.BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -8123,175 +8315,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
       "class": "ASMLiteBuilderTests",
-      "method": "P01_BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved",
-      "line": 289,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Slot Decrease Legacy Slot Backups Preserved",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P01_BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P02_BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly",
-      "line": 328,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Null Existing Param Names Returns Current Schema Only",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P02_BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P03_BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly",
-      "line": 346,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Empty Existing Param Names Returns Current Schema Only",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P03_BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P04_BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped",
-      "line": 361,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Duplicates In Existing Result Is Deduped",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P04_BuildBackupParamNames_DuplicatesInExisting_ResultIsDeduped",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P05_BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty",
-      "line": 386,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Empty Avatar Param Names Returns Legacy Only Or Empty",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P05_BuildBackupParamNames_EmptyAvatarParamNames_ReturnsLegacyOnlyOrEmpty",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P06_BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates",
-      "line": 410,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Mixed Collision Current Schema Wins No Duplicates",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P06_BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P07_BuildBackupParamNames_MalformedLegacyBackups_AreExcluded",
-      "line": 439,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Param Names Malformed Legacy Backups Are Excluded",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P07_BuildBackupParamNames_MalformedLegacyBackups_AreExcluded",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P07_Validate_NullComponent_ReturnsError_NotNullReferenceException",
+      "method": "Validate_NullComponent_ReturnsError_NotNullReferenceException",
       "line": 25,
       "attributes": [
         "TestFixture",
@@ -8309,31 +8333,7 @@
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P07_Validate_NullComponent_ReturnsError_NotNullReferenceException",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteBuilderTests.cs",
-      "class": "ASMLiteBuilderTests",
-      "method": "P08_BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs",
-      "line": 462,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Backup Name Plan Reports Mapped Unmatched And Malformed Aliases Without Duplicate Outputs",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteBuilderTests.P08_BuildBackupNamePlan_ReportsMappedUnmatchedAndMalformedAliases_WithoutDuplicateOutputs",
+      "runnerFilter": "ASMLiteBuilderTests.Validate_NullComponent_ReturnsError_NotNullReferenceException",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -8586,6 +8586,30 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentTests.cs",
       "class": "ASMLiteComponentTests",
+      "method": "CustomIcons_DefaultIsEmptyArray_NotNull",
+      "line": 127,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Custom Icons Default Is Empty Array Not Null",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteComponentTests.CustomIcons_DefaultIsEmptyArray_NotNull",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentTests.cs",
+      "class": "ASMLiteComponentTests",
       "method": "DefaultActionIconMode_IsDefault",
       "line": 43,
       "attributes": [
@@ -8773,30 +8797,6 @@
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteComponentTests.IconMode_SameColor_IsOne",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteComponentTests.cs",
-      "class": "ASMLiteComponentTests",
-      "method": "P09_CustomIcons_DefaultIsEmptyArray_NotNull",
-      "line": 127,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Custom Icons Default Is Empty Array Not Null",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteComponentTests.P09_CustomIcons_DefaultIsEmptyArray_NotNull",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -9821,7 +9821,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Fixture_id_lookup_from_textures_is_deterministic",
+      "method": "FixtureIdLookupFromTextures_IsDeterministic",
       "line": 65,
       "attributes": [
         "TestFixture",
@@ -9835,19 +9835,19 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Fixture id lookup from textures is deterministic",
+      "publicBehaviorClaim": "Fixture Id Lookup From Textures Is Deterministic",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Fixture_id_lookup_from_textures_is_deterministic",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.FixtureIdLookupFromTextures_IsDeterministic",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Known_fixture_ids_are_unique",
+      "method": "KnownFixtureIds_AreUnique",
       "line": 88,
       "attributes": [
         "TestFixture",
@@ -9861,19 +9861,19 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Known fixture ids are unique",
+      "publicBehaviorClaim": "Known Fixture Ids Are Unique",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Known_fixture_ids_are_unique",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.KnownFixtureIds_AreUnique",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Known_fixture_ids_resolve_to_existing_package_textures",
+      "method": "KnownFixtureIds_ResolveToExistingPackageTextures",
       "line": 15,
       "attributes": [
         "TestFixture",
@@ -9887,19 +9887,19 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Known fixture ids resolve to existing package textures",
+      "publicBehaviorClaim": "Known Fixture Ids Resolve To Existing Package Textures",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Known_fixture_ids_resolve_to_existing_package_textures",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.KnownFixtureIds_ResolveToExistingPackageTextures",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Root_and_action_fixture_ids_map_to_canonical_assets",
+      "method": "RootAndActionFixtureIds_MapToCanonicalAssets",
       "line": 56,
       "attributes": [
         "TestFixture",
@@ -9913,19 +9913,19 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Root and action fixture ids map to canonical assets",
+      "publicBehaviorClaim": "Root And Action Fixture Ids Map To Canonical Assets",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Root_and_action_fixture_ids_map_to_canonical_assets",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.RootAndActionFixtureIds_MapToCanonicalAssets",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Slot_fixture_ids_are_stable_and_ordered",
+      "method": "SlotFixtureIds_AreStableAndOrdered",
       "line": 33,
       "attributes": [
         "TestFixture",
@@ -9939,19 +9939,19 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Slot fixture ids are stable and ordered",
+      "publicBehaviorClaim": "Slot Fixture Ids Are Stable And Ordered",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Slot_fixture_ids_are_stable_and_ordered",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.SlotFixtureIds_AreStableAndOrdered",
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteIconFixtureRegistryTests.cs",
       "class": "ASMLiteIconFixtureRegistryTests",
-      "method": "Unknown_fixture_id_fails_readably",
+      "method": "UnknownFixtureId_FailsReadably",
       "line": 78,
       "attributes": [
         "TestFixture",
@@ -9965,14 +9965,208 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Unknown fixture id fails readably",
+      "publicBehaviorClaim": "Unknown Fixture Id Fails Readably",
       "fixtureDependencies": [
         "package fixture assets"
       ],
       "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
-      "runnerFilter": "ASMLiteIconFixtureRegistryTests.Unknown_fixture_id_fails_readably",
+      "runnerFilter": "ASMLiteIconFixtureRegistryTests.UnknownFixtureId_FailsReadably",
       "notes": "Selected by default CI through the core-headless class filter."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess",
+      "line": 258,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Sync Prefab Instance Custom Install Path Requires Routing Success",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride",
+      "line": 217,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Sync Prefab Instance Uses Routing Helper And Clears Prefix Override",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix",
+      "line": 170,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Sync Propagates Custom Install Path To Live Full Controller Prefix",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing",
+      "line": 127,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Full Controller Asset Reference Sync Missing Prefix Field Fails Closed Without Throwing",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "LiveWiring_NullComponent_FailsClosedToEmptyPrefix",
+      "line": 106,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Live Wiring Null Component Fails Closed To Empty Prefix",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.LiveWiring_NullComponent_FailsClosedToEmptyPrefix",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled",
+      "line": 88,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Prefab Wiring Falls Back To Empty Prefix When Disabled",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank",
+      "line": 97,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Prefab Wiring Falls Back To Empty Prefix When Enabled Path Is Blank",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
+      "class": "ASMLiteInstallPathWiringTests",
+      "method": "PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled",
+      "line": 79,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Prefab Wiring Uses Trimmed Custom Install Prefix When Enabled",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteInstallPathWiringTests.PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
@@ -10045,200 +10239,6 @@
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteInstallPathWiringTests.SetInstallPathStateForAutomation_NormalizesSimpleAndNestedEffectivePath",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W03_PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled",
-      "line": 79,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Prefab Wiring Uses Trimmed Custom Install Prefix When Enabled",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W03_PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W04_PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled",
-      "line": 88,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Prefab Wiring Falls Back To Empty Prefix When Disabled",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W04_PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W05_PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank",
-      "line": 97,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Prefab Wiring Falls Back To Empty Prefix When Enabled Path Is Blank",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W05_PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W06_LiveWiring_NullComponent_FailsClosedToEmptyPrefix",
-      "line": 106,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Live Wiring Null Component Fails Closed To Empty Prefix",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W06_LiveWiring_NullComponent_FailsClosedToEmptyPrefix",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing",
-      "line": 127,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Full Controller Asset Reference Sync Missing Prefix Field Fails Closed Without Throwing",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W08_BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix",
-      "line": 170,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Sync Propagates Custom Install Path To Live Full Controller Prefix",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W08_BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W09_BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride",
-      "line": 217,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Sync Prefab Instance Uses Routing Helper And Clears Prefix Override",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W09_BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallPathWiringTests.cs",
-      "class": "ASMLiteInstallPathWiringTests",
-      "method": "W10_BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess",
-      "line": 258,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Sync Prefab Instance Custom Install Path Requires Routing Success",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteInstallPathWiringTests.W10_BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
@@ -10546,175 +10546,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
       "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A01_GetFinalAvatarParams_FiltersASMLitePrefixedParams",
-      "line": 44,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Filters ASMLite Prefixed Params",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A01_GetFinalAvatarParams_FiltersASMLitePrefixedParams",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A02_GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder",
-      "line": 65,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Preserves Non ASMLite Params In Order",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A02_GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A03_GetFinalAvatarParams_SkipsNullAndEmptyNameEntries",
-      "line": 86,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Skips Null And Empty Name Entries",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A03_GetFinalAvatarParams_SkipsNullAndEmptyNameEntries",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A04_GetFinalAvatarParams_ReturnsEmptyList_WhenExpressionParametersIsNull",
-      "line": 105,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Returns Empty List When Expression Parameters Is Null",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A04_GetFinalAvatarParams_ReturnsEmptyList_WhenExpressionParametersIsNull",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A05_GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming",
-      "line": 118,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Preserves VFOpaque Canonical Names Without Renaming",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A05_GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A06_GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames",
-      "line": 141,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Preserves Broker Assigned ASMVFNames",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A06_GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A07_GetFinalAvatarParams_UsesLiveDeterministicSources_NotPreservedLegacyBackupAliases",
-      "line": 164,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Uses Live Deterministic Sources Not Preserved Legacy Backup Aliases",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A07_GetFinalAvatarParams_UsesLiveDeterministicSources_NotPreservedLegacyBackupAliases",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A08_GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames",
+      "method": "GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames",
       "line": 190,
       "attributes": [
         "TestFixture",
@@ -10732,61 +10564,13 @@
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A08_GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
       "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A09_GetFinalAvatarParams_ExclusionsEnabled_UsesExactOrdinalNameMatching",
-      "line": 216,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Get Final Avatar Params Exclusions Enabled Uses Exact Ordinal Name Matching",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A09_GetFinalAvatarParams_ExclusionsEnabled_UsesExactOrdinalNameMatching",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A10_ResolveParameterExclusions_SanitizesMalformedAndDuplicateNames",
-      "line": 247,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Resolve Parameter Exclusions Sanitizes Malformed And Duplicate Names",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A10_ResolveParameterExclusions_SanitizesMalformedAndDuplicateNames",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
-      "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A11_GetFinalAvatarParams_ExclusionsEnabled_AllParamsExcluded_ReturnsEmptyList",
+      "method": "GetFinalAvatarParams_ExclusionsEnabled_AllParamsExcluded_ReturnsEmptyList",
       "line": 284,
       "attributes": [
         "TestFixture",
@@ -10804,13 +10588,13 @@
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A11_GetFinalAvatarParams_ExclusionsEnabled_AllParamsExcluded_ReturnsEmptyList",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_ExclusionsEnabled_AllParamsExcluded_ReturnsEmptyList",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
       "class": "ASMLiteParameterDiscoveryTests",
-      "method": "A12_GetFinalAvatarParams_ExclusionsEnabled_NoDiscoveredParams_ReportsStaleNames",
+      "method": "GetFinalAvatarParams_ExclusionsEnabled_NoDiscoveredParams_ReportsStaleNames",
       "line": 309,
       "attributes": [
         "TestFixture",
@@ -10828,13 +10612,229 @@
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteParameterDiscoveryTests.A12_GetFinalAvatarParams_ExclusionsEnabled_NoDiscoveredParams_ReportsStaleNames",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_ExclusionsEnabled_NoDiscoveredParams_ReportsStaleNames",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_ExclusionsEnabled_UsesExactOrdinalNameMatching",
+      "line": 216,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Exclusions Enabled Uses Exact Ordinal Name Matching",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_ExclusionsEnabled_UsesExactOrdinalNameMatching",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_FiltersASMLitePrefixedParams",
+      "line": 44,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Filters ASMLite Prefixed Params",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_FiltersASMLitePrefixedParams",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames",
+      "line": 141,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Preserves Broker Assigned ASMVFNames",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder",
+      "line": 65,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Preserves Non ASMLite Params In Order",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming",
+      "line": 118,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Preserves VFOpaque Canonical Names Without Renaming",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_PreservesVFOpaqueCanonicalNamesWithoutRenaming",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_ReturnsEmptyList_WhenExpressionParametersIsNull",
+      "line": 105,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Returns Empty List When Expression Parameters Is Null",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_ReturnsEmptyList_WhenExpressionParametersIsNull",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_SkipsNullAndEmptyNameEntries",
+      "line": 86,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Skips Null And Empty Name Entries",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_SkipsNullAndEmptyNameEntries",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "GetFinalAvatarParams_UsesLiveDeterministicSources_NotPreservedLegacyBackupAliases",
+      "line": 164,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Get Final Avatar Params Uses Live Deterministic Sources Not Preserved Legacy Backup Aliases",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.GetFinalAvatarParams_UsesLiveDeterministicSources_NotPreservedLegacyBackupAliases",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
+      "class": "ASMLiteParameterDiscoveryTests",
+      "method": "ResolveParameterExclusions_SanitizesMalformedAndDuplicateNames",
+      "line": 247,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Resolve Parameter Exclusions Sanitizes Malformed And Duplicate Names",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteParameterDiscoveryTests.ResolveParameterExclusions_SanitizesMalformedAndDuplicateNames",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLitePrefabContractTests.cs",
       "class": "ASMLitePrefabContractTests",
-      "method": "T02_Prefab_UsesGeneratedAssetReferences_ForFullController",
+      "method": "Prefab_UsesGeneratedAssetReferences_ForFullController",
       "line": 13,
       "attributes": [
         "TestFixture",
@@ -10854,37 +10854,13 @@
       ],
       "assetSceneMutations": "reads-package-prefab-and-generated-references",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLitePrefabContractTests.T02_Prefab_UsesGeneratedAssetReferences_ForFullController",
+      "runnerFilter": "ASMLitePrefabContractTests.Prefab_UsesGeneratedAssetReferences_ForFullController",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB01_SanitizePathToken_NormalizesMalformedInput",
-      "line": 61,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB01 Sanitize Path Token Normalizes Malformed Input",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB01_SanitizePathToken_NormalizesMalformedInput",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB02_BuildDeterministicGlobalName_CollisionProducesDistinctNames",
+      "method": "BuildDeterministicGlobalName_CollisionProducesDistinctNames",
       "line": 74,
       "attributes": [
         "TestFixture",
@@ -10898,161 +10874,17 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB02 Build Deterministic Global Name Collision Produces Distinct Names",
+      "publicBehaviorClaim": "Build Deterministic Global Name Collision Produces Distinct Names",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB02_BuildDeterministicGlobalName_CollisionProducesDistinctNames",
+      "runnerFilter": "ASMLiteToggleBrokerTests.BuildDeterministicGlobalName_CollisionProducesDistinctNames",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB03_Discovery_FailsClosedWhenReflectedTypeMissing",
-      "line": 96,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB03 Discovery Fails Closed When Reflected Type Missing",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB03_Discovery_FailsClosedWhenReflectedTypeMissing",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB04_Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent",
-      "line": 108,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB04 Discovery Scopes To Asm Lite Avatar And Skips Non Toggle Content",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB04_Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB05_Discovery_HandlesBlankGlobalNameBoundaryAndSchemaDrift",
-      "line": 140,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB05 Discovery Handles Blank Global Name Boundary And Schema Drift",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB05_Discovery_HandlesBlankGlobalNameBoundaryAndSchemaDrift",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB05b_Discovery_AssignedGlobalParams_AreReportedForFallbackDiscovery",
-      "line": 171,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB05b Discovery Assigned Global Params Are Reported For Fallback Discovery",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB05b_Discovery_AssignedGlobalParams_AreReportedForFallbackDiscovery",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB06_Mutation_UpdatesOnlySerializedToggleBoolAndStringFields",
-      "line": 201,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB06 Mutation Updates Only Serialized Toggle Bool And String Fields",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB06_Mutation_UpdatesOnlySerializedToggleBoolAndStringFields",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB07_Mutation_RejectsBlankAssignedGlobalName",
-      "line": 248,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB07 Mutation Rejects Blank Assigned Global Name",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB07_Mutation_RejectsBlankAssignedGlobalName",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB08_Callback_EnrollsOnlyAsmLiteScopedAvatars_AndRestoresRoundTrip",
+      "method": "Callback_EnrollsOnlyAsmLiteScopedAvatars_AndRestoresRoundTrip",
       "line": 273,
       "attributes": [
         "TestFixture",
@@ -11066,18 +10898,18 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB08 Callback Enrolls Only Asm Lite Scoped Avatars And Restores Round Trip",
+      "publicBehaviorClaim": "Callback Enrolls Only Asm Lite Scoped Avatars And Restores Round Trip",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB08_Callback_EnrollsOnlyAsmLiteScopedAvatars_AndRestoresRoundTrip",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Callback_EnrollsOnlyAsmLiteScopedAvatars_AndRestoresRoundTrip",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB09_Restore_ClearsMalformedPayloadAndFailsClosed",
-      "line": 336,
+      "method": "Discovery_AssignedGlobalParams_AreReportedForFallbackDiscovery",
+      "line": 171,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11090,18 +10922,18 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB09 Restore Clears Malformed Payload And Fails Closed",
+      "publicBehaviorClaim": "Discovery Assigned Global Params Are Reported For Fallback Discovery",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB09_Restore_ClearsMalformedPayloadAndFailsClosed",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_AssignedGlobalParams_AreReportedForFallbackDiscovery",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB10_Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp",
-      "line": 352,
+      "method": "Discovery_FailsClosedWhenReflectedTypeMissing",
+      "line": 96,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11114,161 +10946,17 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB10 Restore Handles Missing Instance Ids As Unresolved And Cleans Up",
+      "publicBehaviorClaim": "Discovery Fails Closed When Reflected Type Missing",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB10_Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_FailsClosedWhenReflectedTypeMissing",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB11_Enrollment_DuplicateInvocationPerSession_RestoresStaleThenReenrolls",
-      "line": 369,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB11 Enrollment Duplicate Invocation Per Session Restores Stale Then Reenrolls",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB11_Enrollment_DuplicateInvocationPerSession_RestoresStaleThenReenrolls",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB12_Enrollment_ReorderedSiblingsStillAssignUniqueCollisionNames_AndRestore",
-      "line": 410,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB12 Enrollment Reordered Siblings Still Assign Unique Collision Names And Restore",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB12_Enrollment_ReorderedSiblingsStillAssignUniqueCollisionNames_AndRestore",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB13_Enrollment_PreReservedDescriptorNamesAreSkippedWithoutBlockingUniqueAssignments",
-      "line": 513,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB13 Enrollment Pre Reserved Descriptor Names Are Skipped Without Blocking Unique Assignments",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB13_Enrollment_PreReservedDescriptorNamesAreSkippedWithoutBlockingUniqueAssignments",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB14_StartupRestore_ReplaysPendingState_AndSuppressesDuplicateQueueing",
-      "line": 577,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB14 Startup Restore Replays Pending State And Suppresses Duplicate Queueing",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB14_StartupRestore_ReplaysPendingState_AndSuppressesDuplicateQueueing",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB15_StartupRestore_NoPendingState_RemainsNoOp",
-      "line": 628,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB15 Startup Restore No Pending State Remains No Op",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB15_StartupRestore_NoPendingState_RemainsNoOp",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB16_StartupRestore_CleansMalformedAndUnresolvedPayloads_Idempotently",
-      "line": 648,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "core-unit-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB16 Startup Restore Cleans Malformed And Unresolved Payloads Idempotently",
-      "fixtureDependencies": [],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB16_StartupRestore_CleansMalformedAndUnresolvedPayloads_Idempotently",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
-      "class": "ASMLiteToggleBrokerTests",
-      "method": "TB17_Discovery_FindsEligibleToggleInLegacyFeaturesArray",
+      "method": "Discovery_FindsEligibleToggleInLegacyFeaturesArray",
       "line": 682,
       "attributes": [
         "TestFixture",
@@ -11282,18 +10970,18 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB17 Discovery Finds Eligible Toggle In Legacy Features Array",
+      "publicBehaviorClaim": "Discovery Finds Eligible Toggle In Legacy Features Array",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB17_Discovery_FindsEligibleToggleInLegacyFeaturesArray",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_FindsEligibleToggleInLegacyFeaturesArray",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB18_Discovery_MixedContentAndLegacyFeatures_DoNotDuplicateOrEscapeScope",
-      "line": 707,
+      "method": "Discovery_HandlesBlankGlobalNameBoundaryAndSchemaDrift",
+      "line": 140,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11306,17 +10994,17 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB18 Discovery Mixed Content And Legacy Features Do Not Duplicate Or Escape Scope",
+      "publicBehaviorClaim": "Discovery Handles Blank Global Name Boundary And Schema Drift",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB18_Discovery_MixedContentAndLegacyFeatures_DoNotDuplicateOrEscapeScope",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_HandlesBlankGlobalNameBoundaryAndSchemaDrift",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
       "class": "ASMLiteToggleBrokerTests",
-      "method": "TB19_Discovery_LegacyFeaturesMalformedMembers_FailClosedWithBoundaryCoverage",
+      "method": "Discovery_LegacyFeaturesMalformedMembers_FailClosedWithBoundaryCoverage",
       "line": 781,
       "attributes": [
         "TestFixture",
@@ -11330,11 +11018,323 @@
       "headlessViability": "yes",
       "honesty": "core-unit-contract-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "TB19 Discovery Legacy Features Malformed Members Fail Closed With Boundary Coverage",
+      "publicBehaviorClaim": "Discovery Legacy Features Malformed Members Fail Closed With Boundary Coverage",
       "fixtureDependencies": [],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "none",
-      "runnerFilter": "ASMLiteToggleBrokerTests.TB19_Discovery_LegacyFeaturesMalformedMembers_FailClosedWithBoundaryCoverage",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_LegacyFeaturesMalformedMembers_FailClosedWithBoundaryCoverage",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Discovery_MixedContentAndLegacyFeatures_DoNotDuplicateOrEscapeScope",
+      "line": 707,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Discovery Mixed Content And Legacy Features Do Not Duplicate Or Escape Scope",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_MixedContentAndLegacyFeatures_DoNotDuplicateOrEscapeScope",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent",
+      "line": 108,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Discovery Scopes To Asm Lite Avatar And Skips Non Toggle Content",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Enrollment_DuplicateInvocationPerSession_RestoresStaleThenReenrolls",
+      "line": 369,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Enrollment Duplicate Invocation Per Session Restores Stale Then Reenrolls",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Enrollment_DuplicateInvocationPerSession_RestoresStaleThenReenrolls",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Enrollment_ReorderedSiblingsStillAssignUniqueCollisionNames_AndRestore",
+      "line": 410,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Enrollment Reordered Siblings Still Assign Unique Collision Names And Restore",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Enrollment_ReorderedSiblingsStillAssignUniqueCollisionNames_AndRestore",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Enrollment_SkipsReservedDescriptorNamesWithoutBlockingUniqueAssignments",
+      "line": 513,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Enrollment Skips Reserved Descriptor Names Without Blocking Unique Assignments",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Enrollment_SkipsReservedDescriptorNamesWithoutBlockingUniqueAssignments",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Mutation_RejectsBlankAssignedGlobalName",
+      "line": 248,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Mutation Rejects Blank Assigned Global Name",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Mutation_RejectsBlankAssignedGlobalName",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Mutation_UpdatesOnlySerializedToggleBoolAndStringFields",
+      "line": 201,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Mutation Updates Only Serialized Toggle Bool And String Fields",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Mutation_UpdatesOnlySerializedToggleBoolAndStringFields",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Restore_ClearsMalformedPayloadAndFailsClosed",
+      "line": 336,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Restore Clears Malformed Payload And Fails Closed",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Restore_ClearsMalformedPayloadAndFailsClosed",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp",
+      "line": 352,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Restore Handles Missing Instance Ids As Unresolved And Cleans Up",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "SanitizePathToken_NormalizesMalformedInput",
+      "line": 61,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Sanitize Path Token Normalizes Malformed Input",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.SanitizePathToken_NormalizesMalformedInput",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "StartupRestore_CleansMalformedAndUnresolvedPayloads_Idempotently",
+      "line": 648,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Startup Restore Cleans Malformed And Unresolved Payloads Idempotently",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.StartupRestore_CleansMalformedAndUnresolvedPayloads_Idempotently",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "StartupRestore_NoPendingState_RemainsNoOp",
+      "line": 628,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Startup Restore No Pending State Remains No Op",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.StartupRestore_NoPendingState_RemainsNoOp",
+      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteToggleBrokerTests.cs",
+      "class": "ASMLiteToggleBrokerTests",
+      "method": "StartupRestore_ReplaysPendingState_AndSuppressesDuplicateQueueing",
+      "line": 577,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Startup Restore Replays Pending State And Suppresses Duplicate Queueing",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteToggleBrokerTests.StartupRestore_ReplaysPendingState_AndSuppressesDuplicateQueueing",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
     },
     {

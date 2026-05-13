@@ -20,7 +20,7 @@
         "filters": [
           {
             "testNames": [
-              "ASMLite.Tests.Editor.ASMLitePrefabContractTests.T02_Prefab_UsesGeneratedAssetReferences_ForFullController"
+              "ASMLite.Tests.Editor.ASMLitePrefabContractTests.Prefab_UsesGeneratedAssetReferences_ForFullController"
             ]
           }
         ]

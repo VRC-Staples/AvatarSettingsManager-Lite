@@ -144,10 +144,10 @@ namespace ASMLite.Tests.Editor
                 "Prefab path must end with .prefab");
         }
 
-        // ── P08: Action icon paths ────────────────────────────────────────────
+        // ── Action icon paths ────────────────────────────────────────────
 
         [Test]
-        public void P08_ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension()
+        public void ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension()
         {
             var actionIcons = new (string name, string path)[]
             {

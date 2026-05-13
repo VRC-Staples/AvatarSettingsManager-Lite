@@ -76,46 +76,46 @@ namespace ASMLite.Tests.Editor
         private const string SuiteName = nameof(ASMLiteInstallPathWiringTests);
 
         [Test]
-        public void W03_PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled()
+        public void PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled()
         {
             var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "  Avatars/ASM  ");
 
             Assert.AreEqual("Avatars/ASM", resolvedPrefix,
-                "W03: enabled custom install path must trim and serialize the FullController menu prefix.");
+                "enabled custom install path must trim and serialize the FullController menu prefix.");
         }
 
         [Test]
-        public void W04_PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled()
+        public void PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled()
         {
             var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: false, customInstallPath: "Avatar/ShouldNotApply");
 
             Assert.AreEqual(string.Empty, resolvedPrefix,
-                "W04: disabled custom install path must fail closed to empty FullController prefix even when text exists.");
+                "disabled custom install path must fail closed to empty FullController prefix even when text exists.");
         }
 
         [Test]
-        public void W05_PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank()
+        public void PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank()
         {
             var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "   ");
 
             Assert.AreEqual(string.Empty, resolvedPrefix,
-                "W05: blank enabled custom install path must fail closed to empty FullController prefix.");
+                "blank enabled custom install path must fail closed to empty FullController prefix.");
         }
 
         [Test]
-        public void W06_LiveWiring_NullComponent_FailsClosedToEmptyPrefix()
+        public void LiveWiring_NullComponent_FailsClosedToEmptyPrefix()
         {
-            var go = new GameObject("W06_NullComponent");
+            var go = new GameObject("NullComponent");
             try
             {
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(go, null, "W06 Null Component"),
-                    "W06: live FullController wiring should fail closed and still complete when no ASM-Lite component is available.");
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(go, null, "Null Component"),
+                    "live FullController wiring should fail closed and still complete when no ASM-Lite component is available.");
 
                 var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(go);
                 Assert.IsNotNull(vf,
-                    "W06: live FullController wiring should still create a VF.Model.VRCFury payload for the target root.");
+                    "live FullController wiring should still create a VF.Model.VRCFury payload for the target root.");
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf),
-                    "W06: null component input must fail closed to empty prefix through the actual FullController wiring path.");
+                    "null component input must fail closed to empty prefix through the actual FullController wiring path.");
             }
             finally
             {
@@ -124,9 +124,9 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing()
+        public void FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing()
         {
-            var go = new GameObject("W07_PrefixSchemaDrift");
+            var go = new GameObject("PrefixSchemaDrift");
             try
             {
                 var component = go.AddComponent<ASMLiteComponent>();
@@ -150,14 +150,14 @@ namespace ASMLite.Tests.Editor
                     var diagnostic = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component);
                     ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
                         SuiteName,
-                        nameof(W07_FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing),
+                        nameof(FullControllerAssetReferenceSync_MissingPrefixField_FailsClosedWithoutThrowing),
                         diagnostic);
                     Assert.IsFalse(diagnostic.Success,
-                        "W07: schema drift with a missing FullController menu-prefix field must fail closed without writing partial state.");
+                        "schema drift with a missing FullController menu-prefix field must fail closed without writing partial state.");
                     Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, diagnostic.Code,
-                        "W07: missing FullController prefix path must emit deterministic DRIFT-203.");
+                        "missing FullController prefix path must emit deterministic DRIFT-203.");
                     Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, diagnostic.ContextPath,
-                        "W07: DRIFT-203 diagnostics must include the exact missing prefix path.");
+                        "DRIFT-203 diagnostics must include the exact missing prefix path.");
                 });
             }
             finally
@@ -167,12 +167,12 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void W08_BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix()
+        public void BuildSync_PropagatesCustomInstallPathToLiveFullControllerPrefix()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                Assert.IsNotNull(ctx?.Comp, "W08: fixture creation failed to produce ASMLite component.");
+                Assert.IsNotNull(ctx?.Comp, "fixture creation failed to produce ASMLite component.");
 
                 var component = ctx.Comp;
                 component.useCustomInstallPath = true;
@@ -191,21 +191,21 @@ namespace ASMLite.Tests.Editor
                 beforeSo.Update();
                 var beforePrefix = beforeSo.FindProperty("content.menus.Array.data[0].prefix");
                 Assert.IsNotNull(beforePrefix,
-                    "W08: expected FullController prefix field at content.menus.Array.data[0].prefix before Build().");
+                    "expected FullController prefix field at content.menus.Array.data[0].prefix before Build().");
                 Assert.AreEqual(string.Empty, beforePrefix.stringValue,
-                    "W08: setup should start from empty prefix before Build() sync.");
+                    "setup should start from empty prefix before Build() sync.");
 
                 int buildResult = ASMLiteBuilder.Build(component);
                 Assert.GreaterOrEqual(buildResult, 0,
-                    $"W08: Build() should succeed while syncing install prefix. result={buildResult}.");
+                    $"Build() should succeed while syncing install prefix. result={buildResult}.");
 
                 var afterSo = new SerializedObject(vf);
                 afterSo.Update();
                 var afterPrefix = afterSo.FindProperty("content.menus.Array.data[0].prefix");
                 Assert.IsNotNull(afterPrefix,
-                    "W08: expected FullController prefix field at content.menus.Array.data[0].prefix after Build().");
+                    "expected FullController prefix field at content.menus.Array.data[0].prefix after Build().");
                 Assert.AreEqual("Avatars/UploadSync", afterPrefix.stringValue,
-                    "W08: Build() must propagate trimmed custom install path into live FullController menu prefix for preprocess/upload parity.");
+                    "Build() must propagate trimmed custom install path into live FullController menu prefix for preprocess/upload parity.");
             }
             finally
             {
@@ -214,7 +214,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void W09_BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride()
+        public void BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             ASMLite.Editor.ASMLiteWindow window = null;
@@ -229,9 +229,9 @@ namespace ASMLite.Tests.Editor
 
                 var component = ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(component,
-                    "W09: prefab-instance rebuild characterization requires AddPrefabForAutomation() to attach ASM-Lite first.");
+                    "prefab-instance rebuild characterization requires AddPrefabForAutomation() to attach ASM-Lite first.");
                 Assert.IsTrue(PrefabUtility.IsPartOfPrefabInstance(component.gameObject),
-                    "W09: AddPrefabForAutomation() should attach ASM-Lite as a prefab instance before rebuild routing checks.");
+                    "AddPrefabForAutomation() should attach ASM-Lite as a prefab instance before rebuild routing checks.");
 
                 component.useCustomInstallPath = true;
                 component.customInstallPath = "  Tools/PrefabRouting  ";
@@ -240,11 +240,11 @@ namespace ASMLite.Tests.Editor
 
                 var liveVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component.gameObject);
                 Assert.IsNotNull(liveVf,
-                    "W09: prefab-instance rebuild should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
+                    "prefab-instance rebuild should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
-                    "W09: prefab-instance rebuilds must clear direct FullController menu-prefix overrides after routing through the helper object.");
+                    "prefab-instance rebuilds must clear direct FullController menu-prefix overrides after routing through the helper object.");
                 AssertRoutingHelperPaths(ctx.AvDesc, "Settings Manager", "Tools/PrefabRouting/Settings Manager",
-                    "W09: prefab-instance rebuild should route install-path changes through the deterministic avatar helper object.");
+                    "prefab-instance rebuild should route install-path changes through the deterministic avatar helper object.");
             }
             finally
             {
@@ -255,10 +255,10 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void W10_BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess()
+        public void BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess()
         {
             string prefabPath = string.Empty;
-            var prefabSource = new GameObject("W10_RoutingFailureSource");
+            var prefabSource = new GameObject("RoutingFailureSource");
             GameObject prefabInstance = null;
 
             try
@@ -270,14 +270,14 @@ namespace ASMLite.Tests.Editor
                 if (!AssetDatabase.IsValidFolder("Assets/ASMLiteTests_Temp"))
                     AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
 
-                prefabPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLiteTests_Temp/W10_RoutingFailure.prefab");
+                prefabPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLiteTests_Temp/RoutingFailure.prefab");
                 var prefabAsset = PrefabUtility.SaveAsPrefabAsset(prefabSource, prefabPath);
                 Assert.IsNotNull(prefabAsset,
-                    $"W10: expected prefab asset at '{prefabPath}' for prefab-instance routing failure coverage.");
+                    $"expected prefab asset at '{prefabPath}' for prefab-instance routing failure coverage.");
 
                 prefabInstance = PrefabUtility.InstantiatePrefab(prefabAsset) as GameObject;
                 Assert.IsNotNull(prefabInstance,
-                    "W10: expected prefab instantiation to produce a GameObject instance.");
+                    "expected prefab instantiation to produce a GameObject instance.");
 
                 var component = prefabInstance.GetComponent<ASMLiteComponent>();
                 var liveVf = prefabInstance.GetComponent<VF.Model.VRCFury>();
@@ -296,23 +296,23 @@ namespace ASMLite.Tests.Editor
                 };
 
                 Assert.IsNotNull(component,
-                    "W10: expected prefab instance to preserve the ASMLiteComponent.");
+                    "expected prefab instance to preserve the ASMLiteComponent.");
                 Assert.IsNotNull(liveVf,
-                    "W10: expected prefab instance to provide a live VF.Model.VRCFury payload for stale-prefix clearing coverage.");
+                    "expected prefab instance to provide a live VF.Model.VRCFury payload for stale-prefix clearing coverage.");
                 Assert.IsTrue(PrefabUtility.IsPartOfPrefabInstance(component.gameObject),
-                    "W10: regression coverage requires the target component to be part of a prefab instance.");
+                    "regression coverage requires the target component to be part of a prefab instance.");
                 Assert.AreEqual("Stale/Prefix", ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
-                    "W10: setup should start with a stale direct FullController prefix override before sync.");
+                    "setup should start with a stale direct FullController prefix override before sync.");
 
                 var diagnostic = ASMLiteBuilder.TrySyncInstallPathRoutingWithDiagnostics(component);
                 Assert.IsFalse(diagnostic.Success,
-                    "W10: prefab-instance install-path sync must fail closed when a custom install prefix is enabled but MoveMenu routing cannot be created.");
+                    "prefab-instance install-path sync must fail closed when a custom install prefix is enabled but MoveMenu routing cannot be created.");
                 Assert.AreEqual(ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed, diagnostic.Code,
-                    "W10: routing failure should surface the deterministic build diagnostic for install-prefix sync failure.");
+                    "routing failure should surface the deterministic build diagnostic for install-prefix sync failure.");
                 Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
-                    "W10: stale direct FullController prefixes may still be cleared, but clearing alone must not report success when routing failed.");
+                    "stale direct FullController prefixes may still be cleared, but clearing alone must not report success when routing failed.");
                 Assert.IsNull(prefabInstance.transform.Find("ASM-Lite Install Path Routing"),
-                    "W10: sync should not fabricate a routing helper when no avatar descriptor exists to parent it.");
+                    "sync should not fabricate a routing helper when no avatar descriptor exists to parent it.");
             }
             finally
             {

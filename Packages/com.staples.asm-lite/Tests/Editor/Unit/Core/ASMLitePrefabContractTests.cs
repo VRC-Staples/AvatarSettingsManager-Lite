@@ -10,7 +10,7 @@ namespace ASMLite.Tests.Editor
     public class ASMLitePrefabContractTests
     {
         [Test]
-        public void T02_Prefab_UsesGeneratedAssetReferences_ForFullController()
+        public void Prefab_UsesGeneratedAssetReferences_ForFullController()
         {
             var prefabPath = ASMLiteAssetPaths.Prefab;
             var fullPath = Path.GetFullPath(prefabPath);

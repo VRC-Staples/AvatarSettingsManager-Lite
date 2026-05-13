@@ -12,7 +12,7 @@ namespace ASMLite.Tests.Editor
     internal sealed class ASMLiteIconFixtureRegistryTests
     {
         [Test]
-        public void Known_fixture_ids_resolve_to_existing_package_textures()
+        public void KnownFixtureIds_ResolveToExistingPackageTextures()
         {
             foreach (var fixture in ASMLiteIconFixtureRegistry.GetAllFixtures())
             {
@@ -30,7 +30,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Slot_fixture_ids_are_stable_and_ordered()
+        public void SlotFixtureIds_AreStableAndOrdered()
         {
             string[] expectedIds =
             {
@@ -53,7 +53,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Root_and_action_fixture_ids_map_to_canonical_assets()
+        public void RootAndActionFixtureIds_MapToCanonicalAssets()
         {
             Assert.That(ASMLiteIconFixtureRegistry.ResolveAssetPath("asm-lite-icon/root"), Is.EqualTo(ASMLiteAssetPaths.IconPresets));
             Assert.That(ASMLiteIconFixtureRegistry.ResolveAssetPath("asm-lite-icon/action-save"), Is.EqualTo(ASMLiteAssetPaths.IconSave));
@@ -62,7 +62,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Fixture_id_lookup_from_textures_is_deterministic()
+        public void FixtureIdLookupFromTextures_IsDeterministic()
         {
             var slot01 = ASMLiteIconFixtureRegistry.ResolveTexture("asm-lite-icon/slot-01");
             var save = ASMLiteIconFixtureRegistry.ResolveTexture("asm-lite-icon/action-save");
@@ -75,7 +75,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Unknown_fixture_id_fails_readably()
+        public void UnknownFixtureId_FailsReadably()
         {
             var ex = Assert.Throws<ArgumentException>(() => ASMLiteIconFixtureRegistry.ResolveAssetPath("asm-lite-icon/not-real"));
 
@@ -85,7 +85,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Known_fixture_ids_are_unique()
+        public void KnownFixtureIds_AreUnique()
         {
             var seenIds = new HashSet<string>(StringComparer.Ordinal);
             var seenPaths = new HashSet<string>(StringComparer.Ordinal);
