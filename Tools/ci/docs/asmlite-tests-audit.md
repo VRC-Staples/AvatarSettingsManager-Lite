@@ -16,32 +16,32 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 - Ledger mirror policy: keep the current method-level mirror for now, but add a follow-up to generate it from ledger data instead of maintaining it by hand.
 - Shadow-project hygiene policy: treat the old shadow-project invariant as obsolete; no follow-up unless a shadow project returns.
 - Coded-ID policy: after renaming tests, drop old milestone IDs entirely instead of preserving them in method names, comments, assertions, or ledger metadata.
-- `ASMLitePrefabWiringTests.W02...` gap direction: delete or merge the stale-PRMS predicate into prefab wiring integration coverage instead of preserving it as a separate core-headless selector.
+- Prefab wiring stale-PRMS gap direction: delete the standalone stale-PRMS predicate and keep the remaining behavior-proving prefab wiring coverage in the integration headless lane.
 - Suite-source unification timing: after the PlayMode split, make `suites.json` the runner source of truth before broad rename waves.
 - Visible boundary: keep rendered visible/editor smoke tests manual-only, while command-line/result-document harness tests remain headless default-CI coverage.
 
 - Scope: Unity C# NUnit/EditMode and PlayMode tests under `Packages/com.staples.asm-lite/Tests/**/*.cs`.
 - Test assembly definition policy: keep Editor tests in the existing Editor test assembly and keep true runtime PlayMode coverage in `Packages/com.staples.asm-lite/Tests/PlayMode/ASMLite.Tests.PlayMode.asmdef`.
 - Slice 1 moved and renamed AV3 save/load coverage: command-line/config/default diagnostics now live in Editor `RuntimeReview`, while runtime/manual AV3 cases live in `Tests/PlayMode/Runtime`.
-- No tests were deleted or quarantined by this audit pass; the PlayMode split intentionally moved and renamed the AV3 save/load classes/methods with suite selectors and ledger metadata updated in the same slice.
+- No tests were quarantined by this audit pass; the PlayMode split moved and renamed AV3 save/load coverage, and slice 3 deleted the standalone stale-PRMS prefab predicate while keeping prefab wiring behavior coverage in default CI.
 - Default headless CI lanes remain `contract`, `core-headless`, `integration-headless`, `smoke-protocol-headless`, and `smoke-overlay-host-headless`.
 - Visible editor/operator flows stay in `visible-manual`; PlayMode runtime review stays in `playmode-headless-review`; opt-in external AV3 UAT/fuzz cases stay in the separate `manual` lane.
 - Unity exit 133 from native teardown is not a product failure when valid NUnit XML reports zero failed tests and logs contain only the known teardown assertion.
 
 ## Inventory summary
 
-- Total in-scope test methods classified: **505**
+- Total in-scope test methods classified: **504**
 - Total test classes classified: **52**
 - Methods currently recommended for default CI: **480**
-- Methods explicitly manual/review-only or otherwise outside default CI: **25**
-- Headless/default-CI selection gaps called out for follow-up: **1**
+- Methods explicitly manual/review-only or otherwise outside default CI: **24**
+- Headless/default-CI selection gaps called out for follow-up: **0**
 
 ## Headless and manual lane policy
 
 | Lane | Default CI | Headless policy | Methods | Classes | Policy / honesty note |
 |---|---:|---|---:|---:|---|
 | `contract` | yes | yes | 1 | 1 | Pinned prefab/controller generated-reference contract; gates the smallest high-value generated asset reference invariant. |
-| `core-headless` | yes | yes | 232 | 26 | Fast unit and model contracts selected by class filters or explicit Headless category, including Editor-only AV3 runtime-review configuration diagnostics. |
+| `core-headless` | yes | yes | 231 | 25 | Fast unit and model contracts selected by class filters or explicit Headless category, including Editor-only AV3 runtime-review configuration diagnostics. |
 | `integration-headless` | yes | yes | 116 | 14 | Fixture-heavy Unity EditMode integration with per-test package/temp fixture restoration, source-fixture immutability checks, and fixture isolation sentinels for concurrent roots plus generated asset, scene, selection, and open-scene contamination. |
 | `runner-selftest-headless` | no | yes | 12 | 1 | Batch runner self-tests are headless but intentionally excluded from the default runner batch to avoid self-selection. |
 | `smoke-protocol-headless` | yes | yes | 45 | 6 | Protocol, catalog, artifact, and atomic IO contracts for the visible smoke transport. |
@@ -54,7 +54,6 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 
 | Recommendation | Methods | Meaning |
 |---|---:|---|
-| `add-integration-category-or-default-ci-filter` | 1 | Headless integration coverage is viable but current default filters intentionally miss it until a follow-up confirms category/filter policy. |
 | `default-ci` | 480 | Selected by the current canonical default CI suite map or category filters. |
 | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | 12 | Headless runner self-tests are intentionally outside default CI batch invocations. |
 | `manual-playmode-review` | 2 | External AV3 UAT/fuzz replay coverage requires explicit operator/local fixture inputs and remains manual review-only. |
@@ -82,7 +81,7 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | `ASMLiteMenuTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs` | 9 | `integration-headless` (9) | `yes` (9) | `generated-asset-integration-coverage` (9) | Package GeneratedAssets are snapshotted/restored around each method and generated menu fixtures are asserted unchanged after mutation-heavy build cases. | `default-ci` (9) |
 | `ASMLiteRootMenuOverrideTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs` | 9 | `integration-headless` (9) | `yes` (9) | `generated-asset-integration-coverage` (9) | Package GeneratedAssets are snapshotted/restored around each method; root menu/icon override fixtures use isolated generated-asset restoration and read-only source icon assertions. | `default-ci` (9) |
 | `ASMLiteMigrationTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs` | 6 | `integration-headless` (6) | `yes` (6) | `migration-integration-coverage` (6) | Package GeneratedAssets are snapshotted/restored around each method; temp migration avatar assets are deleted after each method; package prefab fixtures are asserted unchanged. | `default-ci` (6) |
-| `ASMLitePrefabWiringTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | 5 | `core-headless` (1), `integration-headless` (4) | `yes` (5) | `headless-prefab-wiring-contract-coverage` (1), `prefab-wiring-integration-coverage` (4) | Default-CI selection gap remains for the explicitly uncategorized drift-probe method; add a category/filter only after follow-up review confirms the desired lane. | `add-integration-category-or-default-ci-filter` (1), `default-ci` (4) |
+| `ASMLitePrefabWiringTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | 4 | `integration-headless` (4) | `yes` (4) | `prefab-wiring-integration-coverage` (4) | Class now carries `Integration` and `Headless` categories; the stale standalone PRMS predicate was deleted and the remaining behavior-proving prefab wiring coverage is selected by default CI. | `default-ci` (4) |
 | `ASMLiteBatchTestRunnerTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs` | 12 | `runner-selftest-headless` (12) | `yes` (12) | `runner-contract-coverage` (12) | Runner self-tests are intentionally excluded from the default batch plan. | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` (12) |
 | `ASMLiteVRCFuryPipelineTests` | `Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs` | 7 | `integration-headless` (7) | `yes` (7) | `vrcfury-pipeline-integration-coverage` (7) | Package GeneratedAssets are snapshotted/restored around each method; temp VRCFury descriptor assets are deleted after each method; package prefab fixtures are asserted unchanged. | `default-ci` (7) |
 | `ASMLiteSmokeOverlayHostTests` | `Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs` | 74 | `smoke-overlay-host-headless` (74) | `yes` (74) | `headless-smoke-host-coverage` (74) | No honesty exception found. | `default-ci` (74) |
@@ -188,7 +187,7 @@ Rules:
 | Current lane/category | Keep? | Proposed arrangement | Notes |
 |---|---:|---|---|
 | `core-headless` / `Headless` | yes | Fast Editor unit/contract tests. Class filters from `suites.json`; source category stays `Headless` only. | Good default CI lane. Remove method ID prefixes for readability. |
-| `integration-headless` / `Headless` + `Integration` | yes | Fixture-heavy Editor integration tests. Keep `Integration` source category; runner selects category. | Good lane. Add missing category/filter for `ASMLitePrefabWiringTests.W02...` only after lane policy decision. |
+| `integration-headless` / `Headless` + `Integration` | yes | Fixture-heavy Editor integration tests. Keep `Integration` source category; runner selects category. | Good lane. Prefab wiring now uses class-level `Integration` and `Headless` categories. |
 | `contract` | yes | Keep tiny pinned contract lane. | Consider renaming method `Prefab_UsesGeneratedAssetReferences_ForFullController` without `T02_`. |
 | `runner-selftest-headless` | yes, non-default | Keep runner self-tests excluded from default batches. | Avoid self-selection. Names mostly okay. |
 | `smoke-protocol-headless` / `Smoke` + `Headless` | yes | Protocol/catalog/transport contracts. Convert snake_case method names to PascalCase display names. | Good lane; naming style only. |
@@ -211,7 +210,7 @@ Rules:
 | `Integration/GeneratedAssets/ASMLiteCleanupTests.cs` | 12 `A##_` names. | `ASMLiteGeneratedAssetCleanupIntegrationTests`; remove IDs. | Rename. |
 | `Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs` | 9 `R080/R081` names. | `ASMLiteRootMenuOverrideIntegrationTests`; remove IDs. | Rename; keep method grouping by root name vs root icon. |
 | `Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs` | 7 `VF##_` names. | `ASMLiteVrcFuryPipelineIntegrationTests`; remove IDs. | Rename. |
-| `Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | `W##_` names; one core-headless anchor inside integration folder. | Delete or merge the stale-PRMS predicate into prefab wiring integration coverage; remove IDs from remaining prefab wiring tests. | Merge/delete `W02`, then rename remaining coverage. |
+| `Integration/PrefabWiring/ASMLitePrefabWiringTests.cs` | Prefab wiring methods carried milestone IDs and one standalone core-headless stale-PRMS anchor. | Stale-PRMS predicate deleted; remaining prefab wiring coverage renamed and selected through the integration headless lane. | Done in slice 3. |
 | `Unit/Core/ASMLiteToggleBrokerTests.cs` | 19 `TB##_` names. | Keep class; remove IDs. If traceability needed, add ledger metadata. | Rename. |
 | `Unit/Core/ASMLiteParameterDiscoveryTests.cs` | 12 `A##_` names in unit lane. | Keep class; remove IDs. | Rename. |
 | `Unit/Core/ASMLiteInstallPathWiringTests.cs` | 8 `W##_` names. | Keep class; remove IDs. | Rename. |
@@ -354,11 +353,10 @@ This table mirrors the classified ledger fields so the markdown artifact is revi
 | `ASMLiteMigrationTests` | `A45_Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove` | `integration-headless` | `yes` | `migration-integration-coverage` | `default-ci` | snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test / Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs:230` |
 | `ASMLiteMigrationTests` | `A55_RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts` | `integration-headless` | `yes` | `migration-integration-coverage` | `default-ci` | snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test / Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs:266` |
 | `ASMLiteMigrationTests` | `A56_DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup` | `integration-headless` | `yes` | `migration-integration-coverage` | `default-ci` | snapshots-and-restores-package-generated-assets-and-deletes-temp-migration-fixtures-per-test / Unity AssetDatabase fixture assets with package GeneratedAssets restore, temp avatar asset cleanup, and read-only prefab fixture assertions | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Migration/ASMLiteMigrationTests.cs:373` |
-| `ASMLitePrefabWiringTests` | `W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:40` |
-| `ASMLitePrefabWiringTests` | `W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `add-integration-category-or-default-ci-filter` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:94` |
-| `ASMLitePrefabWiringTests` | `W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:146` |
-| `ASMLitePrefabWiringTests` | `W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:166` |
-| `ASMLitePrefabWiringTests` | `W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames` | `core-headless` | `yes` | `headless-prefab-wiring-contract-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:210` |
+| `ASMLitePrefabWiringTests` | `PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:96` |
+| `ASMLitePrefabWiringTests` | `PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:168` |
+| `ASMLitePrefabWiringTests` | `PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:148` |
+| `ASMLitePrefabWiringTests` | `PrefabWiring_UsesGeneratedAssetReferences_ForFullController` | `integration-headless` | `yes` | `prefab-wiring-integration-coverage` | `default-ci` | reads-package-prefab-and-generated-reference-fixtures / Unity AssetDatabase prefab references | `Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs:42` |
 | `ASMLiteBatchTestRunnerTests` | `NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors` | `runner-selftest-headless` | `yes` | `runner-contract-coverage` | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | temporary-runner-results-and-session-state / filesystem-temp-runner-artifacts | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs:28` |
 | `ASMLiteBatchTestRunnerTests` | `NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection` | `runner-selftest-headless` | `yes` | `runner-contract-coverage` | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | temporary-runner-results-and-session-state / filesystem-temp-runner-artifacts | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs:57` |
 | `ASMLiteBatchTestRunnerTests` | `BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter` | `runner-selftest-headless` | `yes` | `runner-contract-coverage` | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | temporary-runner-results-and-session-state / filesystem-temp-runner-artifacts | `Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs:68` |

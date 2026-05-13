@@ -28,7 +28,7 @@
     },
     {
       "id": "core-headless",
-      "description": "Fast headless EditMode unit/contract fixtures plus the stale PRMS wiring anchor already covered by the canonical batch plan.",
+      "description": "Fast headless EditMode unit/contract fixtures covered by canonical class filters.",
       "defaultCi": true,
       "headless": "yes",
       "batchRun": {
@@ -62,11 +62,6 @@
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowRiskAffordanceTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowStatusPanelTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowTerminologyTests(?:\\.|$)"
-            ]
-          },
-          {
-            "testNames": [
-              "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames"
             ]
           }
         ]

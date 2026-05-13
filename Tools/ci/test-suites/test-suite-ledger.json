@@ -3158,122 +3158,45 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
-      "method": "W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
-      "line": 40,
+      "method": "PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
+      "line": 96,
       "attributes": [
         "TestFixture",
-        "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")",
-        "Category(\"Headless\")"
-      ],
-      "categories": [
-        "Integration",
-        "Headless"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "prefab-wiring-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Prefab Wiring Uses Generated Asset References For Full Controller",
-      "fixtureDependencies": [
-        "package prefab wiring fixture"
-      ],
-      "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
-      "runnerFilter": "ASMLitePrefabWiringTests.W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
-      "class": "ASMLitePrefabWiringTests",
-      "method": "W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
-      "line": 210,
-      "attributes": [
-        "TestFixture",
-        "Test",
-        "Category(\"Headless\")"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "headless-prefab-wiring-contract-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Has Stale Prms Entry Detects Legacy Prms Names And Ignores Other Names",
-      "fixtureDependencies": [
-        "package prefab wiring fixture"
-      ],
-      "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
-      "runnerFilter": "ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
-      "class": "ASMLitePrefabWiringTests",
-      "method": "W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
-      "line": 94,
-      "attributes": [
-        "TestFixture",
         "Test"
       ],
-      "categories": [],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
       "lane": "integration-headless",
       "headlessViability": "yes",
       "honesty": "prefab-wiring-integration-coverage",
-      "recommendation": "add-integration-category-or-default-ci-filter",
+      "recommendation": "default-ci",
       "publicBehaviorClaim": "Prefab Wiring Missing Parameter Fallback Group Returns Drift202",
       "fixtureDependencies": [
         "package prefab wiring fixture"
       ],
       "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
-      "runnerFilter": "ASMLitePrefabWiringTests.W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
-      "notes": "Viable drift-probe coverage, but intentionally not selected by default CI in this pass; add an explicit category/filter only after follow-up review confirms the desired lane."
+      "runnerFilter": "ASMLitePrefabWiringTests.PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202",
+      "notes": "Class uses Integration and Headless categories; stale standalone PRMS predicate was removed during slice 3, leaving behavior-proving prefab wiring coverage in default CI."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
       "class": "ASMLitePrefabWiringTests",
-      "method": "W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent",
-      "line": 146,
+      "method": "PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable",
+      "line": 168,
       "attributes": [
         "TestFixture",
-        "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")",
-        "Category(\"Headless\")"
+        "Test"
       ],
       "categories": [
-        "Integration",
-        "Headless"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "prefab-wiring-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Prefab Wiring Second Refresh Is No Op With Single Vrc Fury Component",
-      "fixtureDependencies": [
-        "package prefab wiring fixture"
-      ],
-      "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
-      "runnerFilter": "ASMLitePrefabWiringTests.W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
-      "class": "ASMLitePrefabWiringTests",
-      "method": "W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable",
-      "line": 166,
-      "attributes": [
-        "TestFixture",
-        "Test",
-        "Category(\"Integration\")",
-        "Category(\"Headless\")"
-      ],
-      "categories": [
-        "Integration",
-        "Headless"
+        "Headless",
+        "Integration"
       ],
       "lane": "integration-headless",
       "headlessViability": "yes",
@@ -3285,8 +3208,64 @@
       ],
       "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
-      "runnerFilter": "ASMLitePrefabWiringTests.W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable",
-      "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+      "runnerFilter": "ASMLitePrefabWiringTests.PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable",
+      "notes": "Class uses Integration and Headless categories; stale standalone PRMS predicate was removed during slice 3, leaving behavior-proving prefab wiring coverage in default CI."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
+      "class": "ASMLitePrefabWiringTests",
+      "method": "PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent",
+      "line": 148,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "prefab-wiring-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Prefab Wiring Second Refresh Is No Op With Single Vrc Fury Component",
+      "fixtureDependencies": [
+        "package prefab wiring fixture"
+      ],
+      "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
+      "runnerFilter": "ASMLitePrefabWiringTests.PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent",
+      "notes": "Class uses Integration and Headless categories; stale standalone PRMS predicate was removed during slice 3, leaving behavior-proving prefab wiring coverage in default CI."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/PrefabWiring/ASMLitePrefabWiringTests.cs",
+      "class": "ASMLitePrefabWiringTests",
+      "method": "PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
+      "line": 42,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "prefab-wiring-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Prefab Wiring Uses Generated Asset References For Full Controller",
+      "fixtureDependencies": [
+        "package prefab wiring fixture"
+      ],
+      "assetSceneMutations": "reads-package-prefab-and-generated-reference-fixtures",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase prefab references",
+      "runnerFilter": "ASMLitePrefabWiringTests.PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
+      "notes": "Class uses Integration and Headless categories; stale standalone PRMS predicate was removed during slice 3, leaving behavior-proving prefab wiring coverage in default CI."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",

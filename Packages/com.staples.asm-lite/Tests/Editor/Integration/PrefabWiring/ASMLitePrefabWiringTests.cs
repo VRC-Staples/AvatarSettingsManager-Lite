@@ -32,14 +32,16 @@ namespace VF.Model.Feature
 namespace ASMLite.Tests.Editor
 {
     [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
     public class ASMLitePrefabWiringTests
     {
         private const string SuiteName = nameof(ASMLitePrefabWiringTests);
 
-        [Test, Category("Integration"), Category("Headless")]
-        public void W01_PrefabWiring_UsesGeneratedAssetReferences_ForFullController()
+        [Test]
+        public void PrefabWiring_UsesGeneratedAssetReferences_ForFullController()
         {
-            var go = new GameObject("W01_WiringRoot");
+            var go = new GameObject("PrefabWiringRoot");
             try
             {
                 var component = go.AddComponent<ASMLiteComponent>();
@@ -91,9 +93,9 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202()
+        public void PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202()
         {
-            var go = new GameObject("W03_MissingParameterFallback");
+            var go = new GameObject("MissingParameterFallback");
             try
             {
                 var component = go.AddComponent<ASMLiteComponent>();
@@ -110,9 +112,9 @@ namespace ASMLite.Tests.Editor
                 var menu = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.Menu);
                 var parameters = AssetDatabase.LoadAssetAtPath<Object>(ASMLiteAssetPaths.ExprParams);
 
-                Assert.IsNotNull(fxController, "W03: generated FX controller asset should exist for drift probe coverage.");
-                Assert.IsNotNull(menu, "W03: generated menu asset should exist for drift probe coverage.");
-                Assert.IsNotNull(parameters, "W03: generated expression-parameters asset should exist for drift probe coverage.");
+                Assert.IsNotNull(fxController, "Generated FX controller asset should exist for drift probe coverage.");
+                Assert.IsNotNull(menu, "Generated menu asset should exist for drift probe coverage.");
+                Assert.IsNotNull(parameters, "Generated expression-parameters asset should exist for drift probe coverage.");
 
                 var serializedVf = new SerializedObject(vf);
                 serializedVf.Update();
@@ -126,15 +128,15 @@ namespace ASMLite.Tests.Editor
 
                 ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
                     SuiteName,
-                    nameof(W03_PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202),
+                    nameof(PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202),
                     diagnostic);
 
                 Assert.IsFalse(diagnostic.Success,
-                    "W03: missing all parameter object-reference fallback fields must fail closed before FullController writes.");
+                    "Missing all parameter object-reference fallback fields must fail closed before FullController writes.");
                 Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingParameterFallbackGroup, diagnostic.Code,
-                    "W03: missing parameter fallback group must emit deterministic DRIFT-202.");
+                    "Missing parameter fallback group must emit deterministic DRIFT-202.");
                 Assert.AreEqual(ASMLiteDriftProbe.ParameterFallbackGroupKey, diagnostic.ContextPath,
-                    "W03: DRIFT-202 diagnostics must identify the parameter fallback group key.");
+                    "DRIFT-202 diagnostics must identify the parameter fallback group key.");
             }
             finally
             {
@@ -142,19 +144,19 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration"), Category("Headless")]
-        public void W04_PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent()
+        [Test]
+        public void PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 First Refresh"),
-                    "W04: first live FullController refresh should succeed for a healthy ASM-Lite object.");
-                AssertSingleCriticalWiringState(ctx.Comp, "W04 first refresh");
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "First Refresh"),
+                    "First live FullController refresh should succeed for a healthy ASM-Lite object.");
+                AssertSingleCriticalWiringState(ctx.Comp, "first refresh");
 
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W04 Second Refresh"),
-                    "W04: second live FullController refresh should succeed as a no-op on unchanged input.");
-                AssertSingleCriticalWiringState(ctx.Comp, "W04 second refresh");
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Second Refresh"),
+                    "Second live FullController refresh should succeed as a no-op on unchanged input.");
+                AssertSingleCriticalWiringState(ctx.Comp, "second refresh");
             }
             finally
             {
@@ -162,78 +164,47 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration"), Category("Headless")]
-        public void W05_PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable()
+        [Test]
+        public void PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 First Refresh"),
-                    "W05: first live FullController refresh should succeed for repeated-refresh characterization.");
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Repeated Refresh First Pass"),
+                    "First live FullController refresh should succeed for repeated-refresh characterization.");
 
                 var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
                 var firstVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
                 Assert.IsNotNull(firstVf,
-                    "W05: first refresh should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
+                    "First refresh should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
                 var firstGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(firstVf, "content.globalParams");
 
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "W05 Second Refresh"),
-                    "W05: second live FullController refresh should succeed for repeated-refresh characterization.");
+                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Repeated Refresh Second Pass"),
+                    "Second live FullController refresh should succeed for repeated-refresh characterization.");
 
                 var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
                 var secondVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
                 Assert.IsNotNull(secondVf,
-                    "W05: second refresh should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
+                    "Second refresh should keep a live VF.Model.VRCFury component on the ASM-Lite object.");
                 var secondGlobalParams = ASMLiteTestFixtures.ReadSerializedStringArray(secondVf, "content.globalParams");
 
-                AssertSingleCriticalWiringState(ctx.Comp, "W05 second refresh");
+                AssertSingleCriticalWiringState(ctx.Comp, "repeated refresh second pass");
                 Assert.AreEqual(firstSnapshot.ControllerReferencePath, secondSnapshot.ControllerReferencePath,
-                    "W05: repeated refresh should keep the generated FX controller reference stable.");
+                    "Repeated refresh should keep the generated FX controller reference stable.");
                 Assert.AreEqual(firstSnapshot.MenuReferencePath, secondSnapshot.MenuReferencePath,
-                    "W05: repeated refresh should keep the generated menu reference stable.");
+                    "Repeated refresh should keep the generated menu reference stable.");
                 Assert.AreEqual(firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
-                    "W05: repeated refresh should keep the selected parameter fallback path stable.");
+                    "Repeated refresh should keep the selected parameter fallback path stable.");
                 Assert.AreEqual(firstSnapshot.ParameterReferenceAssetPath, secondSnapshot.ParameterReferenceAssetPath,
-                    "W05: repeated refresh should keep the generated expression-parameters reference stable.");
+                    "Repeated refresh should keep the generated expression-parameters reference stable.");
                 CollectionAssert.AreEqual(firstGlobalParams, secondGlobalParams,
-                    "W05: repeated refresh should keep wildcard global parameter enrollment stable.");
+                    "Repeated refresh should keep wildcard global parameter enrollment stable.");
                 CollectionAssert.AreEqual(new[] { "*" }, secondGlobalParams,
-                    "W05: repeated refresh should keep exactly one wildcard global parameter enrollment entry.");
+                    "Repeated refresh should keep exactly one wildcard global parameter enrollment entry.");
             }
             finally
             {
                 ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
-        [Test, Category("Headless")]
-        public void W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames()
-        {
-            var root = new GameObject("Root");
-            try
-            {
-                Assert.IsFalse(ASMLitePrefabCreator.HasStalePrmsEntry(root),
-                    "No stale entry should be detected when there are no child transforms.");
-
-                var neutral = new GameObject("NotPrms");
-                neutral.transform.SetParent(root.transform);
-                Assert.IsFalse(ASMLitePrefabCreator.HasStalePrmsEntry(root),
-                    "Neutral child names should not trigger stale prms detection.");
-
-                var lowerCasePrms = new GameObject("prms");
-                lowerCasePrms.transform.SetParent(root.transform);
-                Assert.IsTrue(ASMLitePrefabCreator.HasStalePrmsEntry(root),
-                    "Lowercase 'prms' child must trigger stale entry detection.");
-
-                Object.DestroyImmediate(lowerCasePrms);
-                var prefixedPrms = new GameObject("ASMLite_prms");
-                prefixedPrms.transform.SetParent(root.transform);
-                Assert.IsTrue(ASMLitePrefabCreator.HasStalePrmsEntry(root),
-                    "Prefixed 'ASMLite_prms' child must trigger stale entry detection.");
-            }
-            finally
-            {
-                Object.DestroyImmediate(root);
             }
         }
 

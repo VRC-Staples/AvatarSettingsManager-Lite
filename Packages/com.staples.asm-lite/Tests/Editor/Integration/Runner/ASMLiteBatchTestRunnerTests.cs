@@ -38,7 +38,7 @@ namespace ASMLite.Tests.Editor
                         groupNames = new[] { "  ^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)  " }
                     }
                 },
-                testNames = new[] { "  ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames  " },
+                testNames = new[] { "  ASMLite.Tests.Editor.ASMLitePrefabWiringTests.PrefabWiring_UsesGeneratedAssetReferences_ForFullController  " },
             };
 
             var normalized = ASMLiteBatchTestRunner.NormalizeRun(run, 0);
@@ -49,7 +49,7 @@ namespace ASMLite.Tests.Editor
                 "Legacy selector fields should be appended as an extra OR filter when explicit filters are present.");
             Assert.AreEqual("^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)", normalized.filters[0].groupNames[0]);
             Assert.AreEqual(
-                "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.W02_HasStalePrmsEntry_DetectsLegacyPrmsNames_AndIgnoresOtherNames",
+                "ASMLite.Tests.Editor.ASMLitePrefabWiringTests.PrefabWiring_UsesGeneratedAssetReferences_ForFullController",
                 normalized.filters[1].testNames[0]);
         }
 
