@@ -9,7 +9,7 @@ using System.Linq;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A19-A25: Generated expression-parameter schema invariants.
+    /// ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset-LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved: Generated expression-parameter schema invariants.
     /// Integration category: each test calls Build() and inspects the managed
     /// generated stub asset (ASMLiteAssetPaths.ExprParams), which is the current
     /// delivery source for VRCFury FullController wiring.
@@ -17,9 +17,9 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteExpressionParamsTests
+    public class ASMLiteExpressionParameterGenerationIntegrationTests
     {
-        private const string SuiteName = nameof(ASMLiteExpressionParamsTests);
+        private const string SuiteName = nameof(ASMLiteExpressionParameterGenerationIntegrationTests);
         private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
@@ -117,10 +117,8 @@ namespace ASMLite.Tests.Editor
             return driver;
         }
 
-        // ── A19 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A19_ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset()
+        public void ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset()
         {
             _ctx.Comp.slotCount = 1;
             ASMLiteBuilder.Build(_ctx.Comp);
@@ -140,10 +138,8 @@ namespace ASMLite.Tests.Editor
                 "ASMLite_Ctrl must have networkSynced=false.");
         }
 
-        // ── A20 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A20_BackupParams_HaveLocalOnlyFlags_InGeneratedAsset()
+        public void BackupParams_HaveLocalOnlyFlags_InGeneratedAsset()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float, 0.75f);
@@ -163,10 +159,8 @@ namespace ASMLite.Tests.Editor
                 "Backup params must have networkSynced=false (zero synced budget impact).");
         }
 
-        // ── A21 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A21_LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset()
+        public void LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset()
         {
             // Build with 2 slots + 1 avatar param so ASMLite_Bak_S2_X is written.
             _ctx.Comp.slotCount = 2;
@@ -186,10 +180,8 @@ namespace ASMLite.Tests.Editor
             Assert.IsFalse(legacyBak.networkSynced, "Preserved legacy backups must remain networkSynced=false.");
         }
 
-        // ── A22 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A22_GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild()
+        public void GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
@@ -210,10 +202,8 @@ namespace ASMLite.Tests.Editor
                 $"No ASMLite_ entry should be duplicated in generated params after two consecutive Build() calls. Found: {string.Join(", ", duplicates)}");
         }
 
-        // ── A23 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A23_GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls()
+        public void GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "Param", VRCExpressionParameters.ValueType.Int, 4f);
@@ -245,10 +235,8 @@ namespace ASMLite.Tests.Editor
                 "Legacy SafeBool-style control params (ASMLite_S*) must not be emitted in generated expression params.");
         }
 
-        // ── A24 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A24_StaleGeneratedCtrlShape_IsNormalizedOnBuild()
+        public void StaleGeneratedCtrlShape_IsNormalizedOnBuild()
         {
             var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(stubAsset, "Generated VRCExpressionParameters asset must exist for stale-shape setup.");
@@ -291,10 +279,8 @@ namespace ASMLite.Tests.Editor
             Assert.IsFalse(ctrl.networkSynced, "Normalized ASMLite_Ctrl must set networkSynced=false.");
         }
 
-        // ── A25 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A25_LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved()
+        public void LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved()
         {
             var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(stubAsset, "Generated VRCExpressionParameters asset must exist for legacy setup.");
@@ -328,7 +314,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A26_MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset()
+        public void MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset()
         {
             const string legacySource = "VF777_Menu/Hat";
             const string legacyBackup = "ASMLite_Bak_S1_VF777_Menu/Hat";
@@ -414,7 +400,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A27_LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths()
+        public void LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths()
         {
             const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
             const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
@@ -451,7 +437,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A27B_LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState()
+        public void LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState()
         {
             const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
             const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
@@ -486,7 +472,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset()
+        public void ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "KeepA", VRCExpressionParameters.ValueType.Int, 3f);
@@ -494,32 +480,32 @@ namespace ASMLite.Tests.Editor
 
             _ctx.Comp.useParameterExclusions = false;
             int baselineBuild = ASMLiteBuilder.Build(_ctx.Comp);
-            Assert.AreEqual(2, baselineBuild, "A28: baseline build should discover both params before exclusions are enabled.");
+            Assert.AreEqual(2, baselineBuild, "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: baseline build should discover both params before exclusions are enabled.");
 
             var baselineGenerated = LoadGeneratedParams();
             Assert.IsTrue(baselineGenerated.Any(p => p.name == "ASMLite_Bak_S1_DropB"),
-                "A28: baseline build must include backup key for DropB before exclusions are enabled.");
+                "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: baseline build must include backup key for DropB before exclusions are enabled.");
             Assert.IsTrue(baselineGenerated.Any(p => p.name == "ASMLite_Bak_S2_DropB"),
-                "A28: baseline build must include backup key for DropB before exclusions are enabled.");
+                "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: baseline build must include backup key for DropB before exclusions are enabled.");
 
             _ctx.Comp.useParameterExclusions = true;
             _ctx.Comp.excludedParameterNames = new[] { "DropB", "DropB", " GhostMissing " };
 
             int excludedBuild = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(1, excludedBuild,
-                "A28: exclusion-enabled build should return only non-excluded discovered params.");
+                "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: exclusion-enabled build should return only non-excluded discovered params.");
 
             var generated = LoadGeneratedParams();
             var names = generated.Select(p => p.name).ToHashSet();
 
-            Assert.IsTrue(names.Contains("ASMLite_Ctrl"), "A28: control key must remain present in generated expression params.");
-            Assert.IsTrue(names.Contains("ASMLite_Bak_S1_KeepA"), "A28: non-excluded backup key should remain generated.");
-            Assert.IsTrue(names.Contains("ASMLite_Bak_S2_KeepA"), "A28: non-excluded backup key should remain generated.");
+            Assert.IsTrue(names.Contains("ASMLite_Ctrl"), "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: control key must remain present in generated expression params.");
+            Assert.IsTrue(names.Contains("ASMLite_Bak_S1_KeepA"), "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: non-excluded backup key should remain generated.");
+            Assert.IsTrue(names.Contains("ASMLite_Bak_S2_KeepA"), "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: non-excluded backup key should remain generated.");
 
             Assert.IsFalse(names.Contains("ASMLite_Bak_S1_DropB"),
-                "A28: excluded backup key must be removed from generated expression params after exclusions are enabled.");
+                "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: excluded backup key must be removed from generated expression params after exclusions are enabled.");
             Assert.IsFalse(names.Contains("ASMLite_Bak_S2_DropB"),
-                "A28: excluded backup key must be removed from generated expression params after exclusions are enabled.");
+                "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset: excluded backup key must be removed from generated expression params after exclusions are enabled.");
         }
     }
 }

@@ -12,14 +12,14 @@ using System.Linq;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A35-A41: Cleanup integration invariants for Remove Prefab flow.
+    /// Cleanup_RemovesASMLiteFxlayers-Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: Cleanup integration invariants for Remove Prefab flow.
     /// These tests seed avatar assets via Build(), then verify CleanUpAvatarAssets()
     /// removes only ASM-Lite generated content while preserving user-owned artifacts.
     /// </summary>
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteCleanupTests
+    public class ASMLiteGeneratedAssetCleanupIntegrationTests
     {
         private AsmLiteTestContext _ctx;
         private readonly List<string> _ownedVendorizedAvatarFolders = new List<string>();
@@ -34,10 +34,10 @@ namespace ASMLite.Tests.Editor
             _packageGeneratedAssetsSnapshot = PackageGeneratedAssetsSnapshot.Capture(ASMLiteAssetPaths.GeneratedDir);
 
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "A35: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "A35: fixture did not create ASMLiteComponent.");
-            Assert.IsNotNull(_ctx.AvDesc, "A35: fixture did not create VRCAvatarDescriptor.");
-            Assert.IsNotNull(_ctx.Ctrl, "A35: fixture did not create FX AnimatorController.");
+            Assert.IsNotNull(_ctx, "Cleanup_RemovesASMLiteFxlayers: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "Cleanup_RemovesASMLiteFxlayers: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx.AvDesc, "Cleanup_RemovesASMLiteFxlayers: fixture did not create VRCAvatarDescriptor.");
+            Assert.IsNotNull(_ctx.Ctrl, "Cleanup_RemovesASMLiteFxlayers: fixture did not create FX AnimatorController.");
         }
 
         [TearDown]
@@ -370,10 +370,8 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A35 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A35_Cleanup_RemovesASMLiteFxlayers()
+        public void Cleanup_RemovesASMLiteFxlayers()
         {
             _ctx.Comp.slotCount = 2;
             AddAvatarParam(_ctx, "MyInt", VRCExpressionParameters.ValueType.Int);
@@ -381,19 +379,17 @@ namespace ASMLite.Tests.Editor
 
             int before = CountASMLiteLayers(_ctx.Ctrl);
             Assert.Greater(before, 0,
-                $"A35: setup failure, expected seeded ASMLite_ FX layers before cleanup. before={before}.");
+                $"Cleanup_RemovesASMLiteFxlayers: setup failure, expected seeded ASMLite_ FX layers before cleanup. before={before}.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
             int after = CountASMLiteLayers(_ctx.Ctrl);
             Assert.AreEqual(0, after,
-                $"A35: cleanup must remove all ASMLite_ FX layers. before={before}, after={after}.");
+                $"Cleanup_RemovesASMLiteFxlayers: cleanup must remove all ASMLite_ FX layers. before={before}, after={after}.");
         }
 
-        // ── A36 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam()
+        public void Cleanup_RemovesASMLiteFxParametersAndCtrlParam()
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float);
@@ -401,19 +397,17 @@ namespace ASMLite.Tests.Editor
 
             int before = CountASMLiteFxParams(_ctx.Ctrl);
             Assert.Greater(before, 0,
-                $"A36: setup failure, expected seeded ASMLite_ FX params before cleanup. before={before}.");
+                $"Cleanup_RemovesASMLiteFxParametersAndCtrlParam: setup failure, expected seeded ASMLite_ FX params before cleanup. before={before}.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
             int after = CountASMLiteFxParams(_ctx.Ctrl);
             Assert.AreEqual(0, after,
-                $"A36: cleanup must remove ASMLite_ FX params and ASMLite_Ctrl. before={before}, after={after}.");
+                $"Cleanup_RemovesASMLiteFxParametersAndCtrlParam: cleanup must remove ASMLite_ FX params and ASMLite_Ctrl. before={before}, after={after}.");
         }
 
-        // ── A37 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam()
+        public void Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam()
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyBool", VRCExpressionParameters.ValueType.Bool, 1f);
@@ -421,19 +415,17 @@ namespace ASMLite.Tests.Editor
 
             int before = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
             Assert.Greater(before, 0,
-                $"A37: setup failure, expected seeded ASMLite_ expression params before cleanup. before={before}.");
+                $"Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam: setup failure, expected seeded ASMLite_ expression params before cleanup. before={before}.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
             int after = CountASMLiteExprParams(_ctx.AvDesc.expressionParameters);
             Assert.AreEqual(0, after,
-                $"A37: cleanup must remove ASMLite_ expression params and ASMLite_Ctrl. before={before}, after={after}.");
+                $"Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam: cleanup must remove ASMLite_ expression params and ASMLite_Ctrl. before={before}, after={after}.");
         }
 
-        // ── A38 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A38_Cleanup_RemovesSettingsManagerRootControl()
+        public void Cleanup_RemovesSettingsManagerRootControl()
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
@@ -441,17 +433,17 @@ namespace ASMLite.Tests.Editor
 
             int before = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
             Assert.Greater(before, 0,
-                $"A38: setup failure, expected Settings Manager control before cleanup. before={before}.");
+                $"Cleanup_RemovesSettingsManagerRootControl: setup failure, expected Settings Manager control before cleanup. before={before}.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
             int after = CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu);
             Assert.AreEqual(0, after,
-                $"A38: cleanup must remove Settings Manager root control. before={before}, after={after}.");
+                $"Cleanup_RemovesSettingsManagerRootControl: cleanup must remove Settings Manager root control. before={before}, after={after}.");
         }
 
         [Test, Category("Integration")]
-        public void A38b_Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference()
+        public void Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference()
         {
             _ctx.Comp.slotCount = 1;
             _ctx.Comp.useCustomRootName = true;
@@ -460,13 +452,13 @@ namespace ASMLite.Tests.Editor
 
             bool detached = ASMLiteBuilder.TryDetachToDirectDelivery(_ctx.Comp, out string detail);
             Assert.IsTrue(detached,
-                $"A38b: detach setup failed. detail={detail}");
+                $"Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference: detach setup failed. detail={detail}");
 
             int customizedRootCountBefore = _ctx.AvDesc.expressionsMenu.controls.Count(c => c != null
                 && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
                 && c.name == "My Custom Presets");
             Assert.Greater(customizedRootCountBefore, 0,
-                $"A38b: setup failure, expected customized detached root control before cleanup. count={customizedRootCountBefore}.");
+                $"Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference: setup failure, expected customized detached root control before cleanup. count={customizedRootCountBefore}.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
@@ -474,17 +466,15 @@ namespace ASMLite.Tests.Editor
                 && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu
                 && c.name == "My Custom Presets");
             Assert.AreEqual(0, customizedRootCountAfter,
-                $"A38b: cleanup must remove customized detached root control. before={customizedRootCountBefore}, after={customizedRootCountAfter}.");
+                $"Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference: cleanup must remove customized detached root control. before={customizedRootCountBefore}, after={customizedRootCountAfter}.");
         }
 
-        // ── A39 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A39_Cleanup_PreservesUserOwnedFxParamsAndMenuEntries()
+        public void Cleanup_PreservesUserOwnedFxParamsAndMenuEntries()
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "SeedParam", VRCExpressionParameters.ValueType.Float, 0.25f);
-            BuildOrFail(_ctx, "A39");
+            BuildOrFail(_ctx, "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries");
 
             // Seed user-owned FX layer and parameter (non-ASMLite namespace)
             _ctx.Ctrl.AddLayer(new AnimatorControllerLayer
@@ -523,41 +513,37 @@ namespace ASMLite.Tests.Editor
 
             // Preconditions must be explicit to avoid vacuous pass
             Assert.IsTrue(_ctx.Ctrl.layers.Any(l => l.name == "User_CustomLayer"),
-                "A39: setup failure, user FX layer missing before cleanup.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: setup failure, user FX layer missing before cleanup.");
             Assert.IsTrue(_ctx.Ctrl.parameters.Any(p => p.name == "User_CustomParam"),
-                "A39: setup failure, user FX param missing before cleanup.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: setup failure, user FX param missing before cleanup.");
             Assert.IsTrue(_ctx.AvDesc.expressionParameters.parameters.Any(p => p != null && p.name == "UserExprParam"),
-                "A39: setup failure, user expression param missing before cleanup.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: setup failure, user expression param missing before cleanup.");
             Assert.IsTrue(_ctx.AvDesc.expressionsMenu.controls.Any(c => c != null && c.name == "User Control"),
-                "A39: setup failure, user menu control missing before cleanup.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: setup failure, user menu control missing before cleanup.");
 
             ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc);
 
             Assert.IsTrue(_ctx.Ctrl.layers.Any(l => l.name == "User_CustomLayer"),
-                "A39: cleanup removed user FX layer unexpectedly.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: cleanup removed user FX layer unexpectedly.");
             Assert.IsTrue(_ctx.Ctrl.parameters.Any(p => p.name == "User_CustomParam"),
-                "A39: cleanup removed user FX param unexpectedly.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: cleanup removed user FX param unexpectedly.");
             Assert.IsTrue(_ctx.AvDesc.expressionParameters.parameters.Any(p => p != null && p.name == "UserExprParam"),
-                "A39: cleanup removed user expression param unexpectedly.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: cleanup removed user expression param unexpectedly.");
             Assert.IsTrue(_ctx.AvDesc.expressionsMenu.controls.Any(c => c != null && c.name == "User Control"),
-                "A39: cleanup removed user menu control unexpectedly.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: cleanup removed user menu control unexpectedly.");
             Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
-                "A39: cleanup must still remove Settings Manager while preserving user controls.");
+                "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries: cleanup must still remove Settings Manager while preserving user controls.");
         }
 
-        // ── A40 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A40_Cleanup_NullAvatarDescriptor_DoesNotThrow()
+        public void Cleanup_NullAvatarDescriptor_DoesNotThrow()
         {
             Assert.DoesNotThrow(() => ASMLiteBuilder.CleanUpAvatarAssets(null),
-                "A40: cleanup must no-op when avatar descriptor is null.");
+                "Cleanup_NullAvatarDescriptor_DoesNotThrow: cleanup must no-op when avatar descriptor is null.");
         }
 
-        // ── A41 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A41_Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams()
+        public void Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams()
         {
             _ctx.Comp.slotCount = 1;
             AddAvatarParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
@@ -565,13 +551,13 @@ namespace ASMLite.Tests.Editor
             SeedLegacyAsmLiteMenu(_ctx);
 
             Assert.Greater(CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), 0,
-                "A41: setup failure, expected ASMLite expression params before cleanup.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: setup failure, expected ASMLite expression params before cleanup.");
             Assert.Greater(CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu), 0,
-                "A41: setup failure, expected Settings Manager before cleanup.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: setup failure, expected Settings Manager before cleanup.");
 
             int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(fxIndex, 0,
-                "A41: setup failure, FX layer not found in avatar descriptor.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: setup failure, FX layer not found in avatar descriptor.");
 
             // Scenario 1: null controller
             var nullCtrlLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
@@ -580,17 +566,17 @@ namespace ASMLite.Tests.Editor
             _ctx.AvDesc.baseAnimationLayers[fxIndex] = nullCtrlLayer;
 
             Assert.DoesNotThrow(() => ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc),
-                "A41: cleanup must not throw when FX controller is null.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup must not throw when FX controller is null.");
             Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters),
-                "A41: cleanup should still remove ASMLite expression params when FX controller is null.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup should still remove ASMLite expression params when FX controller is null.");
             Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
-                "A41: cleanup should still remove Settings Manager when FX controller is null.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup should still remove Settings Manager when FX controller is null.");
 
             // Re-seed for scenario 2: default FX layer flag with null controller
             SeedLegacyAsmLiteExprParams(_ctx, "MyParam");
             SeedLegacyAsmLiteMenu(_ctx);
             Assert.Greater(CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), 0,
-                "A41: re-seed failure, expected ASMLite expression params before default-FX cleanup.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: re-seed failure, expected ASMLite expression params before default-FX cleanup.");
 
             var defaultLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
             defaultLayer.isDefault = true;
@@ -598,70 +584,66 @@ namespace ASMLite.Tests.Editor
             _ctx.AvDesc.baseAnimationLayers[fxIndex] = defaultLayer;
 
             Assert.DoesNotThrow(() => ASMLiteBuilder.CleanUpAvatarAssets(_ctx.AvDesc),
-                "A41: cleanup must not throw when FX layer is default/unassigned.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup must not throw when FX layer is default/unassigned.");
             Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters),
-                "A41: cleanup should still remove ASMLite expression params when FX layer is default/unassigned.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup should still remove ASMLite expression params when FX layer is default/unassigned.");
             Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
-                "A41: cleanup should still remove Settings Manager when FX layer is default/unassigned.");
+                "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams: cleanup should still remove Settings Manager when FX layer is default/unassigned.");
         }
 
-        // ── A54 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps()
+        public void Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps()
         {
             _ctx.Comp.slotCount = 2;
-            AddAvatarParam(_ctx, "A54_Int", VRCExpressionParameters.ValueType.Int);
-            AddAvatarParam(_ctx, "A54_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
+            AddAvatarParam(_ctx, "CleanupReportRepeatedCalls_Int", VRCExpressionParameters.ValueType.Int);
+            AddAvatarParam(_ctx, "CleanupReportRepeatedCalls_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
             SeedLegacyAsmLiteLayers(_ctx, 2);
-            SeedLegacyAsmLiteFxParams(_ctx, "A54_Int", "A54_Float");
-            SeedLegacyAsmLiteExprParams(_ctx, "A54_Int", "A54_Float");
+            SeedLegacyAsmLiteFxParams(_ctx, "CleanupReportRepeatedCalls_Int", "CleanupReportRepeatedCalls_Float");
+            SeedLegacyAsmLiteExprParams(_ctx, "CleanupReportRepeatedCalls_Int", "CleanupReportRepeatedCalls_Float");
             SeedLegacyAsmLiteMenu(_ctx);
 
             var first = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_ctx.AvDesc);
             int firstTotalRemoved = first.FxLayersRemoved + first.FxParamsRemoved + first.ExprParamsRemoved + first.MenuControlsRemoved;
             Assert.Greater(firstTotalRemoved, 0,
-                $"A54: first cleanup should remove legacy direct-injection-era state. fxLayers={first.FxLayersRemoved}, fxParams={first.FxParamsRemoved}, expr={first.ExprParamsRemoved}, menu={first.MenuControlsRemoved}.");
+                $"Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: first cleanup should remove legacy direct-injection-era state. fxLayers={first.FxLayersRemoved}, fxParams={first.FxParamsRemoved}, expr={first.ExprParamsRemoved}, menu={first.MenuControlsRemoved}.");
 
             var second = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_ctx.AvDesc);
             Assert.AreEqual(0, second.FxLayersRemoved,
-                $"A54: second cleanup should be a deterministic no-op for FX layers. removed={second.FxLayersRemoved}.");
+                $"Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: second cleanup should be a deterministic no-op for FX layers. removed={second.FxLayersRemoved}.");
             Assert.AreEqual(0, second.FxParamsRemoved,
-                $"A54: second cleanup should be a deterministic no-op for FX params. removed={second.FxParamsRemoved}.");
+                $"Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: second cleanup should be a deterministic no-op for FX params. removed={second.FxParamsRemoved}.");
             Assert.AreEqual(0, second.ExprParamsRemoved,
-                $"A54: second cleanup should be a deterministic no-op for expression params. removed={second.ExprParamsRemoved}.");
+                $"Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: second cleanup should be a deterministic no-op for expression params. removed={second.ExprParamsRemoved}.");
             Assert.AreEqual(0, second.MenuControlsRemoved,
-                $"A54: second cleanup should be a deterministic no-op for menu controls. removed={second.MenuControlsRemoved}.");
+                $"Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: second cleanup should be a deterministic no-op for menu controls. removed={second.MenuControlsRemoved}.");
 
-            Assert.AreEqual(0, CountASMLiteLayers(_ctx.Ctrl), "A54: ASMLite FX layers must remain absent after repeated cleanup.");
-            Assert.AreEqual(0, CountASMLiteFxParams(_ctx.Ctrl), "A54: ASMLite FX params must remain absent after repeated cleanup.");
-            Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), "A54: ASMLite expression params must remain absent after repeated cleanup.");
-            Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu), "A54: Settings Manager control must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountASMLiteLayers(_ctx.Ctrl), "Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: ASMLite FX layers must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountASMLiteFxParams(_ctx.Ctrl), "Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: ASMLite FX params must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountASMLiteExprParams(_ctx.AvDesc.expressionParameters), "Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: ASMLite expression params must remain absent after repeated cleanup.");
+            Assert.AreEqual(0, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu), "Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps: Settings Manager control must remain absent after repeated cleanup.");
         }
 
-        // ── A55 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder()
+        public void ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder()
         {
             const string avatarName = "CleanupVendorizedAvatar";
 
             _ctx.AvatarGo.name = avatarName;
-            AddAvatarParam(_ctx, "A55_Int", VRCExpressionParameters.ValueType.Int);
-            BuildOrFail(_ctx, "A55");
+            AddAvatarParam(_ctx, "ReturnAttachedVendorized_Int", VRCExpressionParameters.ValueType.Int);
+            BuildOrFail(_ctx, "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder");
 
-            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "A55");
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder");
             string vendorizedAvatarFolder = Path.GetDirectoryName(vendorizedDir)?.Replace('\\', '/');
-            string userOwnedSiblingAsset = CreateUserOwnedSentinelAsset(vendorizedAvatarFolder, "A55_UserOwnedSibling.asset");
+            string userOwnedSiblingAsset = CreateUserOwnedSentinelAsset(vendorizedAvatarFolder, "ReturnAttachedVendorized_UserOwnedSibling.asset");
 
             Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedDir),
-                $"A55: setup failure, expected vendorized folder '{vendorizedDir}' to exist before return-to-managed cleanup.");
+                $"ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected vendorized folder '{vendorizedDir}' to exist before return-to-managed cleanup.");
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<AnimatorController>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController)),
-                "A55: setup failure, expected mirrored FX controller asset before return-to-managed cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected mirrored FX controller asset before return-to-managed cleanup.");
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams)),
-                "A55: setup failure, expected mirrored expression params asset before return-to-managed cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected mirrored expression params asset before return-to-managed cleanup.");
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu)),
-                "A55: setup failure, expected mirrored menu asset before return-to-managed cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected mirrored menu asset before return-to-managed cleanup.");
 
             _ctx.Comp.useVendorizedGeneratedAssets = true;
             _ctx.Comp.vendorizedGeneratedAssetsPath = vendorizedDir;
@@ -670,7 +652,7 @@ namespace ASMLite.Tests.Editor
 
             int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(fxIndex, 0,
-                "A55: setup failure, expected avatar FX layer before assigning mirrored controller.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected avatar FX layer before assigning mirrored controller.");
 
             var fxLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
             fxLayer.isDefault = false;
@@ -681,50 +663,50 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
 
             Assert.AreEqual(1, CountMenuAssetsUnderPrefix(_ctx.AvDesc.expressionsMenu, vendorizedDir, new System.Collections.Generic.HashSet<VRCExpressionsMenu>()),
-                "A55: setup failure, expected mirrored menu root reference before return-to-managed cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected mirrored menu root reference before return-to-managed cleanup.");
 
             bool restored = ASMLiteWindow.TryReturnAttachedVendorizedToPackageManaged(_ctx.Comp, _ctx.AvDesc);
 
             Assert.IsTrue(restored,
-                "A55: attached vendorized return helper should succeed for a valid mirrored GeneratedAssets folder.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: attached vendorized return helper should succeed for a valid mirrored GeneratedAssets folder.");
             Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
-                "A55: return-to-managed should clear attached vendorized mode on the component.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should clear attached vendorized mode on the component.");
             Assert.AreEqual(string.Empty, _ctx.Comp.vendorizedGeneratedAssetsPath,
-                "A55: return-to-managed should clear the tracked vendorized folder path after cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should clear the tracked vendorized folder path after cleanup.");
             Assert.IsFalse(AssetDatabase.IsValidFolder(vendorizedDir),
-                $"A55: return-to-managed should delete the vendorized GeneratedAssets folder '{vendorizedDir}'.");
+                $"ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should delete the vendorized GeneratedAssets folder '{vendorizedDir}'.");
             Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedAvatarFolder),
-                $"A55: return-to-managed should preserve avatar vendorized folder '{vendorizedAvatarFolder}' while user-owned sibling assets remain.");
+                $"ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should preserve avatar vendorized folder '{vendorizedAvatarFolder}' while user-owned sibling assets remain.");
             Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(userOwnedSiblingAsset),
-                $"A55: return-to-managed should preserve user-owned sibling asset '{userOwnedSiblingAsset}' while deleting only the mirrored GeneratedAssets folder.");
+                $"ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should preserve user-owned sibling asset '{userOwnedSiblingAsset}' while deleting only the mirrored GeneratedAssets folder.");
             Assert.AreEqual(ASMLiteAssetPaths.ExprParams,
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
-                "A55: return-to-managed should restore avatar expression parameters back to package-managed generated assets.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should restore avatar expression parameters back to package-managed generated assets.");
             Assert.AreEqual(ASMLiteAssetPaths.Menu,
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
-                "A55: return-to-managed should restore avatar expressions menu back to package-managed generated assets.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should restore avatar expressions menu back to package-managed generated assets.");
 
             int restoredFxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(restoredFxIndex, 0,
-                "A55: expected avatar FX layer after return-to-managed cleanup.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: expected avatar FX layer after return-to-managed cleanup.");
             Assert.AreEqual(ASMLiteAssetPaths.FXController,
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.baseAnimationLayers[restoredFxIndex].animatorController)?.Replace('\\', '/'),
-                "A55: return-to-managed should restore avatar FX controller back to package-managed generated assets.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: return-to-managed should restore avatar FX controller back to package-managed generated assets.");
             Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
-                "A55: attached avatar should resolve to PackageManaged state after vendorized cleanup completes.");
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: attached avatar should resolve to PackageManaged state after vendorized cleanup completes.");
         }
 
         [Test, Category("Integration")]
-        public void A56_ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState()
+        public void ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState()
         {
             const string avatarName = "CleanupVendorizedRollbackAvatar";
 
             _ctx.AvatarGo.name = avatarName;
-            AddAvatarParam(_ctx, "A56_Int", VRCExpressionParameters.ValueType.Int);
-            BuildOrFail(_ctx, "A56");
+            AddAvatarParam(_ctx, "ReturnAttachedVendorizedRollback_Int", VRCExpressionParameters.ValueType.Int);
+            BuildOrFail(_ctx, "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState");
 
-            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "A56");
+            string vendorizedDir = CreateVendorizedMirrorForTest(avatarName, "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState");
 
             _ctx.Comp.useVendorizedGeneratedAssets = true;
             _ctx.Comp.vendorizedGeneratedAssetsPath = vendorizedDir;
@@ -733,7 +715,7 @@ namespace ASMLite.Tests.Editor
 
             int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(fxIndex, 0,
-                "A56: setup failure, expected avatar FX layer before assigning mirrored controller.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: setup failure, expected avatar FX layer before assigning mirrored controller.");
 
             var fxLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
             fxLayer.isDefault = false;
@@ -743,53 +725,53 @@ namespace ASMLite.Tests.Editor
             EditorUtility.SetDirty(_ctx.Comp);
             AssetDatabase.SaveAssets();
 
-            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "A56 Setup"),
-                "A56: setup should create a live FullController payload before attached-return rollback validation.");
+            Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState Setup"),
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: setup should create a live FullController payload before attached-return rollback validation.");
             Assert.IsTrue(ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, vendorizedDir),
-                "A56: setup should retarget live FullController references to vendorized assets before attached-return rollback validation.");
-            AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir, "A56 setup should leave live FullController references on vendorized assets before return rollback validation.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: setup should retarget live FullController references to vendorized assets before attached-return rollback validation.");
+            AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir, "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState setup should leave live FullController references on vendorized assets before return rollback validation.");
 
             using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringVendorizedFolderDelete))
             {
                 var result = ASMLiteLifecycleTransactionService.ExecuteAttachedReturnToPackageManaged(_ctx.Comp, _ctx.AvDesc);
                 Assert.IsFalse(result.Success,
-                    "A56: attached return should fail closed when vendorized-folder delete staging is injected to fail.");
+                    "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: attached return should fail closed when vendorized-folder delete staging is injected to fail.");
                 Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
-                    "A56: delete-stage failure should surface as an execute-stage transaction failure.");
+                    "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: delete-stage failure should surface as an execute-stage transaction failure.");
                 Assert.IsTrue(result.RollbackAttempted,
-                    "A56: attached return should attempt rollback after delete-stage failure.");
+                    "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: attached return should attempt rollback after delete-stage failure.");
                 Assert.AreEqual(ASMLiteInstallationState.Vendorized, result.RollbackState,
-                    "A56: attached return rollback state should resolve back to Vendorized.");
+                    "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: attached return rollback state should resolve back to Vendorized.");
             }
 
             Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
-                "A56: rollback should preserve vendorized mode on the attached component after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should preserve vendorized mode on the attached component after delete-stage failure.");
             Assert.AreEqual(vendorizedDir, _ctx.Comp.vendorizedGeneratedAssetsPath,
-                "A56: rollback should preserve the tracked vendorized generated-assets path after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should preserve the tracked vendorized generated-assets path after delete-stage failure.");
             Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedDir),
-                "A56: rollback should restore the vendorized generated-assets folder after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should restore the vendorized generated-assets folder after delete-stage failure.");
             Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams),
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/'),
-                "A56: rollback should restore avatar expression parameters back to vendorized assets after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should restore avatar expression parameters back to vendorized assets after delete-stage failure.");
             Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu),
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/'),
-                "A56: rollback should restore avatar expressions menu back to vendorized assets after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should restore avatar expressions menu back to vendorized assets after delete-stage failure.");
 
             int rollbackFxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(rollbackFxIndex, 0,
-                "A56: expected avatar FX layer after delete-stage rollback.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: expected avatar FX layer after delete-stage rollback.");
             Assert.AreEqual(vendorizedDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController),
                 AssetDatabase.GetAssetPath(_ctx.AvDesc.baseAnimationLayers[rollbackFxIndex].animatorController)?.Replace('\\', '/'),
-                "A56: rollback should restore avatar FX controller back to vendorized assets after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should restore avatar FX controller back to vendorized assets after delete-stage failure.");
             AssertLiveFullControllerReferencesUnderPrefix(vendorizedDir,
-                "A56: rollback should restore live FullController references back to vendorized assets after delete-stage failure.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: rollback should restore live FullController references back to vendorized assets after delete-stage failure.");
             Assert.AreEqual(ASMLiteInstallationState.Vendorized,
                 ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
-                "A56: attached avatar should resolve to Vendorized state after delete-stage rollback completes.");
+                "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState: attached avatar should resolve to Vendorized state after delete-stage rollback completes.");
         }
 
         [Test, Category("Integration")]
-        public void A57_DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab()
+        public void DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
@@ -802,10 +784,10 @@ namespace ASMLite.Tests.Editor
                 window.DetachForAutomation();
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
-                    "A57: setup should leave the avatar detached before recovery failure injection.");
+                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: setup should leave the avatar detached before recovery failure injection.");
                 Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "A57: setup should classify the detached avatar as Detached before recovery failure injection.");
+                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: setup should classify the detached avatar as Detached before recovery failure injection.");
 
                 using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify))
                 {
@@ -814,26 +796,26 @@ namespace ASMLite.Tests.Editor
                         pendingSnapshot);
 
                     Assert.IsFalse(result.Success,
-                        "A57: detached recovery should fail closed when verify-stage failure is injected after reattachment completes.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should fail closed when verify-stage failure is injected after reattachment completes.");
                     Assert.AreEqual(ASMLiteLifecycleTransactionStage.Verify, result.FailedStage,
-                        "A57: injected detached recovery failure should surface as a verify-stage transaction failure.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: injected detached recovery failure should surface as a verify-stage transaction failure.");
                     Assert.IsTrue(result.CleanupAttempted,
-                        "A57: detached recovery should record that cleanup ran before the reattach attempt.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should record that cleanup ran before the reattach attempt.");
                     Assert.IsTrue(result.CleanupSucceeded,
-                        "A57: detached recovery should report cleanup success even when later verify-stage recovery fails.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should report cleanup success even when later verify-stage recovery fails.");
                     Assert.IsTrue(result.ReattachAttempted,
-                        "A57: detached recovery should record the reattach attempt before verify-stage failure.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should record the reattach attempt before verify-stage failure.");
                     Assert.IsFalse(result.ReattachSucceeded,
-                        "A57: detached recovery should report reattach failure after verify-stage failure destroys the partial prefab.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should report reattach failure after verify-stage failure destroys the partial prefab.");
                     Assert.AreEqual(ASMLiteInstallationState.NotInstalled, result.RecoveredState,
-                        "A57: detached recovery should report the best-effort recovered state after tearing down the partial prefab.");
+                        "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery should report the best-effort recovered state after tearing down the partial prefab.");
                 }
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
-                    "A57: detached recovery verify failure should not leave a partial ASM-Lite prefab attached.");
+                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery verify failure should not leave a partial ASM-Lite prefab attached.");
                 Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "A57: detached recovery verify failure should clean direct-delivery runtime markers instead of leaving the avatar half-restored.");
+                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: detached recovery verify failure should clean direct-delivery runtime markers instead of leaving the avatar half-restored.");
             }
             finally
             {
@@ -842,7 +824,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A57b_DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry()
+        public void DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry()
         {
             const string legacyFromPath = "Settings Manager";
             const string legacyToPath = "Tools/DetachedRetry/Settings Manager";
@@ -867,12 +849,12 @@ namespace ASMLite.Tests.Editor
                 };
 
                 Assert.AreEqual(1, CountMatchingMoveMenuHelpers(_ctx.AvDesc, legacyFromPath, legacyToPath),
-                    "A58: setup should leave exactly one matching legacy MoveMenu helper on the detached avatar before recovery failure injection.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should leave exactly one matching legacy MoveMenu helper on the detached avatar before recovery failure injection.");
                 Assert.IsNull(_ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing"),
-                    "A58: setup should rely on the legacy MoveMenu helper rather than the package-managed routing helper.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should rely on the legacy MoveMenu helper rather than the package-managed routing helper.");
                 Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "A58: setup should classify the avatar as Detached before pre-finalize recovery failure injection.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should classify the avatar as Detached before pre-finalize recovery failure injection.");
 
                 using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.BeforeDetachedRecoveryRoutingFinalize))
                 {
@@ -881,20 +863,20 @@ namespace ASMLite.Tests.Editor
                         pendingSnapshot);
 
                     Assert.IsFalse(result.Success,
-                        "A58: detached recovery should fail closed when a pre-finalize recovery failure is injected after legacy MoveMenu adoption begins.");
+                        "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: detached recovery should fail closed when a pre-finalize recovery failure is injected after legacy MoveMenu adoption begins.");
                     Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
-                        "A58: the injected pre-finalize recovery failure should surface as an execute-stage transaction failure.");
+                        "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: the injected pre-finalize recovery failure should surface as an execute-stage transaction failure.");
                     Assert.IsTrue(result.InstallPathAdoptionAttempted,
-                        "A58: detached recovery should record that install-path adoption was attempted before the injected pre-finalize failure.");
+                        "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: detached recovery should record that install-path adoption was attempted before the injected pre-finalize failure.");
                 }
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
-                    "A58: pre-finalize recovery failure should not leave a partial ASM-Lite prefab attached.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: pre-finalize recovery failure should not leave a partial ASM-Lite prefab attached.");
                 Assert.AreEqual(1, CountMatchingMoveMenuHelpers(_ctx.AvDesc, legacyFromPath, legacyToPath),
-                    "A58: detached recovery must preserve the legacy MoveMenu continuity helper when recovery fails before finalization succeeds.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: detached recovery must preserve the legacy MoveMenu continuity helper when recovery fails before finalization succeeds.");
                 Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "A58: pre-finalize recovery failure should still report the cleaned best-effort state after tearing down the partial prefab.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: pre-finalize recovery failure should still report the cleaned best-effort state after tearing down the partial prefab.");
             }
             finally
             {
@@ -903,7 +885,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A58_VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName()
+        public void VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName()
         {
             var otherAvatarGo = new GameObject("CollisionAvatar");
             var otherAvatar = otherAvatarGo.AddComponent<VRCAvatarDescriptor>();
@@ -918,19 +900,19 @@ namespace ASMLite.Tests.Editor
                 secondMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(otherAvatar);
 
                 Assert.IsTrue(firstMirror != null && firstMirror.Success,
-                    firstMirror?.Message ?? "A58: expected first vendorized mirror stage to succeed.");
+                    firstMirror?.Message ?? "VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: expected first vendorized mirror stage to succeed.");
                 Assert.IsTrue(secondMirror != null && secondMirror.Success,
-                    secondMirror?.Message ?? "A58: expected second vendorized mirror stage to succeed.");
+                    secondMirror?.Message ?? "VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: expected second vendorized mirror stage to succeed.");
                 Assert.AreNotEqual(firstMirror.TargetPath, secondMirror.TargetPath,
-                    "A58: distinct avatars that share the same GameObject name must not collide onto the same vendorized GeneratedAssets folder.");
+                    "VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: distinct avatars that share the same GameObject name must not collide onto the same vendorized GeneratedAssets folder.");
                 Assert.AreNotEqual(
                     Path.GetDirectoryName(firstMirror.TargetPath)?.Replace('\\', '/'),
                     Path.GetDirectoryName(secondMirror.TargetPath)?.Replace('\\', '/'),
-                    "A58: distinct avatars that share the same GameObject name must receive separate vendorized avatar folders.");
+                    "VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: distinct avatars that share the same GameObject name must receive separate vendorized avatar folders.");
                 Assert.IsTrue(AssetDatabase.IsValidFolder(firstMirror.TargetPath),
-                    $"A58: expected first vendorized GeneratedAssets folder '{firstMirror.TargetPath}' to exist.");
+                    $"VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: expected first vendorized GeneratedAssets folder '{firstMirror.TargetPath}' to exist.");
                 Assert.IsTrue(AssetDatabase.IsValidFolder(secondMirror.TargetPath),
-                    $"A58: expected second vendorized GeneratedAssets folder '{secondMirror.TargetPath}' to exist.");
+                    $"VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName: expected second vendorized GeneratedAssets folder '{secondMirror.TargetPath}' to exist.");
             }
             finally
             {

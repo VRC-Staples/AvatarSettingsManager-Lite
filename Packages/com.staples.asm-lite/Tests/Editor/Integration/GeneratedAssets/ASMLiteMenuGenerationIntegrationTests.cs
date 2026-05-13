@@ -6,16 +6,16 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A26-A34: Generated expression-menu hierarchy invariants.
+    /// MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset-Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: Generated expression-menu hierarchy invariants.
     /// These tests call Build() and assert menu graph shape through the managed
     /// generated menu asset (ASMLiteAssetPaths.Menu).
     /// </summary>
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteMenuTests
+    public class ASMLiteMenuGenerationIntegrationTests
     {
-        private const string SuiteName = nameof(ASMLiteMenuTests);
+        private const string SuiteName = nameof(ASMLiteMenuGenerationIntegrationTests);
         private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
@@ -42,12 +42,12 @@ namespace ASMLite.Tests.Editor
             ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
             _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureGeneratedAssets(SuiteName);
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "A26: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "A26: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx, "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset: fixture did not create ASMLiteComponent.");
 
             var generatedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
             Assert.IsNotNull(generatedRoot,
-                $"A26: generated root menu asset missing at '{ASMLiteAssetPaths.Menu}'.");
+                $"MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset: generated root menu asset missing at '{ASMLiteAssetPaths.Menu}'.");
         }
 
         [TearDown]
@@ -155,220 +155,204 @@ namespace ASMLite.Tests.Editor
             return null;
         }
 
-        // ── A26 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A26_RootContainsSingleSettingsManagerSubmenu()
+        public void RootContainsSingleSettingsManagerSubmenu()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "A26");
-            _ = GetSettingsManagerControl(rootMenu, "A26");
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset");
+            _ = GetSettingsManagerControl(rootMenu, "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset");
         }
 
-        // ── A27 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A27_PresetsMenuCountAndNamesMatchSlotCount()
+        public void PresetsMenuCountAndNamesMatchSlotCount()
         {
             const int slotCount = 2;
-            var rootMenu = BuildAndGetRootMenu(slotCount, "A27");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A27");
+            var rootMenu = BuildAndGetRootMenu(slotCount, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
+            var presetsMenu = GetPresetsMenu(rootMenu, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
 
             Assert.AreEqual(slotCount, presetsMenu.controls.Count,
-                "A27: presets menu control count must equal slotCount.");
+                "PresetsMenuCountAndNamesMatchSlotCount: presets menu control count must equal slotCount.");
 
             for (int slot = 1; slot <= slotCount; slot++)
-                _ = GetPresetControl(presetsMenu, slot, "A27");
+                _ = GetPresetControl(presetsMenu, slot, "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths");
         }
 
-        // ── A28 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A28_EachSlotMenuHasSaveLoadClearWithExpectedControlTypes()
+        public void EachSlotMenuHasSaveLoadClearWithExpectedControlTypes()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "A28");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A28");
-            var slotMenu = GetPresetControl(presetsMenu, 1, "A28").subMenu;
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset");
+            var presetsMenu = GetPresetsMenu(rootMenu, "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset");
+            var slotMenu = GetPresetControl(presetsMenu, 1, "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset").subMenu;
 
-            Assert.IsNotNull(slotMenu.controls, "A28: slot menu controls list is null.");
+            Assert.IsNotNull(slotMenu.controls, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: slot menu controls list is null.");
             Assert.AreEqual(3, slotMenu.controls.Count,
-                "A28: slot menu must contain exactly three controls (Save, Load, Clear Preset).");
+                "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: slot menu must contain exactly three controls (Save, Load, Clear Preset).");
 
             var save = slotMenu.controls[0];
             var load = slotMenu.controls[1];
             var clear = slotMenu.controls[2];
 
-            Assert.AreEqual("Save", save.name, "A28: first slot control must be Save.");
+            Assert.AreEqual("Save", save.name, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: first slot control must be Save.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.SubMenu, save.type,
-                "A28: Save must be SubMenu.");
-            Assert.IsNotNull(save.subMenu, "A28: Save must link to confirm submenu.");
+                "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: Save must be SubMenu.");
+            Assert.IsNotNull(save.subMenu, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: Save must link to confirm submenu.");
 
-            Assert.AreEqual("Load", load.name, "A28: second slot control must be Load.");
+            Assert.AreEqual("Load", load.name, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: second slot control must be Load.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.Button, load.type,
-                "A28: Load must be Button.");
+                "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: Load must be Button.");
 
-            Assert.AreEqual("Clear Preset", clear.name, "A28: third slot control must be Clear Preset.");
+            Assert.AreEqual("Clear Preset", clear.name, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: third slot control must be Clear Preset.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.SubMenu, clear.type,
-                "A28: Clear Preset must be SubMenu.");
-            Assert.IsNotNull(clear.subMenu, "A28: Clear Preset must link to confirm submenu.");
+                "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: Clear Preset must be SubMenu.");
+            Assert.IsNotNull(clear.subMenu, "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes: Clear Preset must link to confirm submenu.");
         }
 
-        // ── A29 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A29_SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue()
+        public void SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "A29");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A29");
-            var slotMenu = GetPresetControl(presetsMenu, 1, "A29").subMenu;
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue");
+            var presetsMenu = GetPresetsMenu(rootMenu, "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue");
+            var slotMenu = GetPresetControl(presetsMenu, 1, "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue").subMenu;
 
             var save = slotMenu.controls[0];
-            Assert.IsNotNull(save.subMenu, "A29: Save submenu reference is null.");
-            Assert.IsNotNull(save.subMenu.controls, "A29: Save confirm submenu controls are null.");
+            Assert.IsNotNull(save.subMenu, "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Save submenu reference is null.");
+            Assert.IsNotNull(save.subMenu.controls, "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Save confirm submenu controls are null.");
             Assert.AreEqual(1, save.subMenu.controls.Count,
-                "A29: Save confirm submenu must contain exactly one control.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Save confirm submenu must contain exactly one control.");
 
             var confirm = save.subMenu.controls[0];
             Assert.AreEqual("Confirm", confirm.name,
-                "A29: save confirm submenu control must be named Confirm.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: save confirm submenu control must be named Confirm.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.Button, confirm.type,
-                "A29: Confirm control must be Button.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Confirm control must be Button.");
             Assert.IsNull(confirm.subMenu,
-                "A29: Confirm control must not be a submenu.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Confirm control must not be a submenu.");
             Assert.IsNotNull(confirm.parameter,
-                "A29: Confirm control parameter payload must exist.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Confirm control parameter payload must exist.");
             Assert.AreEqual("ASMLite_Ctrl", confirm.parameter.name,
-                "A29: Confirm control must target ASMLite_Ctrl.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Confirm control must target ASMLite_Ctrl.");
             Assert.AreEqual(1f, confirm.value,
-                "A29: Confirm value for slot 1 save must be encoded as 1.");
+                "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue: Confirm value for slot 1 save must be encoded as 1.");
         }
 
-        // ── A30 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A30_LoadControlIsDirectButtonNotSubmenu()
+        public void LoadControlIsDirectButtonNotSubmenu()
         {
-            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "A30");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A30");
-            var slotMenu = GetPresetControl(presetsMenu, 1, "A30").subMenu;
+            var rootMenu = BuildAndGetRootMenu(slotCount: 1, aid: "LoadControlIsDirectButtonNotSubmenu");
+            var presetsMenu = GetPresetsMenu(rootMenu, "LoadControlIsDirectButtonNotSubmenu");
+            var slotMenu = GetPresetControl(presetsMenu, 1, "LoadControlIsDirectButtonNotSubmenu").subMenu;
 
             var load = slotMenu.controls[1];
             Assert.AreEqual("Load", load.name,
-                "A30: second slot control must be Load.");
+                "LoadControlIsDirectButtonNotSubmenu: second slot control must be Load.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.Button, load.type,
-                "A30: Load control must be Button (direct action).");
+                "LoadControlIsDirectButtonNotSubmenu: Load control must be Button (direct action).");
             Assert.IsNull(load.subMenu,
-                "A30: Load control must not reference a submenu.");
+                "LoadControlIsDirectButtonNotSubmenu: Load control must not reference a submenu.");
             Assert.IsNotNull(load.parameter,
-                "A30: Load control parameter payload must exist.");
+                "LoadControlIsDirectButtonNotSubmenu: Load control parameter payload must exist.");
             Assert.AreEqual("ASMLite_Ctrl", load.parameter.name,
-                "A30: Load control must target ASMLite_Ctrl.");
+                "LoadControlIsDirectButtonNotSubmenu: Load control must target ASMLite_Ctrl.");
             Assert.AreEqual(2f, load.value,
-                "A30: Load value for slot 1 must be encoded as 2.");
+                "LoadControlIsDirectButtonNotSubmenu: Load value for slot 1 must be encoded as 2.");
         }
 
-        // ── A31 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots()
+        public void AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots()
         {
             const int slotCount = 2;
-            var rootMenu = BuildAndGetRootMenu(slotCount, "A31");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A31");
+            var rootMenu = BuildAndGetRootMenu(slotCount, "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots");
+            var presetsMenu = GetPresetsMenu(rootMenu, "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots");
 
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                var slotMenu = GetPresetControl(presetsMenu, slot, "A31").subMenu;
+                var slotMenu = GetPresetControl(presetsMenu, slot, "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots").subMenu;
 
                 var load = GetControlOrFail(slotMenu, "Load", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A31", slot, "Load");
+                    "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots", slot, "Load");
                 Assert.IsNotNull(load.parameter,
-                    $"A31: slot {slot} Load parameter payload must exist.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} Load parameter payload must exist.");
                 Assert.AreEqual("ASMLite_Ctrl", load.parameter.name,
-                    $"A31: slot {slot} Load must target ASMLite_Ctrl, got '{load.parameter.name ?? "<null>"}'.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} Load must target ASMLite_Ctrl, got '{load.parameter.name ?? "<null>"}'.");
 
                 var save = GetControlOrFail(slotMenu, "Save", VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    "A31", slot, "Save");
+                    "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots", slot, "Save");
                 Assert.IsNotNull(save.subMenu,
-                    $"A31: slot {slot} Save submenu reference is null.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} Save submenu reference is null.");
                 var saveConfirm = GetControlOrFail(save.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A31", slot, "SaveConfirm");
+                    "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots", slot, "SaveConfirm");
                 Assert.IsNotNull(saveConfirm.parameter,
-                    $"A31: slot {slot} SaveConfirm parameter payload must exist.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} SaveConfirm parameter payload must exist.");
                 Assert.AreEqual("ASMLite_Ctrl", saveConfirm.parameter.name,
-                    $"A31: slot {slot} SaveConfirm must target ASMLite_Ctrl, got '{saveConfirm.parameter.name ?? "<null>"}'.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} SaveConfirm must target ASMLite_Ctrl, got '{saveConfirm.parameter.name ?? "<null>"}'.");
 
                 var clear = GetControlOrFail(slotMenu, "Clear Preset", VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    "A31", slot, "Clear");
+                    "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots", slot, "Clear");
                 Assert.IsNotNull(clear.subMenu,
-                    $"A31: slot {slot} Clear Preset submenu reference is null.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} Clear Preset submenu reference is null.");
                 var clearConfirm = GetControlOrFail(clear.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A31", slot, "ClearConfirm");
+                    "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots", slot, "ClearConfirm");
                 Assert.IsNotNull(clearConfirm.parameter,
-                    $"A31: slot {slot} ClearConfirm parameter payload must exist.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} ClearConfirm parameter payload must exist.");
                 Assert.AreEqual("ASMLite_Ctrl", clearConfirm.parameter.name,
-                    $"A31: slot {slot} ClearConfirm must target ASMLite_Ctrl, got '{clearConfirm.parameter.name ?? "<null>"}'.");
+                    $"AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots: slot {slot} ClearConfirm must target ASMLite_Ctrl, got '{clearConfirm.parameter.name ?? "<null>"}'.");
             }
         }
 
-        // ── A32 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots()
+        public void AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots()
         {
             const int slotCount = 2;
-            var rootMenu = BuildAndGetRootMenu(slotCount, "A32");
-            var presetsMenu = GetPresetsMenu(rootMenu, "A32");
+            var rootMenu = BuildAndGetRootMenu(slotCount, "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots");
+            var presetsMenu = GetPresetsMenu(rootMenu, "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots");
 
             for (int slot = 1; slot <= slotCount; slot++)
             {
-                var slotMenu = GetPresetControl(presetsMenu, slot, "A32").subMenu;
+                var slotMenu = GetPresetControl(presetsMenu, slot, "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots").subMenu;
 
                 var load = GetControlOrFail(slotMenu, "Load", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A32", slot, "Load");
+                    "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots", slot, "Load");
                 float expectedLoad = ExpectedCompactIntValue(slot, TriggerActionKind.Load);
                 Assert.AreEqual(expectedLoad, load.value,
-                    $"A32: slot {slot} Load value mismatch. Expected {expectedLoad}, got {load.value}.");
+                    $"AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots: slot {slot} Load value mismatch. Expected {expectedLoad}, got {load.value}.");
 
                 var save = GetControlOrFail(slotMenu, "Save", VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    "A32", slot, "Save");
+                    "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots", slot, "Save");
                 Assert.IsNotNull(save.subMenu,
-                    $"A32: slot {slot} Save submenu reference is null.");
+                    $"AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots: slot {slot} Save submenu reference is null.");
                 var saveConfirm = GetControlOrFail(save.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A32", slot, "SaveConfirm");
+                    "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots", slot, "SaveConfirm");
                 float expectedSave = ExpectedCompactIntValue(slot, TriggerActionKind.SaveConfirm);
                 Assert.AreEqual(expectedSave, saveConfirm.value,
-                    $"A32: slot {slot} SaveConfirm value mismatch. Expected {expectedSave}, got {saveConfirm.value}.");
+                    $"AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots: slot {slot} SaveConfirm value mismatch. Expected {expectedSave}, got {saveConfirm.value}.");
 
                 var clear = GetControlOrFail(slotMenu, "Clear Preset", VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    "A32", slot, "Clear");
+                    "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots", slot, "Clear");
                 Assert.IsNotNull(clear.subMenu,
-                    $"A32: slot {slot} Clear Preset submenu reference is null.");
+                    $"AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots: slot {slot} Clear Preset submenu reference is null.");
                 var clearConfirm = GetControlOrFail(clear.subMenu, "Confirm", VRCExpressionsMenu.Control.ControlType.Button,
-                    "A32", slot, "ClearConfirm");
+                    "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots", slot, "ClearConfirm");
                 float expectedClear = ExpectedCompactIntValue(slot, TriggerActionKind.ClearConfirm);
                 Assert.AreEqual(expectedClear, clearConfirm.value,
-                    $"A32: slot {slot} ClearConfirm value mismatch. Expected {expectedClear}, got {clearConfirm.value}.");
+                    $"AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots: slot {slot} ClearConfirm value mismatch. Expected {expectedClear}, got {clearConfirm.value}.");
             }
         }
 
-        // ── A33 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild()
+        public void GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild()
         {
             _ctx.Comp.slotCount = 1;
 
             int firstResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(firstResult, 0,
-                $"A33: first Build() failed with result {firstResult}.");
+                $"GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: first Build() failed with result {firstResult}.");
 
             int secondResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(secondResult, 0,
-                $"A33: second Build() failed with result {secondResult}.");
+                $"GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: second Build() failed with result {secondResult}.");
 
             var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
-            Assert.IsNotNull(rootMenu, "A33: generated root menu is null after repeated Build().");
-            Assert.IsNotNull(rootMenu.controls, "A33: generated root menu controls list is null after repeated Build().");
+            Assert.IsNotNull(rootMenu, "GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: generated root menu is null after repeated Build().");
+            Assert.IsNotNull(rootMenu.controls, "GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: generated root menu controls list is null after repeated Build().");
 
             int settingsManagerCount = 0;
             for (int i = 0; i < rootMenu.controls.Count; i++)
@@ -383,16 +367,14 @@ namespace ASMLite.Tests.Editor
             }
 
             Assert.AreEqual(1, settingsManagerCount,
-                $"A33: expected exactly one Settings Manager root control after two Build() calls; rootCount={rootMenu.controls.Count}, settingsManagerCount={settingsManagerCount}.");
+                $"GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: expected exactly one Settings Manager root control after two Build() calls; rootCount={rootMenu.controls.Count}, settingsManagerCount={settingsManagerCount}.");
         }
 
-        // ── A34 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper()
+        public void Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper()
         {
             var generatedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
-            Assert.IsNotNull(generatedRoot, "A34: generated root menu is null before stale prefill.");
+            Assert.IsNotNull(generatedRoot, "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: generated root menu is null before stale prefill.");
 
             generatedRoot.controls = new System.Collections.Generic.List<VRCExpressionsMenu.Control>();
             for (int i = 0; i < 8; i++)
@@ -408,23 +390,23 @@ namespace ASMLite.Tests.Editor
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(buildResult, 0,
-                $"A34: Build() failed with result {buildResult} in stale-root normalization scenario.");
+                $"Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: Build() failed with result {buildResult} in stale-root normalization scenario.");
 
             var refreshedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
-            Assert.IsNotNull(refreshedRoot, "A34: generated root menu is null after Build().");
-            Assert.IsNotNull(refreshedRoot.controls, "A34: generated root menu controls list is null after Build().");
+            Assert.IsNotNull(refreshedRoot, "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: generated root menu is null after Build().");
+            Assert.IsNotNull(refreshedRoot.controls, "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: generated root menu controls list is null after Build().");
             Assert.AreEqual(1, refreshedRoot.controls.Count,
-                $"A34: saturated-root regression guard failed; generated root should be normalized to a single wrapper control. got {refreshedRoot.controls.Count}.");
+                $"Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: saturated-root regression guard failed; generated root should be normalized to a single wrapper control. got {refreshedRoot.controls.Count}.");
             Assert.IsFalse(refreshedRoot.controls.Exists(c => c != null && c.name != null && c.name.StartsWith("StalePreExisting_")),
-                "A34: saturated-root regression guard failed; stale pre-existing controls must be removed on rebuild.");
+                "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: saturated-root regression guard failed; stale pre-existing controls must be removed on rebuild.");
 
             var settingsControl = refreshedRoot.controls[0];
             Assert.AreEqual("Settings Manager", settingsControl.name,
-                "A34: normalized generated root control must be named 'Settings Manager'.");
+                "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: normalized generated root control must be named 'Settings Manager'.");
             Assert.AreEqual(VRCExpressionsMenu.Control.ControlType.SubMenu, settingsControl.type,
-                "A34: normalized generated root control must be a SubMenu.");
+                "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: normalized generated root control must be a SubMenu.");
             Assert.IsNotNull(settingsControl.subMenu,
-                "A34: normalized generated root Settings Manager control must reference the presets submenu.");
+                "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: normalized generated root Settings Manager control must reference the presets submenu.");
         }
     }
 }

@@ -508,850 +508,10 @@
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
-      "line": 285,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Slot Count One Populates Expected Generated Artifacts",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts",
-      "line": 325,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Slot Count Eight Populates Expected Generated Artifacts",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema",
-      "line": 366,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Returns Discovered Non ASMLite Param Count And Writes Generated Schema",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged",
-      "line": 391,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Invalid Slot Count Returns Minus One And Leaves Generated Assets Unchanged",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces",
-      "line": 429,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Repeated Build Is Idempotent Across Generated Asset Surfaces",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema",
-      "line": 536,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build With Exclusions Updates Return Count And Generated Schema",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups",
-      "line": 574,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Repeated Build After Enabling Exclusions Is Deterministic And Removes Legacy Excluded Backups",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203",
-      "line": 622,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Full Controller Schema Drift Returns Minus One And Exposes Build302 With Nested Drift203",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs",
-      "line": 466,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Unchanged Input Keeps Stable Generated Names And Full Controller Refs",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteBuildIntegrationTests.cs",
-      "class": "ASMLiteBuildIntegrationTests",
-      "method": "A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly",
-      "line": 489,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Changed Input Produces Expected Snapshot Delta Only",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteBuildIntegrationTests.A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A35_Cleanup_RemovesASMLiteFxlayers",
-      "line": 376,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Removes ASMLite Fxlayers",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A35_Cleanup_RemovesASMLiteFxlayers",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam",
-      "line": 396,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Removes ASMLite Fx Parameters And Ctrl Param",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A36_Cleanup_RemovesASMLiteFxParametersAndCtrlParam",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam",
-      "line": 416,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Removes ASMLite Expression Parameters And Ctrl Param",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A37_Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A38_Cleanup_RemovesSettingsManagerRootControl",
-      "line": 436,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Removes Settings Manager Root Control",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A38_Cleanup_RemovesSettingsManagerRootControl",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A38b_Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference",
-      "line": 454,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Removes Customized Detached Root Control By Presets Submenu Reference",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A38b_Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A39_Cleanup_PreservesUserOwnedFxParamsAndMenuEntries",
-      "line": 483,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Preserves User Owned Fx Params And Menu Entries",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A39_Cleanup_PreservesUserOwnedFxParamsAndMenuEntries",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A40_Cleanup_NullAvatarDescriptor_DoesNotThrow",
-      "line": 551,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Null Avatar Descriptor Does Not Throw",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A40_Cleanup_NullAvatarDescriptor_DoesNotThrow",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A41_Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams",
-      "line": 560,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Null Or Default Fx Controller Does Not Throw And Still Cleans Menu And Expr Params",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A41_Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps",
-      "line": 611,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Cleanup Report Repeated Calls Become Deterministic No Ops",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A54_Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder",
-      "line": 645,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Return Attached Vendorized To Package Managed Deletes Vendorized Mirror Folder",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A55_ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A56_ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState",
-      "line": 719,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Return Attached Vendorized To Package Managed Delete Failure Rolls Back To Vendorized State",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A56_ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A57_DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab",
-      "line": 792,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Detached Recovery Verify Failure Reports Best Effort State Without Leaving Partial Prefab",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A57_DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A57b_DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry",
-      "line": 845,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Detached Recovery Pre Finalize Failure Preserves Legacy Move Menu Helper For Retry",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A57b_DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCleanupTests.cs",
-      "class": "ASMLiteCleanupTests",
-      "method": "A58_VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName",
-      "line": 906,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Vendorized Mirror Uses Distinct Folders For Distinct Avatars With Same Name",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
-      "runnerFilter": "ASMLiteCleanupTests.A58_VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
-      "class": "ASMLiteCustomizationIntegrationTests",
-      "method": "A53_CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
-      "line": 74,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Combined Customization Fixture Composes Root Overrides Exclusions And Install Prefix",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteCustomizationIntegrationTests.A53_CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
-      "class": "ASMLiteCustomizationIntegrationTests",
-      "method": "A54_CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
-      "line": 170,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Combined Customization Fixture Repeated Build Stays Deterministic And Exclusion Safe",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteCustomizationIntegrationTests.A54_CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
-      "class": "ASMLiteCustomizationIntegrationTests",
-      "method": "A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
-      "line": 246,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "All Customization Toggles Disabled Ignores Stale Serialized Values And Matches Baseline Contracts",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteCustomizationIntegrationTests.A55_AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteCustomizationIntegrationTests.cs",
-      "class": "ASMLiteCustomizationIntegrationTests",
-      "method": "A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
-      "line": 344,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Disabled Toggle Baseline Remains Deterministic After Prior Enabled Build",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteCustomizationIntegrationTests.A56_DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A19_ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset",
-      "line": 123,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset",
+      "line": 121,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1374,14 +534,14 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A19_ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A20_BackupParams_HaveLocalOnlyFlags_InGeneratedAsset",
-      "line": 146,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "BackupParams_HaveLocalOnlyFlags_InGeneratedAsset",
+      "line": 142,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1404,254 +564,14 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A20_BackupParams_HaveLocalOnlyFlags_InGeneratedAsset",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.BackupParams_HaveLocalOnlyFlags_InGeneratedAsset",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A21_LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset",
-      "line": 169,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Legacy Preservation Higher Slot Backups Kept In Generated Asset",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A21_LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A22_GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild",
-      "line": 192,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Generated Expression Params No Duplicate ASMLite Entries After Rebuild",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A22_GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A23_GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls",
-      "line": 216,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Generated Schema Uses Shared Ctrl And Local Default Keys No Legacy Safe Bool Controls",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A23_GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A24_StaleGeneratedCtrlShape_IsNormalizedOnBuild",
-      "line": 251,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Stale Generated Ctrl Shape Is Normalized On Build",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A24_StaleGeneratedCtrlShape_IsNormalizedOnBuild",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A25_LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved",
-      "line": 297,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Legacy Backup Flags Are Forced To Local Only When Preserved",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A25_LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A26_MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset",
-      "line": 331,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Mapped Legacy Alias Remains Load Compatible And Is Mirrored For Save And Reset",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A26_MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A27B_LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState",
-      "line": 454,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "A27 B Legacy Alias Diagnostics Keep Generated Expression Params Distinct While Preserving Unmatched State",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A27B_LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A27_LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths",
-      "line": 417,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Legacy Alias Diagnostics Count Unmatched And Malformed Without Wiring Wrong Load Paths",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A27_LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParamsTests.cs",
-      "class": "ASMLiteExpressionParamsTests",
-      "method": "A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset",
-      "line": 489,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset",
+      "line": 475,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1674,14 +594,14 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
-      "runnerFilter": "ASMLiteExpressionParamsTests.A28_ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.ExclusionsEnabled_RemovePreviouslyGeneratedExcludedBackupsFromExpressionAsset",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A05_Build_CreatesCorrectNumberOfASMLiteLayers",
-      "line": 128,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild",
+      "line": 184,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1697,21 +617,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Creates Correct Number Of ASMLite Layers",
+      "publicBehaviorClaim": "Generated Expression Params No Duplicate ASMLite Entries After Rebuild",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A05_Build_CreatesCorrectNumberOfASMLiteLayers",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.GeneratedExpressionParams_NoDuplicateASMLiteEntries_AfterRebuild",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A06_EachSlotLayer_HasFourStates",
-      "line": 143,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls",
+      "line": 206,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1727,21 +647,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Each Slot Layer Has Four States",
+      "publicBehaviorClaim": "Generated Schema Uses Shared Ctrl And Local Default Keys No Legacy Safe Bool Controls",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A06_EachSlotLayer_HasFourStates",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.GeneratedSchema_UsesSharedCtrlAndLocalDefaultKeys_NoLegacySafeBoolControls",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A07_EachSlotLayer_DefaultStateIsIdle",
-      "line": 161,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths",
+      "line": 403,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1757,21 +677,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Each Slot Layer Default State Is Idle",
+      "publicBehaviorClaim": "Legacy Alias Diagnostics Count Unmatched And Malformed Without Wiring Wrong Load Paths",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A07_EachSlotLayer_DefaultStateIsIdle",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A08_AllStates_WriteDefaultValuesIsFalse",
-      "line": 180,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState",
+      "line": 440,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1787,21 +707,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "All States Write Default Values Is False",
+      "publicBehaviorClaim": "A27 B Legacy Alias Diagnostics Keep Generated Expression Params Distinct While Preserving Unmatched State",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A08_AllStates_WriteDefaultValuesIsFalse",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A09_IdleTransitions_UseCorrectEncodedValues",
-      "line": 201,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved",
+      "line": 283,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1817,21 +737,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Idle Transitions Use Correct Encoded Values",
+      "publicBehaviorClaim": "Legacy Backup Flags Are Forced To Local Only When Preserved",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A09_IdleTransitions_UseCorrectEncodedValues",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.LegacyBackupFlags_AreForcedToLocalOnly_WhenPreserved",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A10_SaveDriver_HasCorrectCopyEntries",
-      "line": 245,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset",
+      "line": 163,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1847,21 +767,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Save Driver Has Correct Copy Entries",
+      "publicBehaviorClaim": "Legacy Preservation Higher Slot Backups Kept In Generated Asset",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A10_SaveDriver_HasCorrectCopyEntries",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A11_LoadDriver_HasCorrectCopyEntries",
-      "line": 273,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset",
+      "line": 317,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1877,21 +797,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Driver Has Correct Copy Entries",
+      "publicBehaviorClaim": "Mapped Legacy Alias Remains Load Compatible And Is Mirrored For Save And Reset",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A11_LoadDriver_HasCorrectCopyEntries",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A12_ResetDriver_HasCorrectCopyEntries",
-      "line": 301,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteExpressionParameterGenerationIntegrationTests.cs",
+      "class": "ASMLiteExpressionParameterGenerationIntegrationTests",
+      "method": "StaleGeneratedCtrlShape_IsNormalizedOnBuild",
+      "line": 239,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -1907,284 +827,14 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Reset Driver Has Correct Copy Entries",
+      "publicBehaviorClaim": "Stale Generated Ctrl Shape Is Normalized On Build",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A12_ResetDriver_HasCorrectCopyEntries",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A13_AllDrivers_EndWithSetCtrlToZero",
-      "line": 334,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "All Drivers End With Set Ctrl To Zero",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A13_AllDrivers_EndWithSetCtrlToZero",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A14_AllDrivers_HaveLocalOnlyTrue",
-      "line": 362,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "All Drivers Have Local Only True",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A14_AllDrivers_HaveLocalOnlyTrue",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A15_CtrlParameters_ContainAllExpectedEntries",
-      "line": 384,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Ctrl Parameters Contain All Expected Entries",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A15_CtrlParameters_ContainAllExpectedEntries",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A16_DuplicateAvatarParam_OnlyOneEntryInCtrlParameters",
-      "line": 407,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Duplicate Avatar Param Only One Entry In Ctrl Parameters",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A16_DuplicateAvatarParam_OnlyOneEntryInCtrlParameters",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A17_PreExistingDuplicateASMLiteParams_DrainedBeforeBuild",
-      "line": 430,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Pre Existing Duplicate ASMLite Params Drained Before Build",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A17_PreExistingDuplicateASMLiteParams_DrainedBeforeBuild",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A18_DefParam_HasCorrectDefaultValues",
-      "line": 463,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Def Param Has Correct Default Values",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A18_DefParam_HasCorrectDefaultValues",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams",
-      "line": 518,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "FXController Uses Only One Shared Ctrl Param No Legacy Control Params",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches",
-      "line": 553,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Slot Layers Do Not Use Any State Safe Bool Branches",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFXControllerTests.cs",
-      "class": "ASMLiteFXControllerTests",
-      "method": "A21_ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries",
-      "line": 585,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Exclusions Enabled Omits Excluded FXParams And Driver Copy Entries",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
-      "runnerFilter": "ASMLiteFXControllerTests.A21_ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated expression-parameter fixture immutability assertions",
+      "runnerFilter": "ASMLiteExpressionParameterGenerationIntegrationTests.StaleGeneratedCtrlShape_IsNormalizedOnBuild",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
@@ -2334,10 +984,10 @@
       "notes": "Sentinel coverage for fixture contamination detection; tests intentionally contaminate state and clean up in finally blocks."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
-      "class": "ASMLiteIconTests",
-      "method": "A51_MultiColor_UsesPerSlotGearIconBySlotIndex",
-      "line": 136,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "AllDrivers_EndWithSetCtrlToZero",
+      "line": 316,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2353,21 +1003,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Multi Color Uses Per Slot Gear Icon By Slot Index",
+      "publicBehaviorClaim": "All Drivers End With Set Ctrl To Zero",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteIconTests.A51_MultiColor_UsesPerSlotGearIconBySlotIndex",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.AllDrivers_EndWithSetCtrlToZero",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
-      "class": "ASMLiteIconTests",
-      "method": "A52_SameColor_UsesSelectedGearIconAcrossAllSlots",
-      "line": 157,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "AllDrivers_HaveLocalOnlyTrue",
+      "line": 342,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2383,21 +1033,1311 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Same Color Uses Selected Gear Icon Across All Slots",
+      "publicBehaviorClaim": "All Drivers Have Local Only True",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.AllDrivers_HaveLocalOnlyTrue",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "AllStates_WriteDefaultValuesIsFalse",
+      "line": 172,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "All States Write Default Values Is False",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.AllStates_WriteDefaultValuesIsFalse",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "Build_CreatesCorrectNumberOfASMLiteLayers",
+      "line": 126,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Creates Correct Number Of ASMLite Layers",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.Build_CreatesCorrectNumberOfASMLiteLayers",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "CtrlParameters_ContainAllExpectedEntries",
+      "line": 362,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Ctrl Parameters Contain All Expected Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.CtrlParameters_ContainAllExpectedEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "DefParam_HasCorrectDefaultValues",
+      "line": 435,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Def Param Has Correct Default Values",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.DefParam_HasCorrectDefaultValues",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "DuplicateAvatarParam_OnlyOneEntryInCtrlParameters",
+      "line": 383,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Duplicate Avatar Param Only One Entry In Ctrl Parameters",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.DuplicateAvatarParam_OnlyOneEntryInCtrlParameters",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "EachSlotLayer_DefaultStateIsIdle",
+      "line": 155,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Each Slot Layer Default State Is Idle",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.EachSlotLayer_DefaultStateIsIdle",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "EachSlotLayer_HasFourStates",
+      "line": 139,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Each Slot Layer Has Four States",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.EachSlotLayer_HasFourStates",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries",
+      "line": 553,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Exclusions Enabled Omits Excluded FXParams And Driver Copy Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams",
+      "line": 488,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "FXController Uses Only One Shared Ctrl Param No Legacy Control Params",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "IdleTransitions_UseCorrectEncodedValues",
+      "line": 191,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Idle Transitions Use Correct Encoded Values",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.IdleTransitions_UseCorrectEncodedValues",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "LoadDriver_HasCorrectCopyEntries",
+      "line": 259,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Driver Has Correct Copy Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.LoadDriver_HasCorrectCopyEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "PreExistingDuplicateASMLiteParams_DrainedBeforeBuild",
+      "line": 404,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Pre Existing Duplicate ASMLite Params Drained Before Build",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.PreExistingDuplicateASMLiteParams_DrainedBeforeBuild",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "ResetDriver_HasCorrectCopyEntries",
+      "line": 285,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Reset Driver Has Correct Copy Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.ResetDriver_HasCorrectCopyEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "SaveDriver_HasCorrectCopyEntries",
+      "line": 233,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Save Driver Has Correct Copy Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.SaveDriver_HasCorrectCopyEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFxControllerGenerationIntegrationTests.cs",
+      "class": "ASMLiteFxControllerGenerationIntegrationTests",
+      "method": "SlotLayers_DoNotUseAnyStateSafeBoolBranches",
+      "line": 521,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Slot Layers Do Not Use Any State Safe Bool Branches",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated controller fixture immutability assertions",
+      "runnerFilter": "ASMLiteFxControllerGenerationIntegrationTests.SlotLayers_DoNotUseAnyStateSafeBoolBranches",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly",
+      "line": 479,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Changed Input Produces Expected Snapshot Delta Only",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203",
+      "line": 612,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Full Controller Schema Drift Returns Minus One And Exposes Build302 With Nested Drift203",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged",
+      "line": 383,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Invalid Slot Count Returns Minus One And Leaves Generated Assets Unchanged",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema",
+      "line": 360,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Returns Discovered Non ASMLite Param Count And Writes Generated Schema",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts",
+      "line": 321,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Slot Count Eight Populates Expected Generated Artifacts",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
+      "line": 283,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Slot Count One Populates Expected Generated Artifacts",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs",
+      "line": 456,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build Unchanged Input Keeps Stable Generated Names And Full Controller Refs",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema",
+      "line": 526,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Build With Exclusions Updates Return Count And Generated Schema",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups",
+      "line": 564,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Repeated Build After Enabling Exclusions Is Deterministic And Removes Legacy Excluded Backups",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetBuildIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetBuildIntegrationTests",
+      "method": "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces",
+      "line": 419,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Repeated Build Is Idempotent Across Generated Asset Surfaces",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetBuildIntegrationTests.RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_NullAvatarDescriptor_DoesNotThrow",
+      "line": 539,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Null Avatar Descriptor Does Not Throw",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_NullAvatarDescriptor_DoesNotThrow",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams",
+      "line": 546,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Null Or Default Fx Controller Does Not Throw And Still Cleans Menu And Expr Params",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_NullOrDefaultFxController_DoesNotThrowAndStillCleansMenuAndExprParams",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_PreservesUserOwnedFxParamsAndMenuEntries",
+      "line": 473,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Preserves User Owned Fx Params And Menu Entries",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_PreservesUserOwnedFxParamsAndMenuEntries",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam",
+      "line": 410,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Removes ASMLite Expression Parameters And Ctrl Param",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_RemovesASMLiteExpressionParametersAndCtrlParam",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_RemovesASMLiteFxParametersAndCtrlParam",
+      "line": 392,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Removes ASMLite Fx Parameters And Ctrl Param",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_RemovesASMLiteFxParametersAndCtrlParam",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_RemovesASMLiteFxlayers",
+      "line": 374,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Removes ASMLite Fxlayers",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_RemovesASMLiteFxlayers",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference",
+      "line": 446,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Removes Customized Detached Root Control By Presets Submenu Reference",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_RemovesCustomizedDetachedRootControlByPresetsSubmenuReference",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_RemovesSettingsManagerRootControl",
+      "line": 428,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Removes Settings Manager Root Control",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_RemovesSettingsManagerRootControl",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps",
+      "line": 595,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Cleanup Report Repeated Calls Become Deterministic No Ops",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.Cleanup_Report_RepeatedCallsBecomeDeterministicNoOps",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry",
+      "line": 827,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Detached Recovery Pre Finalize Failure Preserves Legacy Move Menu Helper For Retry",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab",
+      "line": 774,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Detached Recovery Verify Failure Reports Best Effort State Without Leaving Partial Prefab",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState",
+      "line": 701,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Return Attached Vendorized To Package Managed Delete Failure Rolls Back To Vendorized State",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.ReturnAttachedVendorizedToPackageManaged_DeleteFailure_RollsBackToVendorizedState",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder",
+      "line": 627,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Return Attached Vendorized To Package Managed Deletes Vendorized Mirror Folder",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCleanupIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCleanupIntegrationTests",
+      "method": "VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName",
+      "line": 888,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Vendorized Mirror Uses Distinct Folders For Distinct Avatars With Same Name",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-lifecycle-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp lifecycle cleanup, and source fixture immutability assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCleanupIntegrationTests.VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCustomizationIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCustomizationIntegrationTests",
+      "method": "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
+      "line": 246,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "All Customization Toggles Disabled Ignores Stale Serialized Values And Matches Baseline Contracts",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteIconTests.A52_SameColor_UsesSelectedGearIconAcrossAllSlots",
+      "runnerFilter": "ASMLiteGeneratedAssetCustomizationIntegrationTests.AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconTests.cs",
-      "class": "ASMLiteIconTests",
-      "method": "A53_Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
-      "line": 178,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCustomizationIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCustomizationIntegrationTests",
+      "method": "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
+      "line": 74,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Combined Customization Fixture Composes Root Overrides Exclusions And Install Prefix",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCustomizationIntegrationTests.CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCustomizationIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCustomizationIntegrationTests",
+      "method": "CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
+      "line": 170,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Combined Customization Fixture Repeated Build Stays Deterministic And Exclusion Safe",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCustomizationIntegrationTests.CombinedCustomizationFixture_RepeatedBuildStaysDeterministicAndExclusionSafe",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteGeneratedAssetCustomizationIntegrationTests.cs",
+      "class": "ASMLiteGeneratedAssetCustomizationIntegrationTests",
+      "method": "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
+      "line": 344,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Disabled Toggle Baseline Remains Deterministic After Prior Enabled Build",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
+      "runnerFilter": "ASMLiteGeneratedAssetCustomizationIntegrationTests.DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconGenerationIntegrationTests.cs",
+      "class": "ASMLiteIconGenerationIntegrationTests",
+      "method": "Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
+      "line": 172,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2420,14 +2360,14 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
-      "runnerFilter": "ASMLiteIconTests.A53_Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
+      "runnerFilter": "ASMLiteIconGenerationIntegrationTests.Custom_UsesCustomIconAndFallsBackToPresetWhenNullOrOutOfRange",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A26_RootContainsSingleSettingsManagerSubmenu",
-      "line": 161,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconGenerationIntegrationTests.cs",
+      "class": "ASMLiteIconGenerationIntegrationTests",
+      "method": "MultiColor_UsesPerSlotGearIconBySlotIndex",
+      "line": 134,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2443,21 +2383,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Root Contains Single Settings Manager Submenu",
+      "publicBehaviorClaim": "Multi Color Uses Per Slot Gear Icon By Slot Index",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A26_RootContainsSingleSettingsManagerSubmenu",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
+      "runnerFilter": "ASMLiteIconGenerationIntegrationTests.MultiColor_UsesPerSlotGearIconBySlotIndex",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A27_PresetsMenuCountAndNamesMatchSlotCount",
-      "line": 170,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteIconGenerationIntegrationTests.cs",
+      "class": "ASMLiteIconGenerationIntegrationTests",
+      "method": "SameColor_UsesSelectedGearIconAcrossAllSlots",
+      "line": 153,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2473,111 +2413,21 @@
       "headlessViability": "yes",
       "honesty": "generated-asset-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Presets Menu Count And Names Match Slot Count",
+      "publicBehaviorClaim": "Same Color Uses Selected Gear Icon Across All Slots",
       "fixtureDependencies": [
         "generated asset fixtures",
         "test avatar descriptor"
       ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A27_PresetsMenuCountAndNamesMatchSlotCount",
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-copies-custom-icon-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, isolated temp custom icon copies, and read-only source icon fixture assertions",
+      "runnerFilter": "ASMLiteIconGenerationIntegrationTests.SameColor_UsesSelectedGearIconAcrossAllSlots",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A28_EachSlotMenuHasSaveLoadClearWithExpectedControlTypes",
-      "line": 186,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Each Slot Menu Has Save Load Clear With Expected Control Types",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A28_EachSlotMenuHasSaveLoadClearWithExpectedControlTypes",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A29_SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue",
-      "line": 218,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Save Confirm Submenu Has Single Confirm Button With Encoded Value",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A29_SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A30_LoadControlIsDirectButtonNotSubmenu",
-      "line": 248,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Load Control Is Direct Button Not Submenu",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A30_LoadControlIsDirectButtonNotSubmenu",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots",
-      "line": 272,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots",
+      "line": 260,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2600,14 +2450,14 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A31_AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.AllTriggerButtonsBindASMLiteCtrlParameterAcrossSlots",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots",
-      "line": 316,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots",
+      "line": 302,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2630,14 +2480,44 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A32_AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.AllTriggerButtonsUseExpectedCompactIntValueAcrossSlots",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild",
-      "line": 357,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "EachSlotMenuHasSaveLoadClearWithExpectedControlTypes",
+      "line": 180,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Each Slot Menu Has Save Load Clear With Expected Control Types",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.EachSlotMenuHasSaveLoadClearWithExpectedControlTypes",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild",
+      "line": 341,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2660,14 +2540,74 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A33_GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuTests.cs",
-      "class": "ASMLiteMenuTests",
-      "method": "A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper",
-      "line": 392,
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "LoadControlIsDirectButtonNotSubmenu",
+      "line": 238,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Load Control Is Direct Button Not Submenu",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.LoadControlIsDirectButtonNotSubmenu",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "PresetsMenuCountAndNamesMatchSlotCount",
+      "line": 166,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Presets Menu Count And Names Match Slot Count",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.PresetsMenuCountAndNamesMatchSlotCount",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper",
+      "line": 374,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2690,13 +2630,73 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
-      "runnerFilter": "ASMLiteMenuTests.A34_Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R080_CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "RootContainsSingleSettingsManagerSubmenu",
+      "line": 159,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Root Contains Single Settings Manager Submenu",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.RootContainsSingleSettingsManagerSubmenu",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteMenuGenerationIntegrationTests.cs",
+      "class": "ASMLiteMenuGenerationIntegrationTests",
+      "method": "SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue",
+      "line": 210,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Save Confirm Submenu Has Single Confirm Button With Encoded Value",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and generated menu fixture immutability assertions",
+      "runnerFilter": "ASMLiteMenuGenerationIntegrationTests.SaveConfirmSubmenuHasSingleConfirmButtonWithEncodedValue",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
       "line": 189,
       "attributes": [
         "TestFixture",
@@ -2720,193 +2720,13 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R080_CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R080_CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled",
-      "line": 163,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Custom Root Icon Uses Exact Texture Reference When Custom Icons Enabled",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R080_CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R080_DefaultRootIcon_WhenCustomIconsDisabled",
-      "line": 150,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Default Root Icon When Custom Icons Disabled",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R080_DefaultRootIcon_WhenCustomIconsDisabled",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R081_CustomRootName_UsesTrimmedValue_WhenEnabled",
-      "line": 112,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Custom Root Name Uses Trimmed Value When Enabled",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R081_CustomRootName_UsesTrimmedValue_WhenEnabled",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R081_DefaultRootName_WhenCustomToggleDisabled",
-      "line": 101,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Default Root Name When Custom Toggle Disabled",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R081_DefaultRootName_WhenCustomToggleDisabled",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R081_RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName",
-      "line": 134,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Repeated Build Disabled Toggle Resets To Default After Custom Name",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R081_RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R081_WhitespaceCustomName_FallsBackToDefault_WhenEnabled",
-      "line": 123,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "generated-asset-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Whitespace Custom Name Falls Back To Default When Enabled",
-      "fixtureDependencies": [
-        "generated asset fixtures",
-        "test avatar descriptor"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R081_WhitespaceCustomName_FallsBackToDefault_WhenEnabled",
-      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R084_CustomRootIconFallback_WhenCustomIconsEnabledButNull",
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "CustomRootIconFallback_WhenCustomIconsEnabledButNull",
       "line": 176,
       "attributes": [
         "TestFixture",
@@ -2930,13 +2750,133 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R084_CustomRootIconFallback_WhenCustomIconsEnabledButNull",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.CustomRootIconFallback_WhenCustomIconsEnabledButNull",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideTests.cs",
-      "class": "ASMLiteRootMenuOverrideTests",
-      "method": "R084_RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon",
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled",
+      "line": 163,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Custom Root Icon Uses Exact Texture Reference When Custom Icons Enabled",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "CustomRootName_UsesTrimmedValue_WhenEnabled",
+      "line": 112,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Custom Root Name Uses Trimmed Value When Enabled",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.CustomRootName_UsesTrimmedValue_WhenEnabled",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "DefaultRootIcon_WhenCustomIconsDisabled",
+      "line": 150,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Default Root Icon When Custom Icons Disabled",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.DefaultRootIcon_WhenCustomIconsDisabled",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "DefaultRootName_WhenCustomToggleDisabled",
+      "line": 101,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Default Root Name When Custom Toggle Disabled",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.DefaultRootName_WhenCustomToggleDisabled",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon",
       "line": 208,
       "attributes": [
         "TestFixture",
@@ -2960,7 +2900,67 @@
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
-      "runnerFilter": "ASMLiteRootMenuOverrideTests.R084_RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName",
+      "line": 134,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Repeated Build Disabled Toggle Resets To Default After Custom Name",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName",
+      "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
+      "class": "ASMLiteRootMenuOverrideIntegrationTests",
+      "method": "WhitespaceCustomName_FallsBackToDefault_WhenEnabled",
+      "line": 123,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "generated-asset-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Whitespace Custom Name Falls Back To Default When Enabled",
+      "fixtureDependencies": [
+        "generated asset fixtures",
+        "test avatar descriptor"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore and root menu/icon fixture immutability assertions",
+      "runnerFilter": "ASMLiteRootMenuOverrideIntegrationTests.WhitespaceCustomName_FallsBackToDefault_WhenEnabled",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {

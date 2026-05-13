@@ -13,16 +13,16 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A46-A50: Build() integration coverage anchored on generated-assets output.
+    /// Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts-RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: Build() integration coverage anchored on generated-assets output.
     /// Verifies slot bounds, return-path contracts, invalid-slot rejection, and
     /// repeated-build idempotency against generated FX/params/menu assets.
     /// </summary>
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteBuildIntegrationTests
+    public class ASMLiteGeneratedAssetBuildIntegrationTests
     {
-        private const string SuiteName = nameof(ASMLiteBuildIntegrationTests);
+        private const string SuiteName = nameof(ASMLiteGeneratedAssetBuildIntegrationTests);
         private static ASMLiteGeneratedAssetsFolderSnapshot s_classGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetsFolderSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
@@ -47,13 +47,13 @@ namespace ASMLite.Tests.Editor
             ASMLiteTestFixtures.ResetGeneratedExprParams();
             _testGeneratedAssetsBaseline = ASMLiteGeneratedAssetsFolderSnapshot.Capture(SuiteName);
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "A46: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "A46: fixture did not create ASMLiteComponent.");
-            Assert.IsNotNull(_ctx.AvDesc, "A46: fixture did not create VRCAvatarDescriptor.");
+            Assert.IsNotNull(_ctx, "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx.AvDesc, "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: fixture did not create VRCAvatarDescriptor.");
             Assert.IsNotNull(_ctx.AvDesc.expressionParameters,
-                "A46: fixture did not assign expressionParameters.");
+                "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: fixture did not assign expressionParameters.");
             Assert.IsNotNull(_ctx.AvDesc.expressionsMenu,
-                "A46: fixture did not assign expressionsMenu.");
+                "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: fixture did not assign expressionsMenu.");
         }
 
         [TearDown]
@@ -279,22 +279,20 @@ namespace ASMLite.Tests.Editor
                 $"{testName}: repeated Build() should keep FullController parameter asset references stable.", ASMLiteAssetPaths.ExprParams);
         }
 
-        // ── A46 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A46_Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts()
+        public void Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts()
         {
             _ctx.Comp.slotCount = 1;
-            AddParam(_ctx, "A46_Int", VRCExpressionParameters.ValueType.Int, 3f);
-            AddParam(_ctx, "A46_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
+            AddParam(_ctx, "BuildSlotCountOne_Int", VRCExpressionParameters.ValueType.Int, 3f);
+            AddParam(_ctx, "BuildSlotCountOne_Float", VRCExpressionParameters.ValueType.Float, 0.5f);
 
             int discoveredExpected = CountDiscoveredNonASMLiteParams(_ctx.AvDesc.expressionParameters);
             Assert.AreEqual(2, discoveredExpected,
-                $"A46: setup failure, expected exactly 2 discovered params before Build(), got {discoveredExpected}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: setup failure, expected exactly 2 discovered params before Build(), got {discoveredExpected}.");
 
-            int buildResult = BuildOrFail(_ctx, "A46");
+            int buildResult = BuildOrFail(_ctx, "Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts");
             Assert.AreEqual(discoveredExpected, buildResult,
-                $"A46: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
 
             var generatedCtrl = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
@@ -302,40 +300,38 @@ namespace ASMLite.Tests.Editor
 
             int asmLayerCount = CountASMLiteLayers(generatedCtrl);
             Assert.AreEqual(1, asmLayerCount,
-                $"A46: expected 1 ASMLite_ layer for slotCount=1, got {asmLayerCount}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: expected 1 ASMLite_ layer for slotCount=1, got {asmLayerCount}.");
 
             int expectedFxAsmParams = 1 + (1 * discoveredExpected) + discoveredExpected;
             int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
-                $"A46: generated FX ASMLite param count mismatch for slotCount=1. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: generated FX ASMLite param count mismatch for slotCount=1. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
             int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
-                $"A46: generated expression ASMLite param count mismatch for slotCount=1 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: generated expression ASMLite param count mismatch for slotCount=1 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
             int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
-                $"A46: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
+                $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
         }
 
-        // ── A47 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A47_Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts()
+        public void Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts()
         {
             _ctx.Comp.slotCount = 8;
-            AddParam(_ctx, "A47_Int", VRCExpressionParameters.ValueType.Int, 7f);
-            AddParam(_ctx, "A47_Bool", VRCExpressionParameters.ValueType.Bool, 1f);
-            AddParam(_ctx, "A47_Float", VRCExpressionParameters.ValueType.Float, 0.25f);
+            AddParam(_ctx, "BuildSlotCountEight_Int", VRCExpressionParameters.ValueType.Int, 7f);
+            AddParam(_ctx, "BuildSlotCountEight_Bool", VRCExpressionParameters.ValueType.Bool, 1f);
+            AddParam(_ctx, "BuildSlotCountEight_Float", VRCExpressionParameters.ValueType.Float, 0.25f);
 
             int discoveredExpected = CountDiscoveredNonASMLiteParams(_ctx.AvDesc.expressionParameters);
             Assert.AreEqual(3, discoveredExpected,
-                $"A47: setup failure, expected exactly 3 discovered params before Build(), got {discoveredExpected}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: setup failure, expected exactly 3 discovered params before Build(), got {discoveredExpected}.");
 
-            int buildResult = BuildOrFail(_ctx, "A47");
+            int buildResult = BuildOrFail(_ctx, "Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts");
             Assert.AreEqual(discoveredExpected, buildResult,
-                $"A47: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: Build() return mismatch. expected discovered={discoveredExpected}, got {buildResult}.");
 
             var generatedCtrl = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
@@ -343,55 +339,51 @@ namespace ASMLite.Tests.Editor
 
             int asmLayerCount = CountASMLiteLayers(generatedCtrl);
             Assert.AreEqual(8, asmLayerCount,
-                $"A47: expected 8 ASMLite_ layers for slotCount=8, got {asmLayerCount}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: expected 8 ASMLite_ layers for slotCount=8, got {asmLayerCount}.");
 
             int expectedFxAsmParams = 1 + (8 * discoveredExpected) + discoveredExpected;
             int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
-                $"A47: generated FX ASMLite param count mismatch for slotCount=8. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: generated FX ASMLite param count mismatch for slotCount=8. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
 
             int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprAsmParams, asmExprParamCount,
-                $"A47: generated expression ASMLite param count mismatch for slotCount=8 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: generated expression ASMLite param count mismatch for slotCount=8 after accounting for Clear Preset default keys. expected={expectedExprAsmParams}, got {asmExprParamCount}.");
 
             int settingsManagerCount = CountSettingsManagerControls(generatedMenu);
             Assert.AreEqual(1, settingsManagerCount,
-                $"A47: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
+                $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: expected one Settings Manager control in generated root menu. got {settingsManagerCount}.");
         }
 
-        // ── A48 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A48_Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema()
+        public void Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema()
         {
             _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "A48_UserA", VRCExpressionParameters.ValueType.Int);
-            AddParam(_ctx, "A48_UserB", VRCExpressionParameters.ValueType.Float, 0.1f);
+            AddParam(_ctx, "BuildReturnsDiscoveredNon_UserA", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "BuildReturnsDiscoveredNon_UserB", VRCExpressionParameters.ValueType.Float, 0.1f);
             AddParam(_ctx, "ASMLite_A48_Skipped", VRCExpressionParameters.ValueType.Bool, 1f);
 
             int discoveredExpected = CountDiscoveredNonASMLiteParams(_ctx.AvDesc.expressionParameters);
             Assert.AreEqual(2, discoveredExpected,
-                $"A48: setup failure, discovered count should ignore ASMLite_-prefixed params. expected=2, got {discoveredExpected}.");
+                $"Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema: setup failure, discovered count should ignore ASMLite_-prefixed params. expected=2, got {discoveredExpected}.");
 
-            int buildResult = BuildOrFail(_ctx, "A48");
+            int buildResult = BuildOrFail(_ctx, "Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema");
             Assert.AreEqual(discoveredExpected, buildResult,
-                $"A48: Build() must return discovered non-ASMLite param count. expected={discoveredExpected}, got {buildResult}.");
+                $"Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema: Build() must return discovered non-ASMLite param count. expected={discoveredExpected}, got {buildResult}.");
 
             var generatedExpr = LoadGeneratedExprParams();
             int expectedExprParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, discoveredExpected);
             int asmExprParamCount = CountASMLiteExprParams(generatedExpr);
             Assert.AreEqual(expectedExprParams, asmExprParamCount,
-                $"A48: generated expression ASMLite param count mismatch for return-path contract validation after accounting for Clear Preset default keys. expected={expectedExprParams}, got {asmExprParamCount}.");
+                $"Build_ReturnsDiscoveredNonASMLiteParamCount_AndWritesGeneratedSchema: generated expression ASMLite param count mismatch for return-path contract validation after accounting for Clear Preset default keys. expected={expectedExprParams}, got {asmExprParamCount}.");
         }
 
-        // ── A49 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged()
+        public void Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged()
         {
             _ctx.Comp.slotCount = 9;
-            AddParam(_ctx, "A49_User", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "BuildInvalidSlotCount_User", VRCExpressionParameters.ValueType.Int);
 
             string fxBefore = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.FXController);
             string exprBefore = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
@@ -400,152 +392,150 @@ namespace ASMLite.Tests.Editor
             LogAssert.Expect(LogType.Error, "[ASM-Lite] slotCount must be between 1 and 8 (got 9).");
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
-                $"A49: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
+                $"Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: Build() must reject slotCount outside [1..8] with -1. got {buildResult} for slotCount={_ctx.Comp.slotCount}.");
 
             var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
-            RecordBuildDiagnosticFailure(nameof(A49_Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged), diagnostic);
+            RecordBuildDiagnosticFailure(nameof(Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged), diagnostic);
             Assert.IsFalse(diagnostic.Success,
-                "A49: invalid-slot Build() must expose failing diagnostics instead of returning -1 without context.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: invalid-slot Build() must expose failing diagnostics instead of returning -1 without context.");
             Assert.AreEqual(ASMLiteDiagnosticCodes.Build.ValidationFailed, diagnostic.Code,
-                "A49: invalid slotCount must map to deterministic BUILD-301 validation diagnostics.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: invalid slotCount must map to deterministic BUILD-301 validation diagnostics.");
             Assert.AreEqual("slotCount", diagnostic.ContextPath,
-                "A49: BUILD-301 diagnostics should identify slotCount as the failing context.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: BUILD-301 diagnostics should identify slotCount as the failing context.");
 
             string fxAfter = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.FXController);
             string exprAfter = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
             string menuAfter = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.Menu);
 
             Assert.AreEqual(fxBefore, fxAfter,
-                "A49: invalid-slot Build() should not mutate generated FX controller asset.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: invalid-slot Build() should not mutate generated FX controller asset.");
             Assert.AreEqual(exprBefore, exprAfter,
-                "A49: invalid-slot Build() should not mutate generated expression params asset.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: invalid-slot Build() should not mutate generated expression params asset.");
             Assert.AreEqual(menuBefore, menuAfter,
-                "A49: invalid-slot Build() should not mutate generated menu asset.");
+                "Build_InvalidSlotCount_ReturnsMinusOne_AndLeavesGeneratedAssetsUnchanged: invalid-slot Build() should not mutate generated menu asset.");
         }
 
-        // ── A50 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces()
+        public void RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces()
         {
             _ctx.Comp.slotCount = 3;
-            AddParam(_ctx, "A50_Int", VRCExpressionParameters.ValueType.Int, 2f);
-            AddParam(_ctx, "A50_Bool", VRCExpressionParameters.ValueType.Bool, 1f);
+            AddParam(_ctx, "RepeatedBuildIdempotentAcross_Int", VRCExpressionParameters.ValueType.Int, 2f);
+            AddParam(_ctx, "RepeatedBuildIdempotentAcross_Bool", VRCExpressionParameters.ValueType.Bool, 1f);
 
-            int firstResult = BuildOrFail(_ctx, "A50");
+            int firstResult = BuildOrFail(_ctx, "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces");
             Assert.AreEqual(2, firstResult,
-                $"A50: setup failure, first Build() should discover exactly 2 params, got {firstResult}.");
+                $"RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, first Build() should discover exactly 2 params, got {firstResult}.");
 
             var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, firstResult);
             Assert.Greater(firstSnapshot.FxLayerNames.Length, 0,
-                "A50: setup failure, expected normalized FX layer names after first Build().");
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, expected normalized FX layer names after first Build().");
             Assert.Greater(firstSnapshot.FxParameterNames.Length, 0,
-                "A50: setup failure, expected normalized FX parameter names after first Build().");
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, expected normalized FX parameter names after first Build().");
             Assert.AreEqual(1, firstSnapshot.SettingsManagerControlCount,
-                "A50: setup failure, expected exactly one Settings Manager control after first Build().");
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, expected exactly one Settings Manager control after first Build().");
             Assert.AreEqual(0, firstSnapshot.FxDanglingLocalFileIdCount,
-                "A50: setup failure, generated FX controller should not contain dangling local fileID references after first Build().");
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, generated FX controller should not contain dangling local fileID references after first Build().");
             Assert.AreEqual(1, firstSnapshot.LiveVrcFuryComponentCount,
-                "A50: setup failure, first Build() should leave exactly one live VF.Model.VRCFury component.");
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: setup failure, first Build() should leave exactly one live VF.Model.VRCFury component.");
 
-            int secondResult = BuildOrFail(_ctx, "A50");
+            int secondResult = BuildOrFail(_ctx, "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces");
             var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, secondResult);
 
-            AssertUnchangedInputSnapshotMatches(nameof(A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), firstSnapshot, secondSnapshot);
-            AssertDeterminismEqual(nameof(A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
-                "A50: repeated Build() must keep the live FullController FX reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
-                "A50: repeated Build() must keep the live FullController menu reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
-                "A50: repeated Build() must keep the live FullController parameter reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.ExprParams);
-            AssertDeterminismEqual(nameof(A50_RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "FxControllerMainObjectName", "ASMLite_FX", secondSnapshot.FxControllerMainObjectName,
-                "A50: generated FX controller main object name must stay normalized to the filename without the .controller extension to avoid Unity import warnings.", ASMLiteAssetPaths.FXController);
+            AssertUnchangedInputSnapshotMatches(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), firstSnapshot, secondSnapshot);
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController FX reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController menu reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.Menu);
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController parameter reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.ExprParams);
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "FxControllerMainObjectName", "ASMLite_FX", secondSnapshot.FxControllerMainObjectName,
+                "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: generated FX controller main object name must stay normalized to the filename without the .controller extension to avoid Unity import warnings.", ASMLiteAssetPaths.FXController);
         }
 
         [Test, Category("Integration")]
-        public void A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs()
+        public void Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs()
         {
             _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "A54_Toggle", VRCExpressionParameters.ValueType.Bool, 1f);
-            AddParam(_ctx, "A54_Float", VRCExpressionParameters.ValueType.Float, 0.25f);
+            AddParam(_ctx, "BuildUnchangedInputKeeps_Toggle", VRCExpressionParameters.ValueType.Bool, 1f);
+            AddParam(_ctx, "BuildUnchangedInputKeeps_Float", VRCExpressionParameters.ValueType.Float, 0.25f);
 
-            var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, BuildOrFail(_ctx, "A54"));
-            var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, BuildOrFail(_ctx, "A54"));
+            var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, BuildOrFail(_ctx, "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs"));
+            var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, BuildOrFail(_ctx, "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs"));
 
-            AssertUnchangedInputSnapshotMatches(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), firstSnapshot, secondSnapshot);
-            AssertDeterminismEqual(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ControllerReferencePath", ASMLiteAssetPaths.FXController, firstSnapshot.ControllerReferencePath,
-                "A54: unchanged-input builds must keep FullController controller.objRef wired to the canonical generated FX controller path.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "MenuReferencePath", ASMLiteAssetPaths.Menu, firstSnapshot.MenuReferencePath,
-                "A54: unchanged-input builds must keep FullController menu.objRef wired to the canonical generated menu path.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, firstSnapshot.ParameterReferenceAssetPath,
-                "A54: unchanged-input builds must keep the resolved FullController parameter reference wired to the canonical generated expression-parameters path.", ASMLiteAssetPaths.ExprParams);
-            AssertDeterminismEqual(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceResolvedPath", firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
-                "A54: unchanged-input builds must keep the fallback-group-selected parameter reference path stable.");
-            AssertDeterminismEqual(nameof(A54_Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "FxControllerMainObjectName", "ASMLite_FX", firstSnapshot.FxControllerMainObjectName,
-                "A54: generated FX controller main object name must stay normalized on unchanged-input builds.", ASMLiteAssetPaths.FXController);
+            AssertUnchangedInputSnapshotMatches(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), firstSnapshot, secondSnapshot);
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ControllerReferencePath", ASMLiteAssetPaths.FXController, firstSnapshot.ControllerReferencePath,
+                "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep FullController controller.objRef wired to the canonical generated FX controller path.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "MenuReferencePath", ASMLiteAssetPaths.Menu, firstSnapshot.MenuReferencePath,
+                "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep FullController menu.objRef wired to the canonical generated menu path.", ASMLiteAssetPaths.Menu);
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, firstSnapshot.ParameterReferenceAssetPath,
+                "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep the resolved FullController parameter reference wired to the canonical generated expression-parameters path.", ASMLiteAssetPaths.ExprParams);
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceResolvedPath", firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
+                "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep the fallback-group-selected parameter reference path stable.");
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "FxControllerMainObjectName", "ASMLite_FX", firstSnapshot.FxControllerMainObjectName,
+                "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: generated FX controller main object name must stay normalized on unchanged-input builds.", ASMLiteAssetPaths.FXController);
         }
 
         [Test, Category("Integration")]
-        public void A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly()
+        public void Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly()
         {
             _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "A55_Base", VRCExpressionParameters.ValueType.Int, 3f);
+            AddParam(_ctx, "BuildChangedInputProduces_Base", VRCExpressionParameters.ValueType.Int, 3f);
 
-            int firstResult = BuildOrFail(_ctx, "A55");
+            int firstResult = BuildOrFail(_ctx, "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly");
             var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, firstResult);
             int firstExprParamCount = CountASMLiteExprParams(LoadGeneratedExprParams());
             var firstBackupNames = ReadGeneratedBackupNames(firstSnapshot);
 
-            AddParam(_ctx, "A55_NewUserParam", VRCExpressionParameters.ValueType.Bool, 1f);
+            AddParam(_ctx, "BuildChangedInputProduces_NewUserParam", VRCExpressionParameters.ValueType.Bool, 1f);
 
-            int secondResult = BuildOrFail(_ctx, "A55");
+            int secondResult = BuildOrFail(_ctx, "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly");
             var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, secondResult);
             int secondExprParamCount = CountASMLiteExprParams(LoadGeneratedExprParams());
             var secondBackupNames = ReadGeneratedBackupNames(secondSnapshot);
 
-            AssertDeterminismDifferent(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "BuildResult", firstSnapshot.BuildResult, secondSnapshot.BuildResult,
-                "A55: changed input should change the Build() discovered-parameter count captured in the snapshot.");
-            AssertDeterminismDifferent(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "FxParameterNames.Length", firstSnapshot.FxParameterNames.Length, secondSnapshot.FxParameterNames.Length,
-                "A55: changed input should change the normalized generated FX parameter count.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismDifferent(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ExprParamCount", firstExprParamCount, secondExprParamCount,
-                "A55: changed input should change the generated expression-parameter count.", ASMLiteAssetPaths.ExprParams);
-            AssertDeterminismCondition(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "BackupNames",
+            AssertDeterminismDifferent(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "BuildResult", firstSnapshot.BuildResult, secondSnapshot.BuildResult,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should change the Build() discovered-parameter count captured in the snapshot.");
+            AssertDeterminismDifferent(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "FxParameterNames.Length", firstSnapshot.FxParameterNames.Length, secondSnapshot.FxParameterNames.Length,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should change the normalized generated FX parameter count.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismDifferent(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ExprParamCount", firstExprParamCount, secondExprParamCount,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should change the generated expression-parameter count.", ASMLiteAssetPaths.ExprParams);
+            AssertDeterminismCondition(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "BackupNames",
                 !firstBackupNames.SequenceEqual(secondBackupNames),
-                "A55: changed input should change generated backup-key names.",
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should change generated backup-key names.",
                 ASMLiteAssetPaths.FXController);
 
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", firstSnapshot.ControllerReferencePath, secondSnapshot.ControllerReferencePath,
-                "A55: changed input should not retarget the canonical FullController FX asset reference.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", firstSnapshot.MenuReferencePath, secondSnapshot.MenuReferencePath,
-                "A55: changed input should not retarget the canonical FullController menu asset reference.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", firstSnapshot.ParameterReferenceAssetPath, secondSnapshot.ParameterReferenceAssetPath,
-                "A55: changed input should not retarget the canonical FullController parameter asset reference.", ASMLiteAssetPaths.ExprParams);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceResolvedPath", firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
-                "A55: changed input should not change which fallback-group parameter path is populated.");
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "FxControllerMainObjectName", firstSnapshot.FxControllerMainObjectName, secondSnapshot.FxControllerMainObjectName,
-                "A55: changed input should not change the canonical generated FX controller main-object name.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
-                "A55: canonical generated FX asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
-                "A55: canonical generated menu asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(A55_Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
-                "A55: canonical generated parameter asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.ExprParams);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", firstSnapshot.ControllerReferencePath, secondSnapshot.ControllerReferencePath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not retarget the canonical FullController FX asset reference.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", firstSnapshot.MenuReferencePath, secondSnapshot.MenuReferencePath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not retarget the canonical FullController menu asset reference.", ASMLiteAssetPaths.Menu);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", firstSnapshot.ParameterReferenceAssetPath, secondSnapshot.ParameterReferenceAssetPath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not retarget the canonical FullController parameter asset reference.", ASMLiteAssetPaths.ExprParams);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceResolvedPath", firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not change which fallback-group parameter path is populated.");
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "FxControllerMainObjectName", firstSnapshot.FxControllerMainObjectName, secondSnapshot.FxControllerMainObjectName,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not change the canonical generated FX controller main-object name.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated FX asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.FXController);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated menu asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.Menu);
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
+                "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated parameter asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.ExprParams);
         }
 
         [Test, Category("Integration")]
-        public void A51_Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema()
+        public void Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema()
         {
             _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "A51_Keep", VRCExpressionParameters.ValueType.Int);
-            AddParam(_ctx, "A51_Drop", VRCExpressionParameters.ValueType.Float);
-            AddParam(_ctx, "A51_KeepTwo", VRCExpressionParameters.ValueType.Bool);
+            AddParam(_ctx, "BuildExclusionsUpdatesReturn_Keep", VRCExpressionParameters.ValueType.Int);
+            AddParam(_ctx, "BuildExclusionsUpdatesReturn_Drop", VRCExpressionParameters.ValueType.Float);
+            AddParam(_ctx, "BuildExclusionsUpdatesReturn_KeepTwo", VRCExpressionParameters.ValueType.Bool);
 
             _ctx.Comp.useParameterExclusions = true;
-            _ctx.Comp.excludedParameterNames = new[] { "A51_Drop", "A51_Drop", "Missing_Name" };
+            _ctx.Comp.excludedParameterNames = new[] { "BuildExclusionsUpdatesReturn_Drop", "BuildExclusionsUpdatesReturn_Drop", "Missing_Name" };
 
-            int buildResult = BuildOrFail(_ctx, "A51");
+            int buildResult = BuildOrFail(_ctx, "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema");
             Assert.AreEqual(2, buildResult,
-                "A51: Build() return should count only non-excluded discovered params.");
+                "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: Build() return should count only non-excluded discovered params.");
 
             var generatedCtrl = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
@@ -554,75 +544,75 @@ namespace ASMLite.Tests.Editor
             int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, buildResult);
 
             Assert.AreEqual(expectedFxAsmParams, CountASMLiteFxParams(generatedCtrl),
-                "A51: FX parameter shape should reflect exclusion-pruned discovery count.");
+                "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: FX parameter shape should reflect exclusion-pruned discovery count.");
             Assert.AreEqual(expectedExprAsmParams, CountASMLiteExprParams(generatedExpr),
-                "A51: expression parameter shape should reflect exclusion-pruned discovery count plus Clear Preset default keys.");
+                "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: expression parameter shape should reflect exclusion-pruned discovery count plus Clear Preset default keys.");
 
             var fxNames = generatedCtrl.parameters.Select(p => p.name).ToHashSet();
             var exprNames = generatedExpr.parameters.Select(p => p.name).ToHashSet();
 
-            Assert.IsFalse(fxNames.Contains("A51_Drop"), "A51: excluded live parameter must not be declared in FX controller.");
-            Assert.IsFalse(fxNames.Contains("ASMLite_Def_A51_Drop"), "A51: excluded default key must not be generated in FX controller.");
+            Assert.IsFalse(fxNames.Contains("BuildExclusionsUpdatesReturn_Drop"), "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded live parameter must not be declared in FX controller.");
+            Assert.IsFalse(fxNames.Contains("ASMLite_Def_A51_Drop"), "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded default key must not be generated in FX controller.");
             Assert.IsFalse(fxNames.Contains("ASMLite_Bak_S1_A51_Drop") || fxNames.Contains("ASMLite_Bak_S2_A51_Drop"),
-                "A51: excluded backup keys must not be generated in FX controller.");
+                "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded backup keys must not be generated in FX controller.");
 
             Assert.IsFalse(exprNames.Contains("ASMLite_Bak_S1_A51_Drop") || exprNames.Contains("ASMLite_Bak_S2_A51_Drop"),
-                "A51: excluded backup keys must not be generated in expression parameters.");
+                "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded backup keys must not be generated in expression parameters.");
         }
 
         [Test, Category("Integration")]
-        public void A52_RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups()
+        public void RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups()
         {
             _ctx.Comp.slotCount = 1;
-            AddParam(_ctx, "A52_Keep", VRCExpressionParameters.ValueType.Int, 1f);
-            AddParam(_ctx, "A52_Drop", VRCExpressionParameters.ValueType.Float, 0.3f);
+            AddParam(_ctx, "RepeatedBuildEnablingExclusions_Keep", VRCExpressionParameters.ValueType.Int, 1f);
+            AddParam(_ctx, "RepeatedBuildEnablingExclusions_Drop", VRCExpressionParameters.ValueType.Float, 0.3f);
 
             _ctx.Comp.useParameterExclusions = false;
-            int baselineResult = BuildOrFail(_ctx, "A52");
-            Assert.AreEqual(2, baselineResult, "A52: baseline build must include both parameters before exclusion toggle.");
+            int baselineResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
+            Assert.AreEqual(2, baselineResult, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: baseline build must include both parameters before exclusion toggle.");
 
             var baselineExpr = LoadGeneratedExprParams();
             Assert.IsTrue(baselineExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
-                "A52: baseline generated expression schema must contain excluded candidate backup key before toggle.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: baseline generated expression schema must contain excluded candidate backup key before toggle.");
 
             _ctx.Comp.useParameterExclusions = true;
-            _ctx.Comp.excludedParameterNames = new[] { "A52_Drop", " Ghost " };
+            _ctx.Comp.excludedParameterNames = new[] { "RepeatedBuildEnablingExclusions_Drop", " Ghost " };
 
-            int firstExcludedResult = BuildOrFail(_ctx, "A52");
+            int firstExcludedResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
             Assert.AreEqual(1, firstExcludedResult,
-                "A52: exclusion-enabled build should return only the non-excluded discovered param count.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: exclusion-enabled build should return only the non-excluded discovered param count.");
 
             var firstExcludedCtrl = LoadGeneratedFxController();
             int firstExcludedLayers = CountASMLiteLayers(firstExcludedCtrl);
             int firstExcludedFxParamCount = CountASMLiteFxParams(firstExcludedCtrl);
             string exprFirstExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
 
-            int secondExcludedResult = BuildOrFail(_ctx, "A52");
+            int secondExcludedResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
             Assert.AreEqual(firstExcludedResult, secondExcludedResult,
-                "A52: repeated exclusion-enabled builds should keep Build() return deterministic.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: repeated exclusion-enabled builds should keep Build() return deterministic.");
 
             string exprSecondExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
             Assert.AreEqual(exprFirstExcluded, exprSecondExcluded,
-                "A52: expression output should be text-idempotent across repeated exclusion-enabled builds.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: expression output should be text-idempotent across repeated exclusion-enabled builds.");
 
             var generatedCtrl = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
             Assert.AreEqual(firstExcludedLayers, CountASMLiteLayers(generatedCtrl),
-                "A52: repeated exclusion-enabled builds should keep FX layer count deterministic.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: repeated exclusion-enabled builds should keep FX layer count deterministic.");
             Assert.AreEqual(firstExcludedFxParamCount, CountASMLiteFxParams(generatedCtrl),
-                "A52: repeated exclusion-enabled builds should keep FX ASMLite parameter count deterministic.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: repeated exclusion-enabled builds should keep FX ASMLite parameter count deterministic.");
 
-            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "A52_Drop" || p.name == "ASMLite_Def_A52_Drop" || p.name == "ASMLite_Bak_S1_A52_Drop"),
-                "A52: FX output must remove excluded live/default/backup keys after exclusion toggle.");
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "RepeatedBuildEnablingExclusions_Drop" || p.name == "ASMLite_Def_A52_Drop" || p.name == "ASMLite_Bak_S1_A52_Drop"),
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: FX output must remove excluded live/default/backup keys after exclusion toggle.");
             Assert.IsFalse(generatedExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
-                "A52: expression output must remove previously generated excluded backup keys after exclusion toggle.");
+                "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: expression output must remove previously generated excluded backup keys after exclusion toggle.");
         }
 
         [Test, Category("Integration")]
-        public void A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203()
+        public void Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203()
         {
             _ctx.Comp.slotCount = 3;
-            AddParam(_ctx, "A53_User", VRCExpressionParameters.ValueType.Int, 1f);
+            AddParam(_ctx, "BuildFullControllerSchema_User", VRCExpressionParameters.ValueType.Int, 1f);
 
             var vf = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             vf.content = new VF.Model.Feature.BrokenFullController
@@ -638,26 +628,26 @@ namespace ASMLite.Tests.Editor
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
-                "A53: Build() must preserve legacy -1 behavior when critical FullController wiring fails.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: Build() must preserve legacy -1 behavior when critical FullController wiring fails.");
 
             var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
-            RecordBuildDiagnosticFailure(nameof(A53_Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203), diagnostic);
+            RecordBuildDiagnosticFailure(nameof(Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203), diagnostic);
             Assert.IsFalse(diagnostic.Success,
-                "A53: critical FullController drift must expose failing build diagnostics.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: critical FullController drift must expose failing build diagnostics.");
             Assert.AreEqual(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, diagnostic.Code,
-                "A53: FullController schema drift during build preflight must map to BUILD-302.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: FullController schema drift during build preflight must map to BUILD-302.");
             Assert.AreEqual("content", diagnostic.ContextPath,
-                "A53: BUILD-302 wrapper diagnostics should identify FullController content wiring scope.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: BUILD-302 wrapper diagnostics should identify FullController content wiring scope.");
             Assert.IsNotNull(diagnostic.InnerDiagnostic,
-                "A53: BUILD-302 diagnostics should preserve nested DRIFT context for schema remediation.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: BUILD-302 diagnostics should preserve nested DRIFT context for schema remediation.");
 
             var inner = diagnostic.InnerDiagnostic;
             Assert.IsFalse(inner.Success,
-                "A53: nested diagnostic for BUILD-302 should be a failing DRIFT diagnostic.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: nested diagnostic for BUILD-302 should be a failing DRIFT diagnostic.");
             Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, inner.Code,
-                "A53: missing FullController prefix path must be preserved as nested DRIFT-203.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: missing FullController prefix path must be preserved as nested DRIFT-203.");
             Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, inner.ContextPath,
-                "A53: nested DRIFT diagnostics should expose the exact failing schema path.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: nested DRIFT diagnostics should expose the exact failing schema path.");
         }
 
     }

@@ -13,9 +13,9 @@ namespace ASMLite.Tests.Editor
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteRootMenuOverrideTests
+    public class ASMLiteRootMenuOverrideIntegrationTests
     {
-        private const string SuiteName = nameof(ASMLiteRootMenuOverrideTests);
+        private const string SuiteName = nameof(ASMLiteRootMenuOverrideIntegrationTests);
         private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot _sourceIconAssetsBaseline;
@@ -46,8 +46,8 @@ namespace ASMLite.Tests.Editor
                 SuiteName,
                 ASMLiteGeneratedAssetTestIsolation.BuiltInIconFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "R081: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "R081: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx, "DefaultRootName_WhenCustomToggleDisabled: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "DefaultRootName_WhenCustomToggleDisabled: fixture did not create ASMLiteComponent.");
         }
 
         [TearDown]
@@ -98,131 +98,131 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void R081_DefaultRootName_WhenCustomToggleDisabled()
+        public void DefaultRootName_WhenCustomToggleDisabled()
         {
             _ctx.Comp.useCustomRootName = false;
             _ctx.Comp.customRootName = "Creator Custom";
 
-            var rootControl = BuildAndGetRootControl("R081-default-disabled");
+            var rootControl = BuildAndGetRootControl("DefaultRootName_WhenCustomToggleDisabled-default-disabled");
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, rootControl.name,
-                "R081: disabled custom root name must fall back to Settings Manager.");
+                "DefaultRootName_WhenCustomToggleDisabled: disabled custom root name must fall back to Settings Manager.");
         }
 
         [Test, Category("Integration")]
-        public void R081_CustomRootName_UsesTrimmedValue_WhenEnabled()
+        public void CustomRootName_UsesTrimmedValue_WhenEnabled()
         {
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "   My Presets   ";
 
-            var rootControl = BuildAndGetRootControl("R081-trimmed-enabled");
+            var rootControl = BuildAndGetRootControl("CustomRootName_UsesTrimmedValue_WhenEnabled-trimmed-enabled");
             Assert.AreEqual("My Presets", rootControl.name,
-                "R081: enabled custom root name must trim whitespace before applying.");
+                "CustomRootName_UsesTrimmedValue_WhenEnabled: enabled custom root name must trim whitespace before applying.");
         }
 
         [Test, Category("Integration")]
-        public void R081_WhitespaceCustomName_FallsBackToDefault_WhenEnabled()
+        public void WhitespaceCustomName_FallsBackToDefault_WhenEnabled()
         {
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "   \t  \n ";
 
-            var rootControl = BuildAndGetRootControl("R081-blank-enabled");
+            var rootControl = BuildAndGetRootControl("WhitespaceCustomName_FallsBackToDefault_WhenEnabled-blank-enabled");
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, rootControl.name,
-                "R081: blank/whitespace custom root name must fall back to Settings Manager.");
+                "WhitespaceCustomName_FallsBackToDefault_WhenEnabled: blank/whitespace custom root name must fall back to Settings Manager.");
         }
 
         [Test, Category("Integration")]
-        public void R081_RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName()
+        public void RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName()
         {
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  CustomOne  ";
-            var firstRootControl = BuildAndGetRootControl("R081-rebuild-first");
+            var firstRootControl = BuildAndGetRootControl("RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName-rebuild-first");
             Assert.AreEqual("CustomOne", firstRootControl.name,
-                "R081: first build should apply trimmed custom root name.");
+                "RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName: first build should apply trimmed custom root name.");
 
             _ctx.Comp.useCustomRootName = false;
             _ctx.Comp.customRootName = "Stale Name";
-            var secondRootControl = BuildAndGetRootControl("R081-rebuild-second");
+            var secondRootControl = BuildAndGetRootControl("RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName-rebuild-second");
             Assert.AreEqual(ASMLiteBuilder.DefaultRootControlName, secondRootControl.name,
-                "R081: disabled toggle must restore default root name on repeated build.");
+                "RepeatedBuild_DisabledToggleResetsToDefaultAfterCustomName: disabled toggle must restore default root name on repeated build.");
         }
 
         [Test, Category("Integration")]
-        public void R080_DefaultRootIcon_WhenCustomIconsDisabled()
+        public void DefaultRootIcon_WhenCustomIconsDisabled()
         {
-            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R080-default-icon-disabled");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "DefaultRootIcon_WhenCustomIconsDisabled-default-icon-disabled");
             _ctx.Comp.useCustomSlotIcons = false;
             _ctx.Comp.useCustomRootIcon = true;
-            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[1], "R080-default-icon-disabled");
+            _ctx.Comp.customRootIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[1], "DefaultRootIcon_WhenCustomIconsDisabled-default-icon-disabled");
 
-            var rootControl = BuildAndGetRootControl("R080-default-icon-disabled");
+            var rootControl = BuildAndGetRootControl("DefaultRootIcon_WhenCustomIconsDisabled-default-icon-disabled");
             Assert.AreSame(fallbackIcon, rootControl.icon,
-                "R080: disabled custom icons must fall back to bundled presets icon even when a legacy root icon toggle remains enabled.");
+                "DefaultRootIcon_WhenCustomIconsDisabled: disabled custom icons must fall back to bundled presets icon even when a legacy root icon toggle remains enabled.");
         }
 
         [Test, Category("Integration")]
-        public void R080_CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled()
+        public void CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled()
         {
-            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "R080-custom-icon-enabled");
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[6], "CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled-custom-icon-enabled");
             _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = customIcon;
 
-            var rootControl = BuildAndGetRootControl("R080-custom-icon-enabled");
+            var rootControl = BuildAndGetRootControl("CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled-custom-icon-enabled");
             Assert.AreSame(customIcon, rootControl.icon,
-                "R080: enabled custom icons must apply the supplied root icon without requiring a separate root-icon toggle.");
+                "CustomRootIcon_UsesExactTextureReference_WhenCustomIconsEnabled: enabled custom icons must apply the supplied root icon without requiring a separate root-icon toggle.");
         }
 
         [Test, Category("Integration")]
-        public void R084_CustomRootIconFallback_WhenCustomIconsEnabledButNull()
+        public void CustomRootIconFallback_WhenCustomIconsEnabledButNull()
         {
-            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R084-null-icon-fallback");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "CustomRootIconFallback_WhenCustomIconsEnabledButNull-null-icon-fallback");
             _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = null;
 
-            var rootControl = BuildAndGetRootControl("R084-null-icon-fallback");
+            var rootControl = BuildAndGetRootControl("CustomRootIconFallback_WhenCustomIconsEnabledButNull-null-icon-fallback");
             Assert.AreSame(fallbackIcon, rootControl.icon,
-                "R084: enabled custom icons with no assigned root texture must fall back to bundled presets icon.");
+                "CustomRootIconFallback_WhenCustomIconsEnabledButNull: enabled custom icons with no assigned root texture must fall back to bundled presets icon.");
         }
 
         [Test, Category("Integration")]
-        public void R080_CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift()
+        public void CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift()
         {
-            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[3], "R080-combined-name-icon");
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[3], "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift-combined-name-icon");
             _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootName = true;
             _ctx.Comp.customRootName = "  Creator Settings  ";
             _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = customIcon;
 
-            var rootControl = BuildAndGetRootControl("R080-combined-name-icon");
+            var rootControl = BuildAndGetRootControl("CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift-combined-name-icon");
             Assert.AreEqual("Creator Settings", rootControl.name,
-                "R080: combined custom settings must apply trimmed custom root name.");
+                "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift: combined custom settings must apply trimmed custom root name.");
             Assert.AreSame(customIcon, rootControl.icon,
-                "R080: combined custom settings must apply the custom root icon reference.");
+                "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift: combined custom settings must apply the custom root icon reference.");
             Assert.IsNotNull(rootControl.subMenu,
-                "R080: combined custom settings must preserve root submenu wiring.");
+                "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift: combined custom settings must preserve root submenu wiring.");
         }
 
         [Test, Category("Integration")]
-        public void R084_RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon()
+        public void RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon()
         {
-            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "R084-rebuild-icon-fallback");
-            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[5], "R084-rebuild-icon-fallback");
+            var fallbackIcon = LoadIconOrFail(ASMLiteAssetPaths.IconPresets, "RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon-rebuild-icon-fallback");
+            var customIcon = LoadIconOrFail(ASMLiteAssetPaths.GearIconPaths[5], "RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon-rebuild-icon-fallback");
 
             _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.useCustomRootIcon = false;
             _ctx.Comp.customRootIcon = customIcon;
-            var firstRootControl = BuildAndGetRootControl("R084-rebuild-icon-first");
+            var firstRootControl = BuildAndGetRootControl("RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon-rebuild-icon-first");
             Assert.AreSame(customIcon, firstRootControl.icon,
-                "R084: first build should apply custom root icon reference.");
+                "RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon: first build should apply custom root icon reference.");
 
             _ctx.Comp.useCustomSlotIcons = false;
             _ctx.Comp.useCustomRootIcon = true;
             _ctx.Comp.customRootIcon = customIcon;
-            var secondRootControl = BuildAndGetRootControl("R084-rebuild-icon-second");
+            var secondRootControl = BuildAndGetRootControl("RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon-rebuild-icon-second");
             Assert.AreSame(fallbackIcon, secondRootControl.icon,
-                "R084: disabling custom icons must restore fallback icon on repeated build.");
+                "RepeatedBuild_CustomRootIconThenDisabledCustomIcons_RestoresFallbackIcon: disabling custom icons must restore fallback icon on repeated build.");
         }
     }
 }

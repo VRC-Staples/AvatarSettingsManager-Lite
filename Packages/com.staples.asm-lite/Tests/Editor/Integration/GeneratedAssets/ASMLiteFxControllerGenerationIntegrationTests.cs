@@ -12,16 +12,16 @@ using System.Linq;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A05-A18: FX controller state machine invariants.
+    /// FX controller state machine invariants.
     /// Integration category: each test calls Build() and inspects the generated
     /// FX AnimatorController at ASMLiteAssetPaths.FXController.
     /// </summary>
     [TestFixture]
     [Category("Headless")]
     [Category("Integration")]
-    public class ASMLiteFXControllerTests
+    public class ASMLiteFxControllerGenerationIntegrationTests
     {
-        private const string SuiteName = nameof(ASMLiteFXControllerTests);
+        private const string SuiteName = nameof(ASMLiteFxControllerGenerationIntegrationTests);
         private static ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot s_classGeneratedAssetsBaseline;
         private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _testGeneratedAssetsBaseline;
         private AsmLiteTestContext _ctx;
@@ -122,31 +122,27 @@ namespace ASMLite.Tests.Editor
         private static bool HasCopy(VRC_AvatarParameterDriver driver, string source, string destination)
             => driver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == source && p.name == destination);
 
-        // ── A05 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A05_Build_CreatesCorrectNumberOfASMLiteLayers()
+        public void Build_CreatesCorrectNumberOfASMLiteLayers()
         {
             _ctx.Comp.slotCount = 2;
             int result = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(result, 0);
 
-            var genCtrl = LoadGeneratedController("A05");
+            var genCtrl = LoadGeneratedController("Build_CreatesCorrectNumberOfASMLiteLayers");
             int layerCount = genCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             Assert.AreEqual(2, layerCount,
                 "Should create exactly slotCount ASMLite_ layers in the generated FX controller.");
         }
 
-        // ── A06 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A06_EachSlotLayer_HasFourStates()
+        public void EachSlotLayer_HasFourStates()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A06");
+            var genCtrl = LoadGeneratedController("EachSlotLayer_HasFourStates");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -155,16 +151,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A07 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A07_EachSlotLayer_DefaultStateIsIdle()
+        public void EachSlotLayer_DefaultStateIsIdle()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Float);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A07");
+            var genCtrl = LoadGeneratedController("EachSlotLayer_DefaultStateIsIdle");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -174,16 +168,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A08 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A08_AllStates_WriteDefaultValuesIsFalse()
+        public void AllStates_WriteDefaultValuesIsFalse()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A08");
+            var genCtrl = LoadGeneratedController("AllStates_WriteDefaultValuesIsFalse");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -195,16 +187,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A09 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A09_IdleTransitions_UseCorrectEncodedValues()
+        public void IdleTransitions_UseCorrectEncodedValues()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A09");
+            var genCtrl = LoadGeneratedController("IdleTransitions_UseCorrectEncodedValues");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm        = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -239,16 +229,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A10 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A10_SaveDriver_HasCorrectCopyEntries()
+        public void SaveDriver_HasCorrectCopyEntries()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl   = LoadGeneratedController("A10");
+            var genCtrl   = LoadGeneratedController("SaveDriver_HasCorrectCopyEntries");
             var sm        = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var saveState = FindState(sm, "SaveSlot1");
             var driver    = saveState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
@@ -267,16 +255,14 @@ namespace ASMLite.Tests.Editor
                 "Save Copy destination should be the backup param name.");
         }
 
-        // ── A11 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A11_LoadDriver_HasCorrectCopyEntries()
+        public void LoadDriver_HasCorrectCopyEntries()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyInt", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl   = LoadGeneratedController("A11");
+            var genCtrl   = LoadGeneratedController("LoadDriver_HasCorrectCopyEntries");
             var sm        = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var loadState = FindState(sm, "LoadSlot1");
             var driver    = loadState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
@@ -295,16 +281,14 @@ namespace ASMLite.Tests.Editor
                 "Load Copy destination should be the avatar param name.");
         }
 
-        // ── A12 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A12_ResetDriver_HasCorrectCopyEntries()
+        public void ResetDriver_HasCorrectCopyEntries()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyBool", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl    = LoadGeneratedController("A12");
+            var genCtrl    = LoadGeneratedController("ResetDriver_HasCorrectCopyEntries");
             var sm         = GetLayerSM(genCtrl, "ASMLite_Slot1");
             var resetState = FindState(sm, "ResetSlot1");
             var driver     = resetState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
@@ -328,16 +312,14 @@ namespace ASMLite.Tests.Editor
                 "Reset driver should copy defaults into both the slot backup and the live avatar parameter.");
         }
 
-        // ── A13 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A13_AllDrivers_EndWithSetCtrlToZero()
+        public void AllDrivers_EndWithSetCtrlToZero()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A13");
+            var genCtrl = LoadGeneratedController("AllDrivers_EndWithSetCtrlToZero");
             var sm = GetLayerSM(genCtrl, "ASMLite_Slot1");
 
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
@@ -356,16 +338,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A14 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A14_AllDrivers_HaveLocalOnlyTrue()
+        public void AllDrivers_HaveLocalOnlyTrue()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A14");
+            var genCtrl = LoadGeneratedController("AllDrivers_HaveLocalOnlyTrue");
             var sm = GetLayerSM(genCtrl, "ASMLite_Slot1");
 
             foreach (var stateName in new[] { "SaveSlot1", "LoadSlot1", "ResetSlot1" })
@@ -378,17 +358,15 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A15 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A15_CtrlParameters_ContainAllExpectedEntries()
+        public void CtrlParameters_ContainAllExpectedEntries()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "X", VRCExpressionParameters.ValueType.Int);
             int result = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(result, 0);
 
-            var genCtrl = LoadGeneratedController("A15");
+            var genCtrl = LoadGeneratedController("CtrlParameters_ContainAllExpectedEntries");
             var paramNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
 
             Assert.IsTrue(paramNames.Contains("ASMLite_Ctrl"),
@@ -401,10 +379,8 @@ namespace ASMLite.Tests.Editor
                 "Generated FX controller must contain 'ASMLite_Def_X'.");
         }
 
-        // ── A16 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A16_DuplicateAvatarParam_OnlyOneEntryInCtrlParameters()
+        public void DuplicateAvatarParam_OnlyOneEntryInCtrlParameters()
         {
             _ctx.Comp.slotCount = 1;
 
@@ -418,16 +394,14 @@ namespace ASMLite.Tests.Editor
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A16");
+            var genCtrl = LoadGeneratedController("DuplicateAvatarParam_OnlyOneEntryInCtrlParameters");
             int count = genCtrl.parameters.Count(p => p.name == "DupParam");
             Assert.AreEqual(1, count,
                 "Dedup guard: duplicate avatar param name must appear only once in generated FX controller parameters.");
         }
 
-        // ── A17 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A17_PreExistingDuplicateASMLiteParams_DrainedBeforeBuild()
+        public void PreExistingDuplicateASMLiteParams_DrainedBeforeBuild()
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
@@ -435,13 +409,13 @@ namespace ASMLite.Tests.Editor
             // Pre-inject duplicates into the generated FX controller to simulate
             // a stale asset from a prior broken build.
             var genCtrlPre = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            Assert.IsNotNull(genCtrlPre, "A17: generated FX controller must exist before pre-injection.");
+            Assert.IsNotNull(genCtrlPre, "PreExistingDuplicateASMLiteParams_DrainedBeforeBuild: generated FX controller must exist before pre-injection.");
             genCtrlPre.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
             genCtrlPre.AddParameter("ASMLite_Bak_S1_MyParam", AnimatorControllerParameterType.Int);
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A17");
+            var genCtrl = LoadGeneratedController("PreExistingDuplicateASMLiteParams_DrainedBeforeBuild");
             var asmParams = genCtrl.parameters
                 .Where(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter)
                 .Select(p => p.name)
@@ -457,10 +431,8 @@ namespace ASMLite.Tests.Editor
                 $"After Build(), no ASMLite_ param should be duplicated. Found duplicates: {string.Join(", ", duplicates)}");
         }
 
-        // ── A18 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A18_DefParam_HasCorrectDefaultValues()
+        public void DefParam_HasCorrectDefaultValues()
         {
             _ctx.Comp.slotCount = 1;
 
@@ -496,7 +468,7 @@ namespace ASMLite.Tests.Editor
 
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A18");
+            var genCtrl = LoadGeneratedController("DefParam_HasCorrectDefaultValues");
             var paramsByName = genCtrl.parameters.ToDictionary(p => p.name);
 
             Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyInt"), "ASMLite_Def_MyInt not found.");
@@ -512,16 +484,14 @@ namespace ASMLite.Tests.Editor
                 "ASMLite_Def_MyBool.defaultBool should be true (defaultValue=1).");
         }
 
-        // ── A19 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A19_FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams()
+        public void FXController_UsesOnlyOneSharedCtrlParam_NoLegacyControlParams()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A19");
+            var genCtrl = LoadGeneratedController("ASMLiteCtrl_HasCorrectTypeFlags_AndSingleInstance_InGeneratedAsset");
             var ctrlParamEntries = genCtrl.parameters
                 .Where(p => p.name == "ASMLite_Ctrl")
                 .ToList();
@@ -547,16 +517,14 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── A20 ────────────────────────────────────────────────────────────────
-
         [Test, Category("Integration")]
-        public void A20_SlotLayers_DoNotUseAnyStateSafeBoolBranches()
+        public void SlotLayers_DoNotUseAnyStateSafeBoolBranches()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Bool);
             ASMLiteBuilder.Build(_ctx.Comp);
 
-            var genCtrl = LoadGeneratedController("A20");
+            var genCtrl = LoadGeneratedController("BackupParams_HaveLocalOnlyFlags_InGeneratedAsset");
             for (int slot = 1; slot <= 2; slot++)
             {
                 var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
@@ -582,7 +550,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void A21_ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries()
+        public void ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries()
         {
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "KeepA", VRCExpressionParameters.ValueType.Int);
@@ -594,26 +562,26 @@ namespace ASMLite.Tests.Editor
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(1, buildResult,
-                "A21: Build() should return only non-excluded discovered params.");
+                "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Build() should return only non-excluded discovered params.");
 
-            var genCtrl = LoadGeneratedController("A21");
+            var genCtrl = LoadGeneratedController("LegacyPreservation_HigherSlotBackupsKeptInGeneratedAsset");
             var allNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
 
-            Assert.IsTrue(allNames.Contains("KeepA"), "A21: non-excluded live param should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Def_KeepA"), "A21: non-excluded default param should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S1_KeepA"), "A21: non-excluded slot backup should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S2_KeepA"), "A21: non-excluded slot backup should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded live param should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Def_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded default param should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S1_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded slot backup should remain declared in FX params.");
+            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S2_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded slot backup should remain declared in FX params.");
 
-            Assert.IsFalse(allNames.Contains("DropB"), "A21: excluded live param must not be declared in FX params.");
-            Assert.IsFalse(allNames.Contains("DropC"), "A21: excluded live param must not be declared in FX params.");
+            Assert.IsFalse(allNames.Contains("DropB"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded live param must not be declared in FX params.");
+            Assert.IsFalse(allNames.Contains("DropC"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded live param must not be declared in FX params.");
 
             foreach (int slot in new[] { 1, 2 })
             {
-                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropB"), $"A21: excluded backup key ASMLite_Bak_S{slot}_DropB must be omitted.");
-                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropC"), $"A21: excluded backup key ASMLite_Bak_S{slot}_DropC must be omitted.");
+                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropB"), $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded backup key ASMLite_Bak_S{slot}_DropB must be omitted.");
+                Assert.IsFalse(allNames.Contains($"ASMLite_Bak_S{slot}_DropC"), $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded backup key ASMLite_Bak_S{slot}_DropC must be omitted.");
             }
-            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropB"), "A21: excluded default key ASMLite_Def_DropB must be omitted.");
-            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropC"), "A21: excluded default key ASMLite_Def_DropC must be omitted.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropB"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded default key ASMLite_Def_DropB must be omitted.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Def_DropC"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded default key ASMLite_Def_DropC must be omitted.");
 
             for (int slot = 1; slot <= 2; slot++)
             {
@@ -622,18 +590,18 @@ namespace ASMLite.Tests.Editor
                 var resetDriver = LoadSlotDriver(genCtrl, slot, $"ResetSlot{slot}");
 
                 Assert.IsTrue(HasCopy(saveDriver, "KeepA", $"ASMLite_Bak_S{slot}_KeepA"),
-                    $"A21: Save driver for slot {slot} must keep non-excluded copy wiring.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Save driver for slot {slot} must keep non-excluded copy wiring.");
                 Assert.IsTrue(HasCopy(loadDriver, $"ASMLite_Bak_S{slot}_KeepA", "KeepA"),
-                    $"A21: Load driver for slot {slot} must keep non-excluded copy wiring.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Load driver for slot {slot} must keep non-excluded copy wiring.");
                 Assert.IsTrue(HasCopy(resetDriver, "ASMLite_Def_KeepA", $"ASMLite_Bak_S{slot}_KeepA"),
-                    $"A21: Reset driver for slot {slot} must keep non-excluded clear wiring.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Reset driver for slot {slot} must keep non-excluded clear wiring.");
 
                 Assert.IsFalse(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source == "DropB" || p.source == "DropC" || p.name.Contains("DropB") || p.name.Contains("DropC"))),
-                    $"A21: Save driver for slot {slot} must not contain excluded-source copy entries.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Save driver for slot {slot} must not contain excluded-source copy entries.");
                 Assert.IsFalse(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name == "DropB" || p.name == "DropC")),
-                    $"A21: Load driver for slot {slot} must not contain excluded-source copy entries.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Load driver for slot {slot} must not contain excluded-source copy entries.");
                 Assert.IsFalse(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name.Contains("DropB") || p.name.Contains("DropC"))),
-                    $"A21: Reset driver for slot {slot} must not contain excluded-source copy entries.");
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Reset driver for slot {slot} must not contain excluded-source copy entries.");
             }
         }
     }
