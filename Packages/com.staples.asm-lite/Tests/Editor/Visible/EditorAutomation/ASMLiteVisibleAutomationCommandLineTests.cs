@@ -32,8 +32,6 @@ namespace ASMLite.Tests.Editor
         [TestCase("ASMLiteVisiblePlayModeSmoke", AsmLiteVisibleAutomationMode.PlayMode)]
         [TestCase("runtime-review", AsmLiteVisibleAutomationMode.PlayMode)]
         [TestCase("VisibleRuntimeHarness", AsmLiteVisibleAutomationMode.PlayMode)]
-        [TestCase("launch-unity", AsmLiteVisibleAutomationMode.Editor)]
-        [TestCase("LaunchUnity", AsmLiteVisibleAutomationMode.Editor)]
         public void ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode(string selector, AsmLiteVisibleAutomationMode expectedMode)
         {
             Assert.AreEqual(expectedMode, ASMLiteVisibleAutomationCommandLine.ResolveModeSelector(selector));

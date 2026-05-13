@@ -13072,7 +13072,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
-      "line": 135,
+      "line": 133,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13098,7 +13098,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
-      "line": 169,
+      "line": 167,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13124,7 +13124,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted",
-      "line": 64,
+      "line": 62,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13150,7 +13150,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted",
-      "line": 43,
+      "line": 41,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13176,7 +13176,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText",
-      "line": 117,
+      "line": 115,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13202,7 +13202,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ParseConfiguration_UsesExplicitStepDelayArgument_WhenProvided",
-      "line": 80,
+      "line": 78,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13228,7 +13228,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ParseConfiguration_UsesSelectorToInferInitialModeAndStage",
-      "line": 98,
+      "line": 96,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13254,7 +13254,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode",
-      "line": 37,
+      "line": 35,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13265,9 +13265,7 @@
         "TestCase(\"playmode\", AsmLiteVisibleAutomationMode.PlayMode)",
         "TestCase(\"ASMLiteVisiblePlayModeSmoke\", AsmLiteVisibleAutomationMode.PlayMode)",
         "TestCase(\"runtime-review\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"VisibleRuntimeHarness\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"launch-unity\", AsmLiteVisibleAutomationMode.Editor)",
-        "TestCase(\"LaunchUnity\", AsmLiteVisibleAutomationMode.Editor)"
+        "TestCase(\"VisibleRuntimeHarness\", AsmLiteVisibleAutomationMode.PlayMode)"
       ],
       "categories": [
         "Headless"
