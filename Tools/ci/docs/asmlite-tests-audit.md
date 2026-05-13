@@ -30,9 +30,9 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 
 ## Inventory summary
 
-- Total in-scope test methods classified: **504**
+- Total in-scope test methods classified: **503**
 - Total test classes classified: **52**
-- Methods currently recommended for default CI: **480**
+- Methods currently recommended for default CI: **479**
 - Methods explicitly manual/review-only or otherwise outside default CI: **24**
 - Headless/default-CI selection gaps called out for follow-up: **0**
 
@@ -41,7 +41,7 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | Lane | Default CI | Headless policy | Methods | Classes | Policy / honesty note |
 |---|---:|---|---:|---:|---|
 | `contract` | yes | yes | 1 | 1 | Pinned prefab/controller generated-reference contract; gates the smallest high-value generated asset reference invariant. |
-| `core-headless` | yes | yes | 231 | 25 | Fast unit and model contracts selected by class filters or explicit Headless category, including Editor-only AV3 runtime-review configuration diagnostics. |
+| `core-headless` | yes | yes | 230 | 25 | Fast unit and model contracts selected by class filters or explicit Headless category, including Editor-only AV3 runtime-review configuration diagnostics. |
 | `integration-headless` | yes | yes | 116 | 14 | Fixture-heavy Unity EditMode integration with per-test package/temp fixture restoration, source-fixture immutability checks, and fixture isolation sentinels for concurrent roots plus generated asset, scene, selection, and open-scene contamination. |
 | `runner-selftest-headless` | no | yes | 12 | 1 | Batch runner self-tests are headless but intentionally excluded from the default runner batch to avoid self-selection. |
 | `smoke-protocol-headless` | yes | yes | 45 | 6 | Protocol, catalog, artifact, and atomic IO contracts for the visible smoke transport. |
@@ -54,7 +54,7 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 
 | Recommendation | Methods | Meaning |
 |---|---:|---|
-| `default-ci` | 480 | Selected by the current canonical default CI suite map or category filters. |
+| `default-ci` | 479 | Selected by the current canonical default CI suite map or category filters. |
 | `excluded-from-default-ci-to-avoid-batch-runner-self-selection` | 12 | Headless runner self-tests are intentionally outside default CI batch invocations. |
 | `manual-playmode-review` | 2 | External AV3 UAT/fuzz replay coverage requires explicit operator/local fixture inputs and remains manual review-only. |
 | `manual-visible-smoke-only` | 8 | Requires visible editor/operator execution; not headless CI. |
@@ -116,7 +116,7 @@ Canonical artifact: `Tools/ci/docs/asmlite-tests-audit.md`.
 | `ASMLiteWindowRiskAffordanceTests` | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowRiskAffordanceTests.cs` | 2 | `core-headless` (2) | `yes` (2) | `window-model-contract-coverage` (2) | No honesty exception found. | `default-ci` (2) |
 | `ASMLiteWindowStatusPanelTests` | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowStatusPanelTests.cs` | 7 | `core-headless` (7) | `yes` (7) | `window-model-contract-coverage` (7) | No honesty exception found. | `default-ci` (7) |
 | `ASMLiteWindowTerminologyTests` | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowTerminologyTests.cs` | 4 | `core-headless` (4) | `yes` (4) | `window-model-contract-coverage` (4) | No honesty exception found. | `default-ci` (4) |
-| `ASMLiteVisibleAutomationCommandLineTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs` | 9 | `core-headless` (9) | `yes` (9) | `headless-visible-harness-contracts-only` (9) | Headless command-line/result-document coverage only; not evidence that rendered visible overlay execution is headless-safe. | `default-ci` (9) |
+| `ASMLiteVisibleAutomationCommandLineTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs` | 8 | `core-headless` (8) | `yes` (8) | `headless-visible-harness-contracts-only` (8) | Headless command-line/result-document coverage only; not evidence that rendered visible overlay execution is headless-safe. | `default-ci` (8) |
 | `ASMLiteVisibleEditorSmokeTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleEditorSmokeTests.cs` | 8 | `visible-manual` (8) | `no` (8) | `visible-operator-flow-coverage` (8) | Visible/manual only; do not fold into default headless CI. | `manual-visible-smoke-only` (8) |
 | `ASMLiteAv3SaveLoadConfigurationTests` | `Packages/com.staples.asm-lite/Tests/Editor/Visible/RuntimeReview/ASMLiteAv3SaveLoadConfigurationTests.cs` | 4 | `core-headless` (4) | `yes` (4) | `editor-runtime-review-configuration-coverage` (4) | Command-line/default diagnostics only; no PlayMode/runtime fixture. | `default-ci` (4) |
 | `ASMLiteAv3SaveLoadManualTests` | `Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs` | 2 | `manual` (2) | `no` (2) | `playmode-manual-operator-coverage` (2) | Manual external UAT/fuzz replay coverage requires explicit operator or local fixture inputs. | `manual-playmode-review` (2) |
@@ -139,7 +139,7 @@ Audit basis:
 
 - Active content search found no workflow, runner, README, or script references to the removed root-level `Tools/ci/verify-*` helpers or `Tools/ci/bin/setup-git-hooks.sh`; remaining mentions are historical changelog entries and this audit section.
 - `python3 Tools/ci/test-suites/validate-suites.py` passed.
-- `python3 Tools/ci/test-suites/validate-suite-ledger.py` passed with **504** classified Unity C# test methods.
+- `python3 Tools/ci/test-suites/validate-suite-ledger.py` passed with **503** classified Unity C# test methods.
 - Full `Tools/ci/tests` unittest discovery passed for the suite validators and related coverage.
 
 ### Removed / keep removed
@@ -163,8 +163,8 @@ Audit basis:
 
 ### Findings
 
-- Naming inventory from `test-suite-ledger.json`: **504** methods, **52** classes.
-- Disjoint naming signals: **13** coded-ID prefixes remain outside the completed core/generated/smoke cleanup slices (`A42_`, `VF01_`, etc.), **0** snake_case methods remain outside the smoke protocol lane, **2** names/classes containing `PlayMode`, **6** very long names over 95 chars.
+- Naming inventory from `test-suite-ledger.json`: **503** methods, **52** classes.
+- Disjoint naming signals: **13** coded-ID prefixes remain outside the completed core/generated/smoke cleanup slices (`A42_`, `VF01_`, etc.), **0** snake_case methods remain outside the smoke protocol lane, **2** names/classes containing `PlayMode`, **4** very long names over 95 chars.
 - Main runner confusion for AV3 save/load coverage was resolved by moving true `[UnityTest]`/`EnterPlayMode()` cases into `Packages/com.staples.asm-lite/Tests/PlayMode/Runtime`, while command-line/default diagnostics remain in an Editor headless runtime-review fixture.
 - Current categories are mostly coarse and useful: `Headless`, `Integration`, `Smoke`, `VisibleEditorAutomation`, `Manual`, `PlayMode`. Problem is not category count; problem is category/assembly mismatch plus method-name ID noise.
 
@@ -724,9 +724,8 @@ This table mirrors the classified ledger fields so the markdown artifact is revi
 | `ASMLiteWindowTerminologyTests` | `StateSpecificHelpCopy_CoversDetachedVendorizedAndNotInstalledBranches` | `core-headless` | `yes` | `window-model-contract-coverage` | `default-ci` | none-or-in-memory-window-model-fixtures / none | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowTerminologyTests.cs:64` |
 | `ASMLiteWindowTerminologyTests` | `StateSpecificStatusCopy_MatchesTerminologyContract` | `core-headless` | `yes` | `window-model-contract-coverage` | `default-ci` | none-or-in-memory-window-model-fixtures / none | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowTerminologyTests.cs:55` |
 | `ASMLiteWindowTerminologyTests` | `TerminologySnapshot_AllCopySurfacesRejectMixedSlotPresetLanguage` | `core-headless` | `yes` | `window-model-contract-coverage` | `default-ci` | none-or-in-memory-window-model-fixtures / none | `Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowTerminologyTests.cs:87` |
-| `ASMLiteVisibleAutomationCommandLineTests` | `BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:169` |
 | `ASMLiteVisibleAutomationCommandLineTests` | `BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:135` |
-| `ASMLiteVisibleAutomationCommandLineTests` | `BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:201` |
+| `ASMLiteVisibleAutomationCommandLineTests` | `BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:169` |
 | `ASMLiteVisibleAutomationCommandLineTests` | `ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:64` |
 | `ASMLiteVisibleAutomationCommandLineTests` | `ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:43` |
 | `ASMLiteVisibleAutomationCommandLineTests` | `ParseConfiguration_PrefersExplicitModeArgumentOverSelectorText` | `core-headless` | `yes` | `headless-visible-harness-contracts-only` | `default-ci` | none / command-line-argument-contracts-only | `Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs:117` |
@@ -778,7 +777,7 @@ All 12 former `yes-fixture-isolated` classes have completed cleanup review and n
 
 ## Legacy visible overlay execution cleanup
 
-- Visible operator execution should remain manual until a follow-up replaces the legacy launcher path and proves coverage through the headless smoke protocol and overlay-host lanes.
+- Visible operator execution remains manual; legacy launch-unity promotion was removed from the local visible smoke runner, while headless smoke protocol and overlay-host lanes continue to carry non-rendered coverage.
 - `ASMLiteVisibleAutomationCommandLineTests` is headless parser/result-document coverage only; it is not evidence that rendered visible overlay execution is headless-safe.
 
 ## Validation commands for this audit

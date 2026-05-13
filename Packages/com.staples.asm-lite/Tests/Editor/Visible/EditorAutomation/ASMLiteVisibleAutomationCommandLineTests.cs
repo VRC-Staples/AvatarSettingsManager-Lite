@@ -32,8 +32,8 @@ namespace ASMLite.Tests.Editor
         [TestCase("ASMLiteVisiblePlayModeSmoke", AsmLiteVisibleAutomationMode.PlayMode)]
         [TestCase("runtime-review", AsmLiteVisibleAutomationMode.PlayMode)]
         [TestCase("VisibleRuntimeHarness", AsmLiteVisibleAutomationMode.PlayMode)]
-        [TestCase("launch-unity", AsmLiteVisibleAutomationMode.LaunchUnity)]
-        [TestCase("LaunchUnity", AsmLiteVisibleAutomationMode.LaunchUnity)]
+        [TestCase("launch-unity", AsmLiteVisibleAutomationMode.Editor)]
+        [TestCase("LaunchUnity", AsmLiteVisibleAutomationMode.Editor)]
         public void ResolveModeSelector_MapsSelectors_ToExpectedVisibleAutomationMode(string selector, AsmLiteVisibleAutomationMode expectedMode)
         {
             Assert.AreEqual(expectedMode, ASMLiteVisibleAutomationCommandLine.ResolveModeSelector(selector));
@@ -163,38 +163,6 @@ namespace ASMLite.Tests.Editor
                 "ASMLite.Tests.Editor.ASMLiteVisibleEditorSmokeTests.VisibleWindow_AddPrefab_PrimaryActionExecutesThroughRenderedWindow",
                 testCase.GetAttribute("fullname"));
             Assert.IsNull(document.SelectSingleNode("/test-run/test-suite/test-suite/test-case/failure"));
-        }
-
-        [Test]
-        public void BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns()
-        {
-            var configuration = new AsmLiteVisibleAutomationCommandLineConfiguration
-            {
-                resultsPath = "artifacts/visible-launch-unity.xml",
-                selector = "launch-unity",
-                mode = (int)AsmLiteVisibleAutomationMode.LaunchUnity,
-                startedUtcTicks = DateTime.UtcNow.AddSeconds(-4d).Ticks,
-            };
-
-            XmlDocument document = ASMLiteVisibleAutomationCommandLine.BuildResultDocument(
-                configuration,
-                "Passed",
-                null,
-                null,
-                4d,
-                new DateTimeOffset(configuration.startedUtcTicks, TimeSpan.Zero),
-                new DateTimeOffset(configuration.startedUtcTicks, TimeSpan.Zero).AddSeconds(4d));
-
-            XmlElement fixture = document.SelectSingleNode("/test-run/test-suite/test-suite") as XmlElement;
-            XmlElement testCase = document.SelectSingleNode("/test-run/test-suite/test-suite/test-case") as XmlElement;
-
-            Assert.IsNotNull(fixture);
-            Assert.IsNotNull(testCase);
-            Assert.AreEqual("ASMLiteVisibleEditorSmokeTests", fixture.GetAttribute("name"));
-            Assert.AreEqual("VisibleWindow_LaunchUnity_LoadsClickMe_SelectsOct25Dress_AndWaitsForAcceptance", testCase.GetAttribute("name"));
-            Assert.AreEqual(
-                "ASMLite.Tests.Editor.ASMLiteVisibleEditorSmokeTests.VisibleWindow_LaunchUnity_LoadsClickMe_SelectsOct25Dress_AndWaitsForAcceptance",
-                testCase.GetAttribute("fullname"));
         }
 
         [Test]

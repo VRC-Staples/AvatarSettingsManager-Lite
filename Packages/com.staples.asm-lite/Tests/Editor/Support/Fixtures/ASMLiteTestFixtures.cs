@@ -464,7 +464,6 @@ namespace ASMLite.Tests.Editor
     {
         Editor = 0,
         PlayMode = 1,
-        LaunchUnity = 2,
     }
 
     internal enum AsmLiteVisibleAutomationStage
@@ -478,7 +477,6 @@ namespace ASMLite.Tests.Editor
         InspectingPlayMode = 6,
         AwaitingAcceptance = 7,
         ExitingPlayModeAfterAcceptance = 8,
-        VerifyingInteractivity = 9,
     }
 
     [Serializable]
@@ -511,12 +509,10 @@ namespace ASMLite.Tests.Editor
         private const string DefaultVisibleAutomationAvatarName = "Oct25_Dress";
         private const string EditorOverlayTitle = "ASM-Lite visible smoke test";
         private const string PlayModeOverlayTitle = "ASM-Lite visible playmode smoke";
-        private const string LaunchUnityOverlayTitle = "ASM-Lite visible launch UAT";
         private const float DefaultStepDelaySeconds = 1.0f;
         private const string StepDelayEnvVarName = "ASMLITE_VISIBLE_SMOKE_STEP_DELAY_SECONDS";
         private const string EditorFixtureName = "ASMLiteVisibleEditorSmokeTests";
         private const string EditorCaseName = "VisibleWindow_AddPrefab_PrimaryActionExecutesThroughRenderedWindow";
-        private const string LaunchUnityCaseName = "VisibleWindow_LaunchUnity_LoadsClickMe_SelectsOct25Dress_AndWaitsForAcceptance";
         private const string PlayModeFixtureName = "ASMLiteVisiblePlayModeAutomation";
         private const string PlayModeCaseName = "VisibleWindow_AddPrefab_EntersPlayMode_AndWaitsForAcceptance";
 
@@ -528,15 +524,6 @@ namespace ASMLite.Tests.Editor
             "Attach the default ASM-Lite payload to the avatar",
             "Verify the rendered primary action updates to Rebuild",
             "Confirm the visible smoke run completed successfully",
-        };
-
-        private static readonly string[] LaunchUnityChecklist =
-        {
-            "Open the ASM-Lite editor window",
-            "Load scene Assets/Click ME.unity and locate Oct25_Dress",
-            "Select Oct25_Dress from the hierarchy",
-            "Verify the ASM-Lite editor window remains focused and interactable",
-            "Confirm the visible launch UAT completed successfully",
         };
 
         private static readonly string[] PlayModeChecklist =
@@ -637,12 +624,6 @@ namespace ASMLite.Tests.Editor
                 return AsmLiteVisibleAutomationMode.Editor;
 
             string normalized = selector.Trim();
-            if (normalized.IndexOf("launch-unity", StringComparison.OrdinalIgnoreCase) >= 0
-                || normalized.IndexOf("launchunity", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return AsmLiteVisibleAutomationMode.LaunchUnity;
-            }
-
             if (normalized.IndexOf("playmode", StringComparison.OrdinalIgnoreCase) >= 0
                 || normalized.IndexOf("runtime", StringComparison.OrdinalIgnoreCase) >= 0)
             {
@@ -775,7 +756,6 @@ namespace ASMLite.Tests.Editor
             return mode switch
             {
                 AsmLiteVisibleAutomationMode.PlayMode => PlayModeCaseName,
-                AsmLiteVisibleAutomationMode.LaunchUnity => LaunchUnityCaseName,
                 _ => EditorCaseName,
             };
         }
@@ -883,8 +863,7 @@ namespace ASMLite.Tests.Editor
 
                 Selection.activeGameObject = null;
 
-                if ((AsmLiteVisibleAutomationMode)_configuration.mode != AsmLiteVisibleAutomationMode.LaunchUnity
-                    && _context.Comp != null)
+                if (_context.Comp != null)
                 {
                     UnityEngine.Object.DestroyImmediate(_context.Comp.gameObject);
                     _context.Comp = null;
@@ -950,9 +929,6 @@ namespace ASMLite.Tests.Editor
                     case AsmLiteVisibleAutomationStage.InspectingPlayMode:
                         TickInspectingPlayMode();
                         break;
-                    case AsmLiteVisibleAutomationStage.VerifyingInteractivity:
-                        TickVerifyingInteractivity();
-                        break;
                     case AsmLiteVisibleAutomationStage.AwaitingAcceptance:
                         TickAwaitingAcceptance();
                         break;
@@ -996,12 +972,6 @@ namespace ASMLite.Tests.Editor
 
                 if (!HasSatisfiedStepDelay())
                     return;
-
-                if ((AsmLiteVisibleAutomationMode)_configuration.mode == AsmLiteVisibleAutomationMode.LaunchUnity)
-                {
-                    StartStage(AsmLiteVisibleAutomationStage.VerifyingInteractivity);
-                    return;
-                }
 
                 var hierarchy = _window.GetActionHierarchyContract();
                 if (!hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.AddPrefab))
@@ -1109,43 +1079,6 @@ namespace ASMLite.Tests.Editor
                 ShowCompletionReviewForCurrentMode();
             }
 
-            private void TickVerifyingInteractivity()
-            {
-                if (_context?.AvDesc == null)
-                {
-                    FailAndExit("Visible launch UAT lost the live avatar fixture before interactability verification completed.");
-                    return;
-                }
-
-                if (!ReferenceEquals(GetSelectedAvatar(), _context.AvDesc))
-                {
-                    Selection.activeGameObject = _context.AvatarGo;
-                    _window.SelectAvatarForAutomation(_context.AvDesc);
-                    return;
-                }
-
-                if (!EditorWindow.HasOpenInstances<ASMLiteWindow>())
-                {
-                    FailAndExit("Visible launch UAT should keep the ASM-Lite editor window open while verifying interactability.");
-                    return;
-                }
-
-                _window.Focus();
-                var hierarchy = _window.GetActionHierarchyContract();
-                if (!hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.AddPrefab)
-                    && !hierarchy.HasPrimaryAction(ASMLiteWindow.AsmLiteWindowAction.Rebuild))
-                {
-                    if (HasTimedOut(15d))
-                        FailAndExit("Visible launch UAT expected the ASM-Lite editor window to expose an interactable primary action after selecting Oct25_Dress.");
-                    return;
-                }
-
-                if (!HasSatisfiedStepDelay())
-                    return;
-
-                ShowCompletionReviewForCurrentMode();
-            }
-
             private void TickAwaitingAcceptance()
             {
                 if (_window.IsVisibleAutomationCompletionReviewVisibleForAutomation())
@@ -1234,9 +1167,6 @@ namespace ASMLite.Tests.Editor
                     case AsmLiteVisibleAutomationStage.InspectingPlayMode:
                         SetOverlayStep(6, "Play mode is being entered");
                         break;
-                    case AsmLiteVisibleAutomationStage.VerifyingInteractivity:
-                        SetOverlayStep(4, "ASM-Lite window focus is being verified");
-                        break;
                     case AsmLiteVisibleAutomationStage.AwaitingAcceptance:
                         SetOverlayStep(GetTotalSteps(), GetCompletionSuccessStep(), ASMLiteWindow.VisibleAutomationOverlayState.Success);
                         break;
@@ -1248,11 +1178,9 @@ namespace ASMLite.Tests.Editor
                 _window.Repaint();
             }
 
-            private string GetSelectingAvatarStepText()
+            private static string GetSelectingAvatarStepText()
             {
-                return (AsmLiteVisibleAutomationMode)_configuration.mode == AsmLiteVisibleAutomationMode.LaunchUnity
-                    ? "Click ME scene is loading and Oct25_Dress is being selected"
-                    : "Avatar is selected in the editor";
+                return "Avatar is selected in the editor";
             }
 
             private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
@@ -1549,7 +1477,6 @@ namespace ASMLite.Tests.Editor
                 return (AsmLiteVisibleAutomationMode)_configuration.mode switch
                 {
                     AsmLiteVisibleAutomationMode.PlayMode => PlayModeOverlayTitle,
-                    AsmLiteVisibleAutomationMode.LaunchUnity => LaunchUnityOverlayTitle,
                     _ => EditorOverlayTitle,
                 };
             }
@@ -1559,7 +1486,6 @@ namespace ASMLite.Tests.Editor
                 return (AsmLiteVisibleAutomationMode)_configuration.mode switch
                 {
                     AsmLiteVisibleAutomationMode.PlayMode => PlayModeChecklist.Length,
-                    AsmLiteVisibleAutomationMode.LaunchUnity => LaunchUnityChecklist.Length,
                     _ => EditorChecklist.Length,
                 };
             }
@@ -1569,7 +1495,6 @@ namespace ASMLite.Tests.Editor
                 return (AsmLiteVisibleAutomationMode)_configuration.mode switch
                 {
                     AsmLiteVisibleAutomationMode.PlayMode => PlayModeChecklist,
-                    AsmLiteVisibleAutomationMode.LaunchUnity => LaunchUnityChecklist,
                     _ => EditorChecklist,
                 };
             }
@@ -1579,7 +1504,6 @@ namespace ASMLite.Tests.Editor
                 return (AsmLiteVisibleAutomationMode)_configuration.mode switch
                 {
                     AsmLiteVisibleAutomationMode.PlayMode => "Visible playmode smoke run completed successfully",
-                    AsmLiteVisibleAutomationMode.LaunchUnity => "Visible launch UAT completed successfully",
                     _ => "Visible smoke test completed successfully",
                 };
             }

@@ -13071,32 +13071,6 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
-      "method": "BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
-      "line": 169,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Test"
-      ],
-      "categories": [
-        "Headless"
-      ],
-      "lane": "core-headless",
-      "headlessViability": "yes",
-      "honesty": "headless-visible-harness-contracts-only",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Build Result Document Uses Launch Unity Case Name For Launch Unity Runs",
-      "fixtureDependencies": [
-        "visible automation command-line parser"
-      ],
-      "assetSceneMutations": "none",
-      "externalProcessFilesystemEnvUsage": "command-line-argument-contracts-only",
-      "runnerFilter": "ASMLiteVisibleAutomationCommandLineTests.BuildResultDocument_UsesLaunchUnityCaseName_ForLaunchUnityRuns",
-      "notes": "Headless parser/result-document contracts; visible overlay execution remains manual."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
-      "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "BuildResultDocument_UsesLegacyVisibleSmokeFixtureName_ForEditorMode",
       "line": 135,
       "attributes": [
@@ -13124,7 +13098,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Visible/EditorAutomation/ASMLiteVisibleAutomationCommandLineTests.cs",
       "class": "ASMLiteVisibleAutomationCommandLineTests",
       "method": "BuildResultDocument_UsesPlayModeFixtureName_ForPlayModeRuns",
-      "line": 201,
+      "line": 169,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13292,8 +13266,8 @@
         "TestCase(\"ASMLiteVisiblePlayModeSmoke\", AsmLiteVisibleAutomationMode.PlayMode)",
         "TestCase(\"runtime-review\", AsmLiteVisibleAutomationMode.PlayMode)",
         "TestCase(\"VisibleRuntimeHarness\", AsmLiteVisibleAutomationMode.PlayMode)",
-        "TestCase(\"launch-unity\", AsmLiteVisibleAutomationMode.LaunchUnity)",
-        "TestCase(\"LaunchUnity\", AsmLiteVisibleAutomationMode.LaunchUnity)"
+        "TestCase(\"launch-unity\", AsmLiteVisibleAutomationMode.Editor)",
+        "TestCase(\"LaunchUnity\", AsmLiteVisibleAutomationMode.Editor)"
       ],
       "categories": [
         "Headless"

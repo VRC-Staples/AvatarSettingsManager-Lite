@@ -21,10 +21,6 @@ EDITMODE_LOG_PATH=""
 EDITMODE_RESULTS_PATH=""
 VISIBLE_EDITOR_SMOKE_RESULTS_PATH=""
 RUN_COVERAGE_DIR=""
-VISIBLE_OVERLAY_DIR=""
-VISIBLE_OVERLAY_STATE_PATH=""
-VISIBLE_OVERLAY_ACK_PATH=""
-VISIBLE_OVERLAY_LOG_PATH=""
 
 RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-2700}"
 RUN_LOCK_DIR="${RUN_LOCK_DIR:-/tmp/asmlite-editmode-local.lock}"
@@ -374,17 +370,6 @@ ensure_python_bin() {
   exit 1
 }
 
-initialize_visible_overlay_paths() {
-  if [[ -n "${VISIBLE_OVERLAY_DIR}" && -d "${VISIBLE_OVERLAY_DIR}" ]]; then
-    rm -rf "${VISIBLE_OVERLAY_DIR}"
-  fi
-
-  VISIBLE_OVERLAY_DIR="$(mktemp -d "${ARTIFACTS_DIR}/visible-overlay-${RUN_ARTIFACT_BASENAME}.XXXXXX")"
-  VISIBLE_OVERLAY_STATE_PATH="${VISIBLE_OVERLAY_DIR}/overlay-state.payload"
-  VISIBLE_OVERLAY_ACK_PATH="${VISIBLE_OVERLAY_DIR}/overlay-ack.payload"
-  VISIBLE_OVERLAY_LOG_PATH="${VISIBLE_OVERLAY_DIR}/overlay.log"
-}
-
 load_license_secret_from_file_if_needed() {
   if [[ -n "${UNITY_SERIAL:-}" || -n "${UNITY_LICENSE_SECRET:-}" || -z "${UNITY_LICENSE_FILE:-}" ]]; then
     return 0
@@ -703,10 +688,6 @@ return_local_license() {
 cleanup() {
   set +e
 
-  if [[ -n "${VISIBLE_OVERLAY_DIR}" ]]; then
-    rm -rf "${VISIBLE_OVERLAY_DIR}"
-  fi
-
   if [[ "${LOCAL_UNITY_RETURN_LICENSE}" -eq 1 ]]; then
     return_local_license
   fi
@@ -970,16 +951,11 @@ run_local_visible_smoke_mode() {
   fi
 
   visible_mode="editor"
-  if [[ "${visible_selector,,}" == *launch-unity* || "${visible_selector,,}" == *launchunity* ]]; then
-    visible_mode="launch-unity"
-  elif [[ "${visible_selector,,}" == *playmode* || "${visible_selector,,}" == *runtime* ]]; then
+  if [[ "${visible_selector,,}" == *playmode* || "${visible_selector,,}" == *runtime* ]]; then
     visible_mode="playmode"
   fi
 
   echo "note: visible smoke step delay: ${VISIBLE_SMOKE_STEP_DELAY_SECONDS}s"
-
-  initialize_visible_overlay_paths
-  echo "note: run-editmode-local visible smoke no longer launches legacy Python overlay transport."
 
   log_path="$(unity_path_arg "${visible_log_alias}")"
   results_path="$(unity_path_arg "${visible_results_alias}")"
@@ -994,8 +970,6 @@ run_local_visible_smoke_mode() {
     -asmliteVisibleAutomationSelector "${visible_selector}"
     -asmliteVisibleAutomationMode "${visible_mode}"
     -asmliteVisibleAutomationStepDelaySeconds "${VISIBLE_SMOKE_STEP_DELAY_SECONDS}"
-    -asmliteVisibleAutomationExternalOverlayStatePath "$(unity_path_arg "${VISIBLE_OVERLAY_STATE_PATH}")"
-    -asmliteVisibleAutomationExternalOverlayAckPath "$(unity_path_arg "${VISIBLE_OVERLAY_ACK_PATH}")"
   )
 
   echo "note: visible smoke uses the command-line automation harness; timeout disabled while waiting for manual acceptance."

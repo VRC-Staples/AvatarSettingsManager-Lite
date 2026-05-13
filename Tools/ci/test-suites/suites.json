@@ -148,7 +148,7 @@
     },
     {
       "id": "visible-manual",
-      "description": "Visible editor/operator-driven smoke suites and legacy visible automation are discoverable but excluded from default headless CI.",
+      "description": "Visible editor/operator-driven smoke suites are discoverable but excluded from default headless CI.",
       "defaultCi": false,
       "headless": "no",
       "testFiles": [
