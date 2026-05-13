@@ -13,7 +13,7 @@ namespace ASMLite.Tests.Editor
     {
         private const string CatalogRelativePath = "Tools/ci/smoke/suite-catalog.json";
         private const string ProtocolFixtureDirectoryRelativePath = "Tools/ci/smoke/protocol-fixtures";
-        private const string EditModeBatchRunsRelativePath = "Tools/ci/test-suites/editmode-batch-runs.json";
+        private const string SuiteMapRelativePath = "Tools/ci/test-suites/suites.json";
 
         internal static string GetRepositoryRootPath()
         {
@@ -29,9 +29,9 @@ namespace ASMLite.Tests.Editor
             return Path.Combine(GetRepositoryRootPath(), CatalogRelativePath.Replace('/', Path.DirectorySeparatorChar));
         }
 
-        internal static string GetEditModeBatchRunsPath()
+        internal static string GetSuiteMapPath()
         {
-            return Path.Combine(GetRepositoryRootPath(), EditModeBatchRunsRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            return Path.Combine(GetRepositoryRootPath(), SuiteMapRelativePath.Replace('/', Path.DirectorySeparatorChar));
         }
 
         internal static string GetProtocolFixtureDirectory()

@@ -13,9 +13,11 @@ from typing import Any
 
 
 SUITES_PATH = "Tools/ci/test-suites/suites.json"
-EDITMODE_BATCH_RUNS_PATH = "Tools/ci/test-suites/editmode-batch-runs.json"
-STALE_EDITMODE_BATCH_RUNS_PATH = "/".join(("Tools", "ci", "editmode-batch-runs.json"))
 SMOKE_CATALOG_PATH = "Tools/ci/smoke/suite-catalog.json"
+REMOVED_EDITMODE_BATCH_RUNS_PATHS = (
+    "/".join(("Tools", "ci", "editmode-batch-runs.json")),
+    "/".join(("Tools", "ci", "test-suites", "editmode-batch-runs.json")),
+)
 
 REFERENCE_SCAN_EXTENSIONS = {
     ".cs",
@@ -99,13 +101,27 @@ def line_number_at(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
-def path_combine_uses_old_editmode_batch_path(call_args: str) -> bool:
+def removed_editmode_batch_path_from_path_combine(call_args: str) -> str | None:
     segments = [match.group(1) for match in STRING_LITERAL_RE.finditer(call_args)]
-    stale_segments = ["Tools", "ci", "editmode-batch-runs.json"]
-    return any(segments[index:index + len(stale_segments)] == stale_segments for index in range(len(segments)))
+    removed_paths = (
+        ["Tools", "ci", "editmode-batch-runs.json"],
+        ["Tools", "ci", "test-suites", "editmode-batch-runs.json"],
+    )
+    for path_segments in removed_paths:
+        for index in range(len(segments)):
+            if segments[index:index + len(path_segments)] == path_segments:
+                return "/".join(path_segments)
+    return None
 
 
-def assert_no_stale_editmode_batch_path_references(repo_root: Path, errors: list[str]) -> None:
+def assert_removed_editmode_batch_files_absent(repo_root: Path, errors: list[str]) -> None:
+    for removed_path in REMOVED_EDITMODE_BATCH_RUNS_PATHS:
+        candidate = repo_root / removed_path
+        if candidate.exists():
+            errors.append(f"removed EditMode batch plan file must not exist: {removed_path}; use {SUITES_PATH}")
+
+
+def assert_no_removed_editmode_batch_path_references(repo_root: Path, errors: list[str]) -> None:
     for path in iter_reference_files(repo_root):
         try:
             text = path.read_text(encoding="utf-8")
@@ -116,20 +132,27 @@ def assert_no_stale_editmode_batch_path_references(repo_root: Path, errors: list
             continue
 
         relative = path.relative_to(repo_root).as_posix()
-        exact_offset = text.find(STALE_EDITMODE_BATCH_RUNS_PATH)
-        if exact_offset >= 0:
-            errors.append(
-                f"stale EditMode batch plan path reference in {relative}:{line_number_at(text, exact_offset)}; "
-                f"use {EDITMODE_BATCH_RUNS_PATH}"
-            )
+        if relative in {
+            "Tools/ci/test-suites/validate-suites.py",
+            "Tools/ci/tests/test_suites/test_validate_suites.py",
+        }:
+            continue
+        for removed_path in REMOVED_EDITMODE_BATCH_RUNS_PATHS:
+            exact_offset = text.find(removed_path)
+            if exact_offset >= 0:
+                errors.append(
+                    f"removed EditMode batch plan path reference in {relative}:{line_number_at(text, exact_offset)}: "
+                    f"{removed_path}; use {SUITES_PATH}"
+                )
 
         if path.suffix != ".cs":
             continue
         for match in PATH_COMBINE_CALL_RE.finditer(text):
-            if path_combine_uses_old_editmode_batch_path(match.group(1)):
+            removed_path = removed_editmode_batch_path_from_path_combine(match.group(1))
+            if removed_path:
                 errors.append(
-                    f"stale EditMode batch plan path reference in {relative}:{line_number_at(text, match.start())}; "
-                    f"use {EDITMODE_BATCH_RUNS_PATH}"
+                    f"removed EditMode batch plan path reference in {relative}:{line_number_at(text, match.start())}: "
+                    f"{removed_path}; use {SUITES_PATH}"
                 )
 
 
@@ -228,8 +251,27 @@ def assert_smoke_membership(groups: dict[str, dict[str, Any]], errors: list[str]
             )
 
 
-def expected_batch_runs(default_ids: list[str], groups: dict[str, dict[str, Any]], errors: list[str]) -> list[dict[str, Any]]:
-    runs: list[dict[str, Any]] = []
+def run_has_selector(run: dict[str, Any]) -> bool:
+    selector_keys = ("testNames", "groupNames", "categoryNames", "assemblyNames")
+    if any(string_list(run.get(key)) for key in selector_keys):
+        return True
+    filters = run.get("filters")
+    if not isinstance(filters, list):
+        return False
+    return any(
+        isinstance(filter_item, dict) and any(string_list(filter_item.get(key)) for key in selector_keys)
+        for filter_item in filters
+    )
+
+
+def assert_default_batch_runs(
+    suites: dict[str, Any],
+    groups: dict[str, dict[str, Any]],
+    errors: list[str],
+) -> None:
+    default_ids = default_group_ids(suites, groups, errors)
+    seen_names: dict[str, str] = {}
+    seen_result_files: dict[str, str] = {}
     for group_id in default_ids:
         group = groups.get(group_id)
         if group is None:
@@ -238,39 +280,28 @@ def expected_batch_runs(default_ids: list[str], groups: dict[str, dict[str, Any]
         if not isinstance(run, dict):
             errors.append(f"default CI group {group_id} must define a batchRun object")
             continue
-        runs.append(run)
-    return runs
-
-
-def assert_batch_parity(
-    suites: dict[str, Any],
-    editmode_batch_runs: dict[str, Any],
-    groups: dict[str, dict[str, Any]],
-    errors: list[str],
-) -> None:
-    default_ids = default_group_ids(suites, groups, errors)
-    expected = expected_batch_runs(default_ids, groups, errors)
-    actual = editmode_batch_runs.get("runs")
-    if not isinstance(actual, list):
-        errors.append("editmode-batch-runs.json must contain a runs array")
-        return
-    if canonical_json(actual) != canonical_json(expected):
-        expected_by_name = {run.get("name"): run for run in expected if isinstance(run, dict)}
-        actual_by_name = {run.get("name"): run for run in actual if isinstance(run, dict)}
-        for group_id in default_ids:
-            run = groups.get(group_id, {}).get("batchRun")
-            run_name = run.get("name") if isinstance(run, dict) else None
-            if run_name not in actual_by_name:
-                errors.append(f"default CI batch run drift for {group_id}: missing run {run_name}")
-            elif canonical_json(actual_by_name[run_name]) != canonical_json(expected_by_name.get(run_name)):
-                errors.append(f"default CI batch run drift for {group_id}: run {run_name} differs")
-        expected_names = [run.get("name") for run in expected if isinstance(run, dict)]
-        actual_names = [run.get("name") for run in actual if isinstance(run, dict)]
-        if actual_names != expected_names:
-            errors.append(
-                "default CI batch run order/name drift: "
-                f"expected {expected_names}, found {actual_names}"
-            )
+        run_name = run.get("name")
+        result_file = run.get("resultFile")
+        if not isinstance(run_name, str) or not run_name.strip():
+            errors.append(f"default CI group {group_id} batchRun must define a non-empty name")
+            continue
+        if not isinstance(result_file, str) or not result_file.strip():
+            errors.append(f"default CI batch run {group_id}/{run_name} must define a non-empty resultFile")
+        if run_name in seen_names:
+            errors.append(f"duplicate default CI batch run name {run_name}: {seen_names[run_name]} and {group_id}")
+        else:
+            seen_names[run_name] = group_id
+        if isinstance(result_file, str) and result_file.strip():
+            normalized_result_file = result_file.strip()
+            if normalized_result_file in seen_result_files:
+                errors.append(
+                    f"duplicate default CI batch resultFile {normalized_result_file}: "
+                    f"{seen_result_files[normalized_result_file]} and {group_id}"
+                )
+            else:
+                seen_result_files[normalized_result_file] = group_id
+        if not run.get("allowEmptySelection") and not run_has_selector(run):
+            errors.append(f"default CI batch run {group_id}/{run_name} must declare at least one selector")
 
 
 def catalog_suite_ids(catalog: dict[str, Any], errors: list[str]) -> tuple[set[str], set[str]]:
@@ -335,7 +366,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo-root", type=Path, default=repo_root_from_script())
     parser.add_argument("--suites", type=Path, default=None)
-    parser.add_argument("--editmode-batch-runs", type=Path, default=None)
     parser.add_argument("--smoke-catalog", type=Path, default=None)
     return parser.parse_args(argv)
 
@@ -344,14 +374,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     repo_root = args.repo_root.resolve()
     suites_path = args.suites.resolve() if args.suites else repo_root / SUITES_PATH
-    editmode_path = args.editmode_batch_runs.resolve() if args.editmode_batch_runs else repo_root / EDITMODE_BATCH_RUNS_PATH
     catalog_path = args.smoke_catalog.resolve() if args.smoke_catalog else repo_root / SMOKE_CATALOG_PATH
 
     errors: list[str] = []
     suites = load_json(suites_path, "suite map", errors)
-    editmode_batch_runs = load_json(editmode_path, "EditMode batch runs", errors)
     smoke_catalog = load_json(catalog_path, "smoke suite catalog", errors)
-    if not suites or not editmode_batch_runs or not smoke_catalog:
+    if not suites or not smoke_catalog:
         for message in errors:
             print(f"suite map validation failed: {message}", file=sys.stderr)
         return 1
@@ -361,9 +389,10 @@ def main(argv: list[str] | None = None) -> int:
     groups = groups_by_id(suites, errors)
     if groups:
         assert_smoke_membership(groups, errors)
-        assert_batch_parity(suites, editmode_batch_runs, groups, errors)
+        assert_default_batch_runs(suites, groups, errors)
         assert_smoke_catalog_parity(repo_root, suites, smoke_catalog, groups, errors)
-    assert_no_stale_editmode_batch_path_references(repo_root, errors)
+    assert_removed_editmode_batch_files_absent(repo_root, errors)
+    assert_no_removed_editmode_batch_path_references(repo_root, errors)
 
     if errors:
         for message in errors:

@@ -136,10 +136,8 @@ class ValidateSuitesTests(unittest.TestCase):
         (self.root / "Tools/ci/test-suites").mkdir(parents=True)
         (self.root / "Tools/ci/smoke").mkdir(parents=True)
         self.suites_path = self.root / "Tools/ci/test-suites/suites.json"
-        self.batch_path = self.root / "Tools/ci/test-suites/editmode-batch-runs.json"
         self.catalog_path = self.root / "Tools/ci/smoke/suite-catalog.json"
         self.write_json(self.suites_path, suites_document())
-        self.write_json(self.batch_path, batch_runs())
         self.write_json(
             self.catalog_path,
             {
@@ -178,8 +176,6 @@ class ValidateSuitesTests(unittest.TestCase):
                 str(self.root),
                 "--suites",
                 str(self.suites_path),
-                "--editmode-batch-runs",
-                str(self.batch_path),
                 "--smoke-catalog",
                 str(self.catalog_path),
             ],
@@ -195,16 +191,26 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         self.assertIn("suite map ok", result.stdout)
 
-    def test_fails_when_default_ci_batch_run_drifts_from_editmode_plan(self) -> None:
+    def test_fails_when_default_ci_batch_run_drops_selectors(self) -> None:
         document = suites_document()
-        document["groups"][1]["batchRun"]["resultFile"] = "wrong.xml"  # type: ignore[index]
+        document["groups"][1]["batchRun"]["filters"] = []  # type: ignore[index]
         self.write_json(self.suites_path, document)
 
         result = self.run_validator()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("default CI batch run drift", result.stderr)
-        self.assertIn("core-headless", result.stderr)
+        self.assertIn("default CI batch run core-headless/editmode-core must declare at least one selector", result.stderr)
+
+    def test_fails_when_default_ci_batch_run_reuses_result_file(self) -> None:
+        document = suites_document()
+        document["groups"][1]["batchRun"]["resultFile"] = "editmode-contract-results.xml"  # type: ignore[index]
+        self.write_json(self.suites_path, document)
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("duplicate default CI batch resultFile", result.stderr)
+        self.assertIn("editmode-contract-results.xml", result.stderr)
 
     def test_fails_when_smoke_lane_membership_drops_required_host_file(self) -> None:
         document = suites_document()
@@ -228,7 +234,17 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("must be excluded from default CI", result.stderr)
 
-    def test_fails_when_code_uses_segmented_old_editmode_batch_path(self) -> None:
+    def test_fails_when_removed_editmode_batch_plan_file_exists(self) -> None:
+        removed_plan_path = self.root / "Tools/ci/test-suites/editmode-batch-runs.json"
+        self.write_json(removed_plan_path, batch_runs())
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("removed EditMode batch plan file must not exist", result.stderr)
+        self.assertIn("Tools/ci/test-suites/editmode-batch-runs.json", result.stderr)
+
+    def test_fails_when_code_uses_removed_editmode_batch_path(self) -> None:
         source_path = self.root / "Packages/com.staples.asm-lite/Tests/Editor/StaleBatchPathTests.cs"
         source_path.parent.mkdir(parents=True)
         source_path.write_text(
@@ -237,12 +253,13 @@ class ValidateSuitesTests(unittest.TestCase):
 
             public sealed class StaleBatchPathTests
             {
-                public void ReadsOldPath()
+                public void ReadsRemovedPath()
                 {
                     string path = Path.Combine(
                         repoRoot,
                         "Tools",
                         "ci",
+                        "test-suites",
                         "editmode-batch-runs.json");
                 }
             }
@@ -253,8 +270,9 @@ class ValidateSuitesTests(unittest.TestCase):
         result = self.run_validator()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("stale EditMode batch plan path reference", result.stderr)
-        self.assertIn("Tools/ci/test-suites/editmode-batch-runs.json", result.stderr)
+        self.assertIn("removed EditMode batch plan path reference", result.stderr)
+        removed_path = "/".join(("Tools", "ci", "test-suites", "editmode-batch-runs.json"))
+        self.assertIn(removed_path, result.stderr)
 
 
 if __name__ == "__main__":

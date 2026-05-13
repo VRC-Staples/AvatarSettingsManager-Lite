@@ -1636,6 +1636,22 @@ namespace ASMLite.Tests.Editor
     }
 
     [Serializable]
+    internal sealed class AsmLiteSuiteMapConfiguration
+    {
+        public int schemaVersion;
+        public string[] defaultCiGroups = Array.Empty<string>();
+        public AsmLiteSuiteGroupDefinition[] groups = Array.Empty<AsmLiteSuiteGroupDefinition>();
+    }
+
+    [Serializable]
+    internal sealed class AsmLiteSuiteGroupDefinition
+    {
+        public string id;
+        public bool defaultCi;
+        public AsmLiteBatchRunDefinition batchRun;
+    }
+
+    [Serializable]
     internal sealed class AsmLiteBatchRunDefinition
     {
         public string name;
@@ -1847,20 +1863,21 @@ namespace ASMLite.Tests.Editor
 
             string rawJsonPath = ResolveBatchCommandLineValue(commandLineArgs, RunsJsonPathArg);
             string rawJson;
+            AsmLiteBatchRunConfiguration configuration;
             if (!string.IsNullOrWhiteSpace(rawJsonPath))
             {
                 rawJsonPath = ResolveRequiredPath(rawJsonPath);
                 rawJson = File.ReadAllText(rawJsonPath, Encoding.UTF8);
+                configuration = JsonUtility.FromJson<AsmLiteBatchRunConfiguration>(rawJson);
             }
             else
             {
                 rawJson = Environment.GetEnvironmentVariable(RunsJsonEnv);
+                configuration = string.IsNullOrWhiteSpace(rawJson)
+                    ? BuildDefaultBatchRunConfigurationFromSuiteMapPath(ASMLiteSmokeContractPaths.GetSuiteMapPath())
+                    : JsonUtility.FromJson<AsmLiteBatchRunConfiguration>(rawJson);
             }
 
-            if (string.IsNullOrWhiteSpace(rawJson))
-                throw new InvalidOperationException($"Missing required command-line argument '{RunsJsonPathArg}' or environment variable '{RunsJsonEnv}'.");
-
-            var configuration = JsonUtility.FromJson<AsmLiteBatchRunConfiguration>(rawJson);
             if (configuration == null || configuration.runs == null || configuration.runs.Length == 0)
                 throw new InvalidOperationException("Batch test runner requires at least one run definition.");
 
@@ -1912,6 +1929,56 @@ namespace ASMLite.Tests.Editor
                 exitCode = 0,
                 activeRunIndex = -1,
             };
+        }
+
+        internal static AsmLiteBatchRunConfiguration BuildDefaultBatchRunConfigurationFromSuiteMapJson(string rawSuiteMapJson)
+        {
+            if (string.IsNullOrWhiteSpace(rawSuiteMapJson))
+                throw new InvalidOperationException("Suite map JSON must not be empty.");
+
+            var suiteMap = JsonUtility.FromJson<AsmLiteSuiteMapConfiguration>(rawSuiteMapJson);
+            if (suiteMap == null)
+                throw new InvalidOperationException("Unable to read suite map JSON.");
+            if (suiteMap.schemaVersion != 1)
+                throw new InvalidOperationException("Suite map schemaVersion must be 1.");
+
+            string[] defaultGroupIds = suiteMap.defaultCiGroups ?? Array.Empty<string>();
+            if (defaultGroupIds.Length == 0)
+                throw new InvalidOperationException("Suite map defaultCiGroups must include at least one group.");
+
+            var groupsById = new Dictionary<string, AsmLiteSuiteGroupDefinition>(StringComparer.Ordinal);
+            foreach (var group in suiteMap.groups ?? Array.Empty<AsmLiteSuiteGroupDefinition>())
+            {
+                if (group == null || string.IsNullOrWhiteSpace(group.id))
+                    continue;
+                groupsById[group.id] = group;
+            }
+
+            var runs = new List<AsmLiteBatchRunDefinition>();
+            foreach (string groupId in defaultGroupIds)
+            {
+                if (string.IsNullOrWhiteSpace(groupId))
+                    throw new InvalidOperationException("Suite map defaultCiGroups must not contain empty group ids.");
+                if (!groupsById.TryGetValue(groupId, out var group) || group == null)
+                    throw new InvalidOperationException($"Suite map default CI group '{groupId}' is missing from groups.");
+                if (!group.defaultCi)
+                    throw new InvalidOperationException($"Suite map default CI group '{groupId}' must be marked defaultCi.");
+                if (group.batchRun == null)
+                    throw new InvalidOperationException($"Suite map default CI group '{groupId}' must define a batchRun.");
+
+                runs.Add(group.batchRun);
+            }
+
+            return new AsmLiteBatchRunConfiguration
+            {
+                runs = runs.ToArray(),
+            };
+        }
+
+        private static AsmLiteBatchRunConfiguration BuildDefaultBatchRunConfigurationFromSuiteMapPath(string suiteMapPath)
+        {
+            string resolvedPath = ResolveRequiredPath(suiteMapPath);
+            return BuildDefaultBatchRunConfigurationFromSuiteMapJson(File.ReadAllText(resolvedPath, Encoding.UTF8));
         }
 
         private static void RestoreFromSessionState(AsmLiteBatchRunnerSessionState sessionState)

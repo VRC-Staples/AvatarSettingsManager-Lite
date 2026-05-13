@@ -83,13 +83,15 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CanonicalBatchPlan_ExcludesBatchRunnerSelfTests()
+        public void CanonicalSuiteMap_ExcludesBatchRunnerSelfTests()
         {
-            string batchRunsPath = ASMLiteSmokeContractPaths.GetEditModeBatchRunsPath();
-            string json = File.ReadAllText(batchRunsPath, Encoding.UTF8);
+            string suiteMapPath = ASMLiteSmokeContractPaths.GetSuiteMapPath();
+            string json = File.ReadAllText(suiteMapPath, Encoding.UTF8);
+            var configuration = ASMLiteBatchTestRunner.BuildDefaultBatchRunConfigurationFromSuiteMapJson(json);
 
-            StringAssert.DoesNotContain("ASMLiteBatchTestRunnerTests", json,
-                "The canonical single-instance batch run must not run the batch runner's own static-state tests inside the active batch runner callback session.");
+            Assert.AreEqual(5, configuration.runs.Length);
+            StringAssert.DoesNotContain("ASMLiteBatchTestRunnerTests", JsonUtility.ToJson(configuration),
+                "The canonical single-instance batch runs must not run the batch runner's own static-state tests inside the active batch runner callback session.");
         }
 
         public void WrapResultDocumentWithResultMetrics_WrapsSuiteXml_WithAdaptorCounts()

@@ -8,8 +8,8 @@ REPO_DIR_NAME="$(basename "${REPO_ROOT}")"
 PROJECT_REL_PATH="Tools/ci/unity-project"
 PROJECT_PATH="${REPO_ROOT}/${PROJECT_REL_PATH}"
 PROJECT_VERSION_FILE="${PROJECT_PATH}/ProjectSettings/ProjectVersion.txt"
-CANONICAL_BATCH_RUNS_JSON_REL_PATH="Tools/ci/test-suites/editmode-batch-runs.json"
-CANONICAL_BATCH_RUNS_JSON_PATH="${REPO_ROOT}/${CANONICAL_BATCH_RUNS_JSON_REL_PATH}"
+SUITE_MAP_JSON_REL_PATH="Tools/ci/test-suites/suites.json"
+SUITE_MAP_JSON_PATH="${REPO_ROOT}/${SUITE_MAP_JSON_REL_PATH}"
 VERIFY_RESULTS_SCRIPT="${REPO_ROOT}/Tools/ci/validators/verify-unity-editmode-results.py"
 ARTIFACTS_DIR="${REPO_ROOT}/artifacts"
 COVERAGE_DIR="${REPO_ROOT}/CodeCoverage"
@@ -55,6 +55,7 @@ UNITY_PASSWORD="${UNITY_PASSWORD:-}"
 UNITY_LICENSE_SECRET="${UNITY_LICENSE_SECRET:-}"
 UNITY_LICENSE_FILE="${UNITY_LICENSE_FILE:-}"
 LOCAL_UNITY_RETURN_LICENSE=0
+ASMLITE_USE_DEFAULT_SUITE_MAP_BATCH=0
 
 write_run_lock_metadata() {
   local started_at
@@ -215,7 +216,7 @@ Docker mode keeps the existing CI-style activation/return flow and requires
 UNITY_EMAIL, UNITY_PASSWORD, plus UNITY_SERIAL or UNITY_LICENSE_SECRET/UNITY_LICENSE_FILE.
 
 When --test-filter is not supplied and no ASMLITE_BATCH_RUNS_JSON/ASMLITE_BATCH_RUNS_JSON_PATH
-override is set, the run defaults to Tools/ci/test-suites/editmode-batch-runs.json.
+override is set, the batch runner reads its default CI run definitions from Tools/ci/test-suites/suites.json.
 
 Local mode assumes an already activated Unity installation unless --manage-license
 (or LOCAL_UNITY_MANAGE_LICENSE=1) is provided.
@@ -828,7 +829,11 @@ configure_batch_defaults() {
   fi
 
   if [[ -z "${EDITMODE_TEST_FILTER:-}" && -z "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" && -z "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
-    : "${ASMLITE_BATCH_RUNS_JSON_PATH:=${CANONICAL_BATCH_RUNS_JSON_PATH}}"
+    if [[ ! -f "${SUITE_MAP_JSON_PATH}" ]]; then
+      echo "error: suite map does not exist: ${SUITE_MAP_JSON_PATH}" >&2
+      exit 1
+    fi
+    ASMLITE_USE_DEFAULT_SUITE_MAP_BATCH=1
   fi
 
   if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" && ! -f "${ASMLITE_BATCH_RUNS_JSON_PATH}" ]]; then
@@ -1115,7 +1120,7 @@ run_local_visible_suite_mode() {
   local -a unity_cmd
   local -a test_filter_args=()
 
-  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" || "${ASMLITE_USE_DEFAULT_SUITE_MAP_BATCH}" == "1" ]]; then
     run_local_batch_suite_mode visible
     return $?
   fi
@@ -1179,7 +1184,7 @@ run_local_mode() {
     return $?
   fi
 
-  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" ]]; then
+  if [[ -n "${ASMLITE_BATCH_RUNS_JSON_PATH:-}" || -n "${ASMLITE_BATCH_RUNS_JSON:-}" || "${ASMLITE_USE_DEFAULT_SUITE_MAP_BATCH}" == "1" ]]; then
     run_local_batch_suite_mode headless
     return $?
   fi

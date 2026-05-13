@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Canonical ASM-Lite test suite map. The Unity batch runner still consumes Tools/ci/test-suites/editmode-batch-runs.json; validate-suites.py keeps that file and the smoke catalog in parity with this map until direct runner consumption is implemented.",
+  "description": "Canonical ASM-Lite test suite map. The Unity batch runner derives its default CI batch run definitions from this map; validate-suites.py keeps default batch selectors and the smoke catalog in parity with these groups.",
   "defaultCiGroups": [
     "contract",
     "core-headless",

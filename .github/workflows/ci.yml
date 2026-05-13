@@ -308,9 +308,9 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
-          BATCH_PLAN_PATH="/github/workspace/Tools/ci/test-suites/editmode-batch-runs.json"
-          if [ ! -f "${BATCH_PLAN_PATH}" ]; then
-            echo "::error::Missing canonical EditMode batch plan: ${BATCH_PLAN_PATH}"
+          SUITE_MAP_PATH="/github/workspace/Tools/ci/test-suites/suites.json"
+          if [ ! -f "${SUITE_MAP_PATH}" ]; then
+            echo "::error::Missing canonical EditMode suite map: ${SUITE_MAP_PATH}"
             exit 1
           fi
 
@@ -369,7 +369,6 @@ jobs:
             -projectPath Tools/ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
             -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine \
-            -asmliteBatchRunsJsonPath /github/workspace/Tools/ci/test-suites/editmode-batch-runs.json \
             -enableCodeCoverage \
             -debugCodeOptimization \
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
