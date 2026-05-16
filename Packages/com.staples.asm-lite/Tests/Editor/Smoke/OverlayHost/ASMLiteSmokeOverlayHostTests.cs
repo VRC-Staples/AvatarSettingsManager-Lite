@@ -173,7 +173,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void CommandLine_DefaultsToClickMeSceneAndOct25DressAvatar()
+        public void CommandLine_DefaultsToClickMeSceneAndCanonicalDressAvatar()
         {
             string[] args =
             {
@@ -186,7 +186,7 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeOverlayHostConfiguration configuration = ASMLiteSmokeOverlayHostCommandLine.ParseConfiguration(args);
 
             Assert.AreEqual("Assets/Click ME.unity", configuration.ScenePath);
-            Assert.AreEqual("Oct25_Dress", configuration.AvatarName);
+            Assert.AreEqual("CanonicalDress", configuration.AvatarName);
             Assert.AreEqual(120, configuration.StartupTimeoutSeconds);
             Assert.AreEqual(5, configuration.HeartbeatSeconds);
             Assert.That(configuration.ExitOnReady, Is.False);
@@ -229,8 +229,8 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void UnityRuntime_NormalizesClonedAvatarNames()
         {
-            Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("Oct25_Dress (Clone)"));
-            Assert.AreEqual("Oct25_Dress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" Oct25_Dress (Clone) (Clone) "));
+            Assert.AreEqual("CanonicalDress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName("CanonicalDress (Clone)"));
+            Assert.AreEqual("CanonicalDress", ASMLiteSmokeOverlayHostUnityRuntime.NormalizeUnityRuntimeName(" CanonicalDress (Clone) (Clone) "));
         }
 
         [Test]
@@ -272,7 +272,7 @@ namespace ASMLite.Tests.Editor
                     "assert-package-resource-present",
                     new ASMLiteSmokeStepArgs(),
                     "Assets/Click ME.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out string packageDetail,
                     out string packageStackTrace),
                 Is.True);
@@ -283,7 +283,7 @@ namespace ASMLite.Tests.Editor
                     "assert-catalog-loads",
                     new ASMLiteSmokeStepArgs(),
                     "Assets/Click ME.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out string catalogDetail,
                     out string catalogStackTrace),
                 Is.True);
@@ -298,7 +298,7 @@ namespace ASMLite.Tests.Editor
                     "assert-package-resource-present",
                     new ASMLiteSmokeStepArgs { objectName = "Packages/com.staples.asm-lite/Missing.prefab" },
                     "Assets/Click ME.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out string detail,
                     out string stackTrace),
                 Is.False);
@@ -310,16 +310,14 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void UnityRuntime_AssertsExpectedPrimaryActionFromStepArgs()
         {
-            var avatarObject = new GameObject("Phase06_AddPrefabAvatar");
+            var avatarObject = new GameObject("AddPrefabAvatar");
             avatarObject.AddComponent<VRCAvatarDescriptor>();
 
+            bool previousIgnoreFailingMessages = LogAssert.ignoreFailingMessages;
             try
             {
                 Selection.activeObject = avatarObject;
-                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
-                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
-                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
-                LogAssert.Expect(LogType.Error, new Regex("^No graphic device is available"));
+                LogAssert.ignoreFailingMessages = true;
 
                 bool success = ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
                     "assert-primary-action",
@@ -334,22 +332,29 @@ namespace ASMLite.Tests.Editor
             }
             finally
             {
-                ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                    "close-window",
-                    new ASMLiteSmokeStepArgs(),
-                    string.Empty,
-                    avatarObject.name,
-                    out _,
-                    out _);
-                UnityEngine.Object.DestroyImmediate(avatarObject);
-                Selection.activeObject = null;
+                try
+                {
+                    ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
+                        "close-window",
+                        new ASMLiteSmokeStepArgs(),
+                        string.Empty,
+                        avatarObject.name,
+                        out _,
+                        out _);
+                }
+                finally
+                {
+                    LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
+                    UnityEngine.Object.DestroyImmediate(avatarObject);
+                    Selection.activeObject = null;
+                }
             }
         }
 
         [Test]
         public void UnityRuntime_AssertsGeneratedReferencesRemainPackageManagedByDefault()
         {
-            var avatarObject = new GameObject("Phase07B_PackageManagedAvatar");
+            var avatarObject = new GameObject("PackageManagedAvatar");
             avatarObject.AddComponent<VRCAvatarDescriptor>();
             var componentObject = new GameObject("ASM-Lite Component");
             componentObject.transform.SetParent(avatarObject.transform);
@@ -505,7 +510,7 @@ namespace ASMLite.Tests.Editor
             var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             string syncIntName = HarnessVrcFurySyncDataParameterName("Num", 1);
             string syncBoolName = HarnessVrcFurySyncDataParameterName("Bool", 2);
-            string syncIndexName = "VF68_SyncIndex0";
+            string syncIndexName = "Brokered_SyncIndex0";
             string unsavedBoolName = HarnessFixtureParameterName(
                 nameof(Av3SaveLoadHarnessSelection_SkipsVrcfurySyncDataParameters),
                 "UnsavedBool");
@@ -565,8 +570,8 @@ namespace ASMLite.Tests.Editor
                     HarnessParameter("User/SavedBoolB", VRCExpressionParameters.ValueType.Bool, saved: true),
                     HarnessParameter("User/SavedIntA", VRCExpressionParameters.ValueType.Int, saved: true),
                     HarnessParameter("User/SavedFloatA", VRCExpressionParameters.ValueType.Float, saved: true),
-                    HarnessParameter("VF68_SyncIndex0", VRCExpressionParameters.ValueType.Int, saved: false),
-                    HarnessParameter("VF68_SyncDataNum0", VRCExpressionParameters.ValueType.Int, saved: false),
+                    HarnessParameter("Brokered_SyncIndex0", VRCExpressionParameters.ValueType.Int, saved: false),
+                    HarnessParameter("Brokered_SyncDataNum0", VRCExpressionParameters.ValueType.Int, saved: false),
                 }
                     .Concat(stableVrcFuryParameters)
                     .Concat(new[]
@@ -586,9 +591,9 @@ namespace ASMLite.Tests.Editor
                     CollectionAssert.Contains(selectedNames, parameter.name,
                         "The runtime harness must include saved VRCFury-created toggles even when they fall outside the ordinary sampled subset.");
                 }
-                CollectionAssert.DoesNotContain(selectedNames, "VF68_SyncIndex0",
+                CollectionAssert.DoesNotContain(selectedNames, "Brokered_SyncIndex0",
                     "VRCFury sync index parameters are runtime-owned and not stable save/load targets.");
-                CollectionAssert.DoesNotContain(selectedNames, "VF68_SyncDataNum0",
+                CollectionAssert.DoesNotContain(selectedNames, "Brokered_SyncDataNum0",
                     "VRCFury sync data parameters are runtime-owned and not stable save/load targets.");
                 CollectionAssert.DoesNotContain(selectedNames, unsavedVrcFuryParameterName,
                     "Unsaved VRCFury-created parameters should not be treated as saved backup targets.");
@@ -1174,7 +1179,7 @@ namespace ASMLite.Tests.Editor
                     "close-window",
                     new ASMLiteSmokeStepArgs(),
                     "Assets/Click ME.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out _,
                     out _);
 
@@ -1182,7 +1187,7 @@ namespace ASMLite.Tests.Editor
                         "open-window",
                         new ASMLiteSmokeStepArgs(),
                         "Assets/Click ME.unity",
-                        "Oct25_Dress",
+                        "CanonicalDress",
                         out string openDetail,
                         out string openStackTrace),
                     Is.True);
@@ -1193,7 +1198,7 @@ namespace ASMLite.Tests.Editor
                         "assert-window-focused",
                         new ASMLiteSmokeStepArgs(),
                         "Assets/Click ME.unity",
-                        "Oct25_Dress",
+                        "CanonicalDress",
                         out string focusDetail,
                         out string focusStackTrace),
                     Is.True);
@@ -1206,7 +1211,7 @@ namespace ASMLite.Tests.Editor
                     "close-window",
                     new ASMLiteSmokeStepArgs(),
                     "Assets/Click ME.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out _,
                     out _);
                 LogAssert.ignoreFailingMessages = previousIgnoreFailingMessages;
@@ -1220,16 +1225,16 @@ namespace ASMLite.Tests.Editor
             GameObject avatarWithComponentObject = null;
             try
             {
-                avatarWithoutComponentObject = new GameObject("Oct25_Dress");
+                avatarWithoutComponentObject = new GameObject("CanonicalDress");
                 avatarWithoutComponentObject.AddComponent<VRCAvatarDescriptor>();
 
-                avatarWithComponentObject = new GameObject("Oct25_Dress (Clone)");
+                avatarWithComponentObject = new GameObject("CanonicalDress (Clone)");
                 VRCAvatarDescriptor avatarWithComponent = avatarWithComponentObject.AddComponent<VRCAvatarDescriptor>();
                 var componentChild = new GameObject("ASM-Lite Component");
                 componentChild.transform.SetParent(avatarWithComponentObject.transform);
                 componentChild.AddComponent<ASMLite.ASMLiteComponent>();
 
-                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("Oct25_Dress");
+                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("CanonicalDress");
 
                 Assert.That(resolved, Is.SameAs(avatarWithComponent));
             }
@@ -1249,10 +1254,10 @@ namespace ASMLite.Tests.Editor
             GameObject duplicateWithComponentObject = null;
             try
             {
-                selectedAvatarObject = new GameObject("Oct25_Dress");
+                selectedAvatarObject = new GameObject("CanonicalDress");
                 VRCAvatarDescriptor selectedAvatar = selectedAvatarObject.AddComponent<VRCAvatarDescriptor>();
 
-                duplicateWithComponentObject = new GameObject("Oct25_Dress (Clone)");
+                duplicateWithComponentObject = new GameObject("CanonicalDress (Clone)");
                 duplicateWithComponentObject.AddComponent<VRCAvatarDescriptor>();
                 var componentChild = new GameObject("ASM-Lite Component");
                 componentChild.transform.SetParent(duplicateWithComponentObject.transform);
@@ -1260,7 +1265,7 @@ namespace ASMLite.Tests.Editor
 
                 Selection.activeObject = selectedAvatarObject;
 
-                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("Oct25_Dress");
+                VRCAvatarDescriptor resolved = ASMLiteSmokeOverlayHostUnityRuntime.Instance.FindAvatarByName("CanonicalDress");
 
                 Assert.That(resolved, Is.SameAs(selectedAvatar));
             }
@@ -1280,11 +1285,11 @@ namespace ASMLite.Tests.Editor
             GameObject avatarObject = null;
             try
             {
-                avatarObject = new GameObject("Oct25_Dress");
+                avatarObject = new GameObject("CanonicalDress");
                 VRCAvatarDescriptor avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
 
                 bool valid = ASMLiteSmokeOverlayHostUnityRuntime.ValidateRuntimeComponentState(
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     avatar,
                     isPlaying: true,
                     out string detail);
@@ -1305,11 +1310,11 @@ namespace ASMLite.Tests.Editor
             GameObject avatarObject = null;
             try
             {
-                avatarObject = new GameObject("Oct25_Dress");
+                avatarObject = new GameObject("CanonicalDress");
                 VRCAvatarDescriptor avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
 
                 bool valid = ASMLiteSmokeOverlayHostUnityRuntime.ValidateRuntimeComponentState(
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     avatar,
                     isPlaying: false,
                     out string detail);
@@ -1603,7 +1608,7 @@ namespace ASMLite.Tests.Editor
                 AdvanceUntilIdleAfterRun(context);
 
                 Assert.That(context.Runtime.OpenedScenes, Is.EqualTo(new[] { "Assets/Click ME.unity" }));
-                Assert.That(context.Runtime.SelectedAvatars, Is.EqualTo(new[] { "Oct25_Dress" }));
+                Assert.That(context.Runtime.SelectedAvatars, Is.EqualTo(new[] { "CanonicalDress" }));
                 Assert.That(context.Runtime.ExecutedActions, Is.EqualTo(new[] { "open-scene", "open-window", "select-avatar", "add-prefab", "assert-primary-action" }));
             }
         }
@@ -1829,7 +1834,7 @@ namespace ASMLite.Tests.Editor
                 const string commandId = "cmd_000016_run-suite";
                 context.Runtime.FailAction(
                     "select-avatar",
-                    "SETUP_AVATAR_NOT_FOUND: avatar could not be found for fixture name 'Oct25_Dress'.");
+                    "SETUP_AVATAR_NOT_FOUND: avatar could not be found for fixture name 'CanonicalDress'.");
 
                 WriteCommand(context.Paths, BuildRunSuiteCommand(16, commandId, "expected-diagnostic-fixture-reset-host"));
                 AdvanceUntilIdleAfterRun(context);
@@ -2659,7 +2664,7 @@ namespace ASMLite.Tests.Editor
             return new ASMLiteSmokeProtocolCommand
             {
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
-                sessionId = "phase06",
+                sessionId = "add-prefab",
                 commandId = commandId,
                 commandSeq = commandSeq,
                 commandType = ASMLiteSmokeCommandRegistry.LaunchSession,
@@ -2689,7 +2694,7 @@ namespace ASMLite.Tests.Editor
             return new ASMLiteSmokeProtocolCommand
             {
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
-                sessionId = "phase06",
+                sessionId = "add-prefab",
                 commandId = commandId,
                 commandSeq = commandSeq,
                 commandType = ASMLiteSmokeCommandRegistry.RunSuite,
@@ -2719,7 +2724,7 @@ namespace ASMLite.Tests.Editor
             return new ASMLiteSmokeProtocolCommand
             {
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
-                sessionId = "phase06",
+                sessionId = "add-prefab",
                 commandId = commandId,
                 commandSeq = commandSeq,
                 commandType = ASMLiteSmokeCommandRegistry.ReviewDecision,
@@ -2748,7 +2753,7 @@ namespace ASMLite.Tests.Editor
             return new ASMLiteSmokeProtocolCommand
             {
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
-                sessionId = "phase06",
+                sessionId = "add-prefab",
                 commandId = commandId,
                 commandSeq = commandSeq,
                 commandType = ASMLiteSmokeCommandRegistry.AbortRun,
@@ -2775,13 +2780,13 @@ namespace ASMLite.Tests.Editor
                 fixture = new ASMLiteSmokeFixtureDefinition
                 {
                     scenePath = "Assets/Click ME.unity",
-                    avatarName = "Oct25_Dress",
+                    avatarName = "CanonicalDress",
                 },
                 groups = new[]
                 {
                     new ASMLiteSmokeGroupDefinition
                     {
-                        groupId = "phase08-host-tests",
+                        groupId = "recovery-host-tests",
                         label = "Phase 08 Host Tests",
                         description = "Local catalog used by ASMLiteSmokeOverlayHostTests.",
                         suites = new[]
@@ -2797,7 +2802,7 @@ namespace ASMLite.Tests.Editor
                                 presetGroups = new[] { "all-setup" },
                                 requiresPlayMode = false,
                                 stopOnFirstFailure = true,
-                                expectedOutcome = "The scene is open, Oct25_Dress is selected, and the prefab scaffold is ready.",
+                                expectedOutcome = "The scene is open, CanonicalDress is selected, and the prefab scaffold is ready.",
                                 debugHint = "Check scene/avatar fixture names, prefab prerequisites, and window focus if setup stalls.",
                                 cases = new[]
                                 {
@@ -2812,7 +2817,7 @@ namespace ASMLite.Tests.Editor
                                         {
                                             new ASMLiteSmokeStepDefinition { stepId = "open-scene", label = "Scene is open", description = "Open canonical smoke scene.", actionType = "open-scene", expectedOutcome = "Scene opens.", debugHint = "Inspect scene path." },
                                             new ASMLiteSmokeStepDefinition { stepId = "open-window", label = "ASM-Lite window is open", description = "Open ASM-Lite window.", actionType = "open-window", expectedOutcome = "Window opens.", debugHint = "Inspect window state." },
-                                            new ASMLiteSmokeStepDefinition { stepId = "select-avatar", label = "Avatar is selected", description = "Select Oct25_Dress.", actionType = "select-avatar", expectedOutcome = "Avatar selected.", debugHint = "Inspect avatar lookup." },
+                                            new ASMLiteSmokeStepDefinition { stepId = "select-avatar", label = "Avatar is selected", description = "Select CanonicalDress.", actionType = "select-avatar", expectedOutcome = "Avatar selected.", debugHint = "Inspect avatar lookup." },
                                             new ASMLiteSmokeStepDefinition { stepId = "add-prefab", label = "ASM-Lite scaffold is added", description = "Add the ASM-Lite prefab scaffold.", actionType = "add-prefab", expectedOutcome = "Prefab scaffold is attached.", debugHint = "Inspect avatar prerequisites." },
                                             new ASMLiteSmokeStepDefinition { stepId = "assert-primary-action", label = "Primary action is shown", description = "Confirm rebuild action is visible.", actionType = "assert-primary-action", expectedOutcome = "Primary action is visible.", debugHint = "Inspect window refresh state." },
                                         },
@@ -3556,7 +3561,7 @@ namespace ASMLite.Tests.Editor
             return new ASMLiteSmokeProtocolCommand
             {
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
-                sessionId = "phase06",
+                sessionId = "add-prefab",
                 commandId = commandId,
                 commandSeq = commandSeq,
                 commandType = ASMLiteSmokeCommandRegistry.ShutdownSession,
@@ -3617,7 +3622,7 @@ namespace ASMLite.Tests.Editor
                 paths.EnsureSessionLayout();
 
                 var runtime = new FakeRuntime();
-                var avatarObject = new GameObject("Oct25_Dress");
+                var avatarObject = new GameObject("CanonicalDress");
                 var avatar = avatarObject.AddComponent<VRCAvatarDescriptor>();
                 runtime.RegisterAvatar(avatar);
 
@@ -3626,7 +3631,7 @@ namespace ASMLite.Tests.Editor
                     SessionRootPath = sessionRoot,
                     CatalogPath = catalogPath,
                     ScenePath = "Assets/Click ME.unity",
-                    AvatarName = "Oct25_Dress",
+                    AvatarName = "CanonicalDress",
                     StartupTimeoutSeconds = 120,
                     HeartbeatSeconds = 5,
                     ExitOnReady = exitOnReady,

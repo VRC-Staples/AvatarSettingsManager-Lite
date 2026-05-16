@@ -68,17 +68,38 @@ namespace ASMLite.Tests.Editor
         public static AsmLiteTestContext CreateTestAvatar()
         {
             var isolationScope = AsmLiteFixtureIsolationScope.Capture(nameof(CreateTestAvatar));
-            var fixtureGeneratedAssetPaths = new[]
+            var context = CreateTestAvatarCore("TestAvatar", isolationScope);
+            RegisterFixtureIsolationScope(context.AvatarGo, isolationScope, FixtureGeneratedAssetPaths());
+            return context;
+        }
+
+        public static AsmLiteTestContext CreatePlayModeTestAvatar()
+        {
+            return CreateTestAvatarCore("TestAvatar", isolationScope: null);
+        }
+
+        private static string[] FixtureGeneratedAssetPaths()
+        {
+            return new[]
             {
                 TempDir,
                 TempDir + "/TestFX.controller",
                 TempDir + "/TestParams.asset",
                 TempDir + "/TestMenu.asset",
             };
+        }
 
+        private static AsmLiteTestContext CreateTestAvatarCore(string avatarName, AsmLiteFixtureIsolationScope isolationScope)
+        {
             // Create temp directory (guard against already existing)
             if (!AssetDatabase.IsValidFolder(TempDir))
                 AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+
+            foreach (var fixturePath in FixtureGeneratedAssetPaths().Skip(1))
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(fixturePath) != null)
+                    AssetDatabase.DeleteAsset(fixturePath);
+            }
 
             // Create AnimatorController
             var ctrl = AnimatorController.CreateAnimatorControllerAtPath(
@@ -97,7 +118,7 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
 
             // Create avatar GameObject
-            var avatarGo = new GameObject("TestAvatar");
+            var avatarGo = new GameObject(string.IsNullOrWhiteSpace(avatarName) ? "TestAvatar" : avatarName);
             var avDesc = avatarGo.AddComponent<VRCAvatarDescriptor>();
 
             // Wire FX layer -- resize to at least 5 slots rather than indexing blindly
@@ -134,7 +155,7 @@ namespace ASMLite.Tests.Editor
             compGo.transform.SetParent(avatarGo.transform);
             var comp = compGo.AddComponent<ASMLiteComponent>();
 
-            var context = new AsmLiteTestContext
+            return new AsmLiteTestContext
             {
                 AvatarGo = avatarGo,
                 AvDesc = avDesc,
@@ -144,8 +165,6 @@ namespace ASMLite.Tests.Editor
                 MenuAsset = menuAsset,
                 FixtureIsolationScope = isolationScope
             };
-            RegisterFixtureIsolationScope(avatarGo, isolationScope, fixtureGeneratedAssetPaths);
-            return context;
         }
 
         public static void AddExpressionParam(
@@ -327,17 +346,109 @@ namespace ASMLite.Tests.Editor
         public static void TearDownTestAvatar(GameObject avatarGo)
         {
             var isolationScope = UnregisterFixtureIsolationScope(avatarGo);
+            string avatarName = avatarGo != null ? avatarGo.name : string.Empty;
+            var generatedAssetPaths = CaptureFixtureVendorizedGeneratedAssetPaths(avatarGo);
+            var selectionBeforeCleanup = Selection.objects ?? Array.Empty<UnityEngine.Object>();
             try
             {
-                AssetDatabase.DeleteAsset(TempDir);
-                AssetDatabase.Refresh();
                 if (avatarGo != null)
                     UnityEngine.Object.DestroyImmediate(avatarGo);
+
+                DeleteFixtureTempDir();
+                DeleteFixtureVendorizedGeneratedAssets(generatedAssetPaths);
             }
             finally
             {
+                RestoreSelection(selectionBeforeCleanup);
+                isolationScope?.DeleteFixtureGeneratedAssetLeaks(avatarName);
+                RestoreSelection(selectionBeforeCleanup);
                 isolationScope?.Dispose();
             }
+        }
+
+        private static void RestoreSelection(IEnumerable<UnityEngine.Object> selection)
+        {
+            Selection.objects = (selection ?? Array.Empty<UnityEngine.Object>())
+                .Where(selectedObject => selectedObject != null)
+                .ToArray();
+        }
+
+        private static string[] CaptureFixtureVendorizedGeneratedAssetPaths(GameObject avatarGo)
+        {
+            if (avatarGo == null)
+                return Array.Empty<string>();
+
+            return avatarGo.GetComponentsInChildren<ASMLiteComponent>(true)
+                .Where(component => component != null)
+                .Select(component => NormalizeAssetPath(component.vendorizedGeneratedAssetsPath))
+                .Where(path => path.StartsWith("Assets/ASM-Lite/", StringComparison.Ordinal))
+                .Where(path => path.EndsWith("/GeneratedAssets", StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static void DeleteFixtureTempDir()
+        {
+            DeleteFixtureAssetPath(TempDir);
+        }
+
+        private static void DeleteFixtureVendorizedGeneratedAssets(IEnumerable<string> generatedAssetPaths)
+        {
+            foreach (var generatedAssetPath in generatedAssetPaths ?? Array.Empty<string>())
+            {
+                DeleteFixtureAssetPath(generatedAssetPath);
+
+                string avatarFolder = Path.GetDirectoryName(generatedAssetPath)?.Replace('\\', '/');
+                DeleteFixtureFolderIfEmpty(avatarFolder);
+            }
+
+            DeleteFixtureFolderIfEmpty("Assets/ASM-Lite");
+        }
+
+        private static void DeleteFixtureAssetPath(string assetPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath))
+                return;
+            if (IsRegisteredFixtureGeneratedAssetPath(normalizedPath))
+                return;
+
+            AssetDatabase.DeleteAsset(normalizedPath);
+            AssetDatabase.Refresh();
+
+            if (!AssetDatabase.IsValidFolder(normalizedPath)
+                && AssetDatabase.LoadMainAssetAtPath(normalizedPath) == null
+                && string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(normalizedPath))
+                && !Directory.Exists(normalizedPath)
+                && !File.Exists(normalizedPath))
+                return;
+
+            FileUtil.DeleteFileOrDirectory(normalizedPath);
+            FileUtil.DeleteFileOrDirectory(normalizedPath + ".meta");
+            AssetDatabase.Refresh();
+        }
+
+        private static void DeleteFixtureFolderIfEmpty(string assetFolderPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetFolderPath);
+            if (string.IsNullOrEmpty(normalizedPath) || !AssetDatabase.IsValidFolder(normalizedPath))
+                return;
+
+            var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(NormalizeAssetPath)
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                .ToArray();
+            if (childAssetPaths.Length != 0)
+                return;
+
+            DeleteFixtureAssetPath(normalizedPath);
+        }
+
+        private static string NormalizeAssetPath(string assetPath)
+        {
+            return (assetPath ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
         }
 
         private static void RegisterFixtureIsolationScope(GameObject avatarGo, AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
@@ -506,7 +617,7 @@ namespace ASMLite.Tests.Editor
         private const string StepDelaySecondsArg = "-asmliteVisibleAutomationStepDelaySeconds";
         private const string SessionStateKey = "ASMLite.VisibleAutomation.CommandLineConfiguration";
         private const string DefaultVisibleAutomationScenePath = "Assets/Click ME.unity";
-        private const string DefaultVisibleAutomationAvatarName = "Oct25_Dress";
+        private const string DefaultVisibleAutomationAvatarName = "CanonicalDress";
         private const string EditorOverlayTitle = "ASM-Lite visible smoke test";
         private const string PlayModeOverlayTitle = "ASM-Lite visible playmode smoke";
         private const float DefaultStepDelaySeconds = 1.0f;

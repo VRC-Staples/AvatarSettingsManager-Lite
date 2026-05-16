@@ -64,11 +64,11 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void FixtureIdLookupFromTextures_IsDeterministic()
         {
-            var slot01 = ASMLiteIconFixtureRegistry.ResolveTexture("asm-lite-icon/slot-01");
+            var slotTexture = ASMLiteIconFixtureRegistry.ResolveTexture("asm-lite-icon/slot-01");
             var save = ASMLiteIconFixtureRegistry.ResolveTexture("asm-lite-icon/action-save");
-            var customIcons = new[] { slot01, null, save };
+            var customIcons = new[] { slotTexture, null, save };
 
-            Assert.That(ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(slot01), Is.EqualTo("asm-lite-icon/slot-01"));
+            Assert.That(ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(slotTexture), Is.EqualTo("asm-lite-icon/slot-01"));
             Assert.That(
                 ASMLiteIconFixtureRegistry.GetFixtureIdsOrEmpty(customIcons),
                 Is.EqualTo(new[] { "asm-lite-icon/slot-01", string.Empty, "asm-lite-icon/action-save" }));

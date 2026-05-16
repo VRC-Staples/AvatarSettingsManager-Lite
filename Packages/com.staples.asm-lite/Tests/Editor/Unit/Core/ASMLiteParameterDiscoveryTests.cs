@@ -120,8 +120,8 @@ namespace ASMLite.Tests.Editor
             _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             _exprParams.parameters = new[]
             {
-                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "Brokered_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "Brokered_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
                 new VRCExpressionParameters.Parameter { name = "ASMLite_Internal", valueType = VRCExpressionParameters.ValueType.Int },
             };
             _avDesc.expressionParameters = _exprParams;
@@ -130,9 +130,9 @@ namespace ASMLite.Tests.Editor
 
             Assert.AreEqual(2, result.Count,
                 "regression guard: VF-prefixed names must not be silently dropped; only ASMLite_ names should be filtered.");
-            Assert.AreEqual("VF135_Clothing/Rezz", result[0].name,
+            Assert.AreEqual("Brokered_Clothing/Rezz", result[0].name,
                 "regression guard: VF names must remain opaque/canonical and must not be renamed.");
-            Assert.AreEqual("VF135_Clothing/Hood", result[1].name,
+            Assert.AreEqual("Brokered_Clothing/Hood", result[1].name,
                 "regression guard: VF names must remain opaque/canonical and must not be renamed.");
         }
 
@@ -168,7 +168,7 @@ namespace ASMLite.Tests.Editor
             {
                 new VRCExpressionParameters.Parameter { name = "ASM_VF_Menu_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
                 new VRCExpressionParameters.Parameter { name = "FacialBlend", valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S1_VF777_Menu/Hat", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S1_LegacyBrokered_Menu/Hat", valueType = VRCExpressionParameters.ValueType.Bool },
                 new VRCExpressionParameters.Parameter { name = "ASMLite_Def_ASM_VF_Menu_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
             };
             _avDesc.expressionParameters = _exprParams;
@@ -181,7 +181,7 @@ namespace ASMLite.Tests.Editor
                 "regression guard: deterministic source param must remain discoverable as the live source of truth.");
             Assert.AreEqual("FacialBlend", result[1].name,
                 "regression guard: non-VF sibling source params must remain discoverable alongside deterministic VF sources.");
-            Assert.IsFalse(result.Exists(p => p != null && p.name == "ASMLite_Bak_S1_VF777_Menu/Hat"),
+            Assert.IsFalse(result.Exists(p => p != null && p.name == "ASMLite_Bak_S1_LegacyBrokered_Menu/Hat"),
                 "regression guard: preserved legacy backup aliases must not be rediscovered as live avatar source params.");
         }
 
@@ -218,16 +218,16 @@ namespace ASMLite.Tests.Editor
             _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             _exprParams.parameters = new[]
             {
-                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "VF135_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
+                new VRCExpressionParameters.Parameter { name = "Brokered_Clothing/Rezz", valueType = VRCExpressionParameters.ValueType.Float },
+                new VRCExpressionParameters.Parameter { name = "Brokered_Clothing/Hood", valueType = VRCExpressionParameters.ValueType.Bool },
             };
             _avDesc.expressionParameters = _exprParams;
 
             _component.useParameterExclusions = true;
             _component.excludedParameterNames = new[]
             {
-                "VF135_Clothing/Rezz",
-                "vf135_clothing/rezz",
+                "Brokered_Clothing/Rezz",
+                "brokered_clothing/rezz",
             };
 
             var report = ASMLiteBuilder.ResolveParameterExclusions(_component, matchedCount: 0);
@@ -239,7 +239,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, matchedCount, "regression guard: only exact case-sensitive exclusion names should match.");
             Assert.AreEqual(1, finalizedReport.IgnoredStaleCount, "regression guard: non-matching case variants should be counted as stale exclusions.");
             Assert.AreEqual(1, result.Count, "regression guard: only the exact matching live parameter should be filtered.");
-            Assert.AreEqual("VF135_Clothing/Hood", result[0].name);
+            Assert.AreEqual("Brokered_Clothing/Hood", result[0].name);
         }
 
         // sanitization drops null/empty/whitespace and duplicate exclusions while retaining exact canonical names.

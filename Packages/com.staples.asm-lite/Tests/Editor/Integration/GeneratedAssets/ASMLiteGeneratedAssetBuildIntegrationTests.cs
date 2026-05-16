@@ -362,7 +362,7 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 2;
             AddParam(_ctx, "BuildReturnsDiscoveredNon_UserA", VRCExpressionParameters.ValueType.Int);
             AddParam(_ctx, "BuildReturnsDiscoveredNon_UserB", VRCExpressionParameters.ValueType.Float, 0.1f);
-            AddParam(_ctx, "ASMLite_A48_Skipped", VRCExpressionParameters.ValueType.Bool, 1f);
+            AddParam(_ctx, "ASMLite_Skipped", VRCExpressionParameters.ValueType.Bool, 1f);
 
             int discoveredExpected = CountDiscoveredNonASMLiteParams(_ctx.AvDesc.expressionParameters);
             Assert.AreEqual(2, discoveredExpected,
@@ -552,11 +552,11 @@ namespace ASMLite.Tests.Editor
             var exprNames = generatedExpr.parameters.Select(p => p.name).ToHashSet();
 
             Assert.IsFalse(fxNames.Contains("BuildExclusionsUpdatesReturn_Drop"), "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded live parameter must not be declared in FX controller.");
-            Assert.IsFalse(fxNames.Contains("ASMLite_Def_A51_Drop"), "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded default key must not be generated in FX controller.");
-            Assert.IsFalse(fxNames.Contains("ASMLite_Bak_S1_A51_Drop") || fxNames.Contains("ASMLite_Bak_S2_A51_Drop"),
+            Assert.IsFalse(fxNames.Contains("ASMLite_Def_ExcludedDrop"), "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded default key must not be generated in FX controller.");
+            Assert.IsFalse(fxNames.Contains("ASMLite_Bak_S1_ExcludedDrop") || fxNames.Contains("ASMLite_Bak_S2_ExcludedDrop"),
                 "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded backup keys must not be generated in FX controller.");
 
-            Assert.IsFalse(exprNames.Contains("ASMLite_Bak_S1_A51_Drop") || exprNames.Contains("ASMLite_Bak_S2_A51_Drop"),
+            Assert.IsFalse(exprNames.Contains("ASMLite_Bak_S1_ExcludedDrop") || exprNames.Contains("ASMLite_Bak_S2_ExcludedDrop"),
                 "Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema: excluded backup keys must not be generated in expression parameters.");
         }
 
@@ -565,18 +565,18 @@ namespace ASMLite.Tests.Editor
         {
             _ctx.Comp.slotCount = 1;
             AddParam(_ctx, "RepeatedBuildEnablingExclusions_Keep", VRCExpressionParameters.ValueType.Int, 1f);
-            AddParam(_ctx, "RepeatedBuildEnablingExclusions_Drop", VRCExpressionParameters.ValueType.Float, 0.3f);
+            AddParam(_ctx, "RepeatedExcludedDrop", VRCExpressionParameters.ValueType.Float, 0.3f);
 
             _ctx.Comp.useParameterExclusions = false;
             int baselineResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
             Assert.AreEqual(2, baselineResult, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: baseline build must include both parameters before exclusion toggle.");
 
             var baselineExpr = LoadGeneratedExprParams();
-            Assert.IsTrue(baselineExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
+            Assert.IsTrue(baselineExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_RepeatedExcludedDrop"),
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: baseline generated expression schema must contain excluded candidate backup key before toggle.");
 
             _ctx.Comp.useParameterExclusions = true;
-            _ctx.Comp.excludedParameterNames = new[] { "RepeatedBuildEnablingExclusions_Drop", " Ghost " };
+            _ctx.Comp.excludedParameterNames = new[] { "RepeatedExcludedDrop", " Ghost " };
 
             int firstExcludedResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
             Assert.AreEqual(1, firstExcludedResult,
@@ -602,14 +602,14 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(firstExcludedFxParamCount, CountASMLiteFxParams(generatedCtrl),
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: repeated exclusion-enabled builds should keep FX ASMLite parameter count deterministic.");
 
-            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "RepeatedBuildEnablingExclusions_Drop" || p.name == "ASMLite_Def_A52_Drop" || p.name == "ASMLite_Bak_S1_A52_Drop"),
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == "RepeatedExcludedDrop" || p.name == "ASMLite_Def_RepeatedExcludedDrop" || p.name == "ASMLite_Bak_S1_RepeatedExcludedDrop"),
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: FX output must remove excluded live/default/backup keys after exclusion toggle.");
-            Assert.IsFalse(generatedExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_A52_Drop"),
+            Assert.IsFalse(generatedExpr.parameters.Any(p => p.name == "ASMLite_Bak_S1_RepeatedExcludedDrop"),
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: expression output must remove previously generated excluded backup keys after exclusion toggle.");
         }
 
         [Test, Category("Integration")]
-        public void Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203()
+        public void Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic()
         {
             _ctx.Comp.slotCount = 3;
             AddParam(_ctx, "BuildFullControllerSchema_User", VRCExpressionParameters.ValueType.Int, 1f);
@@ -628,26 +628,26 @@ namespace ASMLite.Tests.Editor
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.AreEqual(-1, buildResult,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: Build() must preserve legacy -1 behavior when critical FullController wiring fails.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: Build() must preserve legacy -1 behavior when critical FullController wiring fails.");
 
             var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
-            RecordBuildDiagnosticFailure(nameof(Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203), diagnostic);
+            RecordBuildDiagnosticFailure(nameof(Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic), diagnostic);
             Assert.IsFalse(diagnostic.Success,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: critical FullController drift must expose failing build diagnostics.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: critical FullController drift must expose failing build diagnostics.");
             Assert.AreEqual(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, diagnostic.Code,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: FullController schema drift during build preflight must map to BUILD-302.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: FullController schema drift during build preflight must map to BUILD-302.");
             Assert.AreEqual("content", diagnostic.ContextPath,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: BUILD-302 wrapper diagnostics should identify FullController content wiring scope.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: BUILD-302 wrapper diagnostics should identify FullController content wiring scope.");
             Assert.IsNotNull(diagnostic.InnerDiagnostic,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: BUILD-302 diagnostics should preserve nested DRIFT context for schema remediation.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: BUILD-302 diagnostics should preserve nested DRIFT context for schema remediation.");
 
             var inner = diagnostic.InnerDiagnostic;
             Assert.IsFalse(inner.Success,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: nested diagnostic for BUILD-302 should be a failing DRIFT diagnostic.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: nested diagnostic for BUILD-302 should be a failing DRIFT diagnostic.");
             Assert.AreEqual(ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath, inner.Code,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: missing FullController prefix path must be preserved as nested DRIFT-203.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: missing FullController prefix path must be preserved as nested DRIFT-203.");
             Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, inner.ContextPath,
-                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: nested DRIFT diagnostics should expose the exact failing schema path.");
+                "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: nested DRIFT diagnostics should expose the exact failing schema path.");
         }
 
     }

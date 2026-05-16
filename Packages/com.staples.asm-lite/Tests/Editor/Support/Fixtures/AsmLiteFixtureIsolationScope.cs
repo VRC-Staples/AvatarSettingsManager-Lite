@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using NUnit.Framework;
@@ -23,10 +24,10 @@ namespace ASMLite.Tests.Editor
         private readonly string _owner;
         private readonly Dictionary<string, string> _baselineAssetPathsByGuid;
         private readonly Dictionary<int, string> _baselineSceneRootPathsById;
-        private readonly int[] _baselineSelectionIds;
+        private readonly HashSet<string> _baselineSceneRootPaths;
         private readonly UnityEngine.Object[] _baselineSelectionObjects;
         private readonly SceneSetup[] _baselineSceneSetup;
-        private readonly string _baselineSceneSetupSignature;
+        private readonly string _baselineOpenSceneSignature;
         private bool _disposed;
 
         private AsmLiteFixtureIsolationScope(string owner)
@@ -35,18 +36,38 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.Refresh();
             _baselineAssetPathsByGuid = CaptureGeneratedAssetPathsByGuid();
             _baselineSceneRootPathsById = CaptureSceneRootPathsById();
+            _baselineSceneRootPaths = new HashSet<string>(_baselineSceneRootPathsById.Values, StringComparer.Ordinal);
             _baselineSelectionObjects = Selection.objects ?? Array.Empty<UnityEngine.Object>();
-            _baselineSelectionIds = _baselineSelectionObjects
-                .Where(selection => selection != null)
-                .Select(selection => selection.GetInstanceID())
-                .ToArray();
             _baselineSceneSetup = EditorSceneManager.GetSceneManagerSetup() ?? Array.Empty<SceneSetup>();
-            _baselineSceneSetupSignature = SceneSetupSignature(_baselineSceneSetup);
+            _baselineOpenSceneSignature = OpenSceneSignature();
         }
 
         internal static AsmLiteFixtureIsolationScope Capture(string owner)
         {
             return new AsmLiteFixtureIsolationScope(owner);
+        }
+
+        internal void DeleteFixtureGeneratedAssetLeaks(string avatarName)
+        {
+            AssetDatabase.Refresh();
+            var leakedAssetPaths = CaptureGeneratedAssetPathsByGuid()
+                .Where(pair => !_baselineAssetPathsByGuid.ContainsKey(pair.Key))
+                .Select(pair => pair.Value)
+                .Where(path => IsFixtureGeneratedAssetLeakPath(path, avatarName))
+                .Where(path => !ASMLiteTestFixtures.IsRegisteredFixtureGeneratedAssetPath(path))
+                .OrderByDescending(path => path.Length)
+                .ToArray();
+
+            foreach (var leakedAssetPath in leakedAssetPaths)
+            {
+                if (string.Equals(NormalizeAssetPath(leakedAssetPath), "Assets/ASM-Lite", StringComparison.Ordinal))
+                    continue;
+
+                DeleteFixtureAssetPath(leakedAssetPath);
+            }
+
+            DeleteFixtureFolderIfEmpty("Assets/ASM-Lite");
+            AssetDatabase.Refresh();
         }
 
         public void Dispose()
@@ -90,8 +111,11 @@ namespace ASMLite.Tests.Editor
                 .Where(selection => selection != null)
                 .ToArray();
 
-            if (_baselineSceneSetup.Length > 0)
+            if (_baselineSceneSetup.Length > 0
+                && !string.Equals(_baselineOpenSceneSignature, OpenSceneSignature(), StringComparison.Ordinal))
+            {
                 EditorSceneManager.RestoreSceneManagerSetup(_baselineSceneSetup);
+            }
         }
 
         private void AddGeneratedAssetLeakMessages(List<string> messages)
@@ -116,6 +140,7 @@ namespace ASMLite.Tests.Editor
             var currentSceneRootPathsById = CaptureSceneRootPathsById();
             var leakedSceneRoots = currentSceneRootPathsById
                 .Where(pair => !_baselineSceneRootPathsById.ContainsKey(pair.Key))
+                .Where(pair => !_baselineSceneRootPaths.Contains(pair.Value))
                 .Where(pair => !ASMLiteTestFixtures.IsRegisteredFixtureAvatarRootId(pair.Key))
                 .Select(pair => pair.Value)
                 .Where(path => !string.IsNullOrEmpty(path))
@@ -130,25 +155,28 @@ namespace ASMLite.Tests.Editor
 
         private void AddSelectionLeakMessage(List<string> messages)
         {
+            var expectedSelectionIds = _baselineSelectionObjects
+                .Where(selection => selection != null)
+                .Select(selection => selection.GetInstanceID())
+                .ToArray();
             var currentSelectionIds = (Selection.objects ?? Array.Empty<UnityEngine.Object>())
                 .Where(selection => selection != null)
                 .Select(selection => selection.GetInstanceID())
                 .ToArray();
 
-            if (_baselineSelectionIds.SequenceEqual(currentSelectionIds))
+            if (expectedSelectionIds.SequenceEqual(currentSelectionIds))
                 return;
 
-            messages.Add("selection leak: expected [" + string.Join(", ", _baselineSelectionIds) + "] but found [" + string.Join(", ", currentSelectionIds) + "]");
+            messages.Add("selection leak: expected [" + string.Join(", ", expectedSelectionIds) + "] but found [" + string.Join(", ", currentSelectionIds) + "]");
         }
 
         private void AddOpenSceneLeakMessage(List<string> messages)
         {
-            var currentSceneSetup = EditorSceneManager.GetSceneManagerSetup() ?? Array.Empty<SceneSetup>();
-            var currentSceneSetupSignature = SceneSetupSignature(currentSceneSetup);
-            if (string.Equals(_baselineSceneSetupSignature, currentSceneSetupSignature, StringComparison.Ordinal))
+            var currentOpenSceneSignature = OpenSceneSignature();
+            if (string.Equals(_baselineOpenSceneSignature, currentOpenSceneSignature, StringComparison.Ordinal))
                 return;
 
-            messages.Add("open scene leak: expected [" + _baselineSceneSetupSignature + "] but found [" + currentSceneSetupSignature + "]");
+            messages.Add("open scene leak: expected [" + _baselineOpenSceneSignature + "] but found [" + currentOpenSceneSignature + "]");
         }
 
         private static Dictionary<string, string> CaptureGeneratedAssetPathsByGuid()
@@ -165,6 +193,73 @@ namespace ASMLite.Tests.Editor
             }
 
             return pathsByGuid;
+        }
+
+        private static bool IsFixtureGeneratedAssetLeakPath(string assetPath, string avatarName)
+        {
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath))
+                return false;
+
+            if (string.Equals(normalizedPath, ASMLiteTestFixtures.TempDir, StringComparison.Ordinal)
+                || normalizedPath.StartsWith(ASMLiteTestFixtures.TempDir + "/", StringComparison.Ordinal))
+                return true;
+
+            if (string.Equals(normalizedPath, "Assets/ASM-Lite", StringComparison.Ordinal))
+                return true;
+
+            string normalizedAvatarName = NormalizeAssetPath(avatarName);
+            if (string.IsNullOrEmpty(normalizedAvatarName))
+                return false;
+
+            string avatarRoot = "Assets/ASM-Lite/" + normalizedAvatarName;
+            return string.Equals(normalizedPath, avatarRoot, StringComparison.Ordinal)
+                || normalizedPath.StartsWith(avatarRoot + "/", StringComparison.Ordinal)
+                || normalizedPath.StartsWith(avatarRoot + "__", StringComparison.Ordinal);
+        }
+
+        private static void DeleteFixtureAssetPath(string assetPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath))
+                return;
+
+            AssetDatabase.DeleteAsset(normalizedPath);
+            AssetDatabase.Refresh();
+
+            if (!AssetDatabase.IsValidFolder(normalizedPath)
+                && AssetDatabase.LoadMainAssetAtPath(normalizedPath) == null
+                && string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(normalizedPath))
+                && !Directory.Exists(normalizedPath)
+                && !File.Exists(normalizedPath))
+                return;
+
+            FileUtil.DeleteFileOrDirectory(normalizedPath);
+            FileUtil.DeleteFileOrDirectory(normalizedPath + ".meta");
+            AssetDatabase.Refresh();
+        }
+
+        private static void DeleteFixtureFolderIfEmpty(string assetFolderPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetFolderPath);
+            if (string.IsNullOrEmpty(normalizedPath) || !AssetDatabase.IsValidFolder(normalizedPath))
+                return;
+
+            var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(NormalizeAssetPath)
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                .ToArray();
+            if (childAssetPaths.Length != 0)
+                return;
+
+            DeleteFixtureAssetPath(normalizedPath);
+        }
+
+        private static string NormalizeAssetPath(string assetPath)
+        {
+            return (assetPath ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
         }
 
         private static void AddAssetGuid(Dictionary<string, string> pathsByGuid, string guid)
@@ -204,13 +299,25 @@ namespace ASMLite.Tests.Editor
             return sceneName + "/" + root.name;
         }
 
-        private static string SceneSetupSignature(SceneSetup[] setup)
+        private static string OpenSceneSignature()
         {
-            if (setup == null || setup.Length == 0)
-                return string.Empty;
+            var activeScene = SceneManager.GetActiveScene();
+            var scenes = new List<string>();
+            for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++)
+            {
+                var scene = SceneManager.GetSceneAt(sceneIndex);
+                if (!scene.IsValid())
+                    continue;
 
-            return string.Join(";", setup.Select(scene =>
-                (scene.path ?? string.Empty) + "|loaded=" + scene.isLoaded + "|active=" + scene.isActive));
+                var sceneIdentity = string.IsNullOrEmpty(scene.path)
+                    ? "<unsaved>:" + scene.name
+                    : scene.path;
+                scenes.Add(sceneIndex + ":" + sceneIdentity
+                    + "|loaded=" + scene.isLoaded
+                    + "|active=" + (scene.handle == activeScene.handle));
+            }
+
+            return string.Join(";", scenes);
         }
     }
 }

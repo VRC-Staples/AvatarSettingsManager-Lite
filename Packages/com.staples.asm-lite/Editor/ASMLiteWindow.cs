@@ -5448,13 +5448,6 @@ namespace ASMLite.Editor
             var toolState = GetOrRefreshToolState(component);
             var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
 
-            EditorGUILayout.LabelField("Primary Actions", EditorStyles.boldLabel);
-            EditorGUILayout.LabelField(
-                "Normal workflow first. Maintenance and destructive actions stay below so the main path stays obvious.",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(8f);
-            EditorGUILayout.LabelField("Recommended", EditorStyles.miniBoldLabel);
-            EditorGUILayout.Space(2f);
             EditorGUILayout.BeginVertical("box");
             for (int i = 0; i < hierarchy.PrimaryDescriptors.Length; i++)
             {

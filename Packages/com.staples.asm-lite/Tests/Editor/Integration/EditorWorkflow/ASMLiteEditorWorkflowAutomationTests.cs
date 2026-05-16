@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 using Object = UnityEngine.Object;
 
@@ -54,19 +55,33 @@ namespace ASMLite.Tests.Editor
         {
             Object.DestroyImmediate(_ctx.Comp.gameObject);
             _ctx.Comp = null;
+            ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "Hat",
+                    valueType = VRCExpressionParameters.ValueType.Bool,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = "Mood",
+                    valueType = VRCExpressionParameters.ValueType.Float,
+                    defaultValue = 0f,
+                    saved = true,
+                    networkSynced = true,
+                });
 
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
 
-                SetPrivateField(window, "_pendingSlotCount", 4);
-                SetPrivateField(window, "_pendingUseCustomRootName", true);
-                SetPrivateField(window, "_pendingCustomRootName", "  Tools Root  ");
-                SetPrivateField(window, "_pendingUseCustomInstallPath", true);
-                SetPrivateField(window, "_pendingCustomInstallPath", "  Tools/Automation  ");
-                SetPrivateField(window, "_pendingUseParameterExclusions", true);
-                SetPrivateField(window, "_pendingExcludedParameterNames", new[] { "Hat", " Hat ", "Mood" });
+                window.SetSlotCountForAutomation(4);
+                window.SetRootNameStateForAutomation(true, "  Tools Root  ");
+                window.SetInstallPathStateForAutomation(true, "  Tools/Automation  ");
+                window.SetParameterBackupExclusionsForAutomation(true, new[] { "Hat", " Hat ", "Mood" });
 
                 window.AddPrefabForAutomation();
 
@@ -959,11 +974,5 @@ namespace ASMLite.Tests.Editor
             method.Invoke(target, null);
         }
 
-        private static void SetPrivateField(object target, string fieldName, object value)
-        {
-            var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(field, $"Missing private field '{fieldName}' on {target.GetType().Name}.");
-            field.SetValue(target, value);
-        }
     }
 }

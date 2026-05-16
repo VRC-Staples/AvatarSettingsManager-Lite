@@ -993,7 +993,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void VisibleBackupOptions_PreferDeterministicToggleAlias()
         {
-            const string legacySource = "VF300_Clothing/Rezz";
+            const string legacySource = "Brokered_Clothing/Rezz";
 
             ASMLiteTestFixtures.SetExpressionParams(_ctx,
                 new VRCExpressionParameters.Parameter

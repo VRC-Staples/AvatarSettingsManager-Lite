@@ -30,7 +30,7 @@ namespace ASMLite.Tests.Editor
             "Unity is loaded",
             "Click ME scene is open",
             "ASM-Lite window is open",
-            "Oct25_Dress is selected",
+            "CanonicalDress is selected",
             "ASM-Lite default setup is added",
         };
         private const float DefaultStepDelaySeconds = 1.0f;
@@ -169,6 +169,7 @@ namespace ASMLite.Tests.Editor
         public void PresentationModeOverlay_RunningStep_DoesNotAnimate()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            window.ConfigureExternalVisibleAutomationOverlay(_externalOverlayStatePath, _externalOverlayAckPath);
             try
             {
                 window.SetVisibleAutomationOverlayStatus(
@@ -194,6 +195,7 @@ namespace ASMLite.Tests.Editor
         public void NonPresentationOverlay_RunningStep_StillAnimates()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            window.ConfigureExternalVisibleAutomationOverlay(_externalOverlayStatePath, _externalOverlayAckPath);
             try
             {
                 window.SetVisibleAutomationOverlayStatus(
@@ -345,10 +347,10 @@ namespace ASMLite.Tests.Editor
             yield return WaitForVisibleStep(_window, 3, "ASM-Lite window is open");
 
             Selection.activeGameObject = _ctx.AvatarGo;
-            SetOverlayStep(4, "Oct25_Dress is selected");
+            SetOverlayStep(4, "CanonicalDress is selected");
             _window.Repaint();
 
-            yield return WaitForVisibleStep(_window, 4, "Oct25_Dress is selected");
+            yield return WaitForVisibleStep(_window, 4, "CanonicalDress is selected");
             yield return WaitForSelectedAvatar(_window, _ctx.AvDesc, 30);
 
             var beforeHierarchy = _window.GetActionHierarchyContract();
@@ -366,8 +368,7 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(component,
                 "Visible smoke automation should add the ASM-Lite prefab through the rendered primary action path.");
 
-            Assert.AreEqual(1, CountSettingsManagerControls(_ctx.AvDesc.expressionsMenu),
-                "Visible smoke automation should attach the default ASM-Lite payload to the avatar menu after installation.");
+            yield return WaitForPackageManagedSettingsManagerControl();
 
             var afterHierarchy = _window.GetActionHierarchyContract();
             Assert.IsTrue(afterHierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Rebuild),
@@ -399,9 +400,27 @@ namespace ASMLite.Tests.Editor
             if (rootMenu?.controls == null)
                 return 0;
 
-            return rootMenu.controls.Count(control => control != null
-                && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
-                && string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal));
+            return rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+        }
+
+        private static IEnumerator WaitForPackageManagedSettingsManagerControl()
+        {
+            double deadline = EditorApplication.timeSinceStartup + 15d;
+            while (EditorApplication.timeSinceStartup < deadline)
+            {
+                if (CountSettingsManagerControls(LoadGeneratedRootMenu()) == 1)
+                    break;
+
+                yield return null;
+            }
+
+            Assert.AreEqual(1, CountSettingsManagerControls(LoadGeneratedRootMenu()),
+                "Visible smoke automation should generate exactly one package-managed Settings Manager root control after installation.");
+        }
+
+        private static VRCExpressionsMenu LoadGeneratedRootMenu()
+        {
+            return AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
         }
 
         private void SetOverlayStep(

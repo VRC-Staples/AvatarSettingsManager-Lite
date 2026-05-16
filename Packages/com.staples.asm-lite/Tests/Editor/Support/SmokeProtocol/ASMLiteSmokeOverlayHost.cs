@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security;
 using System.Text;
 using ASMLite.Editor;
+using ASMLite.Tests.PlayMode;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -41,7 +42,7 @@ namespace ASMLite.Tests.Editor
         private const string ExitOnReadyArg = "-asmliteSmokeExitOnReady";
 
         internal const string DefaultScenePath = "Assets/Click ME.unity";
-        internal const string DefaultAvatarName = "Oct25_Dress";
+        internal const string DefaultAvatarName = "CanonicalDress";
         internal const int DefaultStartupTimeoutSeconds = 120;
         internal const int DefaultHeartbeatSeconds = 5;
 
@@ -2105,9 +2106,8 @@ namespace ASMLite.Tests.Editor
             if (parameterName.StartsWith("Go/", StringComparison.Ordinal))
                 return true;
 
-            if (parameterName.StartsWith("VF", StringComparison.Ordinal)
-                && (parameterName.IndexOf("_SyncData", StringComparison.Ordinal) >= 0
-                    || parameterName.IndexOf("_SyncIndex", StringComparison.Ordinal) >= 0))
+            if (parameterName.IndexOf("_SyncData", StringComparison.Ordinal) >= 0
+                || parameterName.IndexOf("_SyncIndex", StringComparison.Ordinal) >= 0)
                 return true;
 
             switch (parameterName)
@@ -4220,7 +4220,7 @@ namespace ASMLite.Tests.Editor
                 sessionId = _sessionId,
                 protocolVersion = ASMLiteSmokeProtocol.SupportedProtocolVersion,
                 state = normalizedState,
-                hostVersion = "asmlite-unity-host-phase09",
+                hostVersion = "asmlite-unity-host",
                 unityVersion = unityVersion,
                 heartbeatUtc = _runtime.GetUtcNowIso(),
                 lastEventSeq = Math.Max(0, lastEventSeq),

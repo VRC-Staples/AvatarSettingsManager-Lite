@@ -132,6 +132,20 @@ namespace ASMLite.Tests.Editor
                 return new SourceAssetsSnapshot(filesByAssetPath);
             }
 
+            internal void Restore()
+            {
+                foreach (var entry in _filesByAssetPath)
+                {
+                    string fullPath = ToProjectFullPath(entry.Key);
+                    string directory = Path.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrEmpty(directory))
+                        Directory.CreateDirectory(directory);
+                    File.WriteAllBytes(fullPath, entry.Value);
+                }
+
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+            }
+
             internal void AssertUnchanged(string suiteName)
             {
                 foreach (var entry in _filesByAssetPath)

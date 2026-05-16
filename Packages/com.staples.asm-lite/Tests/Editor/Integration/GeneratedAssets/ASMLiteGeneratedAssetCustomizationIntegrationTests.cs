@@ -48,8 +48,8 @@ namespace ASMLite.Tests.Editor
                 SuiteName,
                 ASMLiteGeneratedAssetTestIsolation.BuiltInIconFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: fixture did not create ASMLiteComponent.");
         }
 
         [TearDown]

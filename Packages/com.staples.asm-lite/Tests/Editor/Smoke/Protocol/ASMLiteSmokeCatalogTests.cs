@@ -51,7 +51,7 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeStepCommand command = ASMLiteSmokeStepCommand.FromStep(
                 step,
                 defaultScenePath: "Assets/Click ME.unity",
-                defaultAvatarName: "Oct25_Dress");
+                defaultAvatarName: "CanonicalDress");
 
             Assert.AreEqual("open-scene", command.ActionType);
             Assert.AreEqual("Assets/Override.unity", command.ScenePath);
@@ -68,7 +68,7 @@ namespace ASMLite.Tests.Editor
                 new[] { "preflight", "editor-window", "lifecycle", "playmode-runtime" },
                 catalog.groups.Select(group => group.groupId).ToArray());
             Assert.AreEqual("Assets/Click ME.unity", catalog.fixture.scenePath);
-            Assert.AreEqual("Oct25_Dress", catalog.fixture.avatarName);
+            Assert.AreEqual("CanonicalDress", catalog.fixture.avatarName);
             Assert.AreEqual("asm-lite-readiness-check", catalog.groups[0].suites[0].suiteId);
             Assert.AreEqual("setup-scene-avatar", catalog.groups[1].suites[0].suiteId);
             CollectionAssert.AreEqual(
@@ -222,7 +222,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_IncludesPhase05AvatarDiscoverySelectionSuite()
+        public void LoadCanonical_IncludesAvatarDiscoverySelectionSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToArray();
@@ -302,7 +302,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_IncludesPhase06ScaffoldExistingStateSuites()
+        public void LoadCanonical_IncludesScaffoldExistingStateSuites()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -414,7 +414,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_IncludesPhase07aSafeNegativeDiagnosticsSuite()
+        public void LoadCanonical_IncludesSafeNegativeDiagnosticsSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -469,7 +469,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void LoadCanonical_IncludesPhase08DestructiveRecoveryResetSuite()
+        public void LoadCanonical_IncludesDestructiveRecoveryResetSuite()
         {
             var catalog = ASMLiteSmokeCatalog.LoadCanonical();
             var suites = catalog.groups.SelectMany(group => group.suites).ToDictionary(suite => suite.suiteId);
@@ -536,14 +536,14 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(slots.presetGroups, "all-setup");
             Assert.That(slots.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "S01-slot-count-1",
-                "S02-slot-count-2",
-                "S03-slot-count-3",
-                "S04-slot-count-4",
-                "S05-slot-count-5",
-                "S06-slot-count-6",
-                "S07-slot-count-7",
-                "S08-slot-count-8",
+                "slot-count-1",
+                "slot-count-2",
+                "slot-count-3",
+                "slot-count-4",
+                "slot-count-5",
+                "slot-count-6",
+                "slot-count-7",
+                "slot-count-8",
             }));
             Assert.That(slots.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -556,10 +556,10 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(paths.presetGroups, "all-setup");
             Assert.That(paths.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "P01-install-path-disabled",
-                "P02-install-path-root-selected",
-                "P03-install-path-simple",
-                "P04-install-path-nested",
+                "install-path-disabled",
+                "install-path-root-selected",
+                "install-path-simple",
+                "install-path-nested",
             }));
             Assert.That(paths.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -574,12 +574,12 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(names.presetGroups, "all-setup");
             Assert.That(names.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "N01-naming-default",
-                "N02-naming-root-only",
-                "N03-naming-preset-first-only",
-                "N04-naming-preset-all",
-                "N05-naming-save-only",
-                "N06-naming-full-pack",
+                "naming-default",
+                "naming-root-only",
+                "naming-preset-first-only",
+                "naming-preset-all",
+                "naming-save-only",
+                "naming-full-pack",
             }));
             Assert.That(names.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -596,14 +596,14 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(icons.presetGroups, "all-setup");
             Assert.That(icons.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "I01-icon-multicolor-default",
-                "I02-icon-same-color-blue",
-                "I03-icon-same-color-yellow",
-                "I04-icon-root-only",
-                "I05-icon-slot-first-only",
-                "I06-icon-slot-all-custom",
-                "I07-icon-action-save-only",
-                "I08-icon-full-pack",
+                "icon-multicolor-default",
+                "icon-same-color-blue",
+                "icon-same-color-yellow",
+                "icon-root-only",
+                "icon-slot-first-only",
+                "icon-slot-all-custom",
+                "icon-action-save-only",
+                "icon-full-pack",
             }));
             Assert.That(icons.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -622,10 +622,10 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(backup.presetGroups, "all-setup");
             Assert.That(backup.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "B01-parameter-backup-default",
-                "B02-parameter-backup-enabled-none-excluded",
-                "B03-parameter-backup-single-exclusion",
-                "B04-parameter-backup-nested-subset",
+                "parameter-backup-default",
+                "parameter-backup-enabled-none-excluded",
+                "parameter-backup-single-exclusion",
+                "parameter-backup-nested-subset",
             }));
             Assert.That(backup.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -640,12 +640,12 @@ namespace ASMLite.Tests.Editor
             CollectionAssert.Contains(combo.presetGroups, "all-setup");
             Assert.That(combo.cases.Select(item => item.caseId), Is.EqualTo(new[]
             {
-                "C01-combo-max-slots-full-naming",
-                "C02-combo-max-slots-full-slot-icons",
-                "C03-combo-nested-path-full-naming-one-exclusion",
-                "C04-combo-same-color-root-icon-root-name-one-exclusion",
-                "C05-combo-sparse-icons-simple-path-one-preset-rename",
-                "C06-combo-kitchen-sink-medium-density",
+                "combo-max-slots-full-naming",
+                "combo-max-slots-full-slot-icons",
+                "combo-nested-path-full-naming-one-exclusion",
+                "combo-same-color-root-icon-root-name-one-exclusion",
+                "combo-sparse-icons-simple-path-one-preset-rename",
+                "combo-kitchen-sink-medium-density",
             }));
             Assert.That(combo.cases.Select(item => item.steps[0].actionType).ToArray(),
                 Is.All.EqualTo("prelude-recover-context"));
@@ -704,7 +704,7 @@ namespace ASMLite.Tests.Editor
             string rawJson = BuildSingleStepCatalogJson(
                 "\"args\": { "
                 + "\"scenePath\": \"Assets/Setup.unity\", "
-                + "\"avatarName\": \"Oct25_Dress\", "
+                + "\"avatarName\": \"CanonicalDress\", "
                 + "\"objectName\": \"Setup Host\", "
                 + "\"fixtureMutation\": \"missing-scene\", "
                 + "\"expectedPrimaryAction\": \"Add Prefab\", "
@@ -719,7 +719,7 @@ namespace ASMLite.Tests.Editor
             var args = catalog.groups[0].suites[0].cases[0].steps[0].args;
 
             Assert.AreEqual("Assets/Setup.unity", args.scenePath);
-            Assert.AreEqual("Oct25_Dress", args.avatarName);
+            Assert.AreEqual("CanonicalDress", args.avatarName);
             Assert.AreEqual("Setup Host", args.objectName);
             Assert.AreEqual("missing-scene", args.fixtureMutation);
             Assert.AreEqual("Add Prefab", args.expectedPrimaryAction);
@@ -918,7 +918,7 @@ namespace ASMLite.Tests.Editor
             const string rawJson = "{\n"
                 + "  \"catalogVersion\": 1,\n"
                 + "  \"protocolVersion\": \"1.0.0\",\n"
-                + "  \"fixture\": { \"scenePath\": \"Assets/Click ME.unity\", \"avatarName\": \"Oct25_Dress\" },\n"
+                + "  \"fixture\": { \"scenePath\": \"Assets/Click ME.unity\", \"avatarName\": \"CanonicalDress\" },\n"
                 + "  \"groups\": [\n"
                 + "    {\n"
                 + "      \"groupId\": \"editor-window\",\n"
@@ -1336,7 +1336,7 @@ namespace ASMLite.Tests.Editor
             return "{\n"
                 + "  \"catalogVersion\": 1,\n"
                 + "  \"protocolVersion\": \"1.0.0\",\n"
-                + "  \"fixture\": { \"scenePath\": \"Assets/Click ME.unity\", \"avatarName\": \"Oct25_Dress\" },\n"
+                + "  \"fixture\": { \"scenePath\": \"Assets/Click ME.unity\", \"avatarName\": \"CanonicalDress\" },\n"
                 + "  \"groups\": [\n"
                 + "    {\n"
                 + "      \"groupId\": \"editor-window\",\n"

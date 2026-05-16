@@ -156,10 +156,21 @@ namespace ASMLite.Tests.PlayMode
 
             DestroyTestAvatar();
         }
-        protected void BuildAndWireAvatarFixture()
+
+        protected static IEnumerator EnterPlayModeIfNeeded()
         {
+            if (EditorApplication.isPlaying)
+                yield break;
+
+            yield return new EnterPlayMode();
+        }
+
+        protected void BuildAndWireAvatarFixture(params VRCExpressionParameters.Parameter[] additionalSavedParameters)
+        {
+            additionalSavedParameters = additionalSavedParameters ?? Array.Empty<VRCExpressionParameters.Parameter>();
+
             ASMLiteTestFixtures.ResetGeneratedExprParams();
-            _ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            _ctx = ASMLiteTestFixtures.CreatePlayModeTestAvatar();
             Assert.IsNotNull(_ctx, "Runtime: fixture creation returned null context.");
             _ctx.AvatarGo.name = TestAvatarName;
             _ctx.Comp.slotCount = 1;
@@ -167,10 +178,21 @@ namespace ASMLite.Tests.PlayMode
             _ctx.Comp.excludedParameterNames = UnsavedParameterNames.ToArray();
 
             AddVisibilityParameters();
+            foreach (var parameter in additionalSavedParameters)
+            {
+                Assert.IsNotNull(parameter, "Runtime: additional saved parameter fixture entries must not be null.");
+                ASMLiteTestFixtures.AddExpressionParam(
+                    _ctx,
+                    parameter.name,
+                    parameter.valueType,
+                    parameter.defaultValue,
+                    saved: true);
+            }
 
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
-            Assert.AreEqual(SavedParameterNames.Length, buildResult,
-                $"Runtime: Build should discover only saved/non-excluded parameters. got {buildResult}.");
+            int expectedDiscoveredCount = SavedParameterNames.Length + additionalSavedParameters.Length;
+            Assert.AreEqual(expectedDiscoveredCount, buildResult,
+                $"Runtime: Build should discover only saved/non-excluded parameters. expected={expectedDiscoveredCount} got={buildResult}.");
 
             var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(generatedParams, $"Runtime: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");

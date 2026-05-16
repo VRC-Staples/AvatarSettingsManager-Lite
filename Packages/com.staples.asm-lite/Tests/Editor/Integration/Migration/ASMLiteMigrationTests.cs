@@ -18,7 +18,7 @@ namespace VF.Model
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// A42-A45: Migration integration invariants for stale VRCFury component cleanup.
+    /// Migration integration invariants for stale VRCFury component cleanup.
     /// These tests exercise MigrateStaleVRCFuryComponents() end-to-end against real
     /// ASMLite fixture graphs and exact VF.Model.VRCFury full-name matching semantics,
     /// verifying duplicate collapse while preserving one delivery component.
@@ -60,9 +60,9 @@ namespace ASMLite.Tests.Editor
                 SuiteName,
                 SourceMigrationFixturePaths());
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            Assert.IsNotNull(_ctx, "A42: fixture creation returned null context.");
-            Assert.IsNotNull(_ctx.Comp, "A42: fixture did not create ASMLiteComponent.");
-            Assert.IsNotNull(_ctx.AvDesc, "A42: fixture did not create VRCAvatarDescriptor.");
+            Assert.IsNotNull(_ctx, "fixture creation returned null context.");
+            Assert.IsNotNull(_ctx.Comp, "fixture did not create ASMLiteComponent.");
+            Assert.IsNotNull(_ctx.AvDesc, "fixture did not create VRCAvatarDescriptor.");
         }
 
         [TearDown]
@@ -71,10 +71,12 @@ namespace ASMLite.Tests.Editor
             try
             {
                 ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+                _sourceMigrationAssetsBaseline?.Restore();
                 _sourceMigrationAssetsBaseline?.AssertUnchanged(SuiteName);
             }
             finally
             {
+                _sourceMigrationAssetsBaseline?.Restore();
                 (_testGeneratedAssetsBaseline ?? s_classGeneratedAssetsBaseline)?.Restore();
                 ASMLiteGeneratedAssetTestIsolation.DeleteTempFolder();
                 _testGeneratedAssetsBaseline = null;
@@ -144,19 +146,19 @@ namespace ASMLite.Tests.Editor
             UnityEditor.AssetDatabase.SaveAssets();
         }
 
-        // ── A42 ────────────────────────────────────────────────────────────────
+        // ── Migration duplicate cleanup
 
         [Test, Category("Integration")]
-        public void A42_Migration_CollapsesDuplicateVRCFuryTypeNameMatches()
+        public void Migration_CollapsesDuplicateVRCFuryTypeNameMatches()
         {
             var first = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var second = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
-            Assert.IsNotNull(first, "A42: setup failure, failed adding first VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(second, "A42: setup failure, failed adding second VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(first, "setup failure, failed adding first VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(second, "setup failure, failed adding second VF.Model.VRCFury stub component.");
 
             string fullName = first.GetType().FullName;
             Assert.AreEqual("VF.Model.VRCFury", fullName,
-                $"A42: malformed test setup, expected exact full name VF.Model.VRCFury but got '{fullName ?? "<null>"}'.");
+                $"malformed test setup, expected exact full name VF.Model.VRCFury but got '{fullName ?? "<null>"}'.");
 
             int beforeTargets = 0;
             foreach (var c in _ctx.Comp.gameObject.GetComponents<Component>())
@@ -165,7 +167,7 @@ namespace ASMLite.Tests.Editor
                     beforeTargets++;
             }
             Assert.Greater(beforeTargets, 1,
-                $"A42: setup failure, expected at least two stale VRCFury components before migration. beforeTargets={beforeTargets}.");
+                $"setup failure, expected at least two stale VRCFury components before migration. beforeTargets={beforeTargets}.");
 
             ASMLiteBuilder.MigrateStaleVRCFuryComponents(_ctx.Comp);
 
@@ -177,25 +179,25 @@ namespace ASMLite.Tests.Editor
             }
 
             Assert.AreEqual(1, afterTargets,
-                $"A42: migration must collapse duplicate components and preserve one VF delivery component. beforeTargets={beforeTargets}, afterTargets={afterTargets}.");
+                $"migration must collapse duplicate components and preserve one VF delivery component. beforeTargets={beforeTargets}, afterTargets={afterTargets}.");
         }
 
-        // ── A43 ────────────────────────────────────────────────────────────────
+        // ── Migration non-target preservation
 
         [Test, Category("Integration")]
-        public void A43_Migration_PreservesNonTargetComponentsInMixedSet()
+        public void Migration_PreservesNonTargetComponentsInMixedSet()
         {
             var staleA = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var staleB = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var preserved = _ctx.Comp.gameObject.AddComponent<BoxCollider>();
 
-            Assert.IsNotNull(staleA, "A43: setup failure, failed adding first VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(staleB, "A43: setup failure, failed adding second VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(preserved, "A43: setup failure, failed adding non-target BoxCollider component.");
+            Assert.IsNotNull(staleA, "setup failure, failed adding first VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(staleB, "setup failure, failed adding second VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(preserved, "setup failure, failed adding non-target BoxCollider component.");
             Assert.AreEqual("VF.Model.VRCFury", staleA.GetType().FullName,
-                $"A43: malformed test setup, expected exact stale full name VF.Model.VRCFury but got '{FullNameOrNull(staleA)}'.");
+                $"malformed test setup, expected exact stale full name VF.Model.VRCFury but got '{FullNameOrNull(staleA)}'.");
             Assert.AreEqual(typeof(BoxCollider).FullName, preserved.GetType().FullName,
-                $"A43: malformed test setup, expected BoxCollider full name '{typeof(BoxCollider).FullName}' but got '{FullNameOrNull(preserved)}'.");
+                $"malformed test setup, expected BoxCollider full name '{typeof(BoxCollider).FullName}' but got '{FullNameOrNull(preserved)}'.");
 
             ASMLiteBuilder.MigrateStaleVRCFuryComponents(_ctx.Comp);
 
@@ -210,39 +212,39 @@ namespace ASMLite.Tests.Editor
             }
 
             Assert.AreEqual(1, staleCount,
-                $"A43: migration must collapse stale VF.Model.VRCFury duplicates down to one preserved component. staleCount={staleCount}.");
+                $"migration must collapse stale VF.Model.VRCFury duplicates down to one preserved component. staleCount={staleCount}.");
             Assert.GreaterOrEqual(boxCount, 1,
-                $"A43: migration must preserve non-target components. expected BoxCollider survivor, boxCount={boxCount}.");
+                $"migration must preserve non-target components. expected BoxCollider survivor, boxCount={boxCount}.");
         }
 
-        // ── A44 ────────────────────────────────────────────────────────────────
+        // ── Null component no-op
 
         [Test, Category("Integration")]
-        public void A44_Migration_NullComponent_DoesNotThrow()
+        public void Migration_NullComponent_DoesNotThrow()
         {
             Assert.DoesNotThrow(() => ASMLiteBuilder.MigrateStaleVRCFuryComponents(null),
-                "A44: migration must no-op when ASMLiteComponent is null.");
+                "migration must no-op when ASMLiteComponent is null.");
         }
 
-        // ── A45 ────────────────────────────────────────────────────────────────
+        // ── Idempotent migration cleanup
 
         [Test, Category("Integration")]
-        public void A45_Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove()
+        public void Migration_RepeatedCalls_AreIdempotentAndDoNotOverRemove()
         {
             var staleA = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var staleB = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var preserved = _ctx.Comp.gameObject.AddComponent<BoxCollider>();
 
-            Assert.IsNotNull(staleA, "A45: setup failure, failed adding first VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(staleB, "A45: setup failure, failed adding second VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(preserved, "A45: setup failure, failed adding non-target BoxCollider component.");
+            Assert.IsNotNull(staleA, "setup failure, failed adding first VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(staleB, "setup failure, failed adding second VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(preserved, "setup failure, failed adding non-target BoxCollider component.");
             Assert.AreEqual("VF.Model.VRCFury", staleA.GetType().FullName,
-                $"A45: malformed test setup, expected exact stale full name VF.Model.VRCFury but got '{FullNameOrNull(staleA)}'.");
+                $"malformed test setup, expected exact stale full name VF.Model.VRCFury but got '{FullNameOrNull(staleA)}'.");
 
             Assert.DoesNotThrow(() => { ASMLiteBuilder.MigrateStaleVRCFuryComponents(_ctx.Comp); },
-                "A45: first migration invocation must not throw.");
+                "first migration invocation must not throw.");
             Assert.DoesNotThrow(() => { ASMLiteBuilder.MigrateStaleVRCFuryComponents(_ctx.Comp); },
-                "A45: second migration invocation must not throw (idempotency).");
+                "second migration invocation must not throw (idempotency).");
 
             int staleCount = 0;
             int boxCount = 0;
@@ -255,22 +257,22 @@ namespace ASMLite.Tests.Editor
             }
 
             Assert.AreEqual(1, staleCount,
-                $"A45: idempotent migration must preserve exactly one VF.Model.VRCFury delivery component after repeated calls. staleCount={staleCount}.");
+                $"idempotent migration must preserve exactly one VF.Model.VRCFury delivery component after repeated calls. staleCount={staleCount}.");
             Assert.GreaterOrEqual(boxCount, 1,
-                $"A45: repeated migration calls must not remove non-target components. boxCount={boxCount}.");
+                $"repeated migration calls must not remove non-target components. boxCount={boxCount}.");
         }
 
-        // ── A55 ────────────────────────────────────────────────────────────────
+        // ── Rebuild prep selective cleanup
 
         [Test, Category("Integration")]
-        public void A55_RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts()
+        public void RebuildPrep_MixedLegacyState_RemovesOnlyObsoleteArtifacts()
         {
             var staleA = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var staleB = _ctx.Comp.gameObject.AddComponent<VF.Model.VRCFury>();
             var preservedCollider = _ctx.Comp.gameObject.AddComponent<BoxCollider>();
-            Assert.IsNotNull(staleA, "A55: setup failure, failed adding first VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(staleB, "A55: setup failure, failed adding second VF.Model.VRCFury stub component.");
-            Assert.IsNotNull(preservedCollider, "A55: setup failure, failed adding preserved BoxCollider component.");
+            Assert.IsNotNull(staleA, "setup failure, failed adding first VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(staleB, "setup failure, failed adding second VF.Model.VRCFury stub component.");
+            Assert.IsNotNull(preservedCollider, "setup failure, failed adding preserved BoxCollider component.");
 
             _ctx.Ctrl.AddLayer(new UnityEditor.Animations.AnimatorControllerLayer
             {
@@ -326,60 +328,60 @@ namespace ASMLite.Tests.Editor
             });
 
             var first = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(_ctx.Comp);
-            Assert.IsTrue(first.AvatarDescriptorFound, "A55: rebuild prep should find avatar descriptor for fixture avatar.");
+            Assert.IsTrue(first.AvatarDescriptorFound, "rebuild prep should find avatar descriptor for fixture avatar.");
             Assert.AreEqual(1, first.StaleVrcFuryRemoved,
-                $"A55: rebuild prep should collapse stale VRCFury duplicates down to one removal. removed={first.StaleVrcFuryRemoved}.");
+                $"rebuild prep should collapse stale VRCFury duplicates down to one removal. removed={first.StaleVrcFuryRemoved}.");
             Assert.Greater(first.Cleanup.FxLayersRemoved, 0,
-                $"A55: rebuild prep should remove legacy ASMLite FX layers. removed={first.Cleanup.FxLayersRemoved}.");
+                $"rebuild prep should remove legacy ASMLite FX layers. removed={first.Cleanup.FxLayersRemoved}.");
             Assert.Greater(first.Cleanup.FxParamsRemoved, 0,
-                $"A55: rebuild prep should remove legacy ASMLite FX params. removed={first.Cleanup.FxParamsRemoved}.");
+                $"rebuild prep should remove legacy ASMLite FX params. removed={first.Cleanup.FxParamsRemoved}.");
             Assert.Greater(first.Cleanup.ExprParamsRemoved, 0,
-                $"A55: rebuild prep should remove legacy ASMLite expression params. removed={first.Cleanup.ExprParamsRemoved}.");
+                $"rebuild prep should remove legacy ASMLite expression params. removed={first.Cleanup.ExprParamsRemoved}.");
             Assert.Greater(first.Cleanup.MenuControlsRemoved, 0,
-                $"A55: rebuild prep should remove legacy Settings Manager controls. removed={first.Cleanup.MenuControlsRemoved}.");
+                $"rebuild prep should remove legacy Settings Manager controls. removed={first.Cleanup.MenuControlsRemoved}.");
 
             Assert.IsTrue(_ctx.Ctrl.layers.Any(l => l.name == "User_CustomLayer"),
-                "A55: rebuild prep must preserve user-owned FX layers.");
+                "rebuild prep must preserve user-owned FX layers.");
             Assert.IsTrue(_ctx.Ctrl.parameters.Any(p => p.name == "User_CustomParam"),
-                "A55: rebuild prep must preserve user-owned FX params.");
+                "rebuild prep must preserve user-owned FX params.");
             Assert.IsTrue(_ctx.AvDesc.expressionParameters.parameters.Any(p => p != null && p.name == "UserExprParam"),
-                "A55: rebuild prep must preserve user-owned expression params.");
+                "rebuild prep must preserve user-owned expression params.");
             Assert.IsTrue(_ctx.AvDesc.expressionsMenu.controls.Any(c => c != null && c.name == "User Control"),
-                "A55: rebuild prep must preserve user-owned menu controls.");
+                "rebuild prep must preserve user-owned menu controls.");
 
             var second = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(_ctx.Comp);
             Assert.AreEqual(0, second.StaleVrcFuryRemoved,
-                $"A55: repeated rebuild prep should be a no-op for stale VRCFury removals. removed={second.StaleVrcFuryRemoved}.");
+                $"repeated rebuild prep should be a no-op for stale VRCFury removals. removed={second.StaleVrcFuryRemoved}.");
             Assert.AreEqual(0, second.Cleanup.FxLayersRemoved,
-                $"A55: repeated rebuild prep should be a no-op for FX layer cleanup. removed={second.Cleanup.FxLayersRemoved}.");
+                $"repeated rebuild prep should be a no-op for FX layer cleanup. removed={second.Cleanup.FxLayersRemoved}.");
             Assert.AreEqual(0, second.Cleanup.FxParamsRemoved,
-                $"A55: repeated rebuild prep should be a no-op for FX parameter cleanup. removed={second.Cleanup.FxParamsRemoved}.");
+                $"repeated rebuild prep should be a no-op for FX parameter cleanup. removed={second.Cleanup.FxParamsRemoved}.");
             Assert.AreEqual(0, second.Cleanup.ExprParamsRemoved,
-                $"A55: repeated rebuild prep should be a no-op for expression parameter cleanup. removed={second.Cleanup.ExprParamsRemoved}.");
+                $"repeated rebuild prep should be a no-op for expression parameter cleanup. removed={second.Cleanup.ExprParamsRemoved}.");
             Assert.AreEqual(0, second.Cleanup.MenuControlsRemoved,
-                $"A55: repeated rebuild prep should be a no-op for menu cleanup. removed={second.Cleanup.MenuControlsRemoved}.");
+                $"repeated rebuild prep should be a no-op for menu cleanup. removed={second.Cleanup.MenuControlsRemoved}.");
 
             var outcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
                 default,
                 first,
                 default);
             StringAssert.Contains("cleaned ASM-Lite-owned state", outcome.ToCompactSummary(),
-                "A55: compact migration outcome reporting should summarize selective cleanup counts in one transport object.");
+                "compact migration outcome reporting should summarize selective cleanup counts in one transport object.");
             StringAssert.Contains("staleVrcFury=1", outcome.ToCompactSummary(),
-                "A55: compact migration outcome reporting should include collapsed stale VRCFury counts.");
+                "compact migration outcome reporting should include collapsed stale VRCFury counts.");
         }
 
         [Test, Category("Integration")]
-        public void A56_DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup()
+        public void DetachRecoverCycle_PreservesLegacyContinuityAndSelectiveCleanup()
         {
             const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
-            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_LegacyBrokered_Menu/Cape";
 
             AddAvatarParam(_ctx, deterministicSource, VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float, 0.5f);
             AddUserOwnedArtifacts(_ctx);
 
             var generatedExprParams = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(generatedExprParams, "A56: generated expression-parameters asset must exist for detach/recover continuity setup.");
+            Assert.IsNotNull(generatedExprParams, "generated expression-parameters asset must exist for detach/recover continuity setup.");
             generatedExprParams.parameters = new[]
             {
                 new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.Parameter { name = unmatchedLegacy, valueType = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Float, defaultValue = 0.1f, saved = true, networkSynced = true },
@@ -395,10 +397,10 @@ namespace ASMLite.Tests.Editor
                 window.DetachForAutomation();
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
-                    "A56: setup should leave the avatar detached before recovery.");
+                    "setup should leave the avatar detached before recovery.");
                 Assert.AreEqual(ASMLiteInstallationState.Detached,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "A56: setup should classify the avatar as Detached before recovery.");
+                    "setup should classify the avatar as Detached before recovery.");
 
                 window.ReturnToPackageManagedForAutomation();
             }
@@ -409,30 +411,30 @@ namespace ASMLite.Tests.Editor
 
             var recovered = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
             Assert.IsNotNull(recovered,
-                "A56: detached recovery should reattach ASM-Lite in package-managed mode.");
+                "detached recovery should reattach ASM-Lite in package-managed mode.");
             Assert.IsTrue(_ctx.Ctrl.layers.Any(l => l.name == "User_CustomLayer"),
-                "A56: detached recovery cleanup should preserve user-owned FX layers.");
+                "detached recovery cleanup should preserve user-owned FX layers.");
             Assert.IsTrue(_ctx.Ctrl.parameters.Any(p => p.name == "User_CustomParam"),
-                "A56: detached recovery cleanup should preserve user-owned FX parameters.");
+                "detached recovery cleanup should preserve user-owned FX parameters.");
             Assert.IsTrue(_ctx.AvDesc.expressionParameters.parameters.Any(p => p != null && p.name == "UserExprParam"),
-                "A56: detached recovery cleanup should preserve user-owned expression parameters.");
+                "detached recovery cleanup should preserve user-owned expression parameters.");
             Assert.IsTrue(_ctx.AvDesc.expressionsMenu.controls.Any(c => c != null && c.name == "User Control"),
-                "A56: detached recovery cleanup should preserve user-owned menu controls.");
+                "detached recovery cleanup should preserve user-owned menu controls.");
 
             int buildResult = ASMLiteBuilder.Build(recovered);
             Assert.GreaterOrEqual(buildResult, 0,
-                $"A56: build should succeed after detach/recover continuity validation. result={buildResult}.");
+                $"build should succeed after detach/recover continuity validation. result={buildResult}.");
 
             generatedExprParams = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(generatedExprParams, "A56: generated expression-parameters asset must exist after detach/recover rebuild.");
+            Assert.IsNotNull(generatedExprParams, "generated expression-parameters asset must exist after detach/recover rebuild.");
             Assert.IsTrue(generatedExprParams.parameters.Any(p => p != null && p.name == unmatchedLegacy),
-                "A56: unmatched but well-formed legacy backup aliases must remain preserved after detach/recover rebuild.");
+                "unmatched but well-formed legacy backup aliases must remain preserved after detach/recover rebuild.");
             Assert.IsFalse(generatedExprParams.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S_"),
-                "A56: malformed legacy backup aliases must remain excluded after detach/recover rebuild.");
+                "malformed legacy backup aliases must remain excluded after detach/recover rebuild.");
 
             var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
             Assert.GreaterOrEqual(report.UnmatchedCount, 1,
-                "A56: detach/recover rebuild should preserve unmatched legacy continuity reporting.");
+                "detach/recover rebuild should preserve unmatched legacy continuity reporting.");
         }
     }
 }

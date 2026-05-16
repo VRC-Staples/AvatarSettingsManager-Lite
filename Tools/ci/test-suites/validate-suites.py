@@ -46,6 +46,7 @@ REFERENCE_SCAN_IGNORED_DIRS = {
 }
 PATH_COMBINE_CALL_RE = re.compile(r"Path\.Combine\s*\((.*?)\)\s*;", re.DOTALL)
 STRING_LITERAL_RE = re.compile(r'"((?:\\.|[^"\\])*)"')
+CODED_PREFIX_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{1,8}\d{2,4}[A-Z]?(?=\b|[_:-])", re.IGNORECASE)
 
 REQUIRED_GROUP_IDS = (
     "contract",
@@ -187,6 +188,29 @@ def string_list(value: Any) -> list[str]:
 
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def iter_json_strings(value: Any, path: str = "$") -> list[tuple[str, str]]:
+    if isinstance(value, dict):
+        results: list[tuple[str, str]] = []
+        for key, child in value.items():
+            results.extend(iter_json_strings(child, f"{path}.{key}"))
+        return results
+    if isinstance(value, list):
+        results: list[tuple[str, str]] = []
+        for index, child in enumerate(value):
+            results.extend(iter_json_strings(child, f"{path}[{index}]"))
+        return results
+    if isinstance(value, str):
+        return [(path, value)]
+    return []
+
+
+def assert_no_coded_prefixes_in_smoke_catalog(catalog: dict[str, Any], errors: list[str]) -> None:
+    for path, value in iter_json_strings(catalog):
+        match = CODED_PREFIX_TOKEN_RE.search(value)
+        if match:
+            errors.append(f"smoke suite catalog coded prefix at {path}: {match.group(0)} in {value}")
 
 
 def groups_by_id(suites: dict[str, Any], errors: list[str]) -> dict[str, dict[str, Any]]:
@@ -391,6 +415,7 @@ def main(argv: list[str] | None = None) -> int:
         assert_smoke_membership(groups, errors)
         assert_default_batch_runs(suites, groups, errors)
         assert_smoke_catalog_parity(repo_root, suites, smoke_catalog, groups, errors)
+    assert_no_coded_prefixes_in_smoke_catalog(smoke_catalog, errors)
     assert_removed_editmode_batch_files_absent(repo_root, errors)
     assert_no_removed_editmode_batch_path_references(repo_root, errors)
 

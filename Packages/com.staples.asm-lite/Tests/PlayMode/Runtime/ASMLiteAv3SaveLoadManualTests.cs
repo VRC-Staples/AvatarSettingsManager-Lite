@@ -30,7 +30,7 @@ namespace ASMLite.Tests.PlayMode
             var setup = BuildAndWireRealUatAvatarFixture(selection);
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
-            yield return new EnterPlayMode();
+            yield return EnterPlayModeIfNeeded();
 
             GameObject avatar = GameObject.Find(RealUatAvatarName);
             Assert.IsNotNull(avatar,
@@ -56,7 +56,7 @@ namespace ASMLite.Tests.PlayMode
             BuildAndWireAvatarFixture();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
-            yield return new EnterPlayMode();
+            yield return EnterPlayModeIfNeeded();
 
             GameObject avatar = GameObject.Find(TestAvatarName);
             Assert.IsNotNull(avatar,

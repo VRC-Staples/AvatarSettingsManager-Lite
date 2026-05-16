@@ -14,6 +14,7 @@ namespace ASMLite.Tests.Editor
         [SetUp]
         public void SetUp()
         {
+            CleanupStateTestAssets();
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             ASMLiteTestFixtures.ResetGeneratedExprParams();
         }
@@ -21,11 +22,16 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
-            DeleteAssetIfExists("Assets/ASM-Lite/StateTests/TestParams.asset");
-            DeleteAssetIfExists("Assets/ASM-Lite/StateTests");
-            DeleteAssetIfExists("Assets/ASM-Lite");
-            _ctx = null;
+            try
+            {
+                CleanupStateTestAssets();
+                ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+            }
+            finally
+            {
+                CleanupStateTestAssets();
+                _ctx = null;
+            }
         }
 
         [Test]
@@ -101,6 +107,13 @@ namespace ASMLite.Tests.Editor
 
             Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.NotInstalled, state,
                 "Avatar-selected without component or runtime markers should resolve explicitly to NotInstalled state.");
+        }
+
+        private static void CleanupStateTestAssets()
+        {
+            DeleteAssetIfExists("Assets/ASM-Lite/StateTests/TestParams.asset");
+            DeleteAssetIfExists("Assets/ASM-Lite/StateTests");
+            DeleteAssetIfExists("Assets/ASM-Lite");
         }
 
         private static void EnsureAssetFolder(string parent, string child)

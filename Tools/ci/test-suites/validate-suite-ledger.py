@@ -40,6 +40,8 @@ HUMAN_FIELDS = (
 )
 IDENTITY_FIELDS = ("file", "class", "method")
 TEST_ATTRIBUTE_NAMES = {"Test", "UnityTest", "TestCase", "TestCaseSource"}
+CODED_PREFIX_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{1,8}\d{2,4}[A-Z]?(?=\b|[_:-])", re.IGNORECASE)
+CODED_METHOD_PREFIX_RE = re.compile(r"^[A-Z]{1,8}\d{2,4}[A-Z]?_", re.IGNORECASE)
 SMOKE_PROTOCOL_FILES = {
     "ASMLiteSmokeProtocolTests.cs",
     "ASMLiteSmokeProtocolCompatibilityTests.cs",
@@ -52,6 +54,7 @@ SMOKE_OVERLAY_HOST_FILES = {
     "ASMLiteSmokeOverlayHostTests.cs",
     "ASMLiteSmokeSetupFixtureServiceTests.cs",
 }
+PLAYMODE_ASMDEF_PATH = Path("Packages/com.staples.asm-lite/Tests/PlayMode/ASMLite.Tests.PlayMode.asmdef")
 
 
 @dataclass(frozen=True)
@@ -341,7 +344,7 @@ def classify_mechanical(identity: TestIdentity, fields: dict[str, Any]) -> None:
 
 
 def humanize_method(method: str) -> str:
-    name = re.sub(r"^[A-Z]\d+[a-z]?_", "", method)
+    name = CODED_METHOD_PREFIX_RE.sub("", method)
     name = name.replace("_", " ")
     name = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", name)
     return " ".join(name.split())
@@ -533,6 +536,74 @@ def placeholder_messages(document: dict[str, Any]) -> list[str]:
     return messages
 
 
+def coded_prefix_messages(document: dict[str, Any]) -> list[str]:
+    messages: list[str] = []
+    for row in document.get("tests", []):
+        if not isinstance(row, dict):
+            continue
+        key = format_key(row_key(row))
+        method = str(row.get("method", ""))
+        if CODED_METHOD_PREFIX_RE.match(method):
+            messages.append(f"coded prefix for {key}: method={method}")
+        for field in HUMAN_FIELDS:
+            value = row.get(field)
+            values = value if isinstance(value, list) else [value]
+            for item in values:
+                if isinstance(item, str) and CODED_PREFIX_TOKEN_RE.search(item):
+                    messages.append(f"coded prefix for {key}: {field}={item}")
+    return messages
+
+
+def playmode_asmdef_messages(repo_root: Path, document: dict[str, Any]) -> list[str]:
+    playmode_rows = [
+        row for row in document.get("tests", [])
+        if isinstance(row, dict) and str(row.get("file", "")).startswith("Packages/com.staples.asm-lite/Tests/PlayMode/")
+    ]
+    if not playmode_rows:
+        return []
+
+    path = repo_root / PLAYMODE_ASMDEF_PATH
+    try:
+        asmdef = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [f"PlayMode asmdef missing: {PLAYMODE_ASMDEF_PATH}"]
+    except json.JSONDecodeError as exc:
+        return [f"PlayMode asmdef is invalid JSON: {PLAYMODE_ASMDEF_PATH}: {exc}"]
+
+    messages: list[str] = []
+    if asmdef.get("includePlatforms") != []:
+        messages.append("PlayMode asmdef must use includePlatforms=[] so Unity Test Runner lists it under PlayMode")
+    optional_references = asmdef.get("optionalUnityReferences")
+    if not isinstance(optional_references, list) or "TestAssemblies" not in optional_references:
+        messages.append("PlayMode asmdef must include optionalUnityReferences=['TestAssemblies']")
+    references = asmdef.get("references", [])
+    if isinstance(references, list) and "UnityEditor.TestRunner" in references:
+        messages.append("PlayMode asmdef must not reference UnityEditor.TestRunner; that marks the assembly EditMode-only")
+    expected_precompiled = {
+        "VRCSDK3A.dll",
+        "VRCSDK3A-Editor.dll",
+        "VRCSDKBase.dll",
+        "VRCSDKBase-Editor.dll",
+    }
+    precompiled = asmdef.get("precompiledReferences", [])
+    if asmdef.get("overrideReferences") is not True:
+        messages.append("PlayMode asmdef must set overrideReferences=true so VRC SDK plugin DLL references are explicit")
+    if not isinstance(precompiled, list):
+        messages.append("PlayMode asmdef precompiledReferences must be a list")
+    else:
+        missing = sorted(expected_precompiled.difference(precompiled))
+        if missing:
+            messages.append("PlayMode asmdef missing VRC SDK precompiled references: " + ", ".join(missing))
+    for source_path in sorted((repo_root / "Packages/com.staples.asm-lite/Tests/PlayMode").glob("**/*.cs")):
+        text = source_path.read_text(encoding="utf-8", errors="ignore")
+        if "ASMLiteTestFixtures.CreateTestAvatar(" in text:
+            messages.append(
+                "PlayMode source must use CreatePlayModeTestAvatar() instead of CreateTestAvatar(): "
+                + source_path.relative_to(repo_root).as_posix()
+            )
+    return messages
+
+
 def format_key(key: tuple[str, str, str]) -> str:
     file, class_name, method = key
     return f"{file}::{class_name}.{method}"
@@ -586,6 +657,8 @@ def main(argv: list[str] | None = None) -> int:
         return fail(str(exc))
     drift = drift_messages(actual, expected)
     placeholders = placeholder_messages(actual)
+    coded_prefixes = coded_prefix_messages(actual)
+    playmode_asmdef = playmode_asmdef_messages(repo_root, actual)
     if drift:
         for message in drift[:25]:
             print(f"ledger drift: {message}", file=sys.stderr)
@@ -597,7 +670,15 @@ def main(argv: list[str] | None = None) -> int:
             print(message, file=sys.stderr)
         if len(placeholders) > 25:
             print(f"placeholder classification: ... {len(placeholders) - 25} more", file=sys.stderr)
-    if drift or placeholders:
+    if coded_prefixes:
+        for message in coded_prefixes[:25]:
+            print(message, file=sys.stderr)
+        if len(coded_prefixes) > 25:
+            print(f"coded method prefix: ... {len(coded_prefixes) - 25} more", file=sys.stderr)
+    if playmode_asmdef:
+        for message in playmode_asmdef:
+            print(message, file=sys.stderr)
+    if drift or placeholders or coded_prefixes or playmode_asmdef:
         return 1
     print(f"suite ledger ok: {len(actual['tests'])} Unity C# test methods classified")
     return 0

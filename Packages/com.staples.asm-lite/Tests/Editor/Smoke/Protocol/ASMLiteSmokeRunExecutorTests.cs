@@ -102,7 +102,7 @@ namespace ASMLite.Tests.Editor
                 fixture = new ASMLiteSmokeFixtureDefinition
                 {
                     scenePath = "Assets/Click ME.unity",
-                    avatarName = "Oct25_Dress",
+                    avatarName = "CanonicalDress",
                 },
                 groups = new[]
                 {

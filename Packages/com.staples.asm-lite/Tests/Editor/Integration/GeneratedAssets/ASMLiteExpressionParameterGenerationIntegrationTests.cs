@@ -316,8 +316,8 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset()
         {
-            const string legacySource = "VF777_Menu/Hat";
-            const string legacyBackup = "ASMLite_Bak_S1_VF777_Menu/Hat";
+            const string legacySource = "LegacyBrokered_Menu/Hat";
+            const string legacyBackup = "ASMLite_Bak_S1_LegacyBrokered_Menu/Hat";
 
             var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for legacy alias setup.");
@@ -403,7 +403,7 @@ namespace ASMLite.Tests.Editor
         public void LegacyAliasDiagnostics_CountUnmatchedAndMalformedWithoutWiringWrongLoadPaths()
         {
             const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
-            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_LegacyBrokered_Menu/Cape";
 
             var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for unmatched alias setup.");
@@ -440,7 +440,7 @@ namespace ASMLite.Tests.Editor
         public void LegacyAliasDiagnostics_KeepGeneratedExpressionParamsDistinctWhilePreservingUnmatchedState()
         {
             const string deterministicSource = "ASM_VF_Menu_Cape__TestAvatar_ASMLite";
-            const string unmatchedLegacy = "ASMLite_Bak_S1_VF999_Menu/Cape";
+            const string unmatchedLegacy = "ASMLite_Bak_S1_LegacyBrokered_Menu/Cape";
 
             var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for duplicate-preservation validation.");

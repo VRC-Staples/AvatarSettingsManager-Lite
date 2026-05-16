@@ -117,25 +117,61 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup()
         {
+            const string baselineScenePath = ASMLiteTestFixtures.TempDir + "/FixtureIsolationBaseline.unity";
             var originalSetup = EditorSceneManager.GetSceneManagerSetup();
-            AsmLiteFixtureIsolationScope scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup));
+            SceneSetup[] scopedSetup = null;
+            AsmLiteFixtureIsolationScope scope = null;
 
             try
             {
+                EnsureTempFolder();
+                var baselineScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                Assert.IsTrue(EditorSceneManager.SaveScene(baselineScene, baselineScenePath),
+                    "Fixture isolation open-scene contract needs a saved baseline scene before opening an additive scene.");
+                scopedSetup = EditorSceneManager.GetSceneManagerSetup();
+                scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup));
+
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
                 var failure = Assert.Throws<AssertionException>(() => scope.Dispose());
                 scope = null;
                 StringAssert.Contains("open scene leak", failure.Message);
-                Assert.AreEqual(originalSetup.Length, EditorSceneManager.GetSceneManagerSetup().Length,
+                Assert.AreEqual(scopedSetup.Length, EditorSceneManager.GetSceneManagerSetup().Length,
                     "Fixture isolation scope should restore the prior scene setup before reporting contamination.");
             }
             finally
             {
-                if (originalSetup != null && originalSetup.Length > 0)
-                    EditorSceneManager.RestoreSceneManagerSetup(originalSetup);
                 scope?.Dispose();
+                RestoreOriginalSceneSetup(originalSetup);
+                AssetDatabase.DeleteAsset(baselineScenePath);
+                AssetDatabase.DeleteAsset(ASMLiteTestFixtures.TempDir);
+                AssetDatabase.Refresh();
             }
+        }
+
+        private static void RestoreOriginalSceneSetup(SceneSetup[] originalSetup)
+        {
+            if (CanRestoreSceneSetup(originalSetup))
+            {
+                EditorSceneManager.RestoreSceneManagerSetup(originalSetup);
+                return;
+            }
+
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
+
+        private static bool CanRestoreSceneSetup(SceneSetup[] setup)
+        {
+            if (setup == null || setup.Length == 0)
+                return false;
+
+            foreach (var scene in setup)
+            {
+                if (string.IsNullOrEmpty(scene.path))
+                    return false;
+            }
+
+            return true;
         }
 
         private static void EnsureTempFolder()

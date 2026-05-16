@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Tests.PlayMode
 {
@@ -22,7 +23,7 @@ namespace ASMLite.Tests.PlayMode
             BuildAndWireAvatarFixture();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
-            yield return new EnterPlayMode();
+            yield return EnterPlayModeIfNeeded();
 
             GameObject avatar = GameObject.Find(TestAvatarName);
             Assert.IsNotNull(avatar, "Runtime: test avatar should survive EnterPlayMode for AV3 runtime scanning.");
@@ -53,6 +54,36 @@ namespace ASMLite.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Av3SaveLoadSlot1_RestoresVrcFuryBrokeredBoolToggle()
+        {
+            var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
+            if (!runtimeResolution.IsAvailable)
+                Assert.Inconclusive(runtimeResolution.Diagnostic);
+
+            const string brokeredRezzParam = "ASM_VF_Clothing_Rezz__ASMLite_AV3_SaveLoad_Runtime_Avatar_Clothing_Rezz";
+            BuildAndWireAvatarFixture(new VRCExpressionParameters.Parameter
+            {
+                name = brokeredRezzParam,
+                valueType = VRCExpressionParameters.ValueType.Bool,
+                defaultValue = 0f,
+                saved = true,
+                networkSynced = true,
+            });
+            ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
+
+            yield return EnterPlayModeIfNeeded();
+
+            GameObject avatar = GameObject.Find(TestAvatarName);
+            Assert.IsNotNull(avatar, "Runtime: test avatar should survive EnterPlayMode for brokered VRCFury toggle save/load coverage.");
+
+            var savedDescriptors = SavedParameterDescriptors
+                .Concat(new[] { ASMLiteAv3SaveLoadHarness.Descriptor(brokeredRezzParam, VRCExpressionParameters.ValueType.Bool) })
+                .ToArray();
+            var harness = new ASMLiteAv3SaveLoadHarness(savedDescriptors, UnsavedParameterDescriptors);
+            yield return harness.RunCoreInvariant(avatar, 0xA5A5F017u);
+        }
+
+        [UnityTest]
         public IEnumerator Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed([ValueSource(nameof(SaveLoadSeedCases))] ASMLiteAv3SaveLoadSeedCase seedCase)
         {
             var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
@@ -62,7 +93,7 @@ namespace ASMLite.Tests.PlayMode
             BuildAndWireAvatarFixture();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
-            yield return new EnterPlayMode();
+            yield return EnterPlayModeIfNeeded();
 
             GameObject avatar = GameObject.Find(TestAvatarName);
             Assert.IsNotNull(avatar, $"Runtime invariant: test avatar should survive EnterPlayMode for AV3 save/load invariant. seed={seedCase}");

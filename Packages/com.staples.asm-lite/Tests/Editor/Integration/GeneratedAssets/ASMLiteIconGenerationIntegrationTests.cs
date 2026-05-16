@@ -7,7 +7,7 @@ using ASMLite.Editor;
 namespace ASMLite.Tests.Editor
 {
     /// <summary>
-    /// Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema-Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuild302WithNestedDrift203: Integration coverage for icon resolution through Build() output.
+    /// Build_WithExclusions_UpdatesReturnCountAndGeneratedSchema-Build_FullControllerSchemaDrift_ReturnsMinusOne_AndExposesBuildDiagnosticWithNestedDriftDiagnostic: Integration coverage for icon resolution through Build() output.
     /// Asserts icon references from avDesc.expressionsMenu graph, not private helpers.
     /// </summary>
     [TestFixture]

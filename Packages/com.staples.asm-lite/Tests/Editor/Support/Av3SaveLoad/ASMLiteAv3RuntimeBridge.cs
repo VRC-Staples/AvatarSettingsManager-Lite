@@ -37,14 +37,19 @@ namespace ASMLite.Tests.PlayMode
                 throw new InvalidOperationException(resolution.Diagnostic);
 
             var existing = UnityEngine.Object.FindObjectOfType(resolution.Type);
-            var component = existing as Component;
-            var controlObject = component != null
-                ? component.gameObject
-                : GameObject.Find(EmulatorObjectName) ?? new GameObject(EmulatorObjectName);
+            if (existing != null)
+                return ((Component)existing).gameObject;
 
-            component = controlObject.GetComponent(resolution.Type) ?? controlObject.AddComponent(resolution.Type);
-            ConfigureEmulator(component);
-            ScanForRuntimeAvatarsIfPlaying(component);
+            var controlObject = GameObject.Find(EmulatorObjectName) ?? new GameObject(EmulatorObjectName);
+            var component = controlObject.GetComponent(resolution.Type) ?? controlObject.AddComponent(resolution.Type);
+
+            SetBoolField(component, "RunPreprocessAvatarHook", false);
+            SetBoolField(component, "DisableShadowClone", true);
+            SetBoolField(component, "DisableMirrorClone", true);
+            SetBoolField(component, "CreateNonLocalClone", false);
+            SetIntField(component, "CreateNonLocalCloneCount", 0);
+            SetBoolField(component, "SelectAvatarOnStartup", false);
+            SetBoolField(component, "EnableAvatarOSC", false);
 
             return controlObject;
         }
@@ -488,26 +493,6 @@ namespace ASMLite.Tests.PlayMode
 
             return targetType.IsInstanceOfType(value)
                 || string.Equals(targetType.FullName, value.GetType().FullName, StringComparison.Ordinal);
-        }
-
-        private static void ConfigureEmulator(object component)
-        {
-            SetBoolField(component, "RunPreprocessAvatarHook", false);
-            SetBoolField(component, "DisableShadowClone", true);
-            SetBoolField(component, "DisableMirrorClone", true);
-            SetBoolField(component, "CreateNonLocalClone", false);
-            SetIntField(component, "CreateNonLocalCloneCount", 0);
-            SetBoolField(component, "SelectAvatarOnStartup", false);
-            SetBoolField(component, "EnableAvatarOSC", false);
-        }
-
-        private static void ScanForRuntimeAvatarsIfPlaying(object component)
-        {
-            if (!Application.isPlaying || component == null)
-                return;
-
-            var scanMethod = component.GetType().GetMethod("ScanForAvatars", InstanceBindingFlags);
-            scanMethod?.Invoke(component, null);
         }
 
         private static void SetBoolField(object target, string fieldName, bool value)

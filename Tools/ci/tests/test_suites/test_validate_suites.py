@@ -191,6 +191,42 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         self.assertIn("suite map ok", result.stdout)
 
+    def test_fails_when_smoke_catalog_contains_coded_prefix(self) -> None:
+        catalog = {
+            "catalogVersion": 1,
+            "protocolVersion": "1.0.0",
+            "groups": [
+                {
+                    "groupId": "preflight",
+                    "suites": [
+                        {
+                            "suiteId": "asm-lite-readiness-check",
+                            "requiresPlayMode": False,
+                            "cases": [{"caseId": "P" + "01-install-path-disabled"}],
+                        }
+                    ],
+                },
+                {
+                    "groupId": "editor-window",
+                    "suites": [{"suiteId": "setup-scene-avatar", "requiresPlayMode": False}],
+                },
+                {
+                    "groupId": "playmode-runtime",
+                    "suites": [
+                        {"suiteId": "playmode-runtime-validation", "requiresPlayMode": True},
+                        {"suiteId": "playmode-save-load-av3", "requiresPlayMode": True},
+                    ],
+                },
+            ],
+        }
+        self.write_json(self.catalog_path, catalog)
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("smoke suite catalog coded prefix", result.stderr)
+        self.assertIn("install-path-disabled", result.stderr)
+
     def test_fails_when_default_ci_batch_run_drops_selectors(self) -> None:
         document = suites_document()
         document["groups"][1]["batchRun"]["filters"] = []  # type: ignore[index]

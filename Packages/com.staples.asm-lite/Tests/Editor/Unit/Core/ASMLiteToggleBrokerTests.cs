@@ -4,6 +4,8 @@ using NUnit.Framework;
 using UnityEngine;
 using ASMLite.Editor;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase.Editor.BuildPipeline;
 
 namespace VF.Model.Feature
 {
@@ -14,6 +16,11 @@ namespace VF.Model.Feature
         public string globalParam;
         public string menuPath;
         public string name;
+        public bool slider;
+        public bool useInt;
+        public bool defaultOn;
+        public float defaultSliderValue;
+        public bool saved = true;
         public int untouchedCounter = 42;
     }
 
@@ -55,6 +62,21 @@ namespace ASMLite.Tests.Editor
         {
             ASMLiteToggleNameBroker.ClearPendingRestoreState();
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
+        }
+
+        [Test]
+        public void BuildRequestedCallback_IsRegisteredWithVrChatSdkPipeline()
+        {
+            var callback = new ASMLiteToggleBuildRequestedCallback();
+
+            Assert.IsInstanceOf<IVRCSDKBuildRequestedCallback>(callback,
+                "regression guard: callback must implement VRChat SDK build-request interface or Unity/SDK will never invoke VRCFury toggle enrollment before play/build processing.");
+            Assert.IsTrue(callback.OnBuildRequested(VRCSDKRequestedBuildType.Avatar),
+                "avatar build requests should continue after deterministic toggle enrollment.");
+
+            var report = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            Assert.IsNotNull(report,
+                "callback path should be callable through the SDK interface without throwing.");
         }
 
         [Test]
@@ -175,7 +197,7 @@ namespace ASMLite.Tests.Editor
             assignedVf.content = new VF.Model.Feature.Toggle
             {
                 useGlobalParam = true,
-                globalParam = "VF300_Clothing/Rezz",
+                globalParam = "Brokered_Clothing/Rezz",
                 menuPath = "Clothing/Rezz",
                 name = "Rezz",
             };
@@ -193,8 +215,53 @@ namespace ASMLite.Tests.Editor
             var globals = ASMLiteToggleNameBroker.DiscoverAssignedToggleGlobalParams(_ctx.AvatarGo);
             Assert.AreEqual(1, globals.Count,
                 "assigned global discovery should report only non-empty useGlobal=true Toggle globals.");
-            Assert.AreEqual("VF300_Clothing/Rezz", globals[0],
+            Assert.AreEqual("Brokered_Clothing/Rezz", globals[0],
                 "assigned global discovery should preserve canonical VF global names unchanged.");
+        }
+
+        [Test]
+        public void Discovery_AssignedToggleExpressionParameters_MirrorVrcFuryToggleBuilderFields()
+        {
+            var boolGo = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "BoolAssigned");
+            var boolVf = boolGo.AddComponent<VF.Model.VRCFury>();
+            boolVf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "Clothing/Rezz",
+                menuPath = "Clothing/Rezz",
+                name = "Rezz",
+                defaultOn = true,
+                saved = false,
+            };
+
+            var sliderGo = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "SliderAssigned");
+            var sliderVf = sliderGo.AddComponent<VF.Model.VRCFury>();
+            sliderVf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "Hair/Emission",
+                menuPath = "Hair/Emission",
+                name = "Emission",
+                slider = true,
+                defaultSliderValue = 0.4f,
+                saved = true,
+            };
+
+            var discovered = ASMLiteToggleNameBroker.DiscoverAssignedToggleExpressionParameters(_ctx.AvatarGo);
+
+            var boolParam = discovered.SingleOrDefault(p => p.name == "Clothing/Rezz");
+            Assert.IsNotNull(boolParam, "assigned VRCFury bool toggle global must be projected as a backable expression parameter.");
+            Assert.AreEqual(VRCExpressionParameters.ValueType.Bool, boolParam.valueType);
+            Assert.AreEqual(1f, boolParam.defaultValue);
+            Assert.IsFalse(boolParam.saved, "VRCFury Toggle saved field should be preserved.");
+            Assert.IsTrue(boolParam.networkSynced, "VRCFury Toggle globals are synced parameters.");
+
+            var sliderParam = discovered.SingleOrDefault(p => p.name == "Hair/Emission");
+            Assert.IsNotNull(sliderParam, "assigned VRCFury slider global must be projected as a backable expression parameter.");
+            Assert.AreEqual(VRCExpressionParameters.ValueType.Float, sliderParam.valueType);
+            Assert.AreEqual(0.4f, sliderParam.defaultValue);
+            Assert.IsTrue(sliderParam.saved);
+            Assert.IsTrue(sliderParam.networkSynced);
         }
 
         [Test]

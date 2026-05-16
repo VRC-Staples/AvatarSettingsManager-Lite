@@ -59,7 +59,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParseConfiguration_DefaultsToClickMeSceneAndOct25DressAvatar_WhenTargetArgsAreOmitted()
+        public void ParseConfiguration_DefaultsToClickMeSceneAndCanonicalDressAvatar_WhenTargetArgsAreOmitted()
         {
             var configuration = ASMLiteVisibleAutomationCommandLine.ParseConfiguration(new[]
             {
@@ -71,7 +71,7 @@ namespace ASMLite.Tests.Editor
             });
 
             Assert.AreEqual("Assets/Click ME.unity", configuration.scenePath);
-            Assert.AreEqual("Oct25_Dress", configuration.avatarName);
+            Assert.AreEqual("CanonicalDress", configuration.avatarName);
         }
 
         [Test]

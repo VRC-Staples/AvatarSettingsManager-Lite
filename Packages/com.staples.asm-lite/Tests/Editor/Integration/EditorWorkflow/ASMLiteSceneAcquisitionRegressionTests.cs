@@ -14,7 +14,7 @@ namespace ASMLite.Tests.Editor
                     "open-scene",
                     new ASMLiteSmokeStepArgs(),
                     "Assets/Missing.unity",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out string detail,
                     out string stackTrace),
                 Is.False);
@@ -30,7 +30,7 @@ namespace ASMLite.Tests.Editor
                     "open-scene",
                     new ASMLiteSmokeStepArgs(),
                     "Packages/com.staples.asm-lite/package.json",
-                    "Oct25_Dress",
+                    "CanonicalDress",
                     out string detail,
                     out string stackTrace),
                 Is.False);

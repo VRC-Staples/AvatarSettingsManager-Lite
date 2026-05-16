@@ -93,7 +93,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202()
+        public void PrefabWiring_MissingParameterFallbackGroup_ReturnsDriftDiagnostic()
         {
             var go = new GameObject("MissingParameterFallback");
             try
@@ -128,7 +128,7 @@ namespace ASMLite.Tests.Editor
 
                 ASMLiteTestFixtures.RecordBuildDiagnosticFailure(
                     SuiteName,
-                    nameof(PrefabWiring_MissingParameterFallbackGroup_ReturnsDrift202),
+                    nameof(PrefabWiring_MissingParameterFallbackGroup_ReturnsDriftDiagnostic),
                     diagnostic);
 
                 Assert.IsFalse(diagnostic.Success,

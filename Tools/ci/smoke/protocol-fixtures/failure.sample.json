@@ -12,7 +12,7 @@
   "stackTrace": "System.InvalidOperationException: Runtime component validation failed at ASMLite.Tests.Editor.RuntimeValidator.AssertComponentState()",
   "effectiveResetPolicy": "SceneReload",
   "scenePath": "Assets/Click ME.unity",
-  "avatarName": "Oct25_Dress",
+  "avatarName": "CanonicalDress",
   "commandId": "cmd_000004_run-suite",
   "eventSeqRange": {
     "first": 12,

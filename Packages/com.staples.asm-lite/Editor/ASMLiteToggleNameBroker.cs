@@ -6,26 +6,31 @@ using ASMLite;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
+using VRC.SDKBase.Editor.BuildPipeline;
 
 namespace ASMLite.Editor
 {
     /// <summary>
     /// Reflection-safe helper for deterministic VRCFury Toggle global-name enrollment.
     ///
-    /// T01 scope: discovery + deterministic naming + serialized field mutation records.
-    /// T02 scope: build-request enrollment callback wiring + delayed restore lifecycle.
+    /// Discovery scope: discovery + deterministic naming + serialized field mutation records.
+    /// Build-request scope: build-request enrollment callback wiring + delayed restore lifecycle.
     /// </summary>
     internal static class ASMLiteToggleNameBroker
     {
         internal const string GlobalPrefix = "ASM_VF_";
         internal const string DefaultToggleTypeFullName = "VF.Model.Feature.Toggle";
+        internal const string DefaultFullControllerTypeFullName = "VF.Model.Feature.FullController";
 
         private const string SessionRestoreKey = "ASMLite.ToggleBroker.PendingRestore";
+        private const string FullControllerGlobalRestoreKey = "ASMLite.FullControllerGlobals.PendingRestore";
         private static bool s_restoreDelayQueued;
         private static bool s_startupRestoreQueued;
         private static bool s_hasLatestEnrollmentReport;
         private static EnrollmentReport s_latestEnrollmentReport;
         private static GlobalParamMapping[] s_latestGlobalParamMappings = Array.Empty<GlobalParamMapping>();
+        private static FullControllerGlobalEnrollmentReport s_latestFullControllerGlobalEnrollmentReport;
 
         private static readonly string[] s_menuPathCandidateFields =
         {
@@ -37,6 +42,11 @@ namespace ASMLite.Editor
 
         private static readonly string[] s_useGlobalCandidateFields = { "useGlobalParam" };
         private static readonly string[] s_globalParamCandidateFields = { "globalParam" };
+        private static readonly string[] s_sliderCandidateFields = { "slider" };
+        private static readonly string[] s_useIntCandidateFields = { "useInt" };
+        private static readonly string[] s_defaultOnCandidateFields = { "defaultOn" };
+        private static readonly string[] s_defaultSliderValueCandidateFields = { "defaultSliderValue" };
+        private static readonly string[] s_savedCandidateFields = { "saved" };
         private static readonly Regex s_restoreEntryRegex = new Regex(
             "\\{\\s*\\\"componentInstanceId\\\"\\s*:\\s*(?<id>-?\\d+)\\s*,\\s*\\\"objectPath\\\"\\s*:\\s*\\\"(?<objectPath>(?:\\\\.|[^\\\"\\\\])*)\\\"\\s*,\\s*\\\"togglePropertyPath\\\"\\s*:\\s*\\\"(?<togglePath>(?:\\\\.|[^\\\"\\\\])*)\\\"\\s*,\\s*\\\"originalUseGlobalParam\\\"\\s*:\\s*(?<useGlobal>true|false)\\s*,\\s*\\\"originalGlobalParam\\\"\\s*:\\s*\\\"(?<originalGlobal>(?:\\\\.|[^\\\"\\\\])*)\\\"\\s*,\\s*\\\"assignedGlobalParam\\\"\\s*:\\s*\\\"(?<assignedGlobal>(?:\\\\.|[^\\\"\\\\])*)\\\"\\s*\\}",
             RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -56,6 +66,21 @@ namespace ASMLite.Editor
             public bool originalUseGlobalParam;
             public string originalGlobalParam;
             public string assignedGlobalParam;
+        }
+
+        [Serializable]
+        private sealed class FullControllerGlobalRestorePayload
+        {
+            public FullControllerGlobalRestoreEntry[] entries;
+        }
+
+        [Serializable]
+        private sealed class FullControllerGlobalRestoreEntry
+        {
+            public int componentInstanceId;
+            public string objectPath;
+            public string fullControllerPropertyPath;
+            public string[] originalGlobalParams;
         }
 
         private readonly struct PlannedCandidateAssignment
@@ -158,6 +183,24 @@ namespace ASMLite.Editor
             public int StaleCleanupUnresolvedCount { get; }
         }
 
+        internal readonly struct FullControllerGlobalEnrollmentReport
+        {
+            public FullControllerGlobalEnrollmentReport(int avatarScanCount, int fullControllerCount, int promotedParameterCount, int restoredCount, int unresolvedCount)
+            {
+                AvatarScanCount = avatarScanCount;
+                FullControllerCount = fullControllerCount;
+                PromotedParameterCount = promotedParameterCount;
+                RestoredCount = restoredCount;
+                UnresolvedCount = unresolvedCount;
+            }
+
+            public int AvatarScanCount { get; }
+            public int FullControllerCount { get; }
+            public int PromotedParameterCount { get; }
+            public int RestoredCount { get; }
+            public int UnresolvedCount { get; }
+        }
+
         internal readonly struct RestoreReport
         {
             public RestoreReport(int restoredCount, int unresolvedCount, bool malformedPayload)
@@ -202,8 +245,34 @@ namespace ASMLite.Editor
         {
             // If a previous build request crashed or skipped delayCall restore, clean it before mutating again.
             var staleCleanup = RestorePendingMutations(warnOnNoData: false);
+            return EnrollDescriptors(FindAsmLiteAvatarDescriptors(), staleCleanup, RestoreScheduling.Delayed);
+        }
 
-            var descriptors = FindAsmLiteAvatarDescriptors();
+        internal static EnrollmentReport EnrollAvatarForPreprocess(GameObject avatarRoot)
+        {
+            // Play Mode enters through OnPreprocessAvatar without a preceding SDK build-request event.
+            // Enroll the avatar currently being preprocessed so VRCFury consumes deterministic globals.
+            var staleCleanup = RestorePendingMutations(warnOnNoData: false);
+            CancelDelayedRestoreQueue();
+            var descriptors = new List<VRCAvatarDescriptor>(1);
+            var descriptor = avatarRoot != null ? avatarRoot.GetComponent<VRCAvatarDescriptor>() : null;
+            if (descriptor != null && HasAsmLiteScope(descriptor.gameObject))
+                descriptors.Add(descriptor);
+
+            return EnrollDescriptors(descriptors, staleCleanup, RestoreScheduling.Delayed);
+        }
+
+        private enum RestoreScheduling
+        {
+            Delayed,
+        }
+
+        private static EnrollmentReport EnrollDescriptors(
+            IReadOnlyList<VRCAvatarDescriptor> descriptors,
+            RestoreReport staleCleanup,
+            RestoreScheduling restoreScheduling)
+        {
+            int descriptorCount = descriptors?.Count ?? 0;
             int candidateCount = 0;
             int enrolledCount = 0;
             int preReservedNameCount = 0;
@@ -211,7 +280,7 @@ namespace ASMLite.Editor
             int candidateCollisionAdjustments = 0;
             var allMutations = new List<ToggleMutationRecord>();
 
-            for (int i = 0; i < descriptors.Count; i++)
+            for (int i = 0; i < descriptorCount; i++)
             {
                 var descriptor = descriptors[i];
                 if (descriptor == null)
@@ -247,17 +316,18 @@ namespace ASMLite.Editor
             if (allMutations.Count > 0)
             {
                 PersistPendingRestoreRecords(allMutations);
-                QueueDelayedRestore();
+                if (restoreScheduling == RestoreScheduling.Delayed)
+                    QueueDelayedRestore();
             }
             else
             {
-                ClearPendingRestoreState();
+                SessionState.EraseString(SessionRestoreKey);
             }
 
             s_latestGlobalParamMappings = BuildLatestGlobalParamMappings(allMutations);
 
             var report = new EnrollmentReport(
-                descriptors.Count,
+                descriptorCount,
                 candidateCount,
                 enrolledCount,
                 preReservedNameCount,
@@ -287,7 +357,7 @@ namespace ASMLite.Editor
             if (!TryDeserializeMutationRecords(payload, out var records))
             {
                 Debug.LogWarning("[ASM-Lite] Toggle broker restore skipped malformed payload and cleared stale restore state.");
-                ClearPendingRestoreState();
+                SessionState.EraseString(SessionRestoreKey);
                 return new RestoreReport(0, 0, malformedPayload: true);
             }
 
@@ -308,20 +378,124 @@ namespace ASMLite.Editor
                 restoredCount++;
             }
 
-            ClearPendingRestoreState();
+            SessionState.EraseString(SessionRestoreKey);
             Debug.Log($"[ASM-Lite] Toggle broker restore complete: restored={restoredCount}, unresolved={unresolvedCount}.");
+            return new RestoreReport(restoredCount, unresolvedCount, malformedPayload: false);
+        }
+
+        internal static FullControllerGlobalEnrollmentReport EnrollFullControllerParametersForPreprocess(GameObject avatarRoot)
+        {
+            var staleRestore = RestorePendingFullControllerGlobalMutations(warnOnNoData: false);
+            int avatarCount = avatarRoot != null && HasAsmLiteScope(avatarRoot) ? 1 : 0;
+            int fullControllerCount = 0;
+            int promotedCount = 0;
+            var restoreEntries = new List<FullControllerGlobalRestoreEntry>();
+
+            if (avatarCount > 0)
+            {
+                var fullControllerType = FindTypeByFullName(DefaultFullControllerTypeFullName);
+                if (fullControllerType != null)
+                {
+                    var components = avatarRoot.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+                    for (int i = 0; i < components.Length; i++)
+                    {
+                        var component = components[i];
+                        if (component == null)
+                            continue;
+
+                        EnrollFullControllerParametersForComponent(
+                            component,
+                            avatarRoot.transform,
+                            fullControllerType,
+                            restoreEntries,
+                            ref fullControllerCount,
+                            ref promotedCount);
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[ASM-Lite] FullController parameter enrollment skipped because reflected type '{DefaultFullControllerTypeFullName}' was not found.");
+                }
+            }
+
+            if (restoreEntries.Count > 0)
+                PersistPendingFullControllerGlobalRestoreRecords(restoreEntries);
+            else
+                SessionState.EraseString(FullControllerGlobalRestoreKey);
+
+            var report = new FullControllerGlobalEnrollmentReport(
+                avatarCount,
+                fullControllerCount,
+                promotedCount,
+                staleRestore.RestoredCount,
+                staleRestore.UnresolvedCount);
+            s_latestFullControllerGlobalEnrollmentReport = report;
+
+            Debug.Log(
+                $"[ASM-Lite] FullController parameter enrollment: avatars={report.AvatarScanCount}, fullControllers={report.FullControllerCount}, promoted={report.PromotedParameterCount}, staleRestoreRestored={report.RestoredCount}, staleRestoreUnresolved={report.UnresolvedCount}.");
+
+            return report;
+        }
+
+        internal static RestoreReport RestorePendingFullControllerGlobalMutations(bool warnOnNoData = true)
+        {
+            string payload = SessionState.GetString(FullControllerGlobalRestoreKey, string.Empty);
+            if (string.IsNullOrEmpty(payload))
+            {
+                if (warnOnNoData)
+                    Debug.LogWarning("[ASM-Lite] FullController parameter restore no-op: no pending restore state was found.");
+                return new RestoreReport(0, 0, malformedPayload: false);
+            }
+
+            FullControllerGlobalRestorePayload data;
+            try
+            {
+                data = JsonUtility.FromJson<FullControllerGlobalRestorePayload>(payload);
+            }
+            catch
+            {
+                SessionState.EraseString(FullControllerGlobalRestoreKey);
+                Debug.LogWarning("[ASM-Lite] FullController parameter restore skipped malformed payload and cleared stale restore state.");
+                return new RestoreReport(0, 0, malformedPayload: true);
+            }
+
+            if (data?.entries == null)
+            {
+                SessionState.EraseString(FullControllerGlobalRestoreKey);
+                return new RestoreReport(0, 0, malformedPayload: true);
+            }
+
+            int restoredCount = 0;
+            int unresolvedCount = 0;
+            for (int i = 0; i < data.entries.Length; i++)
+            {
+                var entry = data.entries[i];
+                if (!TryRestoreFullControllerGlobalMutation(entry))
+                {
+                    unresolvedCount++;
+                    Debug.LogWarning($"[ASM-Lite] FullController parameter restore unresolved object path '{entry?.objectPath}'. Record skipped.");
+                    continue;
+                }
+
+                restoredCount++;
+            }
+
+            SessionState.EraseString(FullControllerGlobalRestoreKey);
+            Debug.Log($"[ASM-Lite] FullController parameter restore complete: restored={restoredCount}, unresolved={unresolvedCount}.");
             return new RestoreReport(restoredCount, unresolvedCount, malformedPayload: false);
         }
 
         internal static void ClearPendingRestoreState()
         {
             SessionState.EraseString(SessionRestoreKey);
+            SessionState.EraseString(FullControllerGlobalRestoreKey);
         }
 
         internal static bool HasPendingRestoreState()
         {
             string payload = SessionState.GetString(SessionRestoreKey, string.Empty);
-            return !string.IsNullOrEmpty(payload);
+            string fullControllerPayload = SessionState.GetString(FullControllerGlobalRestoreKey, string.Empty);
+            return !string.IsNullOrEmpty(payload) || !string.IsNullOrEmpty(fullControllerPayload);
         }
 
         internal static bool TryGetLatestEnrollmentReport(out EnrollmentReport report)
@@ -361,11 +535,18 @@ namespace ASMLite.Editor
             s_hasLatestEnrollmentReport = false;
             s_latestEnrollmentReport = default;
             s_latestGlobalParamMappings = Array.Empty<GlobalParamMapping>();
+            s_latestFullControllerGlobalEnrollmentReport = default;
+            CancelDelayedRestoreQueue();
         }
 
         internal static void ExecuteDelayedRestoreNowForTests()
         {
             OnDelayedRestore();
+        }
+
+        internal static bool IsDelayedRestoreQueuedForTests()
+        {
+            return s_restoreDelayQueued;
         }
 
         internal static bool TriggerStartupRestoreForTests()
@@ -429,6 +610,96 @@ namespace ASMLite.Editor
                     continue;
 
                 CollectAssignedGlobalsForComponent(component, toggleType, result, seen);
+            }
+
+            return result;
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> DiscoverAssignedToggleExpressionParameters(GameObject avatarRoot, string toggleTypeFullName = DefaultToggleTypeFullName)
+        {
+            var result = new List<VRCExpressionParameters.Parameter>();
+            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+                return result;
+
+            var toggleType = FindTypeByFullName(toggleTypeFullName);
+            if (toggleType == null)
+                return result;
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var components = avatarRoot.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < components.Length; i++)
+            {
+                var component = components[i];
+                if (component == null)
+                    continue;
+
+                CollectAssignedExpressionParametersForComponent(component, toggleType, result, seen);
+            }
+
+            return result;
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> DiscoverPlannedToggleExpressionParameters(
+            GameObject avatarRoot,
+            VRCAvatarDescriptor descriptor = null,
+            string toggleTypeFullName = DefaultToggleTypeFullName)
+        {
+            var result = new List<VRCExpressionParameters.Parameter>();
+            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+                return result;
+
+            var candidates = DiscoverEligibleToggleCandidates(avatarRoot, toggleTypeFullName);
+            if (candidates.Count == 0)
+                return result;
+
+            if (descriptor == null)
+                descriptor = avatarRoot.GetComponent<VRCAvatarDescriptor>();
+
+            var preReservedNames = BuildPreReservedDescriptorNames(descriptor, out _);
+            string[] plannedNames = PlanDeterministicGlobalNames(
+                candidates,
+                preReservedNames,
+                out _,
+                out _);
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < candidates.Count && i < plannedNames.Length; i++)
+            {
+                var candidate = candidates[i];
+                string plannedName = plannedNames[i];
+                if (string.IsNullOrWhiteSpace(plannedName))
+                    continue;
+
+                plannedName = plannedName.Trim();
+                if (!seen.Add(plannedName))
+                    continue;
+
+                var so = new SerializedObject(candidate.Component);
+                result.Add(BuildAssignedExpressionParameter(so, candidate.TogglePropertyPath, plannedName));
+            }
+
+            return result;
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> DiscoverStableFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName)
+        {
+            var result = new List<VRCExpressionParameters.Parameter>();
+            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+                return result;
+
+            var fullControllerType = FindTypeByFullName(fullControllerTypeFullName);
+            if (fullControllerType == null)
+                return result;
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var components = avatarRoot.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < components.Length; i++)
+            {
+                var component = components[i];
+                if (component == null)
+                    continue;
+
+                CollectStableFullControllerExpressionParametersForComponent(component, fullControllerType, result, seen);
             }
 
             return result;
@@ -753,7 +1024,12 @@ namespace ASMLite.Editor
 
             try
             {
-                var restore = RestorePendingMutations(warnOnNoData: false);
+                var toggleRestore = RestorePendingMutations(warnOnNoData: false);
+                var fullControllerRestore = RestorePendingFullControllerGlobalMutations(warnOnNoData: false);
+                var restore = new RestoreReport(
+                    toggleRestore.RestoredCount + fullControllerRestore.RestoredCount,
+                    toggleRestore.UnresolvedCount + fullControllerRestore.UnresolvedCount,
+                    toggleRestore.MalformedPayload || fullControllerRestore.MalformedPayload);
                 if (restore.MalformedPayload)
                 {
                     Debug.LogWarning("[ASM-Lite] Toggle broker startup restore skipped malformed payload and cleared stale restore state.");
@@ -783,6 +1059,15 @@ namespace ASMLite.Editor
 
             s_restoreDelayQueued = true;
             EditorApplication.delayCall += OnDelayedRestore;
+        }
+
+        private static void CancelDelayedRestoreQueue()
+        {
+            if (!s_restoreDelayQueued)
+                return;
+
+            EditorApplication.delayCall -= OnDelayedRestore;
+            s_restoreDelayQueued = false;
         }
 
         private static void OnDelayedRestore()
@@ -904,6 +1189,432 @@ namespace ASMLite.Editor
             } while (iterator.NextVisible(true));
         }
 
+        private static void CollectStableFullControllerExpressionParametersForComponent(Component component, Type fullControllerType, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen)
+        {
+            if (component == null || fullControllerType == null || result == null || seen == null)
+                return;
+
+            var so = new SerializedObject(component);
+            var iterator = so.GetIterator();
+            if (!iterator.NextVisible(true))
+                return;
+
+            var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+            do
+            {
+                if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                    continue;
+
+                if (!IsManagedReferenceOfType(iterator, fullControllerType))
+                    continue;
+
+                string fullControllerPropertyPath = iterator.propertyPath;
+                if (!seenPaths.Add(fullControllerPropertyPath))
+                    continue;
+
+                CollectStableFullControllerExpressionParameters(so, fullControllerPropertyPath, result, seen);
+            } while (iterator.NextVisible(true));
+        }
+
+        private static void EnrollFullControllerParametersForComponent(
+            Component component,
+            Transform avatarRoot,
+            Type fullControllerType,
+            List<FullControllerGlobalRestoreEntry> restoreEntries,
+            ref int fullControllerCount,
+            ref int promotedCount)
+        {
+            if (component == null || fullControllerType == null || restoreEntries == null)
+                return;
+
+            var so = new SerializedObject(component);
+            var iterator = so.GetIterator();
+            if (!iterator.NextVisible(true))
+                return;
+
+            var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+            do
+            {
+                if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                    continue;
+
+                if (!IsManagedReferenceOfType(iterator, fullControllerType))
+                    continue;
+
+                string fullControllerPropertyPath = iterator.propertyPath;
+                if (!seenPaths.Add(fullControllerPropertyPath))
+                    continue;
+
+                fullControllerCount++;
+                promotedCount += EnrollFullControllerParameters(
+                    so,
+                    component,
+                    avatarRoot,
+                    fullControllerPropertyPath,
+                    restoreEntries);
+            } while (iterator.NextVisible(true));
+        }
+
+        private static int EnrollFullControllerParameters(
+            SerializedObject so,
+            Component component,
+            Transform avatarRoot,
+            string fullControllerPropertyPath,
+            List<FullControllerGlobalRestoreEntry> restoreEntries)
+        {
+            var globalParamsProperty = so.FindProperty(fullControllerPropertyPath + ".globalParams");
+            if (globalParamsProperty == null || !globalParamsProperty.isArray)
+                return 0;
+
+            var desiredNames = CollectPromotableFullControllerParameterNames(so, fullControllerPropertyPath);
+            if (desiredNames.Count == 0)
+                return 0;
+
+            var existingGlobals = ReadStringArray(globalParamsProperty);
+            var mergedGlobals = new List<string>(existingGlobals);
+            var seenGlobals = new HashSet<string>(existingGlobals, StringComparer.Ordinal);
+            int addedCount = 0;
+            for (int i = 0; i < desiredNames.Count; i++)
+            {
+                string desiredName = desiredNames[i];
+                if (string.IsNullOrWhiteSpace(desiredName))
+                    continue;
+
+                if (!seenGlobals.Add(desiredName))
+                    continue;
+
+                mergedGlobals.Add(desiredName);
+                addedCount++;
+            }
+
+            if (addedCount == 0)
+                return 0;
+
+            restoreEntries.Add(new FullControllerGlobalRestoreEntry
+            {
+                componentInstanceId = component.GetInstanceID(),
+                objectPath = BuildSceneObjectPath(component.transform, avatarRoot),
+                fullControllerPropertyPath = fullControllerPropertyPath,
+                originalGlobalParams = existingGlobals.ToArray(),
+            });
+
+            WriteStringArray(globalParamsProperty, mergedGlobals);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(component);
+            return addedCount;
+        }
+
+        private static List<string> CollectPromotableFullControllerParameterNames(SerializedObject so, string fullControllerPropertyPath)
+        {
+            var result = new List<string>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+
+            var prms = so.FindProperty(fullControllerPropertyPath + ".prms");
+            if (prms != null && prms.isArray)
+            {
+                for (int i = 0; i < prms.arraySize; i++)
+                {
+                    var entry = prms.GetArrayElementAtIndex(i);
+                    if (entry == null)
+                        continue;
+
+                    var parameters = ReadGuidWrappedExpressionParameters(so, entry.propertyPath + ".parameters");
+                    CollectPromotableFullControllerParameterNames(parameters, result, seen);
+                }
+            }
+
+            var legacyParameters = ReadGuidWrappedExpressionParameters(so, fullControllerPropertyPath + ".parameters");
+            CollectPromotableFullControllerParameterNames(legacyParameters, result, seen);
+            return result;
+        }
+
+        private static void CollectPromotableFullControllerParameterNames(VRCExpressionParameters parameters, List<string> result, HashSet<string> seen)
+        {
+            if (parameters?.parameters == null || result == null || seen == null)
+                return;
+
+            for (int i = 0; i < parameters.parameters.Length; i++)
+            {
+                var parameter = parameters.parameters[i];
+                string name = parameter?.name;
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                name = name.Trim();
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(name))
+                    continue;
+                if (!IsBackableExpressionParameter(parameter))
+                    continue;
+                if (seen.Add(name))
+                    result.Add(name);
+            }
+        }
+
+        private static bool IsBackableExpressionParameter(VRCExpressionParameters.Parameter parameter)
+        {
+            if (parameter == null)
+                return false;
+
+            return parameter.valueType == VRCExpressionParameters.ValueType.Bool
+                || parameter.valueType == VRCExpressionParameters.ValueType.Int
+                || parameter.valueType == VRCExpressionParameters.ValueType.Float;
+        }
+
+        private static void CollectStableFullControllerExpressionParameters(SerializedObject so, string fullControllerPropertyPath, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen)
+        {
+            if (so == null || string.IsNullOrEmpty(fullControllerPropertyPath))
+                return;
+
+            var globalPatterns = ReadStringArray(so.FindProperty(fullControllerPropertyPath + ".globalParams"));
+            bool ignoreSaved = ReadBool(so, fullControllerPropertyPath, new[] { "ignoreSaved" }, false);
+
+            var prms = so.FindProperty(fullControllerPropertyPath + ".prms");
+            if (prms != null && prms.isArray)
+            {
+                for (int i = 0; i < prms.arraySize; i++)
+                {
+                    var entry = prms.GetArrayElementAtIndex(i);
+                    if (entry == null)
+                        continue;
+
+                    var parameters = ReadGuidWrappedExpressionParameters(so, entry.propertyPath + ".parameters");
+                    CollectStableFullControllerExpressionParameters(parameters, globalPatterns, ignoreSaved, result, seen);
+                }
+            }
+
+            var legacyParameters = ReadGuidWrappedExpressionParameters(so, fullControllerPropertyPath + ".parameters");
+            CollectStableFullControllerExpressionParameters(legacyParameters, globalPatterns, ignoreSaved, result, seen);
+        }
+
+        private static void CollectStableFullControllerExpressionParameters(
+            VRCExpressionParameters parameters,
+            IReadOnlyList<string> globalPatterns,
+            bool ignoreSaved,
+            List<VRCExpressionParameters.Parameter> result,
+            HashSet<string> seen)
+        {
+            if (parameters?.parameters == null)
+                return;
+
+            for (int i = 0; i < parameters.parameters.Length; i++)
+            {
+                var parameter = parameters.parameters[i];
+                string name = parameter?.name;
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                name = name.Trim();
+                if (!IsStableFullControllerParameterName(parameter, globalPatterns))
+                    continue;
+
+                if (!seen.Add(name))
+                    continue;
+
+                result.Add(new VRCExpressionParameters.Parameter
+                {
+                    name = name,
+                    valueType = parameter.valueType,
+                    defaultValue = parameter.defaultValue,
+                    saved = ignoreSaved ? false : parameter.saved,
+                    networkSynced = parameter.networkSynced,
+                });
+            }
+        }
+
+        private static VRCExpressionParameters ReadGuidWrappedExpressionParameters(SerializedObject so, string wrapperPath)
+        {
+            if (so == null || string.IsNullOrEmpty(wrapperPath))
+                return null;
+
+            var objRef = so.FindProperty(wrapperPath + ".objRef");
+            if (objRef != null && objRef.propertyType == SerializedPropertyType.ObjectReference)
+                return objRef.objectReferenceValue as VRCExpressionParameters;
+
+            return null;
+        }
+
+        private static bool IsStableFullControllerParameterName(
+            VRCExpressionParameters.Parameter parameter,
+            IReadOnlyList<string> globalPatterns)
+        {
+            string name = parameter?.name;
+            if (string.IsNullOrWhiteSpace(name))
+                return false;
+
+            if (globalPatterns == null)
+                return false;
+
+            bool isGlobal = false;
+            for (int i = 0; i < globalPatterns.Count; i++)
+            {
+                string global = globalPatterns[i];
+                if (string.IsNullOrWhiteSpace(global))
+                    continue;
+
+                global = global.Trim();
+                bool negative = false;
+                bool wildcard = false;
+                if (global.StartsWith("!", StringComparison.Ordinal))
+                {
+                    negative = true;
+                    global = global.Substring(1);
+                }
+
+                if (global.EndsWith("*", StringComparison.Ordinal))
+                {
+                    wildcard = true;
+                    global = global.Substring(0, global.Length - 1);
+                }
+
+                if (string.Equals(name, global, StringComparison.Ordinal)
+                    || (wildcard && name.StartsWith(global, StringComparison.Ordinal)))
+                {
+                    if (negative)
+                    {
+                        isGlobal = false;
+                        break;
+                    }
+
+                    isGlobal = true;
+                }
+            }
+
+            return isGlobal;
+        }
+
+        private static List<string> ReadStringArray(SerializedProperty property)
+        {
+            var result = new List<string>();
+            if (property == null || !property.isArray)
+                return result;
+
+            for (int i = 0; i < property.arraySize; i++)
+            {
+                var element = property.GetArrayElementAtIndex(i);
+                if (element != null && element.propertyType == SerializedPropertyType.String)
+                    result.Add(element.stringValue);
+            }
+
+            return result;
+        }
+
+        private static void WriteStringArray(SerializedProperty property, IReadOnlyList<string> values)
+        {
+            if (property == null || !property.isArray)
+                return;
+
+            int count = values?.Count ?? 0;
+            property.arraySize = count;
+            for (int i = 0; i < count; i++)
+            {
+                var element = property.GetArrayElementAtIndex(i);
+                if (element != null && element.propertyType == SerializedPropertyType.String)
+                    element.stringValue = values[i] ?? string.Empty;
+            }
+        }
+
+        private static void PersistPendingFullControllerGlobalRestoreRecords(List<FullControllerGlobalRestoreEntry> records)
+        {
+            if (records == null || records.Count == 0)
+            {
+                SessionState.EraseString(FullControllerGlobalRestoreKey);
+                return;
+            }
+
+            var payload = new FullControllerGlobalRestorePayload { entries = records.ToArray() };
+            SessionState.SetString(FullControllerGlobalRestoreKey, JsonUtility.ToJson(payload));
+        }
+
+        private static bool TryRestoreFullControllerGlobalMutation(FullControllerGlobalRestoreEntry entry)
+        {
+            if (entry == null || entry.componentInstanceId == 0 || string.IsNullOrEmpty(entry.fullControllerPropertyPath))
+                return false;
+
+            var component = EditorUtility.InstanceIDToObject(entry.componentInstanceId) as Component;
+            if (component == null)
+                return false;
+
+            var so = new SerializedObject(component);
+            var globalParamsProperty = so.FindProperty(entry.fullControllerPropertyPath + ".globalParams");
+            if (globalParamsProperty == null || !globalParamsProperty.isArray)
+                return false;
+
+            WriteStringArray(globalParamsProperty, entry.originalGlobalParams ?? Array.Empty<string>());
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(component);
+            return true;
+        }
+
+        private static void CollectAssignedExpressionParametersForComponent(Component component, Type toggleType, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen)
+        {
+            if (component == null || toggleType == null || result == null || seen == null)
+                return;
+
+            var so = new SerializedObject(component);
+            var iterator = so.GetIterator();
+            if (!iterator.NextVisible(true))
+                return;
+
+            var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+            do
+            {
+                if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                    continue;
+
+                if (!IsToggleManagedReference(iterator, toggleType))
+                    continue;
+
+                string togglePropertyPath = iterator.propertyPath;
+                if (!seenPaths.Add(togglePropertyPath))
+                    continue;
+
+                if (!TryResolveToggleProperties(so, togglePropertyPath, out var useGlobalProp, out var globalParamProp))
+                    continue;
+
+                if (!useGlobalProp.boolValue)
+                    continue;
+
+                string globalParam = globalParamProp.stringValue;
+                if (string.IsNullOrWhiteSpace(globalParam))
+                    continue;
+
+                globalParam = globalParam.Trim();
+                if (!seen.Add(globalParam))
+                    continue;
+
+                result.Add(BuildAssignedExpressionParameter(so, togglePropertyPath, globalParam));
+            } while (iterator.NextVisible(true));
+        }
+
+        private static VRCExpressionParameters.Parameter BuildAssignedExpressionParameter(SerializedObject so, string togglePropertyPath, string globalParam)
+        {
+            bool slider = ReadBool(so, togglePropertyPath, s_sliderCandidateFields, false);
+            bool useInt = ReadBool(so, togglePropertyPath, s_useIntCandidateFields, false);
+            bool defaultOn = ReadBool(so, togglePropertyPath, s_defaultOnCandidateFields, false);
+            bool saved = ReadBool(so, togglePropertyPath, s_savedCandidateFields, true);
+
+            var valueType = VRCExpressionParameters.ValueType.Bool;
+            float defaultValue = defaultOn ? 1f : 0f;
+            if (slider)
+            {
+                valueType = VRCExpressionParameters.ValueType.Float;
+                defaultValue = ReadFloat(so, togglePropertyPath, s_defaultSliderValueCandidateFields, defaultValue);
+            }
+            else if (useInt)
+            {
+                valueType = VRCExpressionParameters.ValueType.Int;
+            }
+
+            return new VRCExpressionParameters.Parameter
+            {
+                name = globalParam,
+                valueType = valueType,
+                defaultValue = defaultValue,
+                saved = saved,
+                networkSynced = true,
+            };
+        }
+
         private static void CollectCandidatesForComponent(Component component, Transform avatarRoot, Type toggleType, List<ToggleCandidate> result)
         {
             var so = new SerializedObject(component);
@@ -943,7 +1654,12 @@ namespace ASMLite.Editor
 
         private static bool IsToggleManagedReference(SerializedProperty property, Type toggleType)
         {
-            if (property == null || toggleType == null)
+            return IsManagedReferenceOfType(property, toggleType);
+        }
+
+        private static bool IsManagedReferenceOfType(SerializedProperty property, Type expectedType)
+        {
+            if (property == null || expectedType == null)
                 return false;
 
             string fullTypeName = property.managedReferenceFullTypename;
@@ -956,7 +1672,7 @@ namespace ASMLite.Editor
                 return false;
 
             string qualifiedTypeName = fullTypeName.Substring(separator + 1);
-            return string.Equals(qualifiedTypeName, toggleType.FullName, StringComparison.Ordinal);
+            return string.Equals(qualifiedTypeName, expectedType.FullName, StringComparison.Ordinal);
         }
 
         private static bool TryResolveToggleProperties(SerializedObject so, string togglePropertyPath, out SerializedProperty useGlobalProp, out SerializedProperty globalParamProp)
@@ -1002,6 +1718,32 @@ namespace ASMLite.Editor
                 return string.Empty;
 
             return property.stringValue ?? string.Empty;
+        }
+
+        private static bool ReadBool(SerializedObject so, string basePath, string[] candidateSuffixes, bool fallback)
+        {
+            var property = FindPropertyBySuffix(so, basePath, candidateSuffixes);
+            if (property == null || property.propertyType != SerializedPropertyType.Boolean)
+                return fallback;
+
+            return property.boolValue;
+        }
+
+        private static float ReadFloat(SerializedObject so, string basePath, string[] candidateSuffixes, float fallback)
+        {
+            var property = FindPropertyBySuffix(so, basePath, candidateSuffixes);
+            if (property == null)
+                return fallback;
+
+            switch (property.propertyType)
+            {
+                case SerializedPropertyType.Float:
+                    return property.floatValue;
+                case SerializedPropertyType.Integer:
+                    return property.intValue;
+                default:
+                    return fallback;
+            }
         }
 
         private static string EscapeJson(string value)
@@ -1140,12 +1882,27 @@ namespace ASMLite.Editor
         }
     }
 
-    internal sealed class ASMLiteToggleBuildRequestedCallback
+    public sealed class ASMLiteTogglePreprocessAvatarCallback : IVRCSDKPreprocessAvatarCallback
+    {
+        public int callbackOrder => -10001;
+
+        public bool OnPreprocessAvatar(GameObject avatarGameObject)
+        {
+            ASMLiteToggleNameBroker.EnrollAvatarForPreprocess(avatarGameObject);
+            return true;
+        }
+    }
+
+    public sealed class ASMLiteToggleBuildRequestedCallback : IVRCSDKBuildRequestedCallback
     {
         private const string AvatarBuildTypeName = "Avatar";
 
-        // Mirrors VRC callback ordering intent when this callback is invoked by integration glue.
         public int callbackOrder => int.MinValue + 1;
+
+        public bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType)
+        {
+            return OnBuildRequested(requestedBuildType.ToString());
+        }
 
         internal bool OnBuildRequested(object requestedBuildType)
         {

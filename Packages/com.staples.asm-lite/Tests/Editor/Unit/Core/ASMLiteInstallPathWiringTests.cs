@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -216,6 +217,8 @@ namespace ASMLite.Tests.Editor
         [Test, Category("Integration")]
         public void BuildSync_PrefabInstance_UsesRoutingHelperAndClearsPrefixOverride()
         {
+            var packageGeneratedAssetsSnapshot = ASMLiteGeneratedAssetsFolderSnapshot.Capture(SuiteName);
+            var packagePrefabSnapshot = PackageAssetSnapshot.Capture(ASMLiteAssetPaths.Prefab);
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             ASMLite.Editor.ASMLiteWindow window = null;
             try
@@ -250,6 +253,8 @@ namespace ASMLite.Tests.Editor
             {
                 if (window != null)
                     UnityEngine.Object.DestroyImmediate(window);
+                packageGeneratedAssetsSnapshot.Restore();
+                packagePrefabSnapshot.Restore();
                 ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
             }
         }
@@ -431,6 +436,63 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
+            }
+        }
+
+        private sealed class PackageAssetSnapshot
+        {
+            private readonly string _assetPath;
+            private readonly bool _assetExisted;
+            private readonly byte[] _assetBytes;
+            private readonly byte[] _metaBytes;
+
+            private PackageAssetSnapshot(string assetPath, bool assetExisted, byte[] assetBytes, byte[] metaBytes)
+            {
+                _assetPath = assetPath;
+                _assetExisted = assetExisted;
+                _assetBytes = assetBytes;
+                _metaBytes = metaBytes;
+            }
+
+            internal static PackageAssetSnapshot Capture(string assetPath)
+            {
+                string fullPath = Path.GetFullPath(assetPath);
+                string metaPath = fullPath + ".meta";
+                bool assetExisted = File.Exists(fullPath);
+                return new PackageAssetSnapshot(
+                    assetPath,
+                    assetExisted,
+                    assetExisted ? File.ReadAllBytes(fullPath) : null,
+                    File.Exists(metaPath) ? File.ReadAllBytes(metaPath) : null);
+            }
+
+            internal void Restore()
+            {
+                string fullPath = Path.GetFullPath(_assetPath);
+                string metaPath = fullPath + ".meta";
+
+                if (_assetExisted)
+                {
+                    string directory = Path.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrWhiteSpace(directory))
+                        Directory.CreateDirectory(directory);
+                    File.WriteAllBytes(fullPath, _assetBytes);
+
+                    if (_metaBytes != null)
+                        File.WriteAllBytes(metaPath, _metaBytes);
+                    else if (File.Exists(metaPath))
+                        File.Delete(metaPath);
+                }
+                else
+                {
+                    AssetDatabase.DeleteAsset(_assetPath);
+                    if (File.Exists(fullPath))
+                        File.Delete(fullPath);
+                    if (File.Exists(metaPath))
+                        File.Delete(metaPath);
+                }
+
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
             }
         }
 

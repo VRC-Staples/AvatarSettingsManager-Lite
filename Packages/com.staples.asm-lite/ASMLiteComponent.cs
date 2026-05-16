@@ -46,7 +46,7 @@ namespace ASMLite
 
         /// <summary>
         /// Number of avatar expression parameter slots that ASM-Lite manages.
-        /// Informational only in S01; used by the builder in S02+.
+        /// Informational before build; used by the builder for generated slot artifacts.
         /// </summary>
         [SerializeField]
         public int slotCount = 3;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -184,7 +185,7 @@ namespace ASMLite.Editor
 
             string avatarFolder = EnsureVendorizeAvatarFolder(avatar);
             string targetDir = NormalizeAssetPath(avatarFolder + "/GeneratedAssets");
-            string stagingDir = CreateUniqueFolder(avatarFolder, "GeneratedAssets.__stage__");
+            string stagingDir = CreateUniqueFolder(avatarFolder, "GeneratedAssets__stage__");
             string backupDir = string.Empty;
             int copiedAssetCount = 0;
 
@@ -241,7 +242,7 @@ namespace ASMLite.Editor
 
                 if (AssetDatabase.IsValidFolder(targetDir))
                 {
-                    backupDir = CreateUniqueFolderName(avatarFolder, "GeneratedAssets.__backup__");
+                    backupDir = CreateUniqueFolderName(avatarFolder, "GeneratedAssets__backup__");
                     string moveTargetError = AssetDatabase.MoveAsset(targetDir, backupDir);
                     AssetDatabase.Refresh();
                     if (!string.IsNullOrEmpty(moveTargetError))
@@ -463,7 +464,7 @@ namespace ASMLite.Editor
             }
 
             string parentFolder = Path.GetDirectoryName(normalizedDir)?.Replace('\\', '/');
-            string backupDir = CreateUniqueFolderName(parentFolder, Path.GetFileName(normalizedDir) + ".__delete__");
+            string backupDir = CreateUniqueFolderName(parentFolder, Path.GetFileName(normalizedDir) + "__delete__");
             string moveError = AssetDatabase.MoveAsset(normalizedDir, backupDir);
             AssetDatabase.Refresh();
             if (!string.IsNullOrEmpty(moveError) || AssetDatabase.IsValidFolder(normalizedDir))
@@ -743,8 +744,8 @@ namespace ASMLite.Editor
                     continue;
 
                 string destinationPath = stagingDir + "/" + Path.GetFileName(sourcePath);
-                if (!AssetDatabase.CopyAsset(sourcePath, destinationPath))
-                    throw new InvalidOperationException($"Failed to stage generated asset '{sourcePath}' to '{destinationPath}'.");
+                if (!CopyGeneratedAsset(sourcePath, destinationPath, out string copyFailureReason))
+                    throw new InvalidOperationException($"Failed to stage generated asset '{sourcePath}' to '{destinationPath}'. {copyFailureReason}");
 
                 copiedAssetCount++;
             }
@@ -752,6 +753,43 @@ namespace ASMLite.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return copiedAssetCount;
+        }
+
+        private static bool CopyGeneratedAsset(string sourcePath, string destinationPath, out string failureReason)
+        {
+            failureReason = string.Empty;
+            if (AssetDatabase.CopyAsset(sourcePath, destinationPath))
+                return true;
+
+            var sourceAsset = AssetDatabase.LoadMainAssetAtPath(sourcePath);
+            if (sourceAsset == null)
+            {
+                failureReason = $"CopyAsset returned false and source asset did not load. sourceGuid='{AssetDatabase.AssetPathToGUID(sourcePath)}'.";
+                return false;
+            }
+
+            string destinationFolder = Path.GetDirectoryName(destinationPath)?.Replace('\\', '/');
+            if (string.IsNullOrWhiteSpace(destinationFolder) || !AssetDatabase.IsValidFolder(destinationFolder))
+            {
+                failureReason = $"CopyAsset returned false and clone destination folder was not valid. destinationFolder='{destinationFolder}' destinationFolderValid={AssetDatabase.IsValidFolder(destinationFolder)} sourceType='{sourceAsset.GetType().FullName}'.";
+                return false;
+            }
+
+            var clonedAsset = UnityEngine.Object.Instantiate(sourceAsset);
+            if (clonedAsset == null)
+            {
+                failureReason = $"CopyAsset returned false and Object.Instantiate returned null. sourceType='{sourceAsset.GetType().FullName}'.";
+                return false;
+            }
+
+            clonedAsset.name = sourceAsset.name;
+            AssetDatabase.CreateAsset(clonedAsset, destinationPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(destinationPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            bool destinationLoads = AssetDatabase.LoadMainAssetAtPath(destinationPath) != null;
+            if (!destinationLoads)
+                failureReason = $"CopyAsset returned false and cloned asset did not load after CreateAsset. sourceType='{sourceAsset.GetType().FullName}' destinationGuid='{AssetDatabase.AssetPathToGUID(destinationPath)}'.";
+            return destinationLoads;
         }
 
         private static bool VerifyGeneratedAssetFolder(string folderPath)
@@ -896,15 +934,28 @@ namespace ASMLite.Editor
             string normalizedParent = NormalizeAssetPath(parent).TrimEnd('/');
             string candidate = normalizedParent + "/" + child;
             if (!AssetDatabase.IsValidFolder(candidate))
+            {
                 AssetDatabase.CreateFolder(normalizedParent, child);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            if (!AssetDatabase.IsValidFolder(candidate))
+            {
+                string physicalCandidate = ResolveProjectPhysicalAssetPath(candidate);
+                Directory.CreateDirectory(physicalCandidate);
+                EnsureFolderMetaFile(physicalCandidate);
+                AssetDatabase.ImportAsset(candidate, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+
             return candidate;
         }
 
         private static string CreateUniqueFolder(string parentFolder, string prefix)
         {
             string uniqueName = CreateUniqueFolderName(parentFolder, prefix);
-            AssetDatabase.CreateFolder(parentFolder, Path.GetFileName(uniqueName));
-            AssetDatabase.Refresh();
+            string uniqueParent = Path.GetDirectoryName(uniqueName)?.Replace('\\', '/');
+            EnsureAssetFolder(uniqueParent, Path.GetFileName(uniqueName));
             return uniqueName;
         }
 
@@ -920,6 +971,34 @@ namespace ASMLite.Editor
             }
 
             return candidate;
+        }
+
+        private static void EnsureFolderMetaFile(string physicalFolderPath)
+        {
+            if (string.IsNullOrWhiteSpace(physicalFolderPath) || !Directory.Exists(physicalFolderPath))
+                return;
+
+            string trimmedPath = physicalFolderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string metaPath = trimmedPath + ".meta";
+            if (File.Exists(metaPath))
+                return;
+
+            string metaContent =
+                "fileFormatVersion: 2\n" +
+                "guid: " + Guid.NewGuid().ToString("N") + "\n" +
+                "folderAsset: yes\n" +
+                "DefaultImporter:\n" +
+                "  externalObjects: {}\n" +
+                "  userData: \n" +
+                "  assetBundleName: \n" +
+                "  assetBundleVariant: \n";
+            File.WriteAllText(metaPath, metaContent);
+        }
+
+        private static string ResolveProjectPhysicalAssetPath(string assetPath)
+        {
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            return Path.GetFullPath(Path.Combine(projectRoot ?? string.Empty, NormalizeAssetPath(assetPath)));
         }
 
         private static void DeleteAssetIfExists(string assetPath)
@@ -944,7 +1023,13 @@ namespace ASMLite.Editor
             if (!AssetDatabase.IsValidFolder(normalizedPath))
                 return;
 
-            if (AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath }).Length == 0)
+            var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Select(NormalizeAssetPath)
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                .ToArray();
+            if (childAssetPaths.Length == 0)
                 AssetDatabase.DeleteAsset(normalizedPath);
         }
 

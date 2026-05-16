@@ -235,6 +235,91 @@ namespace ASMLite.Editor
             return result;
         }
 
+        private static int MergeAssignedVrcFuryToggleParams(
+            VRCAvatarDescriptor avDesc,
+            List<VRCExpressionParameters.Parameter> discoveredParams,
+            HashSet<string> excludedCanonicalNames,
+            ref int matchedExclusionCount)
+        {
+            if (avDesc?.gameObject == null || discoveredParams == null)
+                return 0;
+
+            var existingNames = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < discoveredParams.Count; i++)
+            {
+                string existingName = discoveredParams[i]?.name;
+                if (!string.IsNullOrEmpty(existingName))
+                    existingNames.Add(existingName);
+            }
+
+            var matchedExcludedToggleNames = new HashSet<string>(StringComparer.Ordinal);
+            int addedCount = 0;
+            var assignedToggleParams = ASMLiteToggleNameBroker.DiscoverAssignedToggleExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                assignedToggleParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            var plannedToggleParams = ASMLiteToggleNameBroker.DiscoverPlannedToggleExpressionParameters(avDesc.gameObject, avDesc);
+            AddDiscoveredVrcFuryParams(
+                plannedToggleParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            var fullControllerParams = ASMLiteToggleNameBroker.DiscoverStableFullControllerExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                fullControllerParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            matchedExclusionCount += matchedExcludedToggleNames.Count;
+            return addedCount;
+        }
+
+        private static void AddDiscoveredVrcFuryParams(
+            List<VRCExpressionParameters.Parameter> sourceParams,
+            List<VRCExpressionParameters.Parameter> discoveredParams,
+            HashSet<string> existingNames,
+            HashSet<string> excludedCanonicalNames,
+            HashSet<string> matchedExcludedNames,
+            ref int addedCount)
+        {
+            if (sourceParams == null)
+                return;
+
+            for (int i = 0; i < sourceParams.Count; i++)
+            {
+                var parameter = sourceParams[i];
+                string name = parameter?.name;
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(name))
+                    continue;
+
+                if (excludedCanonicalNames != null && excludedCanonicalNames.Contains(name))
+                {
+                    matchedExcludedNames.Add(name);
+                    continue;
+                }
+
+                if (!existingNames.Add(name))
+                    continue;
+
+                discoveredParams.Add(parameter);
+                addedCount++;
+            }
+        }
+
         internal static ParameterExclusionReport ResolveParameterExclusions(ASMLiteComponent component, int matchedCount)
         {
             if (component == null || !component.useParameterExclusions)
@@ -418,6 +503,16 @@ namespace ASMLite.Editor
             var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
 
             var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out int matchedExclusionCount);
+            int assignedVrcFuryToggleParamCount = MergeAssignedVrcFuryToggleParams(
+                avDesc,
+                discoveredParams,
+                expandedExcludedNames,
+                ref matchedExclusionCount);
+
+            if (assignedVrcFuryToggleParamCount > 0)
+            {
+                Debug.Log($"[ASM-Lite] Included {assignedVrcFuryToggleParamCount} VRCFury parameter(s) before VRCFury bake.");
+            }
 
             if (exclusionReport.Enabled)
             {

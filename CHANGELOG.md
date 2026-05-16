@@ -42,7 +42,7 @@ All notable changes to ASM-Lite are documented here.
 
 - Deterministic VRCFury Toggle global-name enrollment via broker flow (`ASM_VF_*`) with fail-closed, serialized-field-scoped mutation and build-time restore lifecycle.
 - Passive broker diagnostics surfaced in editor status/reporting to expose enrollment, collision planning, restore outcomes, and continuity mapping counters.
-- Added a fail-closed CI verification script (`Tools/ci/verify-m010-contract-tests.py`) and workflow wiring to ensure critical regression test cases are present and passing in generated NUnit XML results.
+- Added a fail-closed CI verification script and workflow wiring to ensure critical regression test cases are present and passing in generated NUnit XML results.
 
 ### Changed
 

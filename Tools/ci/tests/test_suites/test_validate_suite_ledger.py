@@ -261,6 +261,133 @@ class SuiteLedgerValidatorTests(unittest.TestCase):
         self.assertIn("AddedAfterLedger", result.stderr)
         self.assertIn("--update", result.stderr)
 
+    def test_check_detects_playmode_asmdef_that_unity_would_list_as_editmode(self) -> None:
+        self.write_test_file(
+            "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/RuntimeDiscoveryTests.cs",
+            """
+            using System.Collections;
+            using NUnit.Framework;
+            using UnityEngine.TestTools;
+
+            public sealed class RuntimeDiscoveryTests
+            {
+                [UnityTest]
+                public IEnumerator AppearsInPlayModeRunner()
+                {
+                    yield break;
+                }
+            }
+            """,
+        )
+        result = self.run_validator("--update")
+        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+        ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
+        for row in ledger["tests"]:
+            row.update({
+                "lane": "playmode-headless-review",
+                "headlessViability": "conditional-playmode-not-default-ci",
+                "honesty": "playmode-runtime-review",
+                "recommendation": "separate-playmode-lane",
+                "fixtureDependencies": [],
+                "assetSceneMutations": "none",
+                "externalProcessFilesystemEnvUsage": "Unity PlayMode runner",
+                "notes": "",
+            })
+        self.write_ledger_rows(ledger["tests"])
+        asmdef = self.root / "Packages/com.staples.asm-lite/Tests/PlayMode/ASMLite.Tests.PlayMode.asmdef"
+        asmdef.parent.mkdir(parents=True, exist_ok=True)
+        asmdef.write_text(json.dumps({
+            "name": "ASMLite.Tests.PlayMode",
+            "references": ["UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+            "includePlatforms": ["Editor"],
+        }, indent=2) + "\n", encoding="utf-8")
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("includePlatforms=[]", result.stderr)
+        self.assertIn("UnityEditor.TestRunner", result.stderr)
+
+    def test_check_detects_playmode_source_using_editmode_fixture_isolation(self) -> None:
+        self.write_test_file(
+            "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/RuntimeDiscoveryTests.cs",
+            """
+            using System.Collections;
+            using NUnit.Framework;
+            using UnityEngine.TestTools;
+            using ASMLite.Tests.Editor;
+
+            public sealed class RuntimeDiscoveryTests
+            {
+                [UnityTest]
+                public IEnumerator AppearsInPlayModeRunner()
+                {
+                    ASMLiteTestFixtures.CreateTestAvatar();
+                    yield break;
+                }
+            }
+            """,
+        )
+        result = self.run_validator("--update")
+        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+        ledger = json.loads(self.ledger.read_text(encoding="utf-8"))
+        for row in ledger["tests"]:
+            row.update({
+                "lane": "playmode-headless-review",
+                "headlessViability": "conditional-playmode-not-default-ci",
+                "honesty": "playmode-runtime-review",
+                "recommendation": "separate-playmode-lane",
+                "fixtureDependencies": [],
+                "assetSceneMutations": "none",
+                "externalProcessFilesystemEnvUsage": "Unity PlayMode runner",
+                "notes": "",
+            })
+        self.write_ledger_rows(ledger["tests"])
+        asmdef = self.root / "Packages/com.staples.asm-lite/Tests/PlayMode/ASMLite.Tests.PlayMode.asmdef"
+        asmdef.parent.mkdir(parents=True, exist_ok=True)
+        asmdef.write_text(json.dumps({
+            "name": "ASMLite.Tests.PlayMode",
+            "references": ["UnityEngine.TestRunner"],
+            "optionalUnityReferences": ["TestAssemblies"],
+            "includePlatforms": [],
+            "overrideReferences": True,
+            "precompiledReferences": ["VRCSDK3A.dll", "VRCSDK3A-Editor.dll", "VRCSDKBase.dll", "VRCSDKBase-Editor.dll"],
+        }, indent=2) + "\n", encoding="utf-8")
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("CreatePlayModeTestAvatar", result.stderr)
+        self.assertIn("RuntimeDiscoveryTests.cs", result.stderr)
+
+    def test_check_rejects_coded_method_prefixes(self) -> None:
+        coded_method = "TB" + "03_LoadsPresetWithoutLegacyPrefix"
+        self.write_test_file(
+            "Packages/com.staples.asm-lite/Tests/Editor/PrefixTests.cs",
+            f"""
+            using NUnit.Framework;
+            public sealed class PrefixTests
+            {{
+                [Test]
+                public void {coded_method}() {{}}
+            }}
+            """,
+        )
+        self.write_ledger_rows([
+            self.mirror_row(
+                file="Packages/com.staples.asm-lite/Tests/Editor/PrefixTests.cs",
+                class_name="PrefixTests",
+                method=coded_method,
+                line=6,
+            ),
+        ])
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("coded prefix", result.stderr)
+        self.assertIn(coded_method, result.stderr)
+
     def test_update_mirror_writes_sorted_rows_from_ledger(self) -> None:
         zeta = self.mirror_row(
             file="Packages/com.staples.asm-lite/Tests/Editor/ZetaTests.cs",
