@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -24,6 +25,140 @@ namespace ASMLite.Tests.Editor
     [Category("Headless")]
     internal sealed class ASMLiteBatchTestRunnerTests
     {
+        [Test]
+        public void GeneratedAssetRunRestoreCallback_RestoresAtRunStartAndRunFinish()
+        {
+            var reasons = new List<string>();
+            var callback = new ASMLiteGeneratedAssetRunRestore.CallbackForwarder(reason =>
+            {
+                reasons.Add(reason);
+                return ASMLiteGeneratedAssetRunRestore.RestoreResult.SucceededResult;
+            });
+
+            callback.RunStarted(null);
+            callback.RunFinished(null);
+
+            CollectionAssert.AreEqual(new[] { "test-run start", "test-run finish" }, reasons);
+        }
+
+        [Test]
+        public void GeneratedAssetRunRestore_RestoresTrackedGeneratedAssetsAndPrefab_AndCleansGeneratedAssetExtras()
+        {
+            RequireGitAvailable();
+
+            string tempRoot = Path.Combine(Path.GetTempPath(), "asmlite-restore-test-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempRoot);
+
+            try
+            {
+                string generatedDir = Path.Combine(tempRoot, "Packages", "com.staples.asm-lite", "GeneratedAssets");
+                string prefabDir = Path.Combine(tempRoot, "Packages", "com.staples.asm-lite", "Prefabs");
+                Directory.CreateDirectory(generatedDir);
+                Directory.CreateDirectory(prefabDir);
+
+                string fxPath = Path.Combine(generatedDir, "ASMLite_FX.controller");
+                string paramsPath = Path.Combine(generatedDir, "ASMLite_Params.asset");
+                string generatedMetaPath = generatedDir + ".meta";
+                string prefabPath = Path.Combine(prefabDir, "ASM-Lite.prefab");
+                string prefabMetaPath = prefabPath + ".meta";
+                string extraPath = Path.Combine(generatedDir, "Transient.asset");
+
+                File.WriteAllText(fxPath, "baseline fx", Encoding.UTF8);
+                File.WriteAllText(paramsPath, "baseline params", Encoding.UTF8);
+                File.WriteAllText(generatedMetaPath, "baseline generated meta", Encoding.UTF8);
+                File.WriteAllText(prefabPath, "baseline prefab", Encoding.UTF8);
+                File.WriteAllText(prefabMetaPath, "baseline prefab meta", Encoding.UTF8);
+
+                RunGitOrFail(tempRoot, "init");
+                RunGitOrFail(tempRoot, "config user.email asmlite-tests@example.invalid");
+                RunGitOrFail(tempRoot, "config user.name ASMLiteTests");
+                RunGitOrFail(tempRoot, "add Packages");
+                RunGitOrFail(tempRoot, "commit -m baseline");
+
+                File.WriteAllText(fxPath, "dirty fx", Encoding.UTF8);
+                File.WriteAllText(paramsPath, "dirty params", Encoding.UTF8);
+                File.WriteAllText(generatedMetaPath, "dirty generated meta", Encoding.UTF8);
+                File.WriteAllText(prefabPath, "dirty prefab", Encoding.UTF8);
+                File.WriteAllText(prefabMetaPath, "dirty prefab meta", Encoding.UTF8);
+                File.WriteAllText(extraPath, "transient generated artifact", Encoding.UTF8);
+
+                var result = ASMLiteGeneratedAssetRunRestore.RestoreTrackedPackageOutputs(
+                    tempRoot,
+                    "unit test",
+                    refreshAssetDatabase: false);
+
+                Assert.IsTrue(result.Succeeded, result.Message);
+                Assert.AreEqual("baseline fx", File.ReadAllText(fxPath, Encoding.UTF8));
+                Assert.AreEqual("baseline params", File.ReadAllText(paramsPath, Encoding.UTF8));
+                Assert.AreEqual("baseline generated meta", File.ReadAllText(generatedMetaPath, Encoding.UTF8));
+                Assert.AreEqual("baseline prefab", File.ReadAllText(prefabPath, Encoding.UTF8));
+                Assert.AreEqual("baseline prefab meta", File.ReadAllText(prefabMetaPath, Encoding.UTF8));
+                Assert.IsFalse(File.Exists(extraPath), "Untracked generated artifacts should be cleaned at run boundaries.");
+            }
+            finally
+            {
+                if (Directory.Exists(tempRoot))
+                    Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+
+        private static void RequireGitAvailable()
+        {
+            var result = RunProcess("git", "--version", Directory.GetCurrentDirectory());
+            if (result.ExitCode != 0)
+                Assert.Ignore("git is required for generated asset restore coverage: " + result.Output);
+        }
+
+        private static void RunGitOrFail(string workingDirectory, string arguments)
+        {
+            var result = RunProcess("git", arguments, workingDirectory);
+            Assert.AreEqual(0, result.ExitCode, result.Output);
+        }
+
+        private static ProcessResult RunProcess(string fileName, string arguments, string workingDirectory)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+
+            try
+            {
+                using (var process = Process.Start(startInfo))
+                {
+                    if (process == null)
+                        return new ProcessResult(-1, "Process did not start.");
+
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    string stderr = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+                    return new ProcessResult(process.ExitCode, stdout + stderr);
+                }
+            }
+            catch (Exception ex)
+            {
+                return new ProcessResult(-1, ex.Message);
+            }
+        }
+
+        private readonly struct ProcessResult
+        {
+            internal ProcessResult(int exitCode, string output)
+            {
+                ExitCode = exitCode;
+                Output = output ?? string.Empty;
+            }
+
+            internal int ExitCode { get; }
+            internal string Output { get; }
+        }
+
         [Test]
         public void NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors()
         {

@@ -214,6 +214,44 @@ namespace ASMLite.Tests.PlayMode
             EditorUtility.SetDirty(_ctx.AvDesc);
         }
 
+        protected void BuildAndWireExactAvatarFixture(int slotCount, params VRCExpressionParameters.Parameter[] sourceParameters)
+        {
+            sourceParameters = sourceParameters ?? Array.Empty<VRCExpressionParameters.Parameter>();
+
+            ASMLiteTestFixtures.ResetGeneratedExprParams();
+            _ctx = ASMLiteTestFixtures.CreatePlayModeTestAvatar();
+            Assert.IsNotNull(_ctx, "Runtime: fixture creation returned null context.");
+            _ctx.AvatarGo.name = TestAvatarName;
+            _ctx.Comp.slotCount = slotCount;
+            _ctx.Comp.useParameterExclusions = false;
+            _ctx.Comp.excludedParameterNames = Array.Empty<string>();
+
+            ASMLiteTestFixtures.SetExpressionParams(_ctx, sourceParameters);
+
+            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+            Assert.AreEqual(sourceParameters.Length, buildResult,
+                $"Runtime: Build should discover exactly the supplied source parameters. expected={sourceParameters.Length} got={buildResult}.");
+
+            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(generatedParams, $"Runtime: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");
+            Assert.IsTrue((generatedParams.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
+                    .Any(parameter => parameter != null && parameter.name == ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName),
+                "Runtime: generated expression params must include ASMLite_Ctrl before AV3 save/load checks.");
+
+            var generatedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(generatedController, $"Runtime: generated FX controller missing at {ASMLiteAssetPaths.FXController}.");
+
+            var mergedParams = BuildMergedParameters(_ctx.ParamsAsset, generatedParams);
+            AssetDatabase.DeleteAsset(MergedParamsPath);
+            AssetDatabase.CreateAsset(mergedParams, MergedParamsPath);
+            AssetDatabase.SaveAssets();
+
+            _ctx.AvDesc.expressionParameters = mergedParams;
+            WireFxController(_ctx.AvDesc, generatedController);
+            DisableVrcFuryPlayModeProcessing();
+            EditorUtility.SetDirty(_ctx.AvDesc);
+        }
+
         protected RealUatAvatarSetup BuildAndWireRealUatAvatarFixture(RealUatSelection selection)
         {
             Assert.IsTrue(selection.IsConfigured, "External UAT: real UAT setup requires explicit operator selection.");

@@ -3271,7 +3271,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "line": 345,
+      "line": 480,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3297,7 +3297,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "line": 313,
+      "line": 448,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3323,7 +3323,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "line": 279,
+      "line": 414,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3349,7 +3349,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildExecutionFilters_WhenNoSelectorsProvided_ReturnsSingleDefaultEditModeFilter",
-      "line": 68,
+      "line": 203,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3375,7 +3375,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "line": 207,
+      "line": 342,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3401,7 +3401,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "CanonicalSuiteMap_ExcludesBatchRunnerSelfTests",
-      "line": 86,
+      "line": 221,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3427,7 +3427,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "line": 183,
+      "line": 318,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3453,7 +3453,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "line": 195,
+      "line": 330,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3478,8 +3478,60 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
+      "method": "GeneratedAssetRunRestoreCallback_RestoresAtRunStartAndRunFinish",
+      "line": 29,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "runner-selftest-headless",
+      "headlessViability": "yes",
+      "honesty": "runner-contract-coverage",
+      "recommendation": "excluded-from-default-ci-to-avoid-batch-runner-self-selection",
+      "publicBehaviorClaim": "Generated Asset Run Restore Callback Restores At Run Start And Run Finish",
+      "fixtureDependencies": [
+        "test runner callback forwarder"
+      ],
+      "assetSceneMutations": "none-callback-only",
+      "externalProcessFilesystemEnvUsage": "none-callback-only",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.GeneratedAssetRunRestoreCallback_RestoresAtRunStartAndRunFinish",
+      "notes": "Verifies the run-boundary callback invokes restoration at both run start and run finish."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
+      "method": "GeneratedAssetRunRestore_RestoresTrackedGeneratedAssetsAndPrefab_AndCleansGeneratedAssetExtras",
+      "line": 45,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "runner-selftest-headless",
+      "headlessViability": "yes",
+      "honesty": "runner-contract-coverage",
+      "recommendation": "excluded-from-default-ci-to-avoid-batch-runner-self-selection",
+      "publicBehaviorClaim": "Generated Asset Run Restore Restores Tracked Generated Assets And Prefab And Cleans Generated Asset Extras",
+      "fixtureDependencies": [
+        "temporary git worktree with tracked generated outputs"
+      ],
+      "assetSceneMutations": "temporary-git-worktree-only",
+      "externalProcessFilesystemEnvUsage": "git-cli-and-temp-filesystem-fixture",
+      "runnerFilter": "ASMLiteBatchTestRunnerTests.GeneratedAssetRunRestore_RestoresTrackedGeneratedAssetsAndPrefab_AndCleansGeneratedAssetExtras",
+      "notes": "Verifies run-boundary restore resets tracked GeneratedAssets/prefab bytes and cleans transient generated files without touching the live project."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
+      "class": "ASMLiteBatchTestRunnerTests",
       "method": "NormalizeRun_UsesExplicitFilters_AndAppendsLegacySelectors",
-      "line": 28,
+      "line": 163,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3505,7 +3557,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "NormalizeRun_WhenNoSelectorsProvided_LeavesFiltersEmpty_AndReportsNoSelection",
-      "line": 57,
+      "line": 192,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3531,7 +3583,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "line": 384,
+      "line": 519,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3557,7 +3609,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "line": 136,
+      "line": 271,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3583,7 +3635,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces",
-      "line": 266,
+      "line": 306,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3612,7 +3664,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_AssignedVrcFuryToggleGlobal_IsBackedUpBeforeVrcFuryBake",
-      "line": 495,
+      "line": 535,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3641,7 +3693,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy",
-      "line": 734,
+      "line": 806,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3670,7 +3722,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_BrokerDeterministicNames_AreConsumedAsOpaqueSourceParams",
-      "line": 452,
+      "line": 492,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3699,7 +3751,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_DeterministicRebuild_PreservesMappedLegacyBackupAliasesForLoadContinuity",
-      "line": 786,
+      "line": 858,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3728,7 +3780,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_DuplicateDescriptorParams_DoNotDuplicateGeneratedKeysOrBreakBuild",
-      "line": 404,
+      "line": 444,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3756,37 +3808,8 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
-      "method": "Regression_FullControllerAllNonsyncedGlobalParam_IsBackedUpBeforeVrcFuryBake",
-      "line": 597,
-      "attributes": [
-        "TestFixture",
-        "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test",
-        "Category(\"Integration\")"
-      ],
-      "categories": [
-        "Headless",
-        "Integration"
-      ],
-      "lane": "integration-headless",
-      "headlessViability": "yes",
-      "honesty": "vrcfury-pipeline-integration-coverage",
-      "recommendation": "default-ci",
-      "publicBehaviorClaim": "Regression Full Controller All Nonsynced Global Param Is Backed Up Before Vrc Fury Bake",
-      "fixtureDependencies": [
-        "VRCFury pipeline fixtures"
-      ],
-      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-vrcfury-fixtures-per-test",
-      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp VRCFury descriptor cleanup, and read-only prefab fixture assertions",
-      "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_FullControllerAllNonsyncedGlobalParam_IsBackedUpBeforeVrcFuryBake",
-      "notes": "Covers VRCFury FullController allNonsyncedAreGlobal appended params before VRCFury bake; fixture isolation uses generated asset restore."
-    },
-    {
-      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
-      "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_FullControllerGlobalParam_IsBackedUpBeforeVrcFuryBake",
-      "line": 540,
+      "line": 677,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3814,8 +3837,8 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
-      "method": "Regression_PlayModePreprocess_LocalVrcFuryToggleIsBrokeredBeforeVrcFuryBake",
-      "line": 658,
+      "method": "Regression_FullControllerPrmsParam_IsPlannedAndPreprocessPromotedBeforeVrcFuryBake",
+      "line": 734,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3831,20 +3854,20 @@
       "headlessViability": "yes",
       "honesty": "vrcfury-pipeline-integration-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Regression Play Mode Preprocess Local Vrc Fury Toggle Is Brokered Before Vrc Fury Bake",
+      "publicBehaviorClaim": "Regression Full Controller Prms Param Is Planned And Preprocess Promoted Before Vrc Fury Bake",
       "fixtureDependencies": [
         "VRCFury pipeline fixtures"
       ],
       "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-vrcfury-fixtures-per-test",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp VRCFury descriptor cleanup, and read-only prefab fixture assertions",
-      "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_PlayModePreprocess_LocalVrcFuryToggleIsBrokeredBeforeVrcFuryBake",
-      "notes": "Covers VRCFury toggle parameter backup regression with isolated generated asset restore."
+      "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_FullControllerPrmsParam_IsPlannedAndPreprocessPromotedBeforeVrcFuryBake",
+      "notes": "Fixture isolation audited; VRCFury planned/preprocess enrollment coverage uses the existing generated-asset restore path."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_StaleFirstUploadSchemaLag_FirstRebuildUsesCurrentDescriptorParamSet",
-      "line": 313,
+      "line": 353,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -3872,8 +3895,66 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
+      "method": "Regression_SurfaceVrcFuryToggle_PlannedGlobal_IsGeneratedAndPreprocessEnrolled",
+      "line": 580,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "vrcfury-pipeline-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Regression Surface Vrc Fury Toggle Planned Global Is Generated And Preprocess Enrolled",
+      "fixtureDependencies": [
+        "VRCFury pipeline fixtures"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-vrcfury-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp VRCFury descriptor cleanup, and read-only prefab fixture assertions",
+      "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_SurfaceVrcFuryToggle_PlannedGlobal_IsGeneratedAndPreprocessEnrolled",
+      "notes": "Fixture isolation audited; VRCFury planned/preprocess enrollment coverage uses the existing generated-asset restore path."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
+      "class": "ASMLiteVRCFuryPipelineTests",
+      "method": "Regression_SurfaceVrcFuryToggle_PreprocessUsesBuildPlannedNameWhenAvatarRootRenamed",
+      "line": 640,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test",
+        "Category(\"Integration\")"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "vrcfury-pipeline-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Regression Surface Vrc Fury Toggle Preprocess Uses Build Planned Name When Avatar Root Renamed",
+      "fixtureDependencies": [
+        "VRCFury pipeline fixtures"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-deletes-temp-vrcfury-fixtures-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp VRCFury descriptor cleanup, and read-only prefab fixture assertions",
+      "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_SurfaceVrcFuryToggle_PreprocessUsesBuildPlannedNameWhenAvatarRootRenamed",
+      "notes": "Fixture isolation audited; regression covers cloned/root-renamed VRCFury surface-toggle preprocess matching the build-planned source name."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
+      "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_VFPickupDrift_OpaqueVFNamesRemainUnrenamedInGeneratedAssets",
-      "line": 362,
+      "line": 402,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13866,7 +13947,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
       "class": "ASMLiteAv3SaveLoadRuntimeTests",
       "method": "Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed",
-      "line": 87,
+      "line": 139,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
@@ -13915,6 +13996,33 @@
       "externalProcessFilesystemEnvUsage": "Unity PlayMode runtime state plus generated test assets under Assets/ASMLiteTests_Temp",
       "runnerFilter": "ASMLiteAv3SaveLoadRuntimeTests.Av3SaveLoadSlot1_RestoresVrcFuryBrokeredBoolToggle",
       "notes": "Dedicated PlayMode regression for VRCFury brokered bool save/load; excluded from default headless CI until runner policy and fixture requirements are settled."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
+      "class": "ASMLiteAv3SaveLoadRuntimeTests",
+      "method": "Av3SaveLoadSlot2Untouched_ResetsVrcFurySurfaceToggleAndFullControllerParam",
+      "line": 87,
+      "attributes": [
+        "TestFixture",
+        "Category(\"PlayMode\")",
+        "UnityTest"
+      ],
+      "categories": [
+        "PlayMode"
+      ],
+      "lane": "playmode-headless-review",
+      "headlessViability": "conditional-playmode-not-default-ci",
+      "honesty": "playmode-runtime-review",
+      "recommendation": "separate-playmode-lane",
+      "publicBehaviorClaim": "Av3 Save Load Slot2 Untouched Resets Vrc Fury Surface Toggle And Full Controller Param",
+      "fixtureDependencies": [
+        "canonical avatar fixture",
+        "AV3 emulator runtime fixture"
+      ],
+      "assetSceneMutations": "canonical-avatar-playmode-fixture",
+      "externalProcessFilesystemEnvUsage": "Unity PlayMode runtime state plus generated test assets under Assets/ASMLiteTests_Temp",
+      "runnerFilter": "ASMLiteAv3SaveLoadRuntimeTests.Av3SaveLoadSlot2Untouched_ResetsVrcFurySurfaceToggleAndFullControllerParam",
+      "notes": "Dedicated PlayMode AV3 save/load regression for VRCFury-backed params; excluded from default headless CI until runner policy and fixture requirements are settled."
     }
   ]
 }

@@ -281,6 +281,15 @@ namespace ASMLite.Editor
                 matchedExcludedToggleNames,
                 ref addedCount);
 
+            var plannedFullControllerParams = ASMLiteToggleNameBroker.DiscoverPlannedFullControllerExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                plannedFullControllerParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
             matchedExclusionCount += matchedExcludedToggleNames.Count;
             return addedCount;
         }

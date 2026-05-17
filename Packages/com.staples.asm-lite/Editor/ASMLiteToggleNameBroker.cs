@@ -419,9 +419,14 @@ namespace ASMLite.Editor
             }
 
             if (restoreEntries.Count > 0)
+            {
                 PersistPendingFullControllerGlobalRestoreRecords(restoreEntries);
+                QueueDelayedRestore();
+            }
             else
+            {
                 SessionState.EraseString(FullControllerGlobalRestoreKey);
+            }
 
             var report = new FullControllerGlobalEnrollmentReport(
                 avatarCount,
@@ -683,6 +688,16 @@ namespace ASMLite.Editor
 
         internal static List<VRCExpressionParameters.Parameter> DiscoverStableFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName)
         {
+            return DiscoverFullControllerExpressionParameters(avatarRoot, true, fullControllerTypeFullName);
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> DiscoverPlannedFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName)
+        {
+            return DiscoverFullControllerExpressionParameters(avatarRoot, false, fullControllerTypeFullName);
+        }
+
+        private static List<VRCExpressionParameters.Parameter> DiscoverFullControllerExpressionParameters(GameObject avatarRoot, bool requireGlobalPattern, string fullControllerTypeFullName)
+        {
             var result = new List<VRCExpressionParameters.Parameter>();
             if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
                 return result;
@@ -699,7 +714,7 @@ namespace ASMLite.Editor
                 if (component == null)
                     continue;
 
-                CollectStableFullControllerExpressionParametersForComponent(component, fullControllerType, result, seen);
+                CollectFullControllerExpressionParametersForComponent(component, fullControllerType, result, seen, requireGlobalPattern);
             }
 
             return result;
@@ -1073,7 +1088,8 @@ namespace ASMLite.Editor
         private static void OnDelayedRestore()
         {
             s_restoreDelayQueued = false;
-            RestorePendingMutations(warnOnNoData: true);
+            RestorePendingMutations(warnOnNoData: false);
+            RestorePendingFullControllerGlobalMutations(warnOnNoData: false);
         }
 
         private static void PersistPendingRestoreRecords(List<ToggleMutationRecord> records)
@@ -1189,7 +1205,7 @@ namespace ASMLite.Editor
             } while (iterator.NextVisible(true));
         }
 
-        private static void CollectStableFullControllerExpressionParametersForComponent(Component component, Type fullControllerType, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen)
+        private static void CollectFullControllerExpressionParametersForComponent(Component component, Type fullControllerType, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen, bool requireGlobalPattern)
         {
             if (component == null || fullControllerType == null || result == null || seen == null)
                 return;
@@ -1212,7 +1228,7 @@ namespace ASMLite.Editor
                 if (!seenPaths.Add(fullControllerPropertyPath))
                     continue;
 
-                CollectStableFullControllerExpressionParameters(so, fullControllerPropertyPath, result, seen);
+                CollectFullControllerExpressionParameters(so, fullControllerPropertyPath, result, seen, requireGlobalPattern);
             } while (iterator.NextVisible(true));
         }
 
@@ -1360,7 +1376,7 @@ namespace ASMLite.Editor
                 || parameter.valueType == VRCExpressionParameters.ValueType.Float;
         }
 
-        private static void CollectStableFullControllerExpressionParameters(SerializedObject so, string fullControllerPropertyPath, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen)
+        private static void CollectFullControllerExpressionParameters(SerializedObject so, string fullControllerPropertyPath, List<VRCExpressionParameters.Parameter> result, HashSet<string> seen, bool requireGlobalPattern)
         {
             if (so == null || string.IsNullOrEmpty(fullControllerPropertyPath))
                 return;
@@ -1378,20 +1394,21 @@ namespace ASMLite.Editor
                         continue;
 
                     var parameters = ReadGuidWrappedExpressionParameters(so, entry.propertyPath + ".parameters");
-                    CollectStableFullControllerExpressionParameters(parameters, globalPatterns, ignoreSaved, result, seen);
+                    CollectFullControllerExpressionParameters(parameters, globalPatterns, ignoreSaved, result, seen, requireGlobalPattern);
                 }
             }
 
             var legacyParameters = ReadGuidWrappedExpressionParameters(so, fullControllerPropertyPath + ".parameters");
-            CollectStableFullControllerExpressionParameters(legacyParameters, globalPatterns, ignoreSaved, result, seen);
+            CollectFullControllerExpressionParameters(legacyParameters, globalPatterns, ignoreSaved, result, seen, requireGlobalPattern);
         }
 
-        private static void CollectStableFullControllerExpressionParameters(
+        private static void CollectFullControllerExpressionParameters(
             VRCExpressionParameters parameters,
             IReadOnlyList<string> globalPatterns,
             bool ignoreSaved,
             List<VRCExpressionParameters.Parameter> result,
-            HashSet<string> seen)
+            HashSet<string> seen,
+            bool requireGlobalPattern)
         {
             if (parameters?.parameters == null)
                 return;
@@ -1404,7 +1421,11 @@ namespace ASMLite.Editor
                     continue;
 
                 name = name.Trim();
-                if (!IsStableFullControllerParameterName(parameter, globalPatterns))
+                if (!IsBackableExpressionParameter(parameter))
+                    continue;
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(name))
+                    continue;
+                if (requireGlobalPattern && !IsStableFullControllerParameterName(parameter, globalPatterns))
                     continue;
 
                 if (!seen.Add(name))
@@ -1832,7 +1853,7 @@ namespace ASMLite.Editor
             var cursor = current;
             while (cursor != null)
             {
-                stack.Push(cursor.name ?? "<null>");
+                stack.Push(NormalizeSceneObjectPathSegment(cursor.name ?? "<null>"));
                 if (cursor == root)
                     break;
                 cursor = cursor.parent;
@@ -1850,6 +1871,30 @@ namespace ASMLite.Editor
             }
 
             return sb.ToString();
+        }
+
+        private static string NormalizeSceneObjectPathSegment(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return name;
+
+            bool stripped;
+            do
+            {
+                stripped = false;
+                if (name.EndsWith(" (Clone)", StringComparison.Ordinal))
+                {
+                    name = name.Substring(0, name.Length - " (Clone)".Length);
+                    stripped = true;
+                }
+                else if (name.EndsWith("(Clone)", StringComparison.Ordinal))
+                {
+                    name = name.Substring(0, name.Length - "(Clone)".Length);
+                    stripped = true;
+                }
+            } while (stripped);
+
+            return string.IsNullOrEmpty(name) ? "<null>" : name;
         }
 
         private static Type FindTypeByFullName(string fullName)
@@ -1889,6 +1934,7 @@ namespace ASMLite.Editor
         public bool OnPreprocessAvatar(GameObject avatarGameObject)
         {
             ASMLiteToggleNameBroker.EnrollAvatarForPreprocess(avatarGameObject);
+            ASMLiteToggleNameBroker.EnrollFullControllerParametersForPreprocess(avatarGameObject);
             return true;
         }
     }
