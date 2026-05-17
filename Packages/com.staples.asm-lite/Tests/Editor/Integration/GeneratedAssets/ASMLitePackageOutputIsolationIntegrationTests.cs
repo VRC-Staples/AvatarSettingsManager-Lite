@@ -144,6 +144,40 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs()
+        {
+            const string aid = "PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs";
+            PreparePackageManagedAvatarForVendorize(aid);
+            AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(aid);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                aid + ": rebuild should keep the editable ASM-Lite component attached.");
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                aid + ": package-managed direct rebuild should switch the component to avatar-local generated assets after package outputs are restored.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath),
+                aid + ": rebuild should leave an avatar-local generated-assets mirror.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                aid + ": descriptor references should point at the avatar-local generated-assets mirror.");
+            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                aid + ": live FullController references should point at the avatar-local generated-assets mirror.");
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
         public void VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
         {
             PreparePackageManagedAvatarForVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
@@ -285,6 +319,54 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = Math.Max(_ctx.Comp.slotCount + 1, 2);
             EditorUtility.SetDirty(_ctx.Comp);
             AssetDatabase.SaveAssets();
+        }
+
+        private void AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(string aid)
+        {
+            int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(fxIndex, 0,
+                aid + ": setup should find the package-managed FX layer before seeding legacy generated remnants.");
+            var ctrl = _ctx.AvDesc.baseAnimationLayers[fxIndex].animatorController as AnimatorController;
+            Assert.IsNotNull(ctrl,
+                aid + ": setup should resolve the package-managed FX controller before seeding legacy generated remnants.");
+
+            ctrl.AddLayer(new AnimatorControllerLayer
+            {
+                name = "ASMLite_LegacyPrePrepLayer_" + aid,
+                defaultWeight = 1f,
+                stateMachine = new AnimatorStateMachine { name = "ASMLite_LegacyPrePrepStateMachine_" + aid }
+            });
+            ctrl.AddParameter("ASMLite_LegacyPrePrepParam_" + aid, AnimatorControllerParameterType.Float);
+            EditorUtility.SetDirty(ctrl);
+
+            var expressionParameters = _ctx.AvDesc.expressionParameters;
+            Assert.IsNotNull(expressionParameters,
+                aid + ": setup should resolve package-managed expression parameters before seeding legacy generated remnants.");
+            var existingParameters = expressionParameters.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>();
+            var updatedParameters = new VRCExpressionParameters.Parameter[existingParameters.Length + 1];
+            existingParameters.CopyTo(updatedParameters, 0);
+            updatedParameters[existingParameters.Length] = new VRCExpressionParameters.Parameter
+            {
+                name = "ASMLite_LegacyPrePrepExpr_" + aid,
+                valueType = VRCExpressionParameters.ValueType.Float,
+                defaultValue = 0.25f,
+                saved = true,
+                networkSynced = true,
+            };
+            expressionParameters.parameters = updatedParameters;
+            EditorUtility.SetDirty(expressionParameters);
+
+            Assert.IsNotNull(_ctx.AvDesc.expressionsMenu,
+                aid + ": setup should resolve the package-managed expressions menu before seeding legacy generated remnants.");
+            _ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
+            {
+                name = ASMLiteBuilder.DefaultRootControlName,
+                type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+            });
+            EditorUtility.SetDirty(_ctx.AvDesc.expressionsMenu);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
         }
 
         private static int FindFxLayerIndex(VRCAvatarDescriptor avatar)

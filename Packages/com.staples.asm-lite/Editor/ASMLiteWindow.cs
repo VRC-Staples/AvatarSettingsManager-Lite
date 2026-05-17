@@ -6238,59 +6238,66 @@ namespace ASMLite.Editor
                     return;
                 }
 
-                // Rebuild-prep contract for the reverted VF delivery path:
-                // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
-                // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
-                //    so rebuild input reflects generated assets + VF wiring only.
-                var migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
-
-                if (!TryRefreshLiveInstallPathPrefix(component, "Bake"))
-                {
-                    Debug.LogError("[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
-                    return;
-                }
-
                 ASMLitePackageGeneratedOutputSnapshot packageOutputSnapshot = shouldIsolateGeneratedOutputs
                     ? ASMLitePackageGeneratedOutputSnapshot.Capture()
                     : null;
-                bool packageOutputRestoreRequired = false;
                 bool rebuildCompleted = false;
+                bool rebuildAbortedBeforeBuild = false;
+                Exception rebuildException = null;
                 Exception packageOutputRestoreException = null;
+                ASMLiteBuilder.RebuildMigrationReport migrationReport = default;
                 try
                 {
-                    packageOutputRestoreRequired = packageOutputSnapshot != null;
-                    int count = ASMLiteBuilder.Build(component);
-                    var buildDiagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
-                    if (count < 0 || buildDiagnostic == null || !buildDiagnostic.Success)
+                    // Rebuild-prep contract for the reverted VF delivery path:
+                    // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
+                    // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
+                    //    so rebuild input reflects generated assets + VF wiring only.
+                    migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
+
+                    if (!TryRefreshLiveInstallPathPrefix(component, "Bake"))
                     {
-                        Debug.LogError(buildDiagnostic != null
-                            ? buildDiagnostic.ToLogString()
-                            : "[ASM-Lite] Generated asset build failed without a specific diagnostic.");
+                        Debug.LogError("[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+                        rebuildAbortedBeforeBuild = true;
                     }
                     else
                     {
-                        _discoveredParamCount = count;
-
-                        if (!shouldIsolateGeneratedOutputs)
+                        int count = ASMLiteBuilder.Build(component);
+                        var buildDiagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
+                        if (count < 0 || buildDiagnostic == null || !buildDiagnostic.Success)
                         {
-                            rebuildCompleted = true;
+                            Debug.LogError(buildDiagnostic != null
+                                ? buildDiagnostic.ToLogString()
+                                : "[ASM-Lite] Generated asset build failed without a specific diagnostic.");
                         }
-                        else if (TryStageRebuildGeneratedAssetsToAvatarLocal(
-                            component,
-                            rebuildAvatar,
-                            wasUsingVendorizedGeneratedAssets,
-                            out string syncedDir))
+                        else
                         {
-                            rebuildCompleted = true;
-                            Debug.Log(wasUsingVendorizedGeneratedAssets
-                                ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
-                                : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                            _discoveredParamCount = count;
+
+                            if (!shouldIsolateGeneratedOutputs)
+                            {
+                                rebuildCompleted = true;
+                            }
+                            else if (TryStageRebuildGeneratedAssetsToAvatarLocal(
+                                component,
+                                rebuildAvatar,
+                                wasUsingVendorizedGeneratedAssets,
+                                out string syncedDir))
+                            {
+                                rebuildCompleted = true;
+                                Debug.Log(wasUsingVendorizedGeneratedAssets
+                                    ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
+                                    : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                            }
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    rebuildException = ex;
+                }
                 finally
                 {
-                    if (packageOutputRestoreRequired && packageOutputSnapshot != null)
+                    if (packageOutputSnapshot != null)
                     {
                         try
                         {
@@ -6309,7 +6316,13 @@ namespace ASMLite.Editor
                     return;
                 }
 
-                if (!rebuildCompleted)
+                if (rebuildException != null)
+                {
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(rebuildException).Throw();
+                    return;
+                }
+
+                if (rebuildAbortedBeforeBuild || !rebuildCompleted)
                     return;
 
                 AssetDatabase.Refresh();
