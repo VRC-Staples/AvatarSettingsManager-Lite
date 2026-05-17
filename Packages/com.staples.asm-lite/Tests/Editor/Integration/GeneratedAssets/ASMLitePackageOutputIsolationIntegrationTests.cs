@@ -299,6 +299,10 @@ namespace ASMLite.Tests.Editor
                 EditorUtility.SetDirty(_ctx.Comp);
                 AssetDatabase.SaveAssets();
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
+                int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
+                Assert.GreaterOrEqual(buildResult, 0,
+                    $"{aid}: setup package-generated asset build should succeed before vendorize.");
+                AssignPackageGeneratedAssetsToDescriptor(aid);
             }
             finally
             {
@@ -318,6 +322,30 @@ namespace ASMLite.Tests.Editor
             ASMLiteTestFixtures.AddExpressionParam(_ctx, paramName, VRCExpressionParameters.ValueType.Float, 0.5f);
             _ctx.Comp.slotCount = Math.Max(_ctx.Comp.slotCount + 1, 2);
             EditorUtility.SetDirty(_ctx.Comp);
+            AssetDatabase.SaveAssets();
+        }
+
+        private void AssignPackageGeneratedAssetsToDescriptor(string aid)
+        {
+            var expressionParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var expressionsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var fxController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            Assert.IsNotNull(expressionParameters,
+                aid + ": setup should load package-generated expression parameters.");
+            Assert.IsNotNull(expressionsMenu,
+                aid + ": setup should load package-generated expressions menu.");
+            Assert.IsNotNull(fxController,
+                aid + ": setup should load package-generated FX controller.");
+
+            int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
+            Assert.GreaterOrEqual(fxIndex, 0,
+                aid + ": setup should find the FX layer before assigning package-generated outputs.");
+            var fxLayer = _ctx.AvDesc.baseAnimationLayers[fxIndex];
+            fxLayer.animatorController = fxController;
+            _ctx.AvDesc.baseAnimationLayers[fxIndex] = fxLayer;
+            _ctx.AvDesc.expressionParameters = expressionParameters;
+            _ctx.AvDesc.expressionsMenu = expressionsMenu;
+            EditorUtility.SetDirty(_ctx.AvDesc);
             AssetDatabase.SaveAssets();
         }
 
