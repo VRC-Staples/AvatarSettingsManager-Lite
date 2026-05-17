@@ -12,18 +12,15 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteUploadPreprocessCleanupStrategyTests
     {
         [Test]
-        public void UploadPreprocess_CallbackOrdersMatchKnownSdkSequence()
+        public void UploadPreprocess_CallbackOrdersMatchAsmLiteBoundaries()
         {
             var buildRequested = new ASMLite.Editor.ASMLiteToggleBuildRequestedCallback();
             var togglePreprocess = new ASMLite.Editor.ASMLiteTogglePreprocessAvatarCallback();
-            int sdkComponentPreprocessOrder = ResolveSdkComponentPreprocessCallbackOrder();
 
             Assert.AreEqual(int.MinValue + 1, buildRequested.callbackOrder,
                 "build-request enrollment must stay immediately after the SDK/VRCFury int.MinValue guard slot.");
             Assert.AreEqual(-10001, togglePreprocess.callbackOrder,
                 "toggle enrollment must stay at the neighboring SDK preprocess boundary used around VRCFury/NDMF hooks.");
-            Assert.AreEqual(-2048, sdkComponentPreprocessOrder,
-                "the SDK component-preprocess bridge order is the boundary where IPreprocessCallbackBehaviour components run.");
 
             var go = new GameObject("ASMLiteUploadPreprocessOrder");
             try
@@ -39,34 +36,13 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void VrChatSdk_PostprocessAvatarCallback_IsAvailableForDeferredCleanup()
+        public void VrChatSdk_PostprocessAvatarCallback_IsNotAvailableForDeferredCleanup()
         {
-            var postprocessType = typeof(IVRCSDKPostprocessAvatarCallback);
+            var postprocessType = GetLoadableTypes()
+                .FirstOrDefault(type => string.Equals(type.Name, "IVRCSDKPostprocessAvatarCallback", StringComparison.Ordinal));
 
-            var orderedProperty = postprocessType.GetProperty("callbackOrder")
-                ?? postprocessType.GetInterfaces()
-                    .Select(type => type.GetProperty("callbackOrder"))
-                    .FirstOrDefault(property => property != null);
-
-            Assert.IsNotNull(orderedProperty,
-                "postprocess callbacks expose callbackOrder and can be sorted after other SDK postprocess cleanup.");
-            Assert.IsNotNull(postprocessType.GetMethod("OnPostprocessAvatar", Type.EmptyTypes),
-                "postprocess avatar callbacks expose a no-argument cleanup hook after avatar preprocessing.");
-        }
-
-        private static int ResolveSdkComponentPreprocessCallbackOrder()
-        {
-            Type bridgeType = GetLoadableTypes()
-                .FirstOrDefault(type => string.Equals(type.Name, "PreprocessCallbackBehaviours", StringComparison.Ordinal));
-            Assert.IsNotNull(bridgeType,
-                "VRCSDKBase-Editor should provide the component-preprocess bridge that invokes IPreprocessCallbackBehaviour components.");
-
-            var callback = Activator.CreateInstance(bridgeType, nonPublic: true);
-            var orderProperty = bridgeType.GetProperty("callbackOrder");
-            Assert.IsNotNull(orderProperty,
-                "the component-preprocess bridge must expose callbackOrder through the SDK ordered callback contract.");
-
-            return (int)orderProperty.GetValue(callback);
+            Assert.IsNull(postprocessType,
+                "this SDK does not expose a postprocess-avatar callback; package-output cleanup must remain covered by preprocess/lifecycle restore paths.");
         }
 
         private static IEnumerable<Type> GetLoadableTypes()
