@@ -402,6 +402,7 @@ namespace ASMLite.Tests.Editor
                 DeleteFixtureFolderIfEmpty(avatarFolder);
             }
 
+            DeleteEmptyFixtureDirectoryTree("Assets/ASM-Lite");
             DeleteFixtureFolderIfEmpty("Assets/ASM-Lite");
         }
 
@@ -431,19 +432,46 @@ namespace ASMLite.Tests.Editor
         private static void DeleteFixtureFolderIfEmpty(string assetFolderPath)
         {
             string normalizedPath = NormalizeAssetPath(assetFolderPath);
-            if (string.IsNullOrEmpty(normalizedPath) || !AssetDatabase.IsValidFolder(normalizedPath))
+            if (string.IsNullOrEmpty(normalizedPath))
                 return;
 
-            var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(NormalizeAssetPath)
-                .Where(path => !string.IsNullOrEmpty(path))
-                .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
-                .ToArray();
-            if (childAssetPaths.Length != 0)
+            bool isValidAssetFolder = AssetDatabase.IsValidFolder(normalizedPath);
+            bool existsOnDisk = Directory.Exists(normalizedPath);
+            if (!isValidAssetFolder && !existsOnDisk)
+                return;
+
+            if (isValidAssetFolder)
+            {
+                var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .Select(NormalizeAssetPath)
+                    .Where(path => !string.IsNullOrEmpty(path))
+                    .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                    .ToArray();
+                if (childAssetPaths.Length != 0)
+                    return;
+            }
+
+            if (existsOnDisk && Directory.EnumerateFileSystemEntries(normalizedPath).Any())
                 return;
 
             DeleteFixtureAssetPath(normalizedPath);
+        }
+
+        private static void DeleteEmptyFixtureDirectoryTree(string assetFolderPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetFolderPath);
+            if (string.IsNullOrEmpty(normalizedPath) || !Directory.Exists(normalizedPath))
+                return;
+
+            var directories = Directory.GetDirectories(normalizedPath, "*", SearchOption.AllDirectories)
+                .Select(NormalizeAssetPath)
+                .OrderByDescending(path => path.Length)
+                .ToList();
+            directories.Add(normalizedPath);
+
+            foreach (var directory in directories)
+                DeleteFixtureFolderIfEmpty(directory);
         }
 
         private static string NormalizeAssetPath(string assetPath)

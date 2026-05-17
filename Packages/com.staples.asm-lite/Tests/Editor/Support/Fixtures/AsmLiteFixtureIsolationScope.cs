@@ -66,6 +66,7 @@ namespace ASMLite.Tests.Editor
                 DeleteFixtureAssetPath(leakedAssetPath);
             }
 
+            DeleteEmptyFixtureDirectoryTree("Assets/ASM-Lite");
             DeleteFixtureFolderIfEmpty("Assets/ASM-Lite");
             AssetDatabase.Refresh();
         }
@@ -184,7 +185,7 @@ namespace ASMLite.Tests.Editor
             var pathsByGuid = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var root in GeneratedAssetRoots)
             {
-                AddAssetGuid(pathsByGuid, AssetDatabase.AssetPathToGUID(root));
+                AddAssetPathGuid(pathsByGuid, root);
                 if (!AssetDatabase.IsValidFolder(root))
                     continue;
 
@@ -242,19 +243,46 @@ namespace ASMLite.Tests.Editor
         private static void DeleteFixtureFolderIfEmpty(string assetFolderPath)
         {
             string normalizedPath = NormalizeAssetPath(assetFolderPath);
-            if (string.IsNullOrEmpty(normalizedPath) || !AssetDatabase.IsValidFolder(normalizedPath))
+            if (string.IsNullOrEmpty(normalizedPath))
                 return;
 
-            var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Select(NormalizeAssetPath)
-                .Where(path => !string.IsNullOrEmpty(path))
-                .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
-                .ToArray();
-            if (childAssetPaths.Length != 0)
+            bool isValidAssetFolder = AssetDatabase.IsValidFolder(normalizedPath);
+            bool existsOnDisk = Directory.Exists(normalizedPath);
+            if (!isValidAssetFolder && !existsOnDisk)
+                return;
+
+            if (isValidAssetFolder)
+            {
+                var childAssetPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .Select(NormalizeAssetPath)
+                    .Where(path => !string.IsNullOrEmpty(path))
+                    .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                    .ToArray();
+                if (childAssetPaths.Length != 0)
+                    return;
+            }
+
+            if (existsOnDisk && Directory.EnumerateFileSystemEntries(normalizedPath).Any())
                 return;
 
             DeleteFixtureAssetPath(normalizedPath);
+        }
+
+        private static void DeleteEmptyFixtureDirectoryTree(string assetFolderPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetFolderPath);
+            if (string.IsNullOrEmpty(normalizedPath) || !Directory.Exists(normalizedPath))
+                return;
+
+            var directories = Directory.GetDirectories(normalizedPath, "*", SearchOption.AllDirectories)
+                .Select(NormalizeAssetPath)
+                .OrderByDescending(path => path.Length)
+                .ToList();
+            directories.Add(normalizedPath);
+
+            foreach (var directory in directories)
+                DeleteFixtureFolderIfEmpty(directory);
         }
 
         private static string NormalizeAssetPath(string assetPath)
@@ -262,12 +290,30 @@ namespace ASMLite.Tests.Editor
             return (assetPath ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
         }
 
+        private static void AddAssetPathGuid(Dictionary<string, string> pathsByGuid, string assetPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath))
+                return;
+            if (!AssetDatabase.IsValidFolder(normalizedPath)
+                && AssetDatabase.LoadMainAssetAtPath(normalizedPath) == null
+                && !Directory.Exists(normalizedPath)
+                && !File.Exists(normalizedPath))
+                return;
+
+            AddAssetGuid(pathsByGuid, AssetDatabase.AssetPathToGUID(normalizedPath));
+        }
+
         private static void AddAssetGuid(Dictionary<string, string> pathsByGuid, string guid)
         {
             if (string.IsNullOrEmpty(guid) || pathsByGuid.ContainsKey(guid))
                 return;
 
-            pathsByGuid.Add(guid, AssetDatabase.GUIDToAssetPath(guid));
+            string assetPath = NormalizeAssetPath(AssetDatabase.GUIDToAssetPath(guid));
+            if (string.IsNullOrEmpty(assetPath))
+                return;
+
+            pathsByGuid.Add(guid, assetPath);
         }
 
         private static Dictionary<int, string> CaptureSceneRootPathsById()
