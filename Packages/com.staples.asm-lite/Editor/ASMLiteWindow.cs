@@ -6398,10 +6398,48 @@ namespace ASMLite.Editor
             }
 
             string previousVendorizedDir = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+            bool restoredExistingVendorizedReferencesToPackage = false;
+            if (wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir))
+            {
+                var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, previousVendorizedDir);
+                if (!descriptorRestoreResult.Success)
+                {
+                    Debug.LogError(descriptorRestoreResult.ToLogString());
+                    return false;
+                }
+
+                var liveRestoreResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
+                    component,
+                    ASMLiteAssetPaths.GeneratedDir,
+                    "Rebuild Generated Assets Pre-Stage Retarget");
+                if (!liveRestoreResult.Success)
+                {
+                    Debug.LogError(liveRestoreResult.ToLogString());
+                    ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    return false;
+                }
+
+                restoredExistingVendorizedReferencesToPackage = true;
+            }
+
             var mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
             if (!mirrorResult.Success)
             {
                 Debug.LogError(mirrorResult.ToLogString());
+                if (restoredExistingVendorizedReferencesToPackage)
+                {
+                    var descriptorRollbackResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    if (!descriptorRollbackResult.Success)
+                        Debug.LogError(descriptorRollbackResult.ToLogString());
+
+                    var liveRollbackResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
+                        component,
+                        previousVendorizedDir,
+                        "Rebuild Generated Assets Pre-Stage Rollback");
+                    if (!liveRollbackResult.Success)
+                        Debug.LogError(liveRollbackResult.ToLogString());
+                }
+
                 return false;
             }
 

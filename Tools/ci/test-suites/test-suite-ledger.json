@@ -2695,9 +2695,9 @@
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests",
       "method": "AttachedVendorize_RestoreFailure_ReturnsFailure",
-      "line": 72,
+      "line": 340,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2720,14 +2720,14 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoreFailure_ReturnsFailure",
+      "runnerFilter": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoreFailure_ReturnsFailure",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests",
       "method": "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget",
-      "line": 50,
+      "line": 318,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2750,14 +2750,14 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget",
+      "runnerFilter": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests",
       "method": "AttachedVendorize_Rollback_RestoresPackageOutputs",
-      "line": 94,
+      "line": 362,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2780,14 +2780,14 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_Rollback_RestoresPackageOutputs",
+      "runnerFilter": "ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests.AttachedVendorize_Rollback_RestoresPackageOutputs",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests",
       "method": "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
-      "line": 218,
+      "line": 485,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2810,14 +2810,43 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
+      "runnerFilter": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests.PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests",
+      "method": "PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs",
+      "line": 421,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Package-managed rebuild restores pre-prep package outputs after legacy generated remnants are present.",
+      "fixtureDependencies": [
+        "package-managed ASM-Lite avatar fixture",
+        "package generated-assets and prefab snapshot"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests.PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests",
       "method": "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs",
-      "line": 188,
+      "line": 455,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2840,14 +2869,14 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs",
+      "runnerFilter": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests.PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests",
       "method": "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
-      "line": 115,
+      "line": 389,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2870,14 +2899,14 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "runnerFilter": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests.PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
-      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "class": "ASMLiteVendorizedRebuildPackageOutputIsolationIntegrationTests",
       "method": "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
-      "line": 147,
+      "line": 521,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2900,7 +2929,7 @@
       ],
       "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
-      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "runnerFilter": "ASMLiteVendorizedRebuildPackageOutputIsolationIntegrationTests.VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
       "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
     },
     {
@@ -11873,7 +11902,7 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteUploadPreprocessCleanupStrategyTests.cs",
       "class": "ASMLiteUploadPreprocessCleanupStrategyTests",
-      "method": "UploadPreprocess_CallbackOrdersMatchKnownSdkSequence",
+      "method": "UploadPreprocess_CallbackOrdersMatchAsmLiteBoundaries",
       "line": 15,
       "attributes": [
         "TestFixture",
@@ -11887,20 +11916,20 @@
       "headlessViability": "yes",
       "honesty": "upload-preprocess-callback-order-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Upload Preprocess Callback Orders Match Known Sdk Sequence",
+      "publicBehaviorClaim": "Upload preprocess callback ordering matches ASM-Lite cleanup boundaries.",
       "fixtureDependencies": [
         "VRChat SDK build callback types"
       ],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "reflection over loaded VRChat SDK editor callback types and a temporary GameObject destroyed during the test",
-      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.UploadPreprocess_CallbackOrdersMatchKnownSdkSequence",
+      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.UploadPreprocess_CallbackOrdersMatchAsmLiteBoundaries",
       "notes": "Classified during package-output isolation audit; validates deferred cleanup strategy inputs without mutating package outputs."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteUploadPreprocessCleanupStrategyTests.cs",
       "class": "ASMLiteUploadPreprocessCleanupStrategyTests",
-      "method": "VrChatSdk_PostprocessAvatarCallback_IsAvailableForDeferredCleanup",
-      "line": 42,
+      "method": "VrChatSdk_PostprocessAvatarCallback_IsNotAvailableForDeferredCleanup",
+      "line": 39,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11913,13 +11942,13 @@
       "headlessViability": "yes",
       "honesty": "upload-preprocess-callback-order-coverage",
       "recommendation": "default-ci",
-      "publicBehaviorClaim": "Vr Chat Sdk Postprocess Avatar Callback Is Available For Deferred Cleanup",
+      "publicBehaviorClaim": "VRChat SDK postprocess avatar callback is not available early enough for deferred cleanup.",
       "fixtureDependencies": [
         "VRChat SDK build callback types"
       ],
       "assetSceneMutations": "none",
       "externalProcessFilesystemEnvUsage": "reflection over loaded VRChat SDK editor callback types and a temporary GameObject destroyed during the test",
-      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.VrChatSdk_PostprocessAvatarCallback_IsAvailableForDeferredCleanup",
+      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.VrChatSdk_PostprocessAvatarCallback_IsNotAvailableForDeferredCleanup",
       "notes": "Classified during package-output isolation audit; validates deferred cleanup strategy inputs without mutating package outputs."
     },
     {
@@ -12341,8 +12370,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
+      "method": "EditorStateInvalidation_ClearsCachedParameterBackupDiscovery",
+      "line": 852,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "implementation-coupled-window-cache-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Editor state invalidation clears stale parameter-backup and install-path discovery caches.",
+      "fixtureDependencies": [
+        "window model fixtures"
+      ],
+      "assetSceneMutations": "in-memory ScriptableObject window cache fields only",
+      "externalProcessFilesystemEnvUsage": "none",
+      "runnerFilter": "ASMLiteWindowCustomizationTests.EditorStateInvalidation_ClearsCachedParameterBackupDiscovery",
+      "notes": "Classified during ledger refresh; uses private cache fields because the contract is cache invalidation after avatar graph changes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
+      "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_AllSlots_UpdatesEverySlotIconFixture",
-      "line": 579,
+      "line": 580,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12368,7 +12423,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_FirstSlotOnly_UpdatesOnlyFirstSlotIconFixture",
-      "line": 540,
+      "line": 541,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12394,7 +12449,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_FullPack_UpdatesRootSlotAndActionIconFixtures",
-      "line": 646,
+      "line": 647,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12420,7 +12475,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_MultiColorDefault_ReportsBuiltInModeWithNoCustomFixtures",
-      "line": 447,
+      "line": 448,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12446,7 +12501,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_RootOnly_UpdatesOnlyRootIconFixture",
-      "line": 508,
+      "line": 509,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12472,7 +12527,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_SameColor_ReportsSelectedGearIndexWithoutCustomFixtures",
-      "line": 479,
+      "line": 480,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12499,7 +12554,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_SaveOnlyAction_UpdatesOnlySaveActionIconFixture",
-      "line": 613,
+      "line": 614,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12525,7 +12580,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "IconAutomation_UnknownFixtureId_ThrowsBeforeChangingAttachedIconState",
-      "line": 680,
+      "line": 681,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12551,7 +12606,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_AllPresets_UpdatesEveryPresetName",
-      "line": 305,
+      "line": 306,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12577,7 +12632,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_DefaultGateOff_LeavesEffectiveNamesAtDefaults",
-      "line": 184,
+      "line": 185,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12603,7 +12658,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_FirstPresetOnly_UpdatesOnlyFirstPresetName",
-      "line": 262,
+      "line": 263,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12629,7 +12684,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_FullPack_UpdatesRootPresetAndActionLabels",
-      "line": 395,
+      "line": 396,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12655,7 +12710,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_RootOnly_UpdatesRootAcrossPendingAndAttachedSnapshots",
-      "line": 223,
+      "line": 224,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12681,7 +12736,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "NamingAutomation_SaveOnlyActionLabel_UpdatesOnlySaveLabel",
-      "line": 352,
+      "line": 353,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12707,7 +12762,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_DefaultSelectionKeepsBackupCustomizationDisabled",
-      "line": 717,
+      "line": 718,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12733,7 +12788,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_ExactNamesNormalizeAndDisable",
-      "line": 934,
+      "line": 972,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12759,7 +12814,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_ExactVisibleNamesPreserveOrder",
-      "line": 818,
+      "line": 819,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12785,7 +12840,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_FirstTwoPresetStoresVisibleOptions",
-      "line": 790,
+      "line": 791,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12811,7 +12866,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_NonePresetEnablesEmptyExclusions",
-      "line": 738,
+      "line": 739,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12837,7 +12892,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_PresetIdNormalizesSnapshots",
-      "line": 875,
+      "line": 913,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12863,7 +12918,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "ParameterBackupAutomation_SingleVisiblePreset_StoresFirstVisibleExclusion",
-      "line": 764,
+      "line": 765,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12889,7 +12944,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "PendingCustomizationSnapshotForAutomation_ReportsSelectedAvatarSlotCount",
-      "line": 164,
+      "line": 165,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12915,7 +12970,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "SelectingAvatar_AdoptsMoveMenuInstallPathAndRemovesMoveComponent",
-      "line": 1234,
+      "line": 1272,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12941,7 +12996,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "SelectingAvatar_DoesNotAdoptMalformedMoveMenuDestinationOrRemoveHelper",
-      "line": 1284,
+      "line": 1322,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12967,7 +13022,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "SelectingAvatar_LoadsPersistedCustomizationFromComponent",
-      "line": 69,
+      "line": 70,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12993,7 +13048,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "SelectingDifferentAvatar_RefreshesCustomizationSnapshot",
-      "line": 102,
+      "line": 103,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13019,7 +13074,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "SetSlotCountForAutomation_UpdatesPendingCustomizationSnapshot",
-      "line": 144,
+      "line": 145,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13047,7 +13102,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleBackupOptions_IncludeReferencedParameterAssets",
-      "line": 1031,
+      "line": 1069,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13073,7 +13128,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleBackupOptions_PreferDeterministicToggleAlias",
-      "line": 994,
+      "line": 1032,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13099,7 +13154,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleInstallPathOptions_ExcludeAsmLitePresetsBranchAcrossRootNameReloads",
-      "line": 1161,
+      "line": 1199,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13125,7 +13180,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleInstallPathOptions_IncludeMoveMenuDestinationHierarchy",
-      "line": 1131,
+      "line": 1169,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13151,7 +13206,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleInstallPathOptions_ReflectMoveMenuDestinations",
-      "line": 1089,
+      "line": 1127,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -13177,7 +13232,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",
       "class": "ASMLiteWindowCustomizationTests",
       "method": "VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake",
-      "line": 851,
+      "line": 889,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",

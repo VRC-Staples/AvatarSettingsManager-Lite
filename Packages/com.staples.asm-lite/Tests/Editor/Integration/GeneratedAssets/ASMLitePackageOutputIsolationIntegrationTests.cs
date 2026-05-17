@@ -14,12 +14,9 @@ using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
 {
-    [TestFixture]
-    [Category("Headless")]
-    [Category("Integration")]
-    public class ASMLitePackageOutputIsolationIntegrationTests
+    public abstract class ASMLitePackageOutputIsolationIntegrationTestBase
     {
-        private AsmLiteTestContext _ctx;
+        protected AsmLiteTestContext _ctx;
         private ASMLitePackageGeneratedOutputSnapshot _packageOutputSnapshot;
 
         [SetUp]
@@ -46,239 +43,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test]
-        public void AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget()
-        {
-            PreparePackageManagedAvatarForVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget_AddedParam");
-
-            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
-
-            Assert.IsTrue(result.Success,
-                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should succeed for a valid package-managed avatar.");
-            Assert.IsNotNull(result.MirrorResult,
-                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should report the avatar-local generated-assets mirror.");
-            Assert.IsTrue(AssetDatabase.IsValidFolder(result.MirrorResult.TargetPath),
-                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorized mirror folder should exist after successful vendorize.");
-            AssertDescriptorGeneratedAssetReferencesUnderPrefix(result.MirrorResult.TargetPath,
-                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: descriptor references should remain on avatar-local generated assets after package outputs are restored.");
-            AssertLiveFullControllerReferencesUnderPrefix(result.MirrorResult.TargetPath,
-                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: live FullController references should remain on avatar-local generated assets after package outputs are restored.");
-            baseline.AssertMatches("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
-        }
-
-        [Test]
-        public void AttachedVendorize_RestoreFailure_ReturnsFailure()
-        {
-            PreparePackageManagedAvatarForVendorize("AttachedVendorize_RestoreFailure_ReturnsFailure");
-            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_RestoreFailure_ReturnsFailure_AddedParam");
-
-            ASMLiteLifecycleTransactionResult result;
-            using (ASMLitePackageGeneratedOutputSnapshot.PushRestoreFailureForTesting("Injected package-output restore failure for attached vendorize isolation coverage."))
-                result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
-
-            Assert.IsFalse(result.Success,
-                "AttachedVendorize_RestoreFailure_ReturnsFailure: vendorize should fail closed when package-output restore fails.");
-            Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
-                "AttachedVendorize_RestoreFailure_ReturnsFailure: restore failure should surface as an execute-stage lifecycle failure.");
-            StringAssert.Contains("package generated output", result.Message.ToLowerInvariant(),
-                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure message should identify package generated outputs.");
-            StringAssert.Contains(ASMLiteAssetPaths.GeneratedDir, result.ContextPath,
-                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the generated-assets package path.");
-            StringAssert.Contains(ASMLiteAssetPaths.Prefab, result.ContextPath,
-                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the package prefab path.");
-        }
-
-        [Test]
-        public void AttachedVendorize_Rollback_RestoresPackageOutputs()
-        {
-            PreparePackageManagedAvatarForVendorize("AttachedVendorize_Rollback_RestoresPackageOutputs");
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_Rollback_RestoresPackageOutputs_AddedParam");
-
-            using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget))
-            {
-                var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
-                Assert.IsFalse(result.Success,
-                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize should fail closed when failure injection triggers after live retarget.");
-                Assert.IsTrue(result.RollbackAttempted,
-                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize should attempt rollback after live retarget failure.");
-                Assert.IsTrue(result.RollbackSucceeded,
-                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize rollback should restore package-managed references after live retarget failure.");
-            }
-
-            baseline.AssertMatches("AttachedVendorize_Rollback_RestoresPackageOutputs");
-        }
-
-        [Test]
-        public void PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
-        {
-            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs_AddedParam");
-
-            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                window.RebuildForAutomation();
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-
-            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-            Assert.IsNotNull(_ctx.Comp,
-                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should keep the editable ASM-Lite component attached.");
-            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
-                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: package-managed direct rebuild should switch the component to avatar-local generated assets after package outputs are restored.");
-            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath),
-                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should leave an avatar-local generated-assets mirror.");
-            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
-                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: descriptor references should point at the avatar-local generated-assets mirror.");
-            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
-                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: live FullController references should point at the avatar-local generated-assets mirror.");
-            baseline.AssertMatches("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
-        }
-
-        [Test]
-        public void PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs()
-        {
-            const string aid = "PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs";
-            PreparePackageManagedAvatarForVendorize(aid);
-            AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(aid);
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
-
-            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                window.RebuildForAutomation();
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-
-            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-            Assert.IsNotNull(_ctx.Comp,
-                aid + ": rebuild should keep the editable ASM-Lite component attached.");
-            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
-                aid + ": package-managed direct rebuild should switch the component to avatar-local generated assets after package outputs are restored.");
-            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath),
-                aid + ": rebuild should leave an avatar-local generated-assets mirror.");
-            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
-                aid + ": descriptor references should point at the avatar-local generated-assets mirror.");
-            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
-                aid + ": live FullController references should point at the avatar-local generated-assets mirror.");
-            baseline.AssertMatches(aid);
-        }
-
-        [Test]
-        public void VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
-        {
-            PreparePackageManagedAvatarForVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
-
-            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                window.VendorizeForAutomation();
-                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-                Assert.IsNotNull(_ctx.Comp,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: vendorize setup should keep the editable component attached.");
-                string vendorizedGeneratedAssetsPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
-                Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedGeneratedAssetsPath),
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: vendorize setup should create the avatar-local generated-assets mirror.");
-
-                var baseline = PackageOutputBytesSnapshot.Capture();
-                MutateGeneratedInputsBeforeVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs_AddedParam");
-
-                window.RebuildForAutomation();
-
-                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-                Assert.IsNotNull(_ctx.Comp,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should keep the editable component attached.");
-                Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should preserve vendorized generated-assets mode.");
-                Assert.AreEqual(vendorizedGeneratedAssetsPath, _ctx.Comp.vendorizedGeneratedAssetsPath,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should preserve the canonical avatar-local generated-assets path.");
-                AssertDescriptorGeneratedAssetReferencesUnderPrefix(vendorizedGeneratedAssetsPath,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: descriptor references should stay on avatar-local generated assets.");
-                AssertLiveFullControllerReferencesUnderPrefix(vendorizedGeneratedAssetsPath,
-                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: live FullController references should stay on avatar-local generated assets.");
-                baseline.AssertMatches("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs()
-        {
-            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs");
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs_AddedParam");
-            LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
-
-            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.AfterStagedCopy))
-                    window.RebuildForAutomation();
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-
-            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-            Assert.IsNotNull(_ctx.Comp,
-                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed rebuild should keep the editable component attached.");
-            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
-                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed mirror staging should not switch the component to vendorized generated-assets mode.");
-            AssertDescriptorGeneratedAssetReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed rebuild should leave descriptor references on package-managed generated assets.");
-            baseline.AssertMatches("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs");
-        }
-
-        [Test]
-        public void PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs()
-        {
-            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs");
-            var baseline = PackageOutputBytesSnapshot.Capture();
-            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs_AddedParam");
-            _ctx.AvDesc.baseAnimationLayers = null;
-            EditorUtility.SetDirty(_ctx.AvDesc);
-            AssetDatabase.SaveAssets();
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[ASM-Lite\] Package-managed rebuild aborted because avatar descriptor generated-asset references could not be safely retargeted\..*$"));
-
-            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                window.RebuildForAutomation();
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-
-            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
-            Assert.IsNotNull(_ctx.Comp,
-                "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs: invalid descriptor rebuild should keep the editable component attached.");
-            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
-                "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs: invalid descriptor rebuild should not switch generated-assets mode.");
-            baseline.AssertMatches("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs");
-        }
-
-        private void PreparePackageManagedAvatarForVendorize(string aid)
+        protected void PreparePackageManagedAvatarForVendorize(string aid)
         {
             if (_ctx.Comp != null)
                 UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
@@ -317,7 +82,7 @@ namespace ASMLite.Tests.Editor
                 $"{aid}: setup should leave live FullController references on package generated assets before vendorize.");
         }
 
-        private void MutateGeneratedInputsBeforeVendorize(string paramName)
+        protected void MutateGeneratedInputsBeforeVendorize(string paramName)
         {
             ASMLiteTestFixtures.AddExpressionParam(_ctx, paramName, VRCExpressionParameters.ValueType.Float, 0.5f);
             _ctx.Comp.slotCount = Math.Max(_ctx.Comp.slotCount + 1, 2);
@@ -325,7 +90,7 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
-        private void AssignPackageGeneratedAssetsToDescriptor(string aid)
+        protected void AssignPackageGeneratedAssetsToDescriptor(string aid)
         {
             var expressionParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             var expressionsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
@@ -349,7 +114,7 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
-        private void AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(string aid)
+        protected void AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(string aid)
         {
             int fxIndex = FindFxLayerIndex(_ctx.AvDesc);
             Assert.GreaterOrEqual(fxIndex, 0,
@@ -397,7 +162,7 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.Refresh();
         }
 
-        private static int FindFxLayerIndex(VRCAvatarDescriptor avatar)
+        protected static int FindFxLayerIndex(VRCAvatarDescriptor avatar)
         {
             if (avatar == null || avatar.baseAnimationLayers == null)
                 return -1;
@@ -411,7 +176,7 @@ namespace ASMLite.Tests.Editor
             return -1;
         }
 
-        private void AssertDescriptorGeneratedAssetReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        protected void AssertDescriptorGeneratedAssetReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
         {
             string normalizedPrefix = NormalizeAssetPath(expectedPrefix);
             Assert.IsNotNull(_ctx.AvDesc.expressionParameters,
@@ -433,7 +198,7 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " FX controller should point at the expected generated-assets prefix.");
         }
 
-        private void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        protected void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
         {
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp != null ? _ctx.Comp.gameObject : null);
             Assert.IsNotNull(vf,
@@ -462,18 +227,18 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " FullController parameters should point at the expected generated-assets prefix.");
         }
 
-        private static void AssertPathStartsWith(string assetPath, string expectedPrefix, string assertionMessage)
+        protected static void AssertPathStartsWith(string assetPath, string expectedPrefix, string assertionMessage)
         {
             Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.PathStartsWith(NormalizeAssetPath(assetPath), expectedPrefix),
                 assertionMessage + $" Expected prefix '{expectedPrefix}', actual path '{assetPath}'.");
         }
 
-        private static string NormalizeAssetPath(string assetPath)
+        protected static string NormalizeAssetPath(string assetPath)
         {
             return (assetPath ?? string.Empty).Replace('\\', '/').TrimEnd('/');
         }
 
-        private sealed class PackageOutputBytesSnapshot
+        protected sealed class PackageOutputBytesSnapshot
         {
             private readonly Dictionary<string, byte[]> _files;
 
@@ -543,4 +308,255 @@ namespace ASMLite.Tests.Editor
             }
         }
     }
+
+    [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
+    public class ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
+    {
+        [Test]
+        public void AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget()
+        {
+            PreparePackageManagedAvatarForVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget_AddedParam");
+
+            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsTrue(result.Success,
+                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should succeed for a valid package-managed avatar.");
+            Assert.IsNotNull(result.MirrorResult,
+                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should report the avatar-local generated-assets mirror.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(result.MirrorResult.TargetPath),
+                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorized mirror folder should exist after successful vendorize.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(result.MirrorResult.TargetPath,
+                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: descriptor references should remain on avatar-local generated assets after package outputs are restored.");
+            AssertLiveFullControllerReferencesUnderPrefix(result.MirrorResult.TargetPath,
+                "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: live FullController references should remain on avatar-local generated assets after package outputs are restored.");
+            baseline.AssertMatches("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
+        }
+
+        [Test]
+        public void AttachedVendorize_RestoreFailure_ReturnsFailure()
+        {
+            PreparePackageManagedAvatarForVendorize("AttachedVendorize_RestoreFailure_ReturnsFailure");
+            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_RestoreFailure_ReturnsFailure_AddedParam");
+
+            ASMLiteLifecycleTransactionResult result;
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestoreFailureForTesting("Injected package-output restore failure for attached vendorize isolation coverage."))
+                result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Success,
+                "AttachedVendorize_RestoreFailure_ReturnsFailure: vendorize should fail closed when package-output restore fails.");
+            Assert.AreEqual(ASMLiteLifecycleTransactionStage.Execute, result.FailedStage,
+                "AttachedVendorize_RestoreFailure_ReturnsFailure: restore failure should surface as an execute-stage lifecycle failure.");
+            StringAssert.Contains("package generated output", result.Message.ToLowerInvariant(),
+                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure message should identify package generated outputs.");
+            StringAssert.Contains(ASMLiteAssetPaths.GeneratedDir, result.ContextPath,
+                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the generated-assets package path.");
+            StringAssert.Contains(ASMLiteAssetPaths.Prefab, result.ContextPath,
+                "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the package prefab path.");
+        }
+
+        [Test]
+        public void AttachedVendorize_Rollback_RestoresPackageOutputs()
+        {
+            PreparePackageManagedAvatarForVendorize("AttachedVendorize_Rollback_RestoresPackageOutputs");
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("AttachedVendorize_Rollback_RestoresPackageOutputs_AddedParam");
+
+            using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget))
+            {
+                var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+                Assert.IsFalse(result.Success,
+                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize should fail closed when failure injection triggers after live retarget.");
+                Assert.IsTrue(result.RollbackAttempted,
+                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize should attempt rollback after live retarget failure.");
+                Assert.IsTrue(result.RollbackSucceeded,
+                    "AttachedVendorize_Rollback_RestoresPackageOutputs: vendorize rollback should restore package-managed references after live retarget failure.");
+            }
+
+            baseline.AssertMatches("AttachedVendorize_Rollback_RestoresPackageOutputs");
+        }
+    }
+
+    [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
+    public class ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
+    {
+        [Test]
+        public void PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
+        {
+            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs_AddedParam");
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should keep the editable ASM-Lite component attached.");
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: package-managed direct rebuild should switch the component to avatar-local generated assets after package outputs are restored.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath),
+                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should leave an avatar-local generated-assets mirror.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: descriptor references should point at the avatar-local generated-assets mirror.");
+            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: live FullController references should point at the avatar-local generated-assets mirror.");
+            baseline.AssertMatches("PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
+        }
+
+        [Test]
+        public void PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs()
+        {
+            const string aid = "PackageManagedRebuild_LegacyGeneratedRemnants_RestoresPrePrepPackageOutputs";
+            PreparePackageManagedAvatarForVendorize(aid);
+            AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(aid);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                aid + ": rebuild should keep the editable ASM-Lite component attached.");
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                aid + ": package-managed direct rebuild should switch the component to avatar-local generated assets after package outputs are restored.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath),
+                aid + ": rebuild should leave an avatar-local generated-assets mirror.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                aid + ": descriptor references should point at the avatar-local generated-assets mirror.");
+            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath,
+                aid + ": live FullController references should point at the avatar-local generated-assets mirror.");
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
+        public void PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs()
+        {
+            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs");
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs_AddedParam");
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.AfterStagedCopy))
+                    window.RebuildForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed rebuild should keep the editable component attached.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
+                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed mirror staging should not switch the component to vendorized generated-assets mode.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
+                "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs: failed rebuild should leave descriptor references on package-managed generated assets.");
+            baseline.AssertMatches("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs");
+        }
+
+        [Test]
+        public void PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs()
+        {
+            PreparePackageManagedAvatarForVendorize("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs");
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs_AddedParam");
+            _ctx.AvDesc.baseAnimationLayers = null;
+            EditorUtility.SetDirty(_ctx.AvDesc);
+            AssetDatabase.SaveAssets();
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[ASM-Lite\] Package-managed rebuild aborted because avatar descriptor generated-asset references could not be safely retargeted\..*$"));
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.RebuildForAutomation();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs: invalid descriptor rebuild should keep the editable component attached.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
+                "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs: invalid descriptor rebuild should not switch generated-assets mode.");
+            baseline.AssertMatches("PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs");
+        }
+    }
+
+    [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
+    public class ASMLiteVendorizedRebuildPackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
+    {
+        [Test]
+        public void VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
+        {
+            PreparePackageManagedAvatarForVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
+
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.VendorizeForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: vendorize setup should keep the editable component attached.");
+                string vendorizedGeneratedAssetsPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+                Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedGeneratedAssetsPath),
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: vendorize setup should create the avatar-local generated-assets mirror.");
+
+                var baseline = PackageOutputBytesSnapshot.Capture();
+                MutateGeneratedInputsBeforeVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs_AddedParam");
+
+                window.RebuildForAutomation();
+
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should keep the editable component attached.");
+                Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should preserve vendorized generated-assets mode.");
+                Assert.AreEqual(vendorizedGeneratedAssetsPath, _ctx.Comp.vendorizedGeneratedAssetsPath,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: rebuild should preserve the canonical avatar-local generated-assets path.");
+                AssertDescriptorGeneratedAssetReferencesUnderPrefix(vendorizedGeneratedAssetsPath,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: descriptor references should stay on avatar-local generated assets.");
+                AssertLiveFullControllerReferencesUnderPrefix(vendorizedGeneratedAssetsPath,
+                    "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs: live FullController references should stay on avatar-local generated assets.");
+                baseline.AssertMatches("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+    }
+
 }
