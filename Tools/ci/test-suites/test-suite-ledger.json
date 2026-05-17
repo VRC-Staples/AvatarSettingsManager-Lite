@@ -2694,6 +2694,216 @@
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "AttachedVendorize_RestoreFailure_ReturnsFailure",
+      "line": 72,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Attached Vendorize Restore Failure Returns Failure",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoreFailure_ReturnsFailure",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget",
+      "line": 50,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Attached Vendorize Restores Package Generated Outputs After Retarget",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "AttachedVendorize_Rollback_RestoresPackageOutputs",
+      "line": 94,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Attached Vendorize Rollback Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.AttachedVendorize_Rollback_RestoresPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
+      "line": 218,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Package Managed Rebuild Invalid Descriptor Warns And Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs",
+      "line": 188,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Package Managed Rebuild Mirror Failure Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "line": 115,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Package Managed Rebuild Stages Avatar Local Generated Assets And Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.PackageManagedRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLitePackageOutputIsolationIntegrationTests",
+      "method": "VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "line": 147,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Vendorized Rebuild Refreshes Avatar Local Generated Assets And Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase/window/lifecycle transaction state; package outputs restored after vendorize/rebuild failure and success flows",
+      "runnerFilter": "ASMLitePackageOutputIsolationIntegrationTests.VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "notes": "Classified during package-output isolation audit; lifecycle/window isolation coverage is Headless+Integration and validates protected package outputs return clean."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteRootMenuOverrideIntegrationTests.cs",
       "class": "ASMLiteRootMenuOverrideIntegrationTests",
       "method": "CombinedNameAndIconCustomSettings_ApplyTogetherWithoutWrapperDrift",
@@ -10621,6 +10831,84 @@
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLitePackageGeneratedOutputSnapshotTests.cs",
+      "class": "ASMLitePackageGeneratedOutputSnapshotTests",
+      "method": "CaptureRestore_RemovesNewGeneratedAssetsFiles",
+      "line": 46,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-snapshot-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Capture Restore Removes New Generated Assets Files",
+      "fixtureDependencies": [
+        "package generated-output snapshot fixture"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-prefab-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase package GeneratedAssets and package prefab byte-level mutations restored by ASMLitePackageGeneratedOutputSnapshot",
+      "runnerFilter": "ASMLitePackageGeneratedOutputSnapshotTests.CaptureRestore_RemovesNewGeneratedAssetsFiles",
+      "notes": "Classified during package-output isolation audit; core snapshot primitive coverage is headless and restores protected package outputs after each test."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLitePackageGeneratedOutputSnapshotTests.cs",
+      "class": "ASMLitePackageGeneratedOutputSnapshotTests",
+      "method": "CaptureRestore_RestoresGeneratedAssetsFolderBytes",
+      "line": 29,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-snapshot-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Capture Restore Restores Generated Assets Folder Bytes",
+      "fixtureDependencies": [
+        "package generated-output snapshot fixture"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-prefab-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase package GeneratedAssets and package prefab byte-level mutations restored by ASMLitePackageGeneratedOutputSnapshot",
+      "runnerFilter": "ASMLitePackageGeneratedOutputSnapshotTests.CaptureRestore_RestoresGeneratedAssetsFolderBytes",
+      "notes": "Classified during package-output isolation audit; core snapshot primitive coverage is headless and restores protected package outputs after each test."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLitePackageGeneratedOutputSnapshotTests.cs",
+      "class": "ASMLitePackageGeneratedOutputSnapshotTests",
+      "method": "CaptureRestore_RestoresPackagePrefabBytes",
+      "line": 60,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-snapshot-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Capture Restore Restores Package Prefab Bytes",
+      "fixtureDependencies": [
+        "package generated-output snapshot fixture"
+      ],
+      "assetSceneMutations": "snapshots-and-restores-package-generated-assets-and-prefab-per-test",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase package GeneratedAssets and package prefab byte-level mutations restored by ASMLitePackageGeneratedOutputSnapshot",
+      "runnerFilter": "ASMLitePackageGeneratedOutputSnapshotTests.CaptureRestore_RestoresPackagePrefabBytes",
+      "notes": "Classified during package-output isolation audit; core snapshot primitive coverage is headless and restores protected package outputs after each test."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBackupPresetResolverTests.cs",
       "class": "ASMLiteParameterBackupPresetResolverTests",
       "method": "ExactVisibleNames_NormalizeBeforeCompare_AndPreserveFirstSeenOrderForSnapshotStorage",
@@ -11581,6 +11869,58 @@
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteToggleBrokerTests.StartupRestore_ReplaysPendingState_AndSuppressesDuplicateQueueing",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteUploadPreprocessCleanupStrategyTests.cs",
+      "class": "ASMLiteUploadPreprocessCleanupStrategyTests",
+      "method": "UploadPreprocess_CallbackOrdersMatchKnownSdkSequence",
+      "line": 15,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "upload-preprocess-callback-order-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Upload Preprocess Callback Orders Match Known Sdk Sequence",
+      "fixtureDependencies": [
+        "VRChat SDK build callback types"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "reflection over loaded VRChat SDK editor callback types and a temporary GameObject destroyed during the test",
+      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.UploadPreprocess_CallbackOrdersMatchKnownSdkSequence",
+      "notes": "Classified during package-output isolation audit; validates deferred cleanup strategy inputs without mutating package outputs."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteUploadPreprocessCleanupStrategyTests.cs",
+      "class": "ASMLiteUploadPreprocessCleanupStrategyTests",
+      "method": "VrChatSdk_PostprocessAvatarCallback_IsAvailableForDeferredCleanup",
+      "line": 42,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "upload-preprocess-callback-order-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Vr Chat Sdk Postprocess Avatar Callback Is Available For Deferred Cleanup",
+      "fixtureDependencies": [
+        "VRChat SDK build callback types"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "reflection over loaded VRChat SDK editor callback types and a temporary GameObject destroyed during the test",
+      "runnerFilter": "ASMLiteUploadPreprocessCleanupStrategyTests.VrChatSdk_PostprocessAvatarCallback_IsAvailableForDeferredCleanup",
+      "notes": "Classified during package-output isolation audit; validates deferred cleanup strategy inputs without mutating package outputs."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowActionHierarchyTests.cs",
