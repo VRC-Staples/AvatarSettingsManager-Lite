@@ -10,11 +10,22 @@ namespace ASMLite.Editor
         private const string PackageName = "com.staples.asm-lite";
         private const string PackagePrefix = "Packages/" + PackageName + "/";
 
+        private static string s_restoreFailureMessageForTesting;
+
         private readonly RootSnapshot[] _roots;
 
         private ASMLitePackageGeneratedOutputSnapshot(RootSnapshot[] roots)
         {
             _roots = roots ?? Array.Empty<RootSnapshot>();
+        }
+
+        internal static IDisposable PushRestoreFailureForTesting(string message)
+        {
+            string previous = s_restoreFailureMessageForTesting;
+            s_restoreFailureMessageForTesting = string.IsNullOrWhiteSpace(message)
+                ? "Injected package-output restore failure."
+                : message;
+            return new ScopedRestoreFailure(() => s_restoreFailureMessageForTesting = previous);
         }
 
         internal static ASMLitePackageGeneratedOutputSnapshot Capture()
@@ -37,6 +48,9 @@ namespace ASMLite.Editor
 
         internal void Restore()
         {
+            if (!string.IsNullOrEmpty(s_restoreFailureMessageForTesting))
+                throw new InvalidOperationException(s_restoreFailureMessageForTesting);
+
             foreach (RootSnapshot root in _roots)
                 root.DeleteCurrent();
 
@@ -71,6 +85,26 @@ namespace ASMLite.Editor
             }
 
             return Path.GetFullPath(assetPath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        private sealed class ScopedRestoreFailure : IDisposable
+        {
+            private readonly Action _restore;
+            private bool _disposed;
+
+            internal ScopedRestoreFailure(Action restore)
+            {
+                _restore = restore;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+                _restore?.Invoke();
+            }
         }
 
         private sealed class RootSnapshot
