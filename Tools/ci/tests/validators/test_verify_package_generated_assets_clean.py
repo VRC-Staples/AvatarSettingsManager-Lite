@@ -14,10 +14,14 @@ VERIFIER = REPO_ROOT / "Tools/ci/validators/verify-package-generated-assets-clea
 PROTECTED_GENERATED_ASSET = Path(
     "Packages/com.staples.asm-lite/GeneratedAssets/example.asset"
 )
+PROTECTED_GENERATED_ASSETS_META = Path("Packages/com.staples.asm-lite/GeneratedAssets.meta")
 PROTECTED_PREFAB = Path("Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab")
+PROTECTED_PREFAB_META = Path("Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta")
 RECOVERY_COMMANDS = (
     "git restore -- Packages/com.staples.asm-lite/GeneratedAssets "
-    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab\n"
+    "Packages/com.staples.asm-lite/GeneratedAssets.meta "
+    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab "
+    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta\n"
     "python3 /opt/data/skills/software-development/testing/scripts/"
     "asm-lite-refresh-unity-test-project.py"
 )
@@ -38,7 +42,9 @@ class VerifyPackageGeneratedAssetsCleanTests(unittest.TestCase):
             ["git", "config", "user.name", "Tests"], cwd=self.repo, check=True
         )
         self.write_file(PROTECTED_GENERATED_ASSET, "asset-v1\n")
+        self.write_file(PROTECTED_GENERATED_ASSETS_META, "fileFormatVersion: 2\n")
         self.write_file(PROTECTED_PREFAB, "prefab-v1\n")
+        self.write_file(PROTECTED_PREFAB_META, "fileFormatVersion: 2\n")
         subprocess.run(["git", "add", "."], cwd=self.repo, check=True)
         subprocess.run(
             ["git", "commit", "-m", "seed protected outputs"],
@@ -77,6 +83,18 @@ class VerifyPackageGeneratedAssetsCleanTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Packages/com.staples.asm-lite/GeneratedAssets/example.asset", output)
         self.assertIn("Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab", output)
+        self.assertIn(RECOVERY_COMMANDS, output)
+
+    def test_reports_dirty_paths_and_recovery_commands_when_protected_meta_files_change(self) -> None:
+        self.write_file(PROTECTED_GENERATED_ASSETS_META, "fileFormatVersion: 2\ndirty: true\n")
+        self.write_file(PROTECTED_PREFAB_META, "fileFormatVersion: 2\ndirty: true\n")
+
+        result = self.run_verifier()
+        output = result.stdout + result.stderr
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Packages/com.staples.asm-lite/GeneratedAssets.meta", output)
+        self.assertIn("Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta", output)
         self.assertIn(RECOVERY_COMMANDS, output)
 
     def test_ignores_dirty_paths_outside_package_generated_outputs(self) -> None:

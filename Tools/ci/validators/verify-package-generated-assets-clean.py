@@ -11,12 +11,16 @@ from pathlib import Path
 
 PROTECTED_PATHS = (
     "Packages/com.staples.asm-lite/GeneratedAssets",
+    "Packages/com.staples.asm-lite/GeneratedAssets.meta",
     "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab",
+    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta",
 )
 
 RECOVERY_COMMANDS = (
     "git restore -- Packages/com.staples.asm-lite/GeneratedAssets "
-    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab\n"
+    "Packages/com.staples.asm-lite/GeneratedAssets.meta "
+    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab "
+    "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta\n"
     "python3 /opt/data/skills/software-development/testing/scripts/"
     "asm-lite-refresh-unity-test-project.py"
 )
