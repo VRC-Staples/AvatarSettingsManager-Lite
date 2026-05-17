@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -844,6 +845,43 @@ namespace ASMLite.Tests.Editor
             {
                 Object.DestroyImmediate(window);
                 Object.DestroyImmediate(referencedParams);
+            }
+        }
+
+        [Test]
+        public void EditorStateInvalidation_ClearsCachedParameterBackupDiscovery()
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            try
+            {
+                const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
+                Type windowType = typeof(ASMLite.Editor.ASMLiteWindow);
+                FieldInfo cachedParamList = windowType.GetField("_cachedParamList", Flags);
+                FieldInfo cachedParamTree = windowType.GetField("_cachedParamTree", Flags);
+                FieldInfo cachedInstallTree = windowType.GetField("_cachedInstallPathTree", Flags);
+                MethodInfo invalidate = windowType.GetMethod("InvalidateCachedEditorState", Flags);
+
+                Assert.IsNotNull(cachedParamList, "setup failure: expected parameter-list cache field.");
+                Assert.IsNotNull(cachedParamTree, "setup failure: expected parameter-tree cache field.");
+                Assert.IsNotNull(cachedInstallTree, "setup failure: expected install-path tree cache field.");
+                Assert.IsNotNull(invalidate, "setup failure: expected editor-state invalidation method.");
+
+                cachedParamList.SetValue(window, new[] { "Stale/BeforeBuild" });
+                cachedParamTree.SetValue(window, Activator.CreateInstance(cachedParamTree.FieldType, nonPublic: true));
+                cachedInstallTree.SetValue(window, Activator.CreateInstance(cachedInstallTree.FieldType, nonPublic: true));
+
+                invalidate.Invoke(window, new object[] { false });
+
+                Assert.IsNull(cachedParamList.GetValue(window),
+                    "Editor-state invalidation must drop stale parameter-backup discoveries so first-load Customize state refreshes after Add/Rebuild/Bake changes the avatar graph.");
+                Assert.IsNull(cachedParamTree.GetValue(window),
+                    "Editor-state invalidation must drop the stale parameter tree paired with the parameter-backup list.");
+                Assert.IsNull(cachedInstallTree.GetValue(window),
+                    "Editor-state invalidation must drop stale install-path discovery after hierarchy/project changes.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
             }
         }
 

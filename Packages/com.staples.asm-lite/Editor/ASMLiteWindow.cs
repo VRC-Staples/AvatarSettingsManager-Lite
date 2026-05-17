@@ -2184,9 +2184,7 @@ namespace ASMLite.Editor
             if (newAvatar != _selectedAvatar)
             {
                 _selectedAvatar = newAvatar;
-                _cachedComponent = null;
-                _lastRefreshFrame = -1;
-                _discoveredParamCount = -1;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
                 if (_selectedAvatar != null)
                     SyncPendingSlotCountFromAvatar();
@@ -5724,6 +5722,9 @@ namespace ASMLite.Editor
             _cachedComponent = null;
             _lastRefreshFrame = -1;
             _cachedToolState = null;
+            _cachedParamList = null;
+            _cachedParamTree = null;
+            _cachedInstallPathTree = null;
 
             if (resetDiscoveredParamCount)
                 _discoveredParamCount = -1;
