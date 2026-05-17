@@ -66,6 +66,7 @@ namespace ASMLite.Editor
             var originalComponentState = CaptureComponentVendorizedState(component);
             ASMLiteGeneratedAssetMirrorResult mirrorResult = null;
             int discoveredParamCount = -1;
+            ASMLitePackageGeneratedOutputSnapshot packageOutputSnapshot = null;
 
             if (!TryRefreshLiveInstallPathRouting(component, "Vendorize Transaction", out string installPathFailure))
             {
@@ -82,11 +83,14 @@ namespace ASMLite.Editor
                     message: installPathFailure);
             }
 
+            packageOutputSnapshot = ASMLitePackageGeneratedOutputSnapshot.Capture();
             var buildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component);
             discoveredParamCount = buildResult.DiscoveredParamCount;
             if (!buildResult.Success)
             {
-                return ASMLiteLifecycleTransactionResult.Fail(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    ASMLiteLifecycleTransactionResult.Fail(
                     operation: ASMLiteLifecycleOperation.AttachedVendorize,
                     failedStage: ASMLiteLifecycleTransactionStage.Preflight,
                     beforeState: beforeState,
@@ -98,31 +102,39 @@ namespace ASMLite.Editor
                     remediation: string.IsNullOrWhiteSpace(buildResult.Remediation) ? "Fix the build diagnostic before retrying attached vendorize." : buildResult.Remediation,
                     message: string.IsNullOrWhiteSpace(buildResult.Message) ? "[ASM-Lite] Attached vendorize transaction failed because Build() did not succeed." : buildResult.Message,
                     diagnostic: buildResult.Diagnostic,
-                    discoveredParamCount: discoveredParamCount);
+                    discoveredParamCount: discoveredParamCount),
+                    component,
+                    avatar);
             }
 
             mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
             if (!mirrorResult.Success)
             {
-                return ASMLiteLifecycleTransactionResult.Fail(
-                    operation: ASMLiteLifecycleOperation.AttachedVendorize,
-                    failedStage: MapMirrorStage(mirrorResult.FailedStage),
-                    beforeState: beforeState,
-                    afterState: ResolveToolState(avatar, component),
-                    rollbackState: ResolveToolState(avatar, component),
-                    rollbackAttempted: mirrorResult.RollbackAttempted,
-                    rollbackSucceeded: mirrorResult.RollbackSucceeded,
-                    contextPath: mirrorResult.ContextPath,
-                    remediation: mirrorResult.Remediation,
-                    message: mirrorResult.Message,
-                    mirrorResult: mirrorResult,
-                    discoveredParamCount: discoveredParamCount);
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    ASMLiteLifecycleTransactionResult.Fail(
+                        operation: ASMLiteLifecycleOperation.AttachedVendorize,
+                        failedStage: MapMirrorStage(mirrorResult.FailedStage),
+                        beforeState: beforeState,
+                        afterState: ResolveToolState(avatar, component),
+                        rollbackState: ResolveToolState(avatar, component),
+                        rollbackAttempted: mirrorResult.RollbackAttempted,
+                        rollbackSucceeded: mirrorResult.RollbackSucceeded,
+                        contextPath: mirrorResult.ContextPath,
+                        remediation: mirrorResult.Remediation,
+                        message: mirrorResult.Message,
+                        mirrorResult: mirrorResult,
+                        discoveredParamCount: discoveredParamCount),
+                    component,
+                    avatar);
             }
 
             var descriptorResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, mirrorResult.TargetPath);
             if (!descriptorResult.Success)
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -134,12 +146,16 @@ namespace ASMLite.Editor
                     ASMLiteLifecycleTransactionStage.Execute,
                     discoveredParamCount,
                     diagnostic: null,
-                    mirrorDetail: descriptorResult);
+                    mirrorDetail: descriptorResult),
+                    component,
+                    avatar);
             }
 
             if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterDescriptorRetarget))
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -151,13 +167,17 @@ namespace ASMLite.Editor
                     ASMLiteLifecycleTransactionStage.Execute,
                     discoveredParamCount,
                     diagnostic: null,
-                    mirrorDetail: descriptorResult);
+                    mirrorDetail: descriptorResult),
+                    component,
+                    avatar);
             }
 
             var liveRetargetResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, mirrorResult.TargetPath, "Vendorize Transaction Live Retarget");
             if (!liveRetargetResult.Success)
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -168,12 +188,16 @@ namespace ASMLite.Editor
                     liveRetargetResult.Remediation,
                     ASMLiteLifecycleTransactionStage.Execute,
                     discoveredParamCount,
-                    diagnostic: liveRetargetResult);
+                    diagnostic: liveRetargetResult),
+                    component,
+                    avatar);
             }
 
             if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget))
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -184,7 +208,9 @@ namespace ASMLite.Editor
                     "Disable the live-FullController failure injection after validating rollback behavior.",
                     ASMLiteLifecycleTransactionStage.Execute,
                     discoveredParamCount,
-                    diagnostic: null);
+                    diagnostic: null),
+                    component,
+                    avatar);
             }
 
             ApplyComponentVendorizedState(component, useVendorizedGeneratedAssets: true, vendorizedGeneratedAssetsPath: mirrorResult.TargetPath);
@@ -194,7 +220,9 @@ namespace ASMLite.Editor
             if (ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringVendorizeVerify)
                 || !ASMLiteLifecycleVerification.VerifyAttachedVendorizeState(component, avatar, mirrorResult.TargetPath, out verifyFailureMessage, out verifyFailureContext))
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -212,13 +240,17 @@ namespace ASMLite.Editor
                     ASMLiteLifecycleTransactionStage.Verify,
                     discoveredParamCount,
                     diagnostic: null,
-                    expectedAfterFailureState: afterMutationState);
+                    expectedAfterFailureState: afterMutationState),
+                    component,
+                    avatar);
             }
 
             var finalizeMirrorResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirrorResult);
             if (!finalizeMirrorResult.Success)
             {
-                return FailAttachedVendorizeAndRollback(
+                return CompleteAttachedVendorizeWithPackageOutputRestore(
+                    packageOutputSnapshot,
+                    FailAttachedVendorizeAndRollback(
                     component,
                     avatar,
                     beforeState,
@@ -231,16 +263,22 @@ namespace ASMLite.Editor
                     discoveredParamCount,
                     diagnostic: null,
                     mirrorDetail: finalizeMirrorResult,
-                    expectedAfterFailureState: afterMutationState);
+                    expectedAfterFailureState: afterMutationState),
+                    component,
+                    avatar);
             }
 
-            return ASMLiteLifecycleTransactionResult.Pass(
-                operation: ASMLiteLifecycleOperation.AttachedVendorize,
-                beforeState: beforeState,
-                afterState: ResolveToolState(avatar, component),
-                discoveredParamCount: discoveredParamCount,
-                message: $"[ASM-Lite] Attached vendorize transaction completed successfully for '{avatar.gameObject.name}'.",
-                mirrorResult: mirrorResult);
+            return CompleteAttachedVendorizeWithPackageOutputRestore(
+                packageOutputSnapshot,
+                ASMLiteLifecycleTransactionResult.Pass(
+                    operation: ASMLiteLifecycleOperation.AttachedVendorize,
+                    beforeState: beforeState,
+                    afterState: ResolveToolState(avatar, component),
+                    discoveredParamCount: discoveredParamCount,
+                    message: $"[ASM-Lite] Attached vendorize transaction completed successfully for '{avatar.gameObject.name}'.",
+                    mirrorResult: mirrorResult),
+                component,
+                avatar);
         }
 
         internal static ASMLiteLifecycleTransactionResult ExecuteAttachedReturnToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
@@ -1013,6 +1051,52 @@ namespace ASMLite.Editor
                 : existing.AdoptedInstallPrefix;
             int totalRemovedMoveComponents = existing.RemovedMoveComponents + incoming.RemovedMoveComponents + Math.Max(0, removedMoveComponents);
             return new ASMLiteMigrationContinuityService.InstallPathAdoptionResult(adopted, adoptedInstallPrefix, totalRemovedMoveComponents);
+        }
+
+        private static ASMLiteLifecycleTransactionResult CompleteAttachedVendorizeWithPackageOutputRestore(
+            ASMLitePackageGeneratedOutputSnapshot packageOutputSnapshot,
+            ASMLiteLifecycleTransactionResult result,
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar)
+        {
+            try
+            {
+                packageOutputSnapshot?.Restore();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                string contextPath = ASMLiteAssetPaths.GeneratedDir + "; " + ASMLiteAssetPaths.GeneratedDir + ".meta; "
+                    + ASMLiteAssetPaths.Prefab + "; " + ASMLiteAssetPaths.Prefab + ".meta";
+                string remediation = "Restore the package generated output templates before retrying: git restore -- "
+                    + ASMLiteAssetPaths.GeneratedDir + " " + ASMLiteAssetPaths.Prefab + ". " + ex.Message;
+                string message = "[ASM-Lite] Attached vendorize transaction failed while restoring package generated output templates.";
+                ASMLiteBuildDiagnosticResult innerDiagnostic = result != null && result.Diagnostic != null && !result.Diagnostic.Success
+                    ? result.Diagnostic
+                    : null;
+                ASMLiteBuildDiagnosticResult restoreDiagnostic = ASMLiteBuildDiagnosticResult.Fail(
+                    code: "ASMLITE_PACKAGE_OUTPUT_RESTORE_FAILED",
+                    contextPath: contextPath,
+                    remediation: remediation,
+                    message: message,
+                    innerDiagnostic: innerDiagnostic);
+
+                return ASMLiteLifecycleTransactionResult.Fail(
+                    operation: result != null ? result.Operation : ASMLiteLifecycleOperation.AttachedVendorize,
+                    failedStage: ASMLiteLifecycleTransactionStage.Execute,
+                    beforeState: result != null ? result.BeforeState : ResolveToolState(avatar, component),
+                    afterState: ResolveToolState(avatar, component),
+                    rollbackState: result != null && !result.Success ? result.RollbackState : ResolveToolState(avatar, component),
+                    rollbackAttempted: result != null && result.RollbackAttempted,
+                    rollbackSucceeded: result != null && result.RollbackSucceeded,
+                    contextPath: contextPath,
+                    remediation: remediation,
+                    message: message,
+                    diagnostic: restoreDiagnostic,
+                    mirrorResult: result?.MirrorResult,
+                    discoveredParamCount: result != null ? result.DiscoveredParamCount : -1,
+                    recoveredState: result?.RecoveredState);
+            }
         }
 
         private static ASMLiteLifecycleTransactionResult FailAttachedVendorizeAndRollback(
