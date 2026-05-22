@@ -26,7 +26,7 @@ fi
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
 VRC_DYNAMICS="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
-VRC_BUILD_PIPELINE_STUB="${REPO_ROOT}/${CI_PROJECT_PATH}/CompilerStubs/VRCSDKBuildPipelineCallbacks.cs"
+VRC_BUILD_PIPELINE_STUB="${REPO_ROOT}/${CI_PROJECT_PATH}/Assets/Editor/ASMLiteCiVRCBuildPipelineStubs.cs"
 
 OUT_DIR="${REPO_ROOT}/${CI_PROJECT_PATH}"
 
