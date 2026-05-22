@@ -12,16 +12,6 @@ namespace ASMLite.Tests.Editor
     [Category("Headless")]
     public class ASMLiteGeneratedOwnershipPolicyTests
     {
-        private const string TestAssetRoot = "Assets/ASMLiteGeneratedOwnershipPolicyTests";
-
-        [TearDown]
-        public void TearDown()
-        {
-            if (AssetDatabase.IsValidFolder(TestAssetRoot))
-                AssetDatabase.DeleteAsset(TestAssetRoot);
-
-            AssetDatabase.Refresh();
-        }
 
         [Test]
         public void GeneratedRuntimeNamePolicy_CoversDirectDeliveryMarkers()
@@ -65,9 +55,8 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void RootMenuControlPolicy_MatchesGeneratedNameAndPresetsMenuFilenameOnlyForSubmenus()
         {
-            EnsureFolder("Assets", "ASMLiteGeneratedOwnershipPolicyTests");
-            var generatedMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            AssetDatabase.CreateAsset(generatedMenu, TestAssetRoot + "/ASMLite_Presets_Menu.asset");
+            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath);
+            Assert.IsNotNull(generatedMenu, "Expected package-generated menu fixture to be importable.");
 
             Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(new VRCExpressionsMenu.Control
             {
@@ -90,19 +79,19 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void InjectedRootMenuPolicy_PreservesPresetsFilenameOutsideGeneratedPathWhenNameDoesNotMatch()
         {
-            EnsureFolder("Assets", "ASMLiteGeneratedOwnershipPolicyTests");
-            var generatedMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            AssetDatabase.CreateAsset(generatedMenu, TestAssetRoot + "/ASMLite_Presets_Menu.asset");
+            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(
+                "Assets/User/Menus/ASMLite_Presets_Menu.asset"),
+                "Cleanup keeps the historical broad filename predicate for stale generated root menu entries.");
+
+            var userMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
 
             var renamedWrapper = new VRCExpressionsMenu.Control
             {
                 name = "Renamed Wrapper",
                 type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                subMenu = generatedMenu,
+                subMenu = userMenu,
             };
 
-            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(renamedWrapper),
-                "Cleanup keeps the historical broad filename predicate for stale generated root menu entries.");
             Assert.IsFalse(ASMLiteGeneratedOwnershipPolicy.IsInjectedRootMenuControl(renamedWrapper, "Other ASM-Lite Root"),
                 "Build-time injection should preserve the previous exact generated-path/name behavior for non-package menus.");
         }
@@ -110,21 +99,19 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void RuntimeMarkerPolicy_DetectsDirectDeliverySubmenuAssetMarkers()
         {
-            EnsureFolder("Assets", "ASMLiteGeneratedOwnershipPolicyTests");
             var avatarGo = new GameObject("OwnershipPolicyAvatar");
             var avatar = avatarGo.AddComponent<VRCAvatarDescriptor>();
             var rootMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            var directDeliveryMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath);
 
             try
             {
-                AssetDatabase.CreateAsset(rootMenu, TestAssetRoot + "/Root.asset");
-                AssetDatabase.CreateAsset(directDeliveryMenu, TestAssetRoot + "/ASMLite_Direct_Menu.asset");
+                Assert.IsNotNull(generatedMenu, "Expected package-generated menu fixture to be importable.");
                 rootMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name = "Direct Delivery",
+                    name = "Generated Package Menu",
                     type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = directDeliveryMenu,
+                    subMenu = generatedMenu,
                 });
                 avatar.expressionsMenu = rootMenu;
 
@@ -139,25 +126,28 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void DescriptorReferencePolicy_TracesNestedMenuGraphsWithoutLooping()
         {
-            EnsureFolder("Assets", "ASMLiteGeneratedOwnershipPolicyTests");
-            string generatedRoot = EnsureFolder(TestAssetRoot, "GeneratedAssets");
+            string generatedRoot = ASMLiteAssetPaths.GeneratedDir;
 
             var avatarGo = new GameObject("OwnershipPolicyAvatar");
             var avatar = avatarGo.AddComponent<VRCAvatarDescriptor>();
             var rootMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
             var childMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            var generatedMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            var parameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
-            var controller = new AnimatorController();
+            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath);
+            var parameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
 
             try
             {
-                AssetDatabase.CreateAsset(rootMenu, TestAssetRoot + "/Root.asset");
-                AssetDatabase.CreateAsset(childMenu, TestAssetRoot + "/Child.asset");
-                AssetDatabase.CreateAsset(generatedMenu, generatedRoot + "/ASMLite_Presets_Menu.asset");
-                AssetDatabase.CreateAsset(parameters, generatedRoot + "/ASMLite_Parameters.asset");
-                AssetDatabase.CreateAsset(controller, generatedRoot + "/ASMLite_FX.controller");
+                Assert.IsNotNull(generatedMenu, "Expected package-generated menu fixture to be importable.");
+                Assert.IsNotNull(parameters, "Expected package-generated parameters fixture to be importable.");
+                Assert.IsNotNull(controller, "Expected package-generated FX controller fixture to be importable.");
 
+                childMenu.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = "Loop",
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = rootMenu,
+                });
                 childMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
                     name = "Generated",
@@ -170,13 +160,6 @@ namespace ASMLite.Tests.Editor
                     type = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = childMenu,
                 });
-                generatedMenu.controls.Add(new VRCExpressionsMenu.Control
-                {
-                    name = "Loop",
-                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = rootMenu,
-                });
-
                 avatar.expressionsMenu = rootMenu;
                 avatar.expressionParameters = parameters;
                 avatar.baseAnimationLayers = new[]
@@ -197,12 +180,6 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static string EnsureFolder(string parent, string child)
-        {
-            string path = parent + "/" + child;
-            if (!AssetDatabase.IsValidFolder(path))
-                AssetDatabase.CreateFolder(parent, child);
-            return path;
-        }
+
     }
 }

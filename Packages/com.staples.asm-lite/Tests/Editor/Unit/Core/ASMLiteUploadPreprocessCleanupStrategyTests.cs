@@ -36,13 +36,23 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void VrChatSdk_PostprocessAvatarCallback_IsNotAvailableForDeferredCleanup()
+        public void VrChatSdk_PostprocessAvatarCallback_IsNotUsedForDeferredCleanup()
         {
             var postprocessType = GetLoadableTypes()
                 .FirstOrDefault(type => string.Equals(type.Name, "IVRCSDKPostprocessAvatarCallback", StringComparison.Ordinal));
 
-            Assert.IsNull(postprocessType,
-                "this SDK does not expose a postprocess-avatar callback; package-output cleanup must remain covered by preprocess/lifecycle restore paths.");
+            if (postprocessType == null)
+                return;
+
+            var asmLitePostprocessCallbacks = GetLoadableTypes()
+                .Where(type => string.Equals(type.Namespace, "ASMLite.Editor", StringComparison.Ordinal)
+                    && postprocessType.IsAssignableFrom(type))
+                .Select(type => type.FullName)
+                .ToArray();
+
+            Assert.AreEqual(0, asmLitePostprocessCallbacks.Length,
+                "ASM-Lite package-output cleanup must remain covered by preprocess/lifecycle restore paths, not a deferred SDK postprocess callback: "
+                + string.Join(", ", asmLitePostprocessCallbacks));
         }
 
         private static IEnumerable<Type> GetLoadableTypes()

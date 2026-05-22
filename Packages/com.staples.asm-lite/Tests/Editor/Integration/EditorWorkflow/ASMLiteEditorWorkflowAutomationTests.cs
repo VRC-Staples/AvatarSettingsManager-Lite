@@ -365,10 +365,8 @@ namespace ASMLite.Tests.Editor
                     "Repeated vendorize/return characterization requires AddPrefabForAutomation() to attach ASM-Lite first.");
                 prefabInstanceComponent.useCustomInstallPath = true;
                 prefabInstanceComponent.customInstallPath = "Tools/VendorizeTwice";
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
-                    nameof(Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable),
-                    window.RebuildForAutomation);
+                RebuildAndRestorePackageManagedBaselineForAutomation(window,
+                    nameof(Automation_VendorizeReturnTwice_KeepsRefsAndRoutingStable));
 
                 var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 var baselineSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(baselineComponent, 0);
@@ -444,10 +442,8 @@ namespace ASMLite.Tests.Editor
                     "Automation staged-copy rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before vendorize failure injection.");
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = "Tools/AutomationRollback";
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
-                    nameof(Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation),
-                    window.RebuildForAutomation);
+                RebuildAndRestorePackageManagedBaselineForAutomation(window,
+                    nameof(Automation_VendorizeForAutomation_StagedCopyFailure_RollsBackWithoutPartialAttachedMutation));
 
                 var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(baselineComponent,
@@ -512,10 +508,8 @@ namespace ASMLite.Tests.Editor
                     "Detach rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before failure injection.");
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = "Tools/DetachRollback";
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
-                    nameof(Automation_DetachForAutomation_VerifyFailure_LeavesPrefabAttachedAndPackageManaged),
-                    window.RebuildForAutomation);
+                RebuildAndRestorePackageManagedBaselineForAutomation(window,
+                    nameof(Automation_DetachForAutomation_VerifyFailure_LeavesPrefabAttachedAndPackageManaged));
 
                 var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(baselineComponent,
@@ -579,10 +573,8 @@ namespace ASMLite.Tests.Editor
                     "Vendorize + detach rollback validation requires AddPrefabForAutomation() to attach ASM-Lite before failure injection.");
                 _ctx.Comp.useCustomInstallPath = true;
                 _ctx.Comp.customInstallPath = "Tools/VendorizeDetachRollback";
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                ExecuteAutomationActionAndRecordLatestBuildDiagnostic(
-                    nameof(Automation_VendorizeAndDetach_VerifyFailure_LeavesPrefabAttachedAndPackageManaged),
-                    window.RebuildForAutomation);
+                RebuildAndRestorePackageManagedBaselineForAutomation(window,
+                    nameof(Automation_VendorizeAndDetach_VerifyFailure_LeavesPrefabAttachedAndPackageManaged));
 
                 var baselineComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
                 Assert.IsNotNull(baselineComponent,
@@ -701,7 +693,8 @@ namespace ASMLite.Tests.Editor
             {
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
                 ResetDescriptorToDefaultGeneratedAssetReferences(_ctx.AvDesc);
-                window.RebuildForAutomation();
+                RebuildAndRestorePackageManagedBaselineForAutomation(window,
+                    nameof(Automation_AttachedVendorizedDetach_RetargetsDirectDeliveryDescriptorReferencesToVendorizedAssets));
                 window.VendorizeForAutomation();
 
                 var vendorizedComponent = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
@@ -838,6 +831,26 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Unexpected routing helper source path.");
             Assert.AreEqual(expectedToPath, toPathProperty.stringValue,
                 assertionMessage + " Unexpected routing helper destination path.");
+        }
+
+        private void RebuildAndRestorePackageManagedBaselineForAutomation(ASMLite.Editor.ASMLiteWindow window, string testName)
+        {
+            Assert.IsNotNull(window, "Package-managed baseline setup requires an ASM-Lite window.");
+            window.SelectAvatarForAutomation(_ctx.AvDesc);
+            ExecuteAutomationActionAndRecordLatestBuildDiagnostic(testName, window.RebuildForAutomation);
+            window.SelectAvatarForAutomation(_ctx.AvDesc);
+            window.ReturnToPackageManagedForAutomation();
+
+            _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            Assert.IsNotNull(_ctx.Comp,
+                "Package-managed baseline setup should leave ASM-Lite attached after return-to-package-managed recovery.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets,
+                "Package-managed baseline setup should clear vendorized generated-assets mode before lifecycle actions that require PackageManaged state.");
+            Assert.AreEqual(string.Empty, _ctx.Comp.vendorizedGeneratedAssetsPath,
+                "Package-managed baseline setup should clear the tracked vendorized generated-assets path.");
+            Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
+                ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
+                "Package-managed baseline setup should restore PackageManaged tool state before lifecycle actions that require it.");
         }
 
         private static void ExecuteAutomationActionAndRecordLatestBuildDiagnostic(string testName, Action automationAction)

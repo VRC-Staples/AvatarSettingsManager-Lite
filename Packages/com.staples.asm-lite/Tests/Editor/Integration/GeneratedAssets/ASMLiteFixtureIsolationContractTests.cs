@@ -41,15 +41,23 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak()
         {
-            AsmLiteFixtureIsolationScope scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak));
             const string assetPath = "Assets/ASMLiteTests_Temp/IsolationSentinel.asset";
+            AssetDatabase.DeleteAsset(assetPath);
+            AssetDatabase.DeleteAsset(ASMLiteTestFixtures.TempDir);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+
+            AsmLiteFixtureIsolationScope scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak));
 
             try
             {
                 EnsureTempFolder();
-                var material = new Material(Shader.Find("Standard"));
-                AssetDatabase.CreateAsset(material, assetPath);
+                var sentinel = ScriptableObject.CreateInstance<ScriptableObject>();
+                AssetDatabase.CreateAsset(sentinel, assetPath);
                 AssetDatabase.SaveAssets();
+                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+                Assert.IsNotNull(AssetDatabase.LoadAssetAtPath<ScriptableObject>(assetPath),
+                    "setup should create a detectable generated-asset sentinel after fixture isolation capture.");
 
                 var failure = Assert.Throws<AssertionException>(() => scope.Dispose());
                 scope = null;
@@ -176,8 +184,7 @@ namespace ASMLite.Tests.Editor
 
         private static void EnsureTempFolder()
         {
-            if (!AssetDatabase.IsValidFolder(ASMLiteTestFixtures.TempDir))
-                AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+            ASMLiteTestFixtures.EnsureFixtureTempDir();
         }
     }
 }

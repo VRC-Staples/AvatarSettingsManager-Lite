@@ -252,7 +252,7 @@ jobs:
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
           printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
 
-          # Derive serial from the .ulf file (machine-independent — only the
+          # Derive serial from the .ulf file (machine-independent - only the
           # DeveloperData base64 segment is used, not machine bindings).
           SERIAL_FILE="$(mktemp)"
           python - <<'PY' "$SERIAL_FILE"
@@ -351,7 +351,7 @@ jobs:
             -logFile "${ACTIVATE_LOG}" || true
           cat "${ACTIVATE_LOG}"
           if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
-            echo "::error::License activation failed — 'Successfully activated' not found in log."
+            echo "::error::License activation failed - 'Successfully activated' not found in log."
             exit 1
           fi
           rm -f "${ACTIVATE_LOG}"

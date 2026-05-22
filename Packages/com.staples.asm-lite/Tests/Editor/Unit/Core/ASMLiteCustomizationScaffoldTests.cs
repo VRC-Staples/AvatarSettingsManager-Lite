@@ -847,6 +847,10 @@ namespace ASMLite.Tests.Editor
                 _ctx.Comp.customInstallPath = "Tools/Rollback";
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
                 window.RebuildForAutomation();
+                window.ReturnToPackageManagedForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Vendorize rollback setup should restore an editable package-managed ASM-Lite component before failure injection.");
 
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/Rollback/Settings Manager",
                     "Vendorize rollback setup should establish deterministic install-path routing before failure injection.");
@@ -923,6 +927,10 @@ namespace ASMLite.Tests.Editor
                 _ctx.Comp.customInstallPath = "Tools/DetachRollback";
                 window.SelectAvatarForAutomation(_ctx.AvDesc);
                 window.RebuildForAutomation();
+                window.ReturnToPackageManagedForAutomation();
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+                Assert.IsNotNull(_ctx.Comp,
+                    "Detach rollback setup should restore an editable package-managed ASM-Lite component before failure injection.");
 
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
                     "Detach rollback setup should establish deterministic install-path routing before failure injection.");
@@ -1141,11 +1149,11 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(parametersReference.HasReference,
                 assertionMessage + " Expected a populated FullController parameter reference.");
             Assert.IsTrue(controllerReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + " Expected the FullController FX controller reference to point at the expected generated-assets prefix.");
+                assertionMessage + $" Expected the FullController FX controller reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{controllerReference.AssetPath}', property='{controllerReference.PropertyPath}'.");
             Assert.IsTrue(menuReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + " Expected the FullController menu reference to point at the expected generated-assets prefix.");
+                assertionMessage + $" Expected the FullController menu reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{menuReference.AssetPath}', property='{menuReference.PropertyPath}'.");
             Assert.IsTrue(parametersReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + " Expected the FullController parameter reference to point at the expected generated-assets prefix.");
+                assertionMessage + $" Expected the FullController parameter reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{parametersReference.AssetPath}', property='{parametersReference.PropertyPath}'.");
         }
 
         private static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)

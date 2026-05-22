@@ -14,7 +14,7 @@ A lightweight prefab that adds Save, Load, and Clear Preset for expression param
 
 ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu.
 
-You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, regenerates its managed FX/parameter/menu assets, and delivers them through the prefab's VRCFury FullController wiring.
+You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count, menu labels, icon style, install path, and optional parameter backup presets, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, regenerates its managed FX/parameter/menu assets, and delivers them through the prefab's VRCFury FullController wiring.
 
 ---
 
@@ -60,8 +60,11 @@ CI blocks commits that use banned personal identity metadata or blocked co-autho
 2. Select your avatar from the **Avatar Root** field.
 3. Configure your settings (all options are available before adding the prefab):
    - **Slot Count** - number of preset slots (1-8).
-   - **Icon Mode** - what icons appear in the expression menu for each slot (see below).
+   - **Menu Labels** - optional custom root, preset, action, and confirmation labels.
+   - **Icon Mode** - what icons appear in the expression menu root and preset slots (see below).
    - **Action Icon Mode** - default bundled action icons or custom Save/Load/Clear icons.
+   - **Install Path** - optional expression-menu path where ASM-Lite should appear.
+   - **Parameter Backups** - optional presets for excluding parameters from Save/Load storage.
 4. Click **Add ASM-Lite Prefab**.
 
 Once the prefab is added, management actions appear:
@@ -88,9 +91,21 @@ Once the prefab is added, management actions appear:
 
 The number of independent preset slots ASM-Lite manages, from 1 to 8. Each slot stores a full snapshot of every expression parameter on the avatar. Changes take effect after a rebuild.
 
+### Menu Labels
+
+ASM-Lite can rename the generated expression-menu entries before attach or while attached. You can override the root menu name, each preset slot label, Save/Load/Clear Preset labels, and confirmation labels. Blank fields fall back to the default text.
+
+### Install Path
+
+By default ASM-Lite appears at the expression-menu root as **Settings Manager**. You can place it under an existing menu path, including paths discovered from VRCFury MoveMenu destinations. Choosing root clears the custom path and keeps the normal root placement.
+
+### Parameter Backups
+
+ASM-Lite normally stores every discovered non-ASM-Lite expression parameter. Parameter backup presets let you exclude selected visible parameters from generated backup/default storage, including deterministic VRCFury-created toggle names shown in the editor window.
+
 ### Icon Mode
 
-Controls the icons displayed in the expression menu for each preset slot.
+Controls the icons displayed for the ASM-Lite root menu and each preset slot.
 
 | Mode | Behavior |
 |---|---|
@@ -113,10 +128,13 @@ Controls the icons shown for **Save**, **Load**, and **Clear Preset** actions in
 
 At build time, ASM-Lite runs via `IPreprocessCallbackBehaviour` after VRCFury has merged avatar parameters into the descriptor snapshot used for discovery. It then:
 
-1. **Discovers parameters** - reads expression parameters from `avDesc.expressionParameters` and skips any `ASMLite_`-prefixed entries to avoid self-referential loops.
-2. **Generates managed assets** - rebuilds the managed FX controller, expression-parameter asset, and menu assets in `GeneratedAssets` using the discovered schema.
-3. **Builds the expression menu** - generates the nested `Settings Manager → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear.
+1. **Discovers parameters** - reads expression parameters from `avDesc.expressionParameters`, skips `ASMLite_`-prefixed entries to avoid self-referential loops, and applies any configured parameter exclusions.
+2. **Generates managed assets** - rebuilds the managed FX controller, expression-parameter asset, and menu assets in `GeneratedAssets` using the discovered schema and current customization settings.
+3. **Builds the expression menu** - generates the nested `Settings Manager → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear, using custom labels/icons when configured.
 4. **Delivers through VRCFury FullController** - the prefab's FullController wiring references those generated assets, so the current upload consumes the freshly rebuilt payload instead of stale content.
+5. **Keeps generated-asset ownership explicit** - the default attached workflow keeps package-managed references under `Packages/com.staples.asm-lite/GeneratedAssets`. Vendorize and Detach copy the payload into avatar-owned assets, retarget descriptor/FullController references there, and roll back staged copies if retargeting fails.
+
+Package-managed generated assets are rebuilt as a deterministic clean payload. The editor/test workflow verifies folder metas, GUID-bearing assets, and VRCFury menu-prefix wiring so repeated rebuilds do not leave stale prefab overrides or partially retargeted references.
 
 Backup parameters (`ASMLite_Bak_*`) and default parameters (`ASMLite_Def_*`) are local-only and not synced, so they do not consume the 256-bit expression parameter sync budget.
 
@@ -157,8 +175,12 @@ Expected canonical artifacts from the default run:
 
 For contributor validation, `Tools/ci/bin/run-editmode-local.sh` remains the only required full test path before pushing changes.
 
+Test-suite coverage inventory is tracked in:
+- `Tools/ci/docs/asmlite-tests-audit.md` - human-readable suite ledger with isolation class, CI bucket, and source location.
+- `Tools/ci/test-suites/test-suite-ledger.json` - machine-readable ledger consumed by CI/smoke automation.
+
 Optional local-only helper:
-- `Tools/ci/bin/run-visible-smoke-local.sh` (interactive/local visible smoke entrypoint)
+- `Tools/ci/bin/run-visible-smoke-local.sh` (interactive/local smoke validation entrypoint)
 
 ---
 

@@ -569,11 +569,16 @@ namespace ASMLite.Editor
             return s_startupRestoreQueued;
         }
 
-        internal static List<ToggleCandidate> DiscoverEligibleToggleCandidates(GameObject avatarRoot, string toggleTypeFullName = DefaultToggleTypeFullName)
+        internal static List<ToggleCandidate> DiscoverEligibleToggleCandidates(
+            GameObject avatarRoot,
+            string toggleTypeFullName = DefaultToggleTypeFullName,
+            bool requireAsmLiteScope = true)
         {
             var result = new List<ToggleCandidate>();
 
-            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+            if (avatarRoot == null)
+                return result;
+            if (requireAsmLiteScope && !HasAsmLiteScope(avatarRoot))
                 return result;
 
             var toggleType = FindTypeByFullName(toggleTypeFullName);
@@ -596,10 +601,15 @@ namespace ASMLite.Editor
             return result;
         }
 
-        internal static List<string> DiscoverAssignedToggleGlobalParams(GameObject avatarRoot, string toggleTypeFullName = DefaultToggleTypeFullName)
+        internal static List<string> DiscoverAssignedToggleGlobalParams(
+            GameObject avatarRoot,
+            string toggleTypeFullName = DefaultToggleTypeFullName,
+            bool requireAsmLiteScope = true)
         {
             var result = new List<string>();
-            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+            if (avatarRoot == null)
+                return result;
+            if (requireAsmLiteScope && !HasAsmLiteScope(avatarRoot))
                 return result;
 
             var toggleType = FindTypeByFullName(toggleTypeFullName);
@@ -1734,11 +1744,25 @@ namespace ASMLite.Editor
 
         private static string ReadFirstNonEmptyString(SerializedObject so, string basePath, string[] candidateSuffixes)
         {
-            var property = FindPropertyBySuffix(so, basePath, candidateSuffixes);
-            if (property == null || property.propertyType != SerializedPropertyType.String)
+            if (so == null || string.IsNullOrEmpty(basePath) || candidateSuffixes == null)
                 return string.Empty;
 
-            return property.stringValue ?? string.Empty;
+            for (int i = 0; i < candidateSuffixes.Length; i++)
+            {
+                string suffix = candidateSuffixes[i];
+                if (string.IsNullOrEmpty(suffix))
+                    continue;
+
+                var property = so.FindProperty(basePath + "." + suffix);
+                if (property == null || property.propertyType != SerializedPropertyType.String)
+                    continue;
+
+                string value = property.stringValue;
+                if (!string.IsNullOrWhiteSpace(value))
+                    return value;
+            }
+
+            return string.Empty;
         }
 
         private static bool ReadBool(SerializedObject so, string basePath, string[] candidateSuffixes, bool fallback)

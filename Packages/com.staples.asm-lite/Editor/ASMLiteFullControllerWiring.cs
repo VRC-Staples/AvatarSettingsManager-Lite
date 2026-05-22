@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -158,14 +160,114 @@ namespace ASMLite.Editor
             if (prefixProperty == null)
                 return false;
 
-            prefixProperty.stringValue = string.Empty;
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
+            bool prefabOverrideBeforeWrite = PrefabUtility.IsPartOfPrefabInstance(vfComponent) && prefixProperty.prefabOverride;
+            if (!TryWriteMenuPrefix(serializedVf, vfComponent, string.Empty))
+                return false;
 
-            if (PrefabUtility.IsPartOfPrefabInstance(vfComponent) && prefixProperty.prefabOverride)
+            prefixProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+            if (prefixProperty == null)
+                return false;
+
+            if (prefabOverrideBeforeWrite && !string.IsNullOrEmpty(prefixProperty.stringValue))
+            {
                 PrefabUtility.RevertPropertyOverride(prefixProperty, InteractionMode.AutomatedAction);
+                serializedVf.Update();
+                prefixProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+                if (prefixProperty == null)
+                    return false;
+            }
 
+            if (!string.IsNullOrEmpty(prefixProperty.stringValue) && !TryWriteMenuPrefix(serializedVf, vfComponent, string.Empty))
+                return false;
+
+            prefixProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+            return prefixProperty != null && string.IsNullOrEmpty(prefixProperty.stringValue);
+        }
+
+        private static bool TryWriteMenuPrefix(SerializedObject serializedVf, MonoBehaviour vfComponent, string value)
+        {
+            string targetValue = value ?? string.Empty;
+            var prefixProperty = serializedVf?.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+            if (prefixProperty == null)
+                return false;
+
+            prefixProperty.stringValue = targetValue;
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            TrySetMenuPrefixDirect(vfComponent, targetValue);
+            if (PrefabUtility.IsPartOfPrefabInstance(vfComponent))
+                PrefabUtility.RecordPrefabInstancePropertyModifications(vfComponent);
+            EditorUtility.SetDirty(vfComponent);
+            serializedVf.Update();
+            prefixProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+            return prefixProperty != null && string.Equals(prefixProperty.stringValue, targetValue, StringComparison.Ordinal);
+        }
+
+        private static bool TrySetMenuPrefixDirect(MonoBehaviour vfComponent, string value)
+        {
+            if (vfComponent == null)
+                return false;
+
+            var contentMember = FindFieldOrProperty(vfComponent.GetType(), "content");
+            if (contentMember == null)
+                return false;
+
+            object content = GetMemberValue(contentMember, vfComponent);
+            if (content == null)
+                return false;
+
+            var menusMember = FindFieldOrProperty(content.GetType(), "menus");
+            if (menusMember == null)
+                return false;
+
+            object menusObject = GetMemberValue(menusMember, content);
+            if (!(menusObject is IList menus) || menus.Count == 0)
+                return false;
+
+            object menuEntry = menus[0];
+            if (menuEntry == null)
+                return false;
+
+            var prefixMember = FindFieldOrProperty(menuEntry.GetType(), "prefix");
+            if (prefixMember == null)
+                return false;
+
+            SetMemberValue(prefixMember, menuEntry, value ?? string.Empty);
+            menus[0] = menuEntry;
+            SetMemberValue(menusMember, content, menusObject);
+            SetMemberValue(contentMember, vfComponent, content);
             return true;
+        }
+
+        private static MemberInfo FindFieldOrProperty(Type type, string name)
+        {
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            return type?.GetField(name, flags) ?? (MemberInfo)type?.GetProperty(name, flags);
+        }
+
+        private static object GetMemberValue(MemberInfo member, object target)
+        {
+            if (member is FieldInfo field)
+                return field.GetValue(target);
+            if (member is PropertyInfo property && property.CanRead)
+                return property.GetValue(target, null);
+            return null;
+        }
+
+        private static bool SetMemberValue(MemberInfo member, object target, object value)
+        {
+            if (member is FieldInfo field)
+            {
+                field.SetValue(target, value);
+                return true;
+            }
+
+            if (member is PropertyInfo property && property.CanWrite)
+            {
+                property.SetValue(target, value, null);
+                return true;
+            }
+
+            return false;
         }
 
         internal static bool HasLiveVrcFuryComponent(ASMLiteComponent component)
@@ -438,7 +540,7 @@ namespace ASMLite.Editor
             if (!SetObjectReferenceStrict(serializedVfComponent, ASMLiteDriftProbe.MenuObjectRefPath, menu))
                 return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.MenuObjectRefPath);
 
-            var prefixResult = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
+            var prefixResult = TryApplyMenuPrefixForFullControllerAssetWiring(serializedVfComponent, component);
             if (!prefixResult.Success)
                 return prefixResult;
 
@@ -494,6 +596,32 @@ namespace ASMLite.Editor
             }
 
             return ASMLiteBuildDiagnosticResult.Pass();
+        }
+
+        private static ASMLiteBuildDiagnosticResult TryApplyMenuPrefixForFullControllerAssetWiring(
+            SerializedObject serializedVfComponent,
+            ASMLiteComponent component)
+        {
+            if (component != null && PrefabUtility.IsPartOfPrefabInstance(component.gameObject))
+            {
+                var probeResult = ASMLiteDriftProbe.ValidateInstallPrefixWritePath(serializedVfComponent);
+                if (!probeResult.Success)
+                    return probeResult.ToDiagnosticResult();
+
+                var prefixProperty = serializedVfComponent.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
+                if (prefixProperty == null)
+                {
+                    return ASMLiteBuildDiagnosticResult.Fail(
+                        code: ASMLiteDiagnosticCodes.Drift.MissingMenuPrefixPath,
+                        contextPath: ASMLiteDriftProbe.MenuPrefixPath,
+                        remediation: "Update VRCFury FullController schema mapping so menu prefix write path remains available.");
+                }
+
+                prefixProperty.stringValue = string.Empty;
+                return ASMLiteBuildDiagnosticResult.Pass();
+            }
+
+            return ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
         }
 
         private static Type FindTypeByFullName(string fullName)

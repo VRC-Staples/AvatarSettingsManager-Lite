@@ -86,7 +86,7 @@ jobs:
           output = os.environ["GITHUB_OUTPUT"]
 
           if is_hotfix:
-            print("::notice::Hotfix mode — overwriting artifacts for current version.")
+            print("::notice::Hotfix mode - overwriting artifacts for current version.")
             with open(output, "a") as fh:
               print("should_release=true", file=fh)
               print("create_tag=false", file=fh)
@@ -125,7 +125,7 @@ jobs:
               latest_parts = tuple(int(p) for p in match.group(1).split("."))
           except urllib.error.HTTPError as exc:
             if exc.code == 404:
-              print("::notice::No existing releases found — will create first release.")
+              print("::notice::No existing releases found - will create first release.")
             else:
               details = exc.read().decode("utf-8", errors="replace")
               print(f"::error::GitHub API HTTP {exc.code}: {details[:800]}")

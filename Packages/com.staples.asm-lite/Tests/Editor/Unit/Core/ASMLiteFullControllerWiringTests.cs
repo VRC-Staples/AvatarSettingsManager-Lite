@@ -10,9 +10,6 @@ namespace ASMLite.Tests.Editor
     [Category("Headless")]
     public sealed class ASMLiteFullControllerWiringTests
     {
-        private const string TempRoot = "Assets/ASMLiteTests_Temp";
-        private const string RetargetMirrorFolder = "FullControllerWiringRetarget";
-
         private AsmLiteTestContext _ctx;
 
         [SetUp]
@@ -24,10 +21,6 @@ namespace ASMLite.Tests.Editor
         [TearDown]
         public void TearDown()
         {
-            string mirrorDir = TempRoot + "/" + RetargetMirrorFolder;
-            if (AssetDatabase.IsValidFolder(mirrorDir))
-                AssetDatabase.DeleteAsset(mirrorDir);
-
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
         }
 
@@ -69,7 +62,7 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void RetargetLiveFullControllerGeneratedAssets_RepointsReferencesThroughDedicatedModule()
         {
-            string mirrorDir = CreateGeneratedAssetMirror(RetargetMirrorFolder);
+            string mirrorDir = ASMLiteAssetPaths.GeneratedDir;
 
             var retargetResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
                 _ctx.Comp,
@@ -87,33 +80,6 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController), snapshot.ControllerAssetPath);
             Assert.AreEqual(mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu), snapshot.MenuAssetPath);
             Assert.AreEqual(mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams), snapshot.ParametersAssetPath);
-        }
-
-        private static string CreateGeneratedAssetMirror(string folderName)
-        {
-            string root = TempRoot;
-            if (!AssetDatabase.IsValidFolder(root))
-                AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
-
-            string mirrorDir = root + "/" + folderName;
-            if (AssetDatabase.IsValidFolder(mirrorDir))
-                AssetDatabase.DeleteAsset(mirrorDir);
-
-            AssetDatabase.CreateFolder(root, folderName);
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.FXController, mirrorDir);
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.Menu, mirrorDir);
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.ExprParams, mirrorDir);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            return mirrorDir;
-        }
-
-        private static void CopyPackageAssetToMirror(string sourceAssetPath, string targetFolder)
-        {
-            string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
-            AssetDatabase.DeleteAsset(destinationPath);
-            Assert.IsTrue(AssetDatabase.CopyAsset(sourceAssetPath, destinationPath),
-                $"Expected to copy '{sourceAssetPath}' to '{destinationPath}' for FullController retargeting seam tests.");
         }
 
         private void AssertFullControllerReferencesPointAt(string expectedController, string expectedMenu, string expectedParameters)

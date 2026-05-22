@@ -98,7 +98,7 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 if (Directory.Exists(tempRoot))
-                    Directory.Delete(tempRoot, recursive: true);
+                    DeleteDirectoryIfExists(tempRoot);
             }
         }
 
@@ -406,7 +406,7 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 if (Directory.Exists(tempDirectory))
-                    Directory.Delete(tempDirectory, recursive: true);
+                    DeleteDirectoryIfExists(tempDirectory);
             }
         }
 
@@ -590,7 +590,7 @@ namespace ASMLite.Tests.Editor
                 InvokeBatchRunnerPrivateMethod("ResetStaticState");
                 SessionState.EraseString("ASMLite.BatchTestRunner.SessionState");
                 if (Directory.Exists(tempDirectory))
-                    Directory.Delete(tempDirectory, recursive: true);
+                    DeleteDirectoryIfExists(tempDirectory);
             }
         }
 
@@ -606,6 +606,32 @@ namespace ASMLite.Tests.Editor
             typeof(ASMLiteBatchTestRunner)
                 .GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic)
                 ?.Invoke(null, arguments);
+        }
+
+        private static void DeleteDirectoryIfExists(string path)
+        {
+            ClearRestrictiveAttributes(path);
+            foreach (var directory in Directory.GetDirectories(path, "*", SearchOption.AllDirectories))
+                ClearRestrictiveAttributes(directory);
+            foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+                ClearRestrictiveAttributes(file);
+
+            Directory.Delete(path, recursive: true);
+        }
+
+        private static void ClearRestrictiveAttributes(string path)
+        {
+            try
+            {
+                File.SetAttributes(path, File.GetAttributes(path) &
+                    ~(FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System));
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
         }
 
         private sealed class FakeTestResultAdaptor : ITestResultAdaptor

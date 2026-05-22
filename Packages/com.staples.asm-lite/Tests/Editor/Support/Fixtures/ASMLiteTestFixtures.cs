@@ -55,12 +55,14 @@ namespace ASMLite.Tests.Editor
 
         private sealed class FixtureIsolationRegistration
         {
-            internal FixtureIsolationRegistration(AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
+            internal FixtureIsolationRegistration(GameObject avatarGo, AsmLiteFixtureIsolationScope scope, IEnumerable<string> generatedAssetPaths)
             {
+                AvatarGo = avatarGo;
                 Scope = scope;
                 GeneratedAssetPaths = new HashSet<string>(generatedAssetPaths ?? Array.Empty<string>(), StringComparer.Ordinal);
             }
 
+            internal GameObject AvatarGo { get; }
             internal AsmLiteFixtureIsolationScope Scope { get; }
             internal HashSet<string> GeneratedAssetPaths { get; }
         }
@@ -91,9 +93,7 @@ namespace ASMLite.Tests.Editor
 
         private static AsmLiteTestContext CreateTestAvatarCore(string avatarName, AsmLiteFixtureIsolationScope isolationScope)
         {
-            // Create temp directory (guard against already existing)
-            if (!AssetDatabase.IsValidFolder(TempDir))
-                AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+            EnsureFixtureTempDir();
 
             foreach (var fixturePath in FixtureGeneratedAssetPaths().Skip(1))
             {
@@ -390,6 +390,61 @@ namespace ASMLite.Tests.Editor
         private static void DeleteFixtureTempDir()
         {
             DeleteFixtureAssetPath(TempDir);
+            DeleteFixtureAssetPath(TempDir + " 1");
+            DeleteFixtureAssetPath(TempDir + " 2");
+            DeleteFixtureAssetPath(TempDir + " 3");
+        }
+
+        internal static void EnsureFixtureTempDir()
+        {
+            if (!AssetDatabase.IsValidFolder(TempDir))
+            {
+                DeleteFixtureTempDirPath(TempDir);
+                DeleteFixtureTempDirPath(TempDir + " 1");
+                DeleteFixtureTempDirPath(TempDir + " 2");
+                DeleteFixtureTempDirPath(TempDir + " 3");
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+
+                string guid = AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+                string createdPath = AssetDatabase.GUIDToAssetPath(guid)?.Replace('\\', '/');
+                if (!string.IsNullOrEmpty(createdPath) && !string.Equals(createdPath, TempDir, StringComparison.Ordinal))
+                    DeleteFixtureTempDirPath(createdPath);
+                EnsureFixtureFolderMeta(TempDir, Path.Combine(Application.dataPath, "ASMLiteTests_Temp"));
+                AssetDatabase.ImportAsset(TempDir, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            EnsureFixtureFolderMeta(TempDir, Path.Combine(Application.dataPath, "ASMLiteTests_Temp"));
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+
+            Assert.IsTrue(AssetDatabase.IsValidFolder(TempDir),
+                $"Expected exact fixture temp folder '{TempDir}' to exist.");
+        }
+
+        private static void EnsureFixtureFolderMeta(string assetPath, string fullPath)
+        {
+            Directory.CreateDirectory(fullPath);
+            string metaPath = fullPath + ".meta";
+            if (!File.Exists(metaPath))
+            {
+                File.WriteAllText(metaPath,
+                    "fileFormatVersion: 2\n"
+                    + $"guid: {System.Guid.NewGuid():N}\n"
+                    + "folderAsset: yes\n"
+                    + "DefaultImporter:\n"
+                    + "  externalObjects: {}\n"
+                    + "  userData:\n"
+                    + "  assetBundleName:\n"
+                    + "  assetBundleVariant:\n");
+            }
+
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        private static void DeleteFixtureTempDirPath(string assetPath)
+        {
+            FileUtil.DeleteFileOrDirectory(assetPath);
+            FileUtil.DeleteFileOrDirectory(assetPath + ".meta");
         }
 
         private static void DeleteFixtureVendorizedGeneratedAssets(IEnumerable<string> generatedAssetPaths)
@@ -484,7 +539,8 @@ namespace ASMLite.Tests.Editor
             if (avatarGo == null || scope == null)
                 return;
 
-            s_fixtureIsolationRegistrations[avatarGo.GetInstanceID()] = new FixtureIsolationRegistration(scope, generatedAssetPaths);
+            PruneDeadFixtureIsolationRegistrations();
+            s_fixtureIsolationRegistrations[avatarGo.GetInstanceID()] = new FixtureIsolationRegistration(avatarGo, scope, generatedAssetPaths);
         }
 
         private static AsmLiteFixtureIsolationScope UnregisterFixtureIsolationScope(GameObject avatarGo)
@@ -502,6 +558,7 @@ namespace ASMLite.Tests.Editor
 
         internal static bool IsRegisteredFixtureAvatarRootId(int instanceId)
         {
+            PruneDeadFixtureIsolationRegistrations();
             return s_fixtureIsolationRegistrations.ContainsKey(instanceId);
         }
 
@@ -510,8 +567,20 @@ namespace ASMLite.Tests.Editor
             if (string.IsNullOrEmpty(assetPath))
                 return false;
 
+            PruneDeadFixtureIsolationRegistrations();
             return s_fixtureIsolationRegistrations.Values.Any(registration =>
                 registration.GeneratedAssetPaths.Contains(assetPath));
+        }
+
+        private static void PruneDeadFixtureIsolationRegistrations()
+        {
+            foreach (var key in s_fixtureIsolationRegistrations
+                .Where(pair => pair.Value.AvatarGo == null)
+                .Select(pair => pair.Key)
+                .ToArray())
+            {
+                s_fixtureIsolationRegistrations.Remove(key);
+            }
         }
 
         public static void ResetGeneratedExprParams()
@@ -2335,7 +2404,7 @@ namespace ASMLite.Tests.Editor
                 PersistSessionState();
                 WriteOverlayState(
                     "Running",
-                    $"Running suite {s_completedRunCount + 1}/{s_expectedRunCount}: {s_activeRun.suiteLabel} — {s_activeRun.name}",
+                    $"Running suite {s_completedRunCount + 1}/{s_expectedRunCount}: {s_activeRun.suiteLabel} - {s_activeRun.name}",
                     s_completedRunCount + 1,
                     true);
 
@@ -2406,8 +2475,8 @@ namespace ASMLite.Tests.Editor
                 WriteOverlayState(
                     runFailed ? "Warning" : "Running",
                     runFailed
-                        ? $"Suite failed {s_completedRunCount}/{s_expectedRunCount}: {s_activeRun.suiteLabel} — {s_activeRun.name}"
-                        : $"Completed suite {s_completedRunCount}/{s_expectedRunCount}: {s_activeRun.suiteLabel} — {s_activeRun.name}",
+                        ? $"Suite failed {s_completedRunCount}/{s_expectedRunCount}: {s_activeRun.suiteLabel} - {s_activeRun.name}"
+                        : $"Completed suite {s_completedRunCount}/{s_expectedRunCount}: {s_activeRun.suiteLabel} - {s_activeRun.name}",
                     s_completedRunCount,
                     true);
 

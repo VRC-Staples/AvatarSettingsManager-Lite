@@ -3669,7 +3669,9 @@ namespace ASMLite.Editor
             if (avatar.gameObject != null)
             {
                 var reserved = new HashSet<string>(result.Keys, StringComparer.Ordinal);
-                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(avatar.gameObject);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
                 for (int i = 0; i < candidates.Count; i++)
                 {
                     var candidate = candidates[i];
@@ -3981,7 +3983,9 @@ namespace ASMLite.Editor
             //    expressionParameters has been rebuilt.
             if (avatar?.gameObject != null)
             {
-                var assignedGlobals = ASMLiteToggleNameBroker.DiscoverAssignedToggleGlobalParams(avatar.gameObject);
+                var assignedGlobals = ASMLiteToggleNameBroker.DiscoverAssignedToggleGlobalParams(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
                 for (int i = 0; i < assignedGlobals.Count; i++)
                 {
                     string assigned = assignedGlobals[i];
@@ -4004,7 +4008,9 @@ namespace ASMLite.Editor
             if (avatar?.gameObject != null)
             {
                 var reserved = new HashSet<string>(names, StringComparer.Ordinal);
-                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(avatar.gameObject);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
                 for (int i = 0; i < candidates.Count; i++)
                 {
                     var candidate = candidates[i];
@@ -6408,13 +6414,10 @@ namespace ASMLite.Editor
                     return false;
                 }
 
-                var liveRestoreResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
+                if (!ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(
                     component,
-                    ASMLiteAssetPaths.GeneratedDir,
-                    "Rebuild Generated Assets Pre-Stage Retarget");
-                if (!liveRestoreResult.Success)
+                    ASMLiteAssetPaths.GeneratedDir))
                 {
-                    Debug.LogError(liveRestoreResult.ToLogString());
                     ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
                     return false;
                 }
@@ -6432,12 +6435,7 @@ namespace ASMLite.Editor
                     if (!descriptorRollbackResult.Success)
                         Debug.LogError(descriptorRollbackResult.ToLogString());
 
-                    var liveRollbackResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
-                        component,
-                        previousVendorizedDir,
-                        "Rebuild Generated Assets Pre-Stage Rollback");
-                    if (!liveRollbackResult.Success)
-                        Debug.LogError(liveRollbackResult.ToLogString());
+                    ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, previousVendorizedDir);
                 }
 
                 return false;
@@ -6456,10 +6454,8 @@ namespace ASMLite.Editor
 
                 descriptorRetargeted = true;
 
-                var liveRetargetResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, mirrorResult.TargetPath, "Rebuild Generated Assets Live Retarget");
-                if (!liveRetargetResult.Success)
+                if (!ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath))
                 {
-                    Debug.LogError(liveRetargetResult.ToLogString());
                     return false;
                 }
 

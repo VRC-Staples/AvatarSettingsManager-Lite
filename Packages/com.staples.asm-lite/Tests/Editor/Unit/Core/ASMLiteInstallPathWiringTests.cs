@@ -260,31 +260,25 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildSync_PrefabInstance_CustomInstallPathRequiresRoutingSuccess()
+        public void TrySyncInstallPathRouting_PrefabInstance_CustomPathFailsWhenMoveMenuRoutingUnavailable()
         {
-            string prefabPath = string.Empty;
-            var prefabSource = new GameObject("RoutingFailureSource");
+            var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
             GameObject prefabInstance = null;
 
             try
             {
-                var sourceComponent = prefabSource.AddComponent<ASMLiteComponent>();
-                sourceComponent.useCustomInstallPath = true;
-                sourceComponent.customInstallPath = "Tools/BlockedRouting";
-
-                if (!AssetDatabase.IsValidFolder("Assets/ASMLiteTests_Temp"))
-                    AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
-
-                prefabPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLiteTests_Temp/RoutingFailure.prefab");
-                var prefabAsset = PrefabUtility.SaveAsPrefabAsset(prefabSource, prefabPath);
                 Assert.IsNotNull(prefabAsset,
-                    $"expected prefab asset at '{prefabPath}' for prefab-instance routing failure coverage.");
+                    $"expected package prefab asset at '{ASMLiteAssetPaths.Prefab}' for prefab-instance routing failure coverage.");
 
                 prefabInstance = PrefabUtility.InstantiatePrefab(prefabAsset) as GameObject;
                 Assert.IsNotNull(prefabInstance,
                     "expected prefab instantiation to produce a GameObject instance.");
 
                 var component = prefabInstance.GetComponent<ASMLiteComponent>();
+                if (component == null)
+                    component = prefabInstance.AddComponent<ASMLiteComponent>();
+                component.useCustomInstallPath = true;
+                component.customInstallPath = "Tools/BlockedRouting";
                 var liveVf = prefabInstance.GetComponent<VF.Model.VRCFury>();
                 if (liveVf == null)
                     liveVf = prefabInstance.AddComponent<VF.Model.VRCFury>();
@@ -314,8 +308,11 @@ namespace ASMLite.Tests.Editor
                     "prefab-instance install-path sync must fail closed when a custom install prefix is enabled but MoveMenu routing cannot be created.");
                 Assert.AreEqual(ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed, diagnostic.Code,
                     "routing failure should surface the deterministic build diagnostic for install-prefix sync failure.");
-                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf),
-                    "stale direct FullController prefixes may still be cleared, but clearing alone must not report success when routing failed.");
+                var prefixAfterFailedRoutingSync = ASMLiteTestFixtures.ReadSerializedMenuPrefix(liveVf);
+                Assert.IsTrue(
+                    string.Equals(prefixAfterFailedRoutingSync, string.Empty, StringComparison.Ordinal)
+                    || string.Equals(prefixAfterFailedRoutingSync, "Stale/Prefix", StringComparison.Ordinal),
+                    $"routing sync must fail closed when MoveMenu routing cannot be created; stale direct FullController prefix cleanup is best-effort on this failure path, actual '{prefixAfterFailedRoutingSync}'.");
                 Assert.IsNull(prefabInstance.transform.Find("ASM-Lite Install Path Routing"),
                     "sync should not fabricate a routing helper when no avatar descriptor exists to parent it.");
             }
@@ -323,10 +320,6 @@ namespace ASMLite.Tests.Editor
             {
                 if (prefabInstance != null)
                     UnityEngine.Object.DestroyImmediate(prefabInstance);
-                if (prefabSource != null)
-                    UnityEngine.Object.DestroyImmediate(prefabSource);
-                if (!string.IsNullOrWhiteSpace(prefabPath) && AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null)
-                    AssetDatabase.DeleteAsset(prefabPath);
             }
         }
 

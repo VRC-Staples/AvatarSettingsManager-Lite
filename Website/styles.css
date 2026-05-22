@@ -19,13 +19,13 @@ body {
   background-color: #12161e;
 }
 
-/* #1 — H1 contrast fix */
+/* #1 - H1 contrast fix */
 h1 {
   color: #e6edf5 !important;
   margin-bottom: 0.5rem;
 }
 
-/* #3 + #9 — package card and search dark theme */
+/* #3 + #9 - package card and search dark theme */
 fluent-data-grid,
 fluent-data-grid-row,
 fluent-data-grid-cell,

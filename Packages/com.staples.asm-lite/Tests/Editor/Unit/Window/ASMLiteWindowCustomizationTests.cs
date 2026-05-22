@@ -910,6 +910,68 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_BeforeAsmAddition()
+        {
+            Object.DestroyImmediate(_ctx.Comp.gameObject);
+            Assert.IsFalse(ASMLite.Editor.ASMLiteToggleNameBroker.HasAsmLiteScope(_ctx.AvatarGo),
+                "regression setup should match first-add Customize flow before the ASM-Lite prefab exists on the avatar.");
+
+            var limbRoot = new GameObject("FixtureSource");
+            limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var arms = new GameObject("Arms");
+            arms.transform.SetParent(limbRoot.transform, false);
+
+            var vf = arms.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = true,
+                globalParam = "Fixture/Source/One",
+                name = "Fixture Source One",
+                menuPath = string.Empty,
+            };
+
+            string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
+
+            CollectionAssert.Contains(backable, "Fixture/Source/One",
+                "First-add Customize must discover assigned VRCFury toggle globals even before ASM-Lite has been added to the avatar.");
+        }
+
+        [Test]
+        public void VisibleParameterBackupOptions_IncludePlannedToggleAliases_BeforeAsmAddition()
+        {
+            Object.DestroyImmediate(_ctx.Comp.gameObject);
+            Assert.IsFalse(ASMLite.Editor.ASMLiteToggleNameBroker.HasAsmLiteScope(_ctx.AvatarGo),
+                "regression setup should match first-add Customize flow before the ASM-Lite prefab exists on the avatar.");
+
+            var wardrobe = new GameObject("Wardrobe");
+            wardrobe.transform.SetParent(_ctx.AvatarGo.transform, false);
+
+            var vf = wardrobe.AddComponent<VF.Model.VRCFury>();
+            vf.content = new VF.Model.Feature.Toggle
+            {
+                useGlobalParam = false,
+                globalParam = "Legacy/Unused/Rezz",
+                name = "Clothing/Rezz",
+                menuPath = string.Empty,
+                saved = true,
+                defaultOn = false,
+            };
+
+            string expectedAlias = ASMLite.Editor.ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                "Clothing/Rezz",
+                _ctx.AvatarGo.name + "/Wardrobe",
+                new HashSet<string>(StringComparer.Ordinal));
+
+            string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
+
+            CollectionAssert.Contains(backable, expectedAlias,
+                "First-add Customize must show the deterministic VRCFury toggle alias ASM-Lite will back up after build enrollment.");
+            CollectionAssert.DoesNotContain(backable, "Legacy/Unused/Rezz",
+                "First-add Customize should not offer stale non-global toggle source names when ASM-Lite will replace them with deterministic aliases.");
+        }
+
+        [Test]
         public void ParameterBackupAutomation_PresetIdNormalizesSnapshots()
         {
             var limbRoot = new GameObject("FixtureSource");

@@ -375,9 +375,33 @@ namespace ASMLite.Tests.Editor
 
         private static void EnsureTestAssetFolder(string parent, string child)
         {
-            string path = parent.TrimEnd('/') + "/" + child;
+            string normalizedParent = (parent ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
+            string path = normalizedParent + "/" + child;
             if (!AssetDatabase.IsValidFolder(path))
-                AssetDatabase.CreateFolder(parent, child);
+                AssetDatabase.CreateFolder(normalizedParent, child);
+
+            string relative = path.StartsWith("Assets/", System.StringComparison.Ordinal)
+                ? path.Substring("Assets/".Length).Replace('/', Path.DirectorySeparatorChar)
+                : path;
+            string fullPath = Path.Combine(Application.dataPath, relative);
+            Directory.CreateDirectory(fullPath);
+
+            string metaPath = fullPath + ".meta";
+            if (!File.Exists(metaPath))
+            {
+                File.WriteAllText(metaPath,
+                    "fileFormatVersion: 2\n"
+                    + $"guid: {System.Guid.NewGuid():N}\n"
+                    + "folderAsset: yes\n"
+                    + "DefaultImporter:\n"
+                    + "  externalObjects: {}\n"
+                    + "  userData:\n"
+                    + "  assetBundleName:\n"
+                    + "  assetBundleVariant:\n");
+            }
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
         }
 
         private static void DeleteTestAssetIfExists(string assetPath)

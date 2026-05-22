@@ -15,22 +15,41 @@ All notable changes to ASM-Lite are documented here.
   - **Vendorize (Keep Attached)** to mirror generated payload assets into `Assets/ASM-Lite/<Avatar>/GeneratedAssets` while keeping ASM-Lite editable.
   - **Return to Package Managed** recovery path for vendorized/detached states.
 - Vendorized state persistence fields on `ASMLiteComponent` (`useVendorizedGeneratedAssets`, `vendorizedGeneratedAssetsPath`).
-- Expanded EditMode coverage for install-path wiring, root menu overrides, and window customization flows (including MoveMenu adoption/remap behavior).
+- Editor customization draft flow for deterministic pre-attach and attached updates to slot count, root/preset/action labels, slot icons, action icons, install path, and backup-parameter presets.
+- Stable icon fixture registry plus the bundled `FlowArrow` icon fixture used by customization automation and smoke coverage.
+- Parameter backup preset resolver for selecting visible generated/VRCFury-backed parameter groups by stable preset id or exact visible name.
+- Generated-asset ownership, lifecycle, and direct-delivery policy modules that classify package-managed, vendorized, and detached avatar states without mixing ownership boundaries.
+- Expanded EditMode coverage for install-path wiring, root menu overrides, MoveMenu adoption/remap behavior, customization snapshots, lifecycle rollback, package-output isolation, and upload preprocess cleanup boundaries.
+- Expanded smoke/PlayMode coverage for setup matrices, avatar discovery, scaffold state, negative diagnostics, destructive recovery reset, naming/icon/backup combinations, AV3 Save/Load runtime checks, package-resource loading, package-managed generated-reference assertions, suite step timing, fail-fast behavior, console-error failures, and heartbeat/stall/crash host signals.
+- Canonical test-suite ledger and CI-derived batch plan covering 528 inventoried package tests across core, integration, smoke protocol, overlay host, visible/manual, and PlayMode review lanes.
+- Generated compatibility summary documenting Unity, VRChat SDK, and VRCFury policy floors with machine-checkable reason codes.
 
 ### Changed
 
 - Build pipeline now syncs install-path routing in `Build()` and uses a safer prefab-instance path
   that routes via MoveMenu helper behavior instead of relying on brittle FullController managed-reference overrides.
+- Package-managed generated outputs are now snapshotted/restored around rebuild, vendorize, detach, tests, and fixture setup so package assets do not stay dirty after avatar-local delivery flows.
+- FullController menu-prefix normalization now writes through both serialized properties and the live VRCFury payload, clearing stale prefab overrides before package-managed asset retargeting.
+- Generated-asset fixture setup now recreates folders/metas from disk when Unity's AssetDatabase creates suffixed paths or stale import state.
 - Parameter exclusions now expand across VRCFury toggle mapping pairs (original global name + assigned deterministic name) so either-side exclusion behaves consistently.
-- Updated README editor workflow docs to reflect detach/vendorize/package-managed action set and current release automation behavior.
-- Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
+- Visible automation and smoke overlay UX now has clearer suite filters, current-suite/recent-event states, review/monitor copy, live-run spacing, and automatic event monitor opening.
+- Test tree, CI scripts, validators, release gates, and audit docs were reorganized into taxonomy folders with canonical suite-map validation and release-critical result checks.
 - Local CI-equivalent EditMode runner (`Tools/ci/bin/run-editmode-local.sh`) now supports `.env` defaults for Unity credential/license variables, adds local-only Docker Desktop credential helper shim behavior, and enforces bounded timeout handling to fail fast on hangs.
+- Updated README editor workflow docs to reflect detach/vendorize/package-managed action set, deterministic generated-asset ownership, and current release automation behavior.
+- Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
 
 ### Fixed
 
+- Restored live ASM-Lite Save/Load behavior and added AV3 replay/fuzz/runtime coverage for backup/default parameter continuity.
 - Migration rebuild now normalizes persisted custom root names before reapplying state so stale-prefab rebuild preserves trimmed customization values consistently.
 - Slot icon resolution now treats `IconMode.Custom` as explicit custom-slot-only mode and fails closed to the bundled presets icon when a slot override is null or out-of-range.
+- Build and rebuild now auto-heal missing or corrupted FullController parameter enrollment before regenerating assets.
+- Vendorize/detach recovery classification now accepts already-retargeted vendorized generated references when deciding whether detached recovery can continue.
+- Stale ASM-Lite editor caches are cleared across same-window lifecycle cycles so vendorize/detach/recovery actions use current avatar state.
 - `ASMLiteTestFixtures.SetExpressionParams` now guards null `ParamsAsset` by recovering descriptor-bound parameters or creating a fallback expression-parameters asset before dirty/save calls.
+- Smoke setup fixture selection now validates the shipped package prefab directly instead of creating a temporary prefab asset, reducing fixture asset churn.
+- Generated asset validators now include `.meta` files and package-output snapshots to catch stale GUID/meta drift.
+- Fixture isolation now restores generated assets, prefab bytes, scene selection, open scenes, and fixture roots across concurrent avatar tests.
 
 ### Known Issues
 

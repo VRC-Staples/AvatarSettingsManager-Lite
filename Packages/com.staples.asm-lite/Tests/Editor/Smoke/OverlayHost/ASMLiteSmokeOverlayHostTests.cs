@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ASMLite.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -1537,18 +1538,10 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void UnityRuntime_AvatarSelection_ReportsPrefabAssetSelectionDiagnostic()
         {
-            const string folderPath = "Assets/ASMLiteAvatarSelectionTests_Temp";
-            const string prefabPath = folderPath + "/FixturePrefabAvatar.prefab";
-            GameObject source = null;
             try
             {
-                if (!AssetDatabase.IsValidFolder(folderPath))
-                    AssetDatabase.CreateFolder("Assets", "ASMLiteAvatarSelectionTests_Temp");
-                source = new GameObject("FixtureAvatar");
-                source.AddComponent<VRCAvatarDescriptor>();
-                GameObject prefab = PrefabUtility.SaveAsPrefabAsset(source, prefabPath);
-                UnityEngine.Object.DestroyImmediate(source);
-                source = null;
+                GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+                Assert.That(prefab, Is.Not.Null, $"setup failure: package prefab asset should exist at '{ASMLiteAssetPaths.Prefab}'.");
                 Selection.activeObject = prefab;
 
                 bool resolved = ASMLiteSmokeOverlayHostUnityRuntime.TryResolveAvatarForSelection(
@@ -1564,11 +1557,6 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 Selection.activeObject = null;
-                if (source != null)
-                    UnityEngine.Object.DestroyImmediate(source);
-                AssetDatabase.DeleteAsset(prefabPath);
-                if (AssetDatabase.IsValidFolder(folderPath))
-                    AssetDatabase.DeleteAsset(folderPath);
             }
         }
 

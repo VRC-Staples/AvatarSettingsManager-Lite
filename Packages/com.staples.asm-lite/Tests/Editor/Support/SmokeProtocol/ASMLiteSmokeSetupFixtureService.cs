@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ASMLite;
+using ASMLite.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -322,22 +323,21 @@ namespace ASMLite.Tests.Editor
 
         private bool ApplySelectedPrefabAsset(string objectName, out string detail)
         {
-            EnsureAssetFolder("Assets", "ASMLiteTests_Temp");
-            string prefabPath = "Assets/ASMLiteTests_Temp/FixturePrefabAvatar.prefab";
-            var source = new GameObject(objectName);
-            source.AddComponent<VRCAvatarDescriptor>();
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(source, prefabPath);
-            DestroyObject(source);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+            if (prefab == null)
+            {
+                detail = $"Package prefab asset was not found at '{ASMLiteAssetPaths.Prefab}'.";
+                return false;
+            }
 
             UnityEngine.Object previousSelection = Selection.activeObject;
-            _cleanupLedger.Push(new CleanupEntry("delete selected prefab asset", () =>
+            _cleanupLedger.Push(new CleanupEntry("restore selected prefab asset selection", () =>
             {
                 Selection.activeObject = previousSelection;
-                DeleteAssetIfExists(prefabPath);
             }));
 
             Selection.activeObject = prefab;
-            detail = $"Prefab asset avatar '{objectName}' selected and cleanup recorded.";
+            detail = $"Prefab asset '{prefab.name}' selected and cleanup recorded.";
             return true;
         }
 
@@ -789,18 +789,61 @@ namespace ASMLite.Tests.Editor
 
         private static string EnsureAssetFolder(string parent, string child)
         {
-            if (!AssetDatabase.IsValidFolder(parent))
+            string normalizedParent = NormalizeAssetPath(parent);
+            EnsureExistingAssetFolder(normalizedParent);
+
+            string path = NormalizeAssetPath(normalizedParent.TrimEnd('/') + "/" + child);
+            if (!AssetDatabase.IsValidFolder(path))
             {
-                string grandParent = Path.GetDirectoryName(parent)?.Replace('\\', '/');
-                string parentName = Path.GetFileName(parent);
-                if (!string.IsNullOrWhiteSpace(grandParent) && !string.IsNullOrWhiteSpace(parentName))
-                    EnsureAssetFolder(grandParent, parentName);
+                string guid = AssetDatabase.CreateFolder(normalizedParent, child);
+                string createdPath = NormalizeAssetPath(AssetDatabase.GUIDToAssetPath(guid));
+                if (!string.IsNullOrEmpty(createdPath) && !string.Equals(createdPath, path, StringComparison.Ordinal))
+                    DeleteAssetIfExists(createdPath);
             }
 
-            string path = parent.TrimEnd('/') + "/" + child;
-            if (!AssetDatabase.IsValidFolder(path))
-                AssetDatabase.CreateFolder(parent, child);
+            EnsureAssetFolderOnDisk(path);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
             return path;
+        }
+
+        private static void EnsureExistingAssetFolder(string assetPath)
+        {
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath) || string.Equals(normalizedPath, "Assets", StringComparison.Ordinal))
+                return;
+
+            string parent = NormalizeAssetPath(Path.GetDirectoryName(normalizedPath)?.Replace('\\', '/'));
+            string child = Path.GetFileName(normalizedPath);
+            if (!AssetDatabase.IsValidFolder(normalizedPath))
+                EnsureAssetFolder(parent, child);
+            else
+                EnsureAssetFolderOnDisk(normalizedPath);
+        }
+
+        private static void EnsureAssetFolderOnDisk(string assetPath)
+        {
+            string fullPath = ToAbsoluteProjectPath(assetPath);
+            Directory.CreateDirectory(fullPath);
+
+            string metaPath = fullPath + ".meta";
+            if (!File.Exists(metaPath))
+            {
+                File.WriteAllText(metaPath,
+                    "fileFormatVersion: 2\n"
+                    + $"guid: {Guid.NewGuid():N}\n"
+                    + "folderAsset: yes\n"
+                    + "DefaultImporter:\n"
+                    + "  externalObjects: {}\n"
+                    + "  userData:\n"
+                    + "  assetBundleName:\n"
+                    + "  assetBundleVariant:\n");
+            }
+        }
+
+        private static string NormalizeAssetPath(string assetPath)
+        {
+            return (assetPath ?? string.Empty).Trim().Replace('\\', '/').TrimEnd('/');
         }
 
         private static VRCAvatarDescriptor FindSceneAvatarByName(string avatarName, bool includeInactive = true)
@@ -849,12 +892,31 @@ namespace ASMLite.Tests.Editor
 
         private static void DeleteAssetIfEmpty(string assetPath)
         {
-            if (!AssetDatabase.IsValidFolder(assetPath))
+            string normalizedPath = NormalizeAssetPath(assetPath);
+            if (string.IsNullOrEmpty(normalizedPath))
                 return;
 
-            string[] children = AssetDatabase.FindAssets(string.Empty, new[] { assetPath });
-            if (children.Length == 0)
-                AssetDatabase.DeleteAsset(assetPath);
+            bool validFolder = AssetDatabase.IsValidFolder(normalizedPath);
+            bool existsOnDisk = Directory.Exists(ToAbsoluteProjectPath(normalizedPath));
+            if (!validFolder && !existsOnDisk)
+                return;
+
+            if (validFolder)
+            {
+                string[] childPaths = AssetDatabase.FindAssets(string.Empty, new[] { normalizedPath })
+                    .Select(AssetDatabase.GUIDToAssetPath)
+                    .Select(NormalizeAssetPath)
+                    .Where(path => !string.IsNullOrEmpty(path))
+                    .Where(path => !string.Equals(path, normalizedPath, StringComparison.Ordinal))
+                    .ToArray();
+                if (childPaths.Length != 0)
+                    return;
+            }
+
+            if (existsOnDisk && Directory.EnumerateFileSystemEntries(ToAbsoluteProjectPath(normalizedPath)).Any())
+                return;
+
+            DeleteAssetIfExists(normalizedPath);
         }
 
         private static string ToAbsoluteProjectPath(string assetPath)

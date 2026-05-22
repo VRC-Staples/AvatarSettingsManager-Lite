@@ -638,13 +638,13 @@ namespace ASMLite.Tests.Editor
             GameObject selectedObject = GetSelectedGameObject();
             if (selectedObject != null)
             {
-                VRCAvatarDescriptor selectedAvatar = selectedObject.GetComponent<VRCAvatarDescriptor>();
-                if (selectedAvatar != null && EditorUtility.IsPersistent(selectedObject))
+                if (EditorUtility.IsPersistent(selectedObject))
                 {
                     detail = $"SETUP_AVATAR_PREFAB_ASSET: selected avatar target is a prefab asset, not a scene avatar instance: '{selectedObject.name}'.";
                     return false;
                 }
 
+                VRCAvatarDescriptor selectedAvatar = selectedObject.GetComponent<VRCAvatarDescriptor>();
                 if (selectedAvatar == null || !IsLoadedSceneObject(selectedObject))
                 {
                     detail = $"SETUP_SELECTED_OBJECT_NOT_AVATAR: selected object is not a valid avatar target: '{selectedObject.name}'.";

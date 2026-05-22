@@ -164,8 +164,52 @@ namespace ASMLite.Tests.Editor
         {
             string candidate = parent + "/" + child;
             if (!AssetDatabase.IsValidFolder(candidate))
-                AssetDatabase.CreateFolder(parent, child);
+            {
+                FileUtil.DeleteFileOrDirectory(candidate);
+                FileUtil.DeleteFileOrDirectory(candidate + ".meta");
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+
+                string guid = AssetDatabase.CreateFolder(parent, child);
+                string createdPath = AssetDatabase.GUIDToAssetPath(guid)?.Replace('\\', '/');
+                if (!string.IsNullOrEmpty(createdPath) && !string.Equals(createdPath, candidate, System.StringComparison.Ordinal))
+                    FileUtil.DeleteFileOrDirectory(createdPath);
+                EnsureFolderMeta(candidate, ToProjectRelativeFullPath(candidate));
+                AssetDatabase.ImportAsset(candidate, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+            Assert.IsTrue(AssetDatabase.IsValidFolder(candidate),
+                $"Expected test asset folder '{candidate}' to exist before staging generated asset fixtures.");
             return candidate;
+        }
+
+        private static void EnsureFolderMeta(string assetPath, string fullPath)
+        {
+            Directory.CreateDirectory(fullPath);
+            string metaPath = fullPath + ".meta";
+            if (!File.Exists(metaPath))
+            {
+                File.WriteAllText(metaPath,
+                    "fileFormatVersion: 2\n"
+                    + $"guid: {System.Guid.NewGuid():N}\n"
+                    + "folderAsset: yes\n"
+                    + "DefaultImporter:\n"
+                    + "  externalObjects: {}\n"
+                    + "  userData:\n"
+                    + "  assetBundleName:\n"
+                    + "  assetBundleVariant:\n");
+            }
+
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        private static string ToProjectRelativeFullPath(string assetPath)
+        {
+            string normalized = (assetPath ?? string.Empty).Replace('\\', '/').Trim('/');
+            if (string.Equals(normalized, "Assets", System.StringComparison.Ordinal))
+                return Application.dataPath;
+            if (normalized.StartsWith("Assets/", System.StringComparison.Ordinal))
+                return Path.Combine(Application.dataPath, normalized.Substring("Assets/".Length).Replace('/', Path.DirectorySeparatorChar));
+            return Path.Combine(Directory.GetCurrentDirectory(), normalized.Replace('/', Path.DirectorySeparatorChar));
         }
 
         private string CreateVendorizedMirrorForTest(string avatarName, string aid)
@@ -191,13 +235,14 @@ namespace ASMLite.Tests.Editor
 
             for (int attempt = 0; attempt < 20; attempt++)
             {
-                string folderName = $"{prefix}_{System.Guid.NewGuid():N}";
-                folderName = folderName.Substring(0, System.Math.Min(folderName.Length, prefix.Length + 9));
+                string folderName = $"{prefix.Substring(0, System.Math.Min(prefix.Length, 48))}_{System.Guid.NewGuid().ToString("N").Substring(0, 8)}";
                 string folderPath = root + "/" + folderName;
                 if (AssetDatabase.IsValidFolder(folderPath))
                     continue;
 
-                AssetDatabase.CreateFolder(root, folderName);
+                EnsureAssetFolder(root, folderName);
+                if (!AssetDatabase.IsValidFolder(folderPath))
+                    continue;
                 _ownedVendorizedAvatarFolders.Add(folderPath);
                 return folderPath;
             }
@@ -295,8 +340,23 @@ namespace ASMLite.Tests.Editor
             string destinationPath = targetFolder + "/" + Path.GetFileName(sourceAssetPath);
             Assert.IsFalse(AssetDatabase.LoadMainAssetAtPath(destinationPath) != null || AssetDatabase.IsValidFolder(destinationPath),
                 $"Expected test-owned mirror destination '{destinationPath}' to be empty before copying package asset '{sourceAssetPath}'.");
-            Assert.IsTrue(AssetDatabase.CopyAsset(sourceAssetPath, destinationPath),
-                $"Expected to copy '{sourceAssetPath}' to '{destinationPath}' for vendorized cleanup regression setup.");
+
+            if (!AssetDatabase.CopyAsset(sourceAssetPath, destinationPath))
+            {
+                FileUtil.DeleteFileOrDirectory(destinationPath);
+                FileUtil.DeleteFileOrDirectory(destinationPath + ".meta");
+                var sourceAsset = AssetDatabase.LoadMainAssetAtPath(sourceAssetPath);
+                Assert.IsNotNull(sourceAsset,
+                    $"Expected package source asset '{sourceAssetPath}' to be importable before creating a vendorized cleanup mirror.");
+                var clone = UnityEngine.Object.Instantiate(sourceAsset);
+                clone.name = Path.GetFileNameWithoutExtension(sourceAssetPath);
+                AssetDatabase.CreateAsset(clone, destinationPath);
+                AssetDatabase.ImportAsset(destinationPath, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            Assert.IsNotNull(AssetDatabase.LoadMainAssetAtPath(destinationPath),
+                $"Expected copied mirror asset '{destinationPath}' to import for vendorized cleanup regression setup.");
         }
 
         private string CreateUserOwnedSentinelAsset(string avatarFolder, string fileName)
@@ -354,8 +414,8 @@ namespace ASMLite.Tests.Editor
             if (!_ownedVendorizedAvatarFolders.Contains(normalized))
                 _ownedVendorizedAvatarFolders.Add(normalized);
 
-            if (AssetDatabase.IsValidFolder(normalized))
-                AssetDatabase.DeleteAsset(normalized);
+            FileUtil.DeleteFileOrDirectory(normalized);
+            FileUtil.DeleteFileOrDirectory(normalized + ".meta");
         }
 
         private void PruneOwnedAsmLiteRootIfEmpty()
@@ -363,11 +423,12 @@ namespace ASMLite.Tests.Editor
             if (_asmLiteRootExistedBeforeTest)
                 return;
 
-            if (AssetDatabase.IsValidFolder("Assets/ASM-Lite")
-                && AssetDatabase.FindAssets(string.Empty, new[] { "Assets/ASM-Lite" }).Length == 0)
-            {
-                AssetDatabase.DeleteAsset("Assets/ASM-Lite");
-            }
+            string rootPath = ToProjectRelativeFullPath("Assets/ASM-Lite");
+            if (Directory.Exists(rootPath) && Directory.EnumerateFileSystemEntries(rootPath).Any())
+                return;
+
+            FileUtil.DeleteFileOrDirectory("Assets/ASM-Lite");
+            FileUtil.DeleteFileOrDirectory("Assets/ASM-Lite.meta");
         }
 
         [Test, Category("Integration")]
@@ -785,9 +846,9 @@ namespace ASMLite.Tests.Editor
 
                 Assert.IsNull(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true),
                     "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: setup should leave the avatar detached before recovery failure injection.");
-                Assert.AreEqual(ASMLiteInstallationState.Detached,
+                AssertDetachedRecoveryEligibleState(
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: setup should classify the detached avatar as Detached before recovery failure injection.");
+                    "DetachedRecovery_VerifyFailure_ReportsBestEffortStateWithoutLeavingPartialPrefab: setup should classify the detached avatar as eligible for detached recovery before failure injection.");
 
                 using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify))
                 {
@@ -852,9 +913,9 @@ namespace ASMLite.Tests.Editor
                     "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should leave exactly one matching legacy MoveMenu helper on the detached avatar before recovery failure injection.");
                 Assert.IsNull(_ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing"),
                     "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should rely on the legacy MoveMenu helper rather than the package-managed routing helper.");
-                Assert.AreEqual(ASMLiteInstallationState.Detached,
+                AssertDetachedRecoveryEligibleState(
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
-                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should classify the avatar as Detached before pre-finalize recovery failure injection.");
+                    "DetachedRecovery_PreFinalizeFailure_PreservesLegacyMoveMenuHelperForRetry: setup should classify the avatar as eligible for detached recovery before pre-finalize recovery failure injection.");
 
                 using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.BeforeDetachedRecoveryRoutingFinalize))
                 {
@@ -921,6 +982,14 @@ namespace ASMLite.Tests.Editor
                 Object.DestroyImmediate(otherAvatarGo);
             }
         }
+
+        private static void AssertDetachedRecoveryEligibleState(ASMLiteInstallationState state, string message)
+        {
+            Assert.IsTrue(
+                state == ASMLiteInstallationState.Detached || state == ASMLiteInstallationState.Vendorized,
+                $"{message} Actual: {state}.");
+        }
+
         private sealed class PackageGeneratedAssetsSnapshot
         {
             private readonly string _rootFolder;

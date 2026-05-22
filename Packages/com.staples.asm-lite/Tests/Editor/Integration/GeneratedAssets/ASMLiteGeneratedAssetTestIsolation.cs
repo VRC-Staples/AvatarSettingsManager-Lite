@@ -169,8 +169,7 @@ namespace ASMLite.Tests.Editor
 
         private static void EnsureTempFolder()
         {
-            if (!AssetDatabase.IsValidFolder(TempDir))
-                AssetDatabase.CreateFolder("Assets", "ASMLiteTests_Temp");
+            ASMLiteTestFixtures.EnsureFixtureTempDir();
         }
 
         private static void AssertReadableAssetFile(string assetPath, string aid)
