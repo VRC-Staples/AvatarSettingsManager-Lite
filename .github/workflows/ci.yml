@@ -332,6 +332,8 @@ jobs:
             exit 1
           fi
 
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
+
           mkdir -p Tools/ci/unity-project/Assets/Editor
           cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
             Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
@@ -483,6 +485,8 @@ jobs:
             exit 1
           fi
           echo "::add-mask::${UNITY_SERIAL}"
+
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
 
           mkdir -p Tools/ci/unity-project/Assets/Editor
           cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \

@@ -113,6 +113,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.modules.cloth": {
+      "version": "1.0.0",
+      "depth": 0,
+      "source": "builtin",
+      "dependencies": {}
+    },
     "com.unity.ugui": {
       "version": "1.0.0",
       "depth": 1,
