@@ -314,6 +314,10 @@ jobs:
             exit 1
           fi
 
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
+
           export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
 
           # Write the inner script to a temp file to avoid quoting issues
