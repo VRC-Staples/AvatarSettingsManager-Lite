@@ -21,8 +21,11 @@ All notable changes to ASM-Lite are documented here.
 - Generated-asset ownership, lifecycle, and direct-delivery policy modules that classify package-managed, vendorized, and detached avatar states without mixing ownership boundaries.
 - Expanded EditMode coverage for install-path wiring, root menu overrides, MoveMenu adoption/remap behavior, customization snapshots, lifecycle rollback, package-output isolation, and upload preprocess cleanup boundaries.
 - Expanded smoke/PlayMode coverage for setup matrices, avatar discovery, scaffold state, negative diagnostics, destructive recovery reset, naming/icon/backup combinations, AV3 Save/Load runtime checks, package-resource loading, package-managed generated-reference assertions, suite step timing, fail-fast behavior, console-error failures, and heartbeat/stall/crash host signals.
-- Canonical test-suite ledger and CI-derived batch plan covering 528 inventoried package tests across core, integration, smoke protocol, overlay host, visible/manual, and PlayMode review lanes.
+- Canonical test-suite ledger and CI-derived batch plan covering 530 inventoried package tests across core, integration, smoke protocol, overlay host, visible/manual, and PlayMode review lanes.
 - Generated compatibility summary documenting Unity, VRChat SDK, and VRCFury policy floors with machine-checkable reason codes.
+- CI Asset Hygiene verifier and workflow lane to reject tracked local Test Project payloads, runtime-generated CI Unity `Assets` payloads except `.gitkeep`, generated `bin`/`obj` outputs, generated `.csproj` files, and Unity `Library`/`Temp`/`Logs`/`UserSettings` state.
+- PlayMode Save/Load CI lane that runs `ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests` in the CI Unity project with VRCFury and Lyuma Av3 Emulator available.
+- Unity license serial derivation helper for raw or base64 `.ulf` secrets without printing license contents.
 
 ### Changed
 
@@ -35,6 +38,9 @@ All notable changes to ASM-Lite are documented here.
 - Visible automation and smoke overlay UX now has clearer suite filters, current-suite/recent-event states, review/monitor copy, live-run spacing, and automatic event monitor opening.
 - Test tree, CI scripts, validators, release gates, and audit docs were reorganized into taxonomy folders with canonical suite-map validation and release-critical result checks.
 - Local CI-equivalent EditMode runner (`Tools/ci/bin/run-editmode-local.sh`) now supports `.env` defaults for Unity credential/license variables, adds local-only Docker Desktop credential helper shim behavior, and enforces bounded timeout handling to fail fast on hangs.
+- CI Unity result verification now requires nonzero passing NUnit XML and can fail skipped or inconclusive tests for strict EditMode and PlayMode gates.
+- EditMode and PlayMode CI jobs now verify package-managed generated assets and the shipped prefab stay clean after Unity runs.
+- CI Unity project manifest now declares ASM-Lite as testable and includes VRCFury plus Lyuma Av3 Emulator dependencies for PlayMode runtime coverage.
 - Updated README editor workflow docs to reflect detach/vendorize/package-managed action set, deterministic generated-asset ownership, and current release automation behavior.
 - Pruned stale `.gsd` documentation entries and corrected requirements traceability metadata drift.
 
@@ -50,6 +56,10 @@ All notable changes to ASM-Lite are documented here.
 - Smoke setup fixture selection now validates the shipped package prefab directly instead of creating a temporary prefab asset, reducing fixture asset churn.
 - Generated asset validators now include `.meta` files and package-output snapshots to catch stale GUID/meta drift.
 - Fixture isolation now restores generated assets, prefab bytes, scene selection, open scenes, and fixture roots across concurrent avatar tests.
+
+### Removed
+
+- Tracked CI Unity `bin`/`obj` generated outputs from version control so compile artifacts are recreated instead of carried in the repository.
 
 ### Known Issues
 

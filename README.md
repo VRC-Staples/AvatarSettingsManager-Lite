@@ -179,6 +179,14 @@ Test-suite coverage inventory is tracked in:
 - `Tools/ci/docs/asmlite-tests-audit.md` - human-readable suite ledger with isolation class, CI bucket, and source location.
 - `Tools/ci/test-suites/test-suite-ledger.json` - machine-readable ledger consumed by CI/smoke automation.
 
+Current suite inventory validates 530 Unity C# test methods, with 7 suite groups and 5 default CI groups.
+
+CI adds these release-facing guardrails around the local EditMode path:
+- **CI Asset Hygiene** rejects tracked local Test Project payloads, runtime-generated CI Unity `Assets` payloads except `.gitkeep`, generated `bin`/`obj` outputs, generated `.csproj` files, and Unity `Library`/`Temp`/`Logs`/`UserSettings` state.
+- **Strict Unity result verification** requires nonzero passing NUnit XML and fails skipped or inconclusive tests in CI Unity runs.
+- **Generated asset cleanliness checks** run after EditMode and PlayMode jobs so package-managed `GeneratedAssets` and the shipped prefab stay clean.
+- **PlayMode Save/Load Tests** run `ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests` in the CI Unity project with VRCFury and Lyuma Av3 Emulator available.
+
 Optional local-only helper:
 - `Tools/ci/bin/run-visible-smoke-local.sh` (interactive/local smoke validation entrypoint)
 
@@ -186,7 +194,7 @@ Optional local-only helper:
 
 ## Releases
 
-Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. Stable release publication waits for green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch), and nightly prerelease publication also waits on green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds.
+Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. Stable release publication waits for green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds. The broader CI workflow also runs identity, asset hygiene, compatibility, release-gate invariant, and PlayMode Save/Load lanes. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch), and nightly prerelease publication also waits on green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds.
 
 ---
 

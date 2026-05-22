@@ -31,6 +31,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--unity-exit-code", required=True, type=int)
     parser.add_argument("--results", required=True, type=Path)
     parser.add_argument("--log", required=True, type=Path)
+    parser.add_argument(
+        "--forbid-skipped-tests",
+        action="store_true",
+        help="Fail when NUnit XML reports skipped tests or skipped test cases.",
+    )
+    parser.add_argument(
+        "--forbid-inconclusive-tests",
+        action="store_true",
+        help="Fail when NUnit XML reports inconclusive tests or test cases.",
+    )
     return parser.parse_args()
 
 
@@ -55,32 +65,66 @@ def int_attr(node: ET.Element, name: str, default: int = 0) -> int:
         raise RuntimeError(f"NUnit XML has non-integer {name} value: {raw!r}") from exc
 
 
-def failed_test_names(root: ET.Element) -> list[str]:
+def test_case_names_with_result(root: ET.Element, result_name: str) -> list[str]:
     names: list[str] = []
+    expected = result_name.lower()
     for case in root.iter("test-case"):
         result = (case.get("result") or "").lower()
-        if result == "failed":
+        label = (case.get("label") or "").lower()
+        if result == expected or label == expected:
             names.append(case.get("fullname") or case.get("name") or "<unnamed test-case>")
     return names
 
 
-def validate_passing_nunit_xml(root: ET.Element) -> tuple[int, int]:
+def failed_test_names(root: ET.Element) -> list[str]:
+    return test_case_names_with_result(root, "failed")
+
+
+def format_case_details(names: list[str]) -> str:
+    if not names:
+        return ""
+    details = ": " + ", ".join(names[:20])
+    if len(names) > 20:
+        details += f", ... ({len(names)} total cases)"
+    return details
+
+
+def validate_passing_nunit_xml(
+    root: ET.Element,
+    *,
+    forbid_skipped_tests: bool = False,
+    forbid_inconclusive_tests: bool = False,
+) -> tuple[int, int]:
     total = int_attr(root, "total", int_attr(root, "testcasecount", 0))
     failed = int_attr(root, "failed", 0)
+    skipped = int_attr(root, "skipped", 0)
+    inconclusive = int_attr(root, "inconclusive", 0)
     result = root.get("result", "")
     failed_names = failed_test_names(root)
 
     if total <= 0:
         raise RuntimeError("NUnit XML reports zero selected tests")
     if failed > 0 or failed_names or result.lower() == "failed":
-        details = ""
-        if failed_names:
-            details = ": " + ", ".join(failed_names[:20])
-            if len(failed_names) > 20:
-                details += f", ... ({len(failed_names)} total failed cases)"
-        raise RuntimeError(f"NUnit XML reports failed tests (failed={failed}){details}")
+        raise RuntimeError(
+            f"NUnit XML reports failed tests (failed={failed})"
+            f"{format_case_details(failed_names)}"
+        )
     if result and result.lower() != "passed":
         raise RuntimeError(f"NUnit XML result is not passing: {result}")
+    if forbid_skipped_tests:
+        skipped_names = test_case_names_with_result(root, "skipped")
+        if skipped > 0 or skipped_names:
+            raise RuntimeError(
+                f"NUnit XML reports skipped tests (skipped={skipped})"
+                f"{format_case_details(skipped_names)}"
+            )
+    if forbid_inconclusive_tests:
+        inconclusive_names = test_case_names_with_result(root, "inconclusive")
+        if inconclusive > 0 or inconclusive_names:
+            raise RuntimeError(
+                f"NUnit XML reports inconclusive tests (inconclusive={inconclusive})"
+                f"{format_case_details(inconclusive_names)}"
+            )
     return total, failed
 
 
@@ -105,7 +149,11 @@ def main() -> int:
     args = parse_args()
     try:
         root = load_nunit_xml(args.results)
-        total, failed = validate_passing_nunit_xml(root)
+        total, failed = validate_passing_nunit_xml(
+            root,
+            forbid_skipped_tests=args.forbid_skipped_tests,
+            forbid_inconclusive_tests=args.forbid_inconclusive_tests,
+        )
         if args.unity_exit_code == 0:
             print(
                 f"unity-editmode-results-ok: total={total} failed={failed} results={args.results}"

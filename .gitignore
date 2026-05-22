@@ -58,6 +58,8 @@ Tools/ci/unity-project/Temp/
 Tools/ci/unity-project/Logs/
 Tools/ci/unity-project/UserSettings/
 Tools/ci/unity-project/Assets/
+Tools/ci/unity-project/bin/
+Tools/ci/unity-project/obj/
 Tools/ci/unity-project/*.csproj
 
 # CI Unity project package filtering

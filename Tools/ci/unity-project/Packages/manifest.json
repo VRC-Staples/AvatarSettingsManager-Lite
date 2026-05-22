@@ -1,11 +1,16 @@
 {
   "dependencies": {
     "com.staples.asm-lite": "file:../../../../Packages/com.staples.asm-lite",
+    "com.vrcfury.vrcfury": "https://github.com/VRCFury/VRCFury.git?path=/com.vrcfury.vrcfury#com.vrcfury.vrcfury/1.1334.0",
+    "lyuma.av3emulator": "https://github.com/lyuma/Av3Emulator.git#v3.4.13",
     "com.unity.test-framework": "1.1.33",
     "com.unity.toolchain.linux-x86_64": "2.0.11",
     "com.vrchat.avatars": "file:com.vrchat.avatars",
     "com.vrchat.base": "file:com.vrchat.base"
   },
+  "testables": [
+    "com.staples.asm-lite"
+  ],
   "scopedRegistries": [
     {
       "name": "Unity",

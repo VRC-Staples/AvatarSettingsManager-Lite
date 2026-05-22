@@ -36,6 +36,24 @@ jobs:
           chmod +x Tools/ci/validators/verify-commit-identity.sh
           Tools/ci/validators/verify-commit-identity.sh "$BASE_SHA" "$HEAD_SHA"
 
+  ci-asset-hygiene:
+    name: CI Asset Hygiene
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CI asset hygiene
+        run: python3 Tools/ci/validators/verify-ci-asset-hygiene.py
+
   compatibility-guard:
     name: Compatibility Contract Guard
     runs-on: ubuntu-latest
@@ -396,11 +414,152 @@ jobs:
           python3 Tools/ci/validators/verify-unity-editmode-results.py \
             --unity-exit-code "${UNITY_RUN_EXIT}" \
             --results artifacts/editmode-results.xml \
-            --log artifacts/editmode.log
+            --log artifacts/editmode.log \
+            --forbid-skipped-tests \
+            --forbid-inconclusive-tests
           rm -f "${RUNNER_SCRIPT}"
+      - name: Verify package generated assets stayed clean
+        run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
       - name: Upload NUnit results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: test-results
+          path: artifacts
+
+  playmode-save-load:
+    name: PlayMode Save/Load Tests
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Cache Unity Library
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: Tools/ci/unity-project/Library
+          key: PlayMode-Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**') }}
+          restore-keys: PlayMode-Library-
+      - name: Run PlayMode Save/Load Tests
+        shell: bash
+        env:
+          UNITY_LICENSE_SECRET: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p artifacts
+
+          if [ -z "${UNITY_LICENSE_SECRET:-}" ]; then
+            echo "::error::UNITY_LICENSE is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_EMAIL:-}" ]; then
+            echo "::error::UNITY_EMAIL is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_PASSWORD:-}" ]; then
+            echo "::error::UNITY_PASSWORD is missing."
+            exit 1
+          fi
+
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
+            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt | tr -d '\r\n')"
+          if [ -z "${UNITY_VERSION:-}" ]; then
+            echo "::error::Failed to read Unity version from ProjectVersion.txt"
+            exit 1
+          fi
+
+          UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
+          printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
+
+          UNITY_SERIAL="$(python3 Tools/ci/bin/derive-unity-serial.py | tr -d '\r\n')"
+          if [ -z "${UNITY_SERIAL:-}" ]; then
+            echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
+            exit 1
+          fi
+          echo "::add-mask::${UNITY_SERIAL}"
+
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
+
+          RUNNER_SCRIPT="$(mktemp /tmp/unity-playmode-runner.XXXXXX.sh)"
+          cat > "${RUNNER_SCRIPT}" <<'RUNNER'
+          set -euo pipefail
+          export HOME="${HOME:-/root}"
+          mkdir -p "$HOME/.cache/unity3d" /github/workspace/artifacts
+
+          return_license() {
+            unity-editor \
+              -batchmode \
+              -quit \
+              -returnlicense \
+              -username "$UNITY_EMAIL" \
+              -password "$UNITY_PASSWORD" \
+              -logFile /dev/stdout || true
+          }
+          trap return_license EXIT
+
+          ACTIVATE_LOG="$(mktemp)"
+          unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -serial "$UNITY_SERIAL" \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
+            -logFile "${ACTIVATE_LOG}" || true
+          cat "${ACTIVATE_LOG}"
+          if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
+            echo "::error::License activation failed - 'Successfully activated' not found in log."
+            exit 1
+          fi
+          rm -f "${ACTIVATE_LOG}"
+
+          rm -rf /github/workspace/Tools/ci/unity-project/Temp
+
+          unity-editor \
+            -batchmode \
+            -nographics \
+            -runTests \
+            -testPlatform playmode \
+            -testFilter ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests \
+            -testResults /github/workspace/artifacts/playmode-save-load-results.xml \
+            -logFile /github/workspace/artifacts/playmode-save-load.log \
+            -projectPath Tools/ci/unity-project
+          RUNNER
+
+          set +e
+          docker run --rm \
+            --workdir /github/workspace \
+            --env HOME=/root \
+            --env UNITY_EMAIL \
+            --env UNITY_PASSWORD \
+            --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --volume "${GITHUB_WORKSPACE}:/github/workspace" \
+            --volume "${RUNNER_SCRIPT}:/tmp/unity-playmode-runner.sh" \
+            "${UNITY_IMAGE}" \
+            /bin/bash /tmp/unity-playmode-runner.sh
+          UNITY_RUN_EXIT=$?
+          set -e
+
+          python3 Tools/ci/validators/verify-unity-editmode-results.py \
+            --unity-exit-code "${UNITY_RUN_EXIT}" \
+            --results artifacts/playmode-save-load-results.xml \
+            --log artifacts/playmode-save-load.log \
+            --forbid-skipped-tests \
+            --forbid-inconclusive-tests
+          rm -f "${RUNNER_SCRIPT}"
+      - name: Verify package generated assets stayed clean
+        run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
+      - name: Upload PlayMode NUnit results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: playmode-save-load-results
           path: artifacts
