@@ -97,6 +97,16 @@ namespace VRC.SDKBase.Editor.BuildPipeline
 public class VRCExpressionsMenuEditor : Editor
 {
 }
+
+namespace VRC.Editor
+{
+    public static class EnvConfig
+    {
+        public static void SetAudioSettings()
+        {
+        }
+    }
+}
 """
 
 BUILD_PIPELINE_FALLBACK_META = """fileFormatVersion: 2

@@ -234,7 +234,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: Tools/ci/unity-project/Library
-          key: Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**') }}
+          key: Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
           restore-keys: Library-
       - name: Run EditMode Tests
         shell: bash
@@ -333,6 +333,10 @@ jobs:
           fi
 
           python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
+
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
 
           export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
 
@@ -439,7 +443,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: Tools/ci/unity-project/Library
-          key: PlayMode-Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**') }}
+          key: PlayMode-Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
           restore-keys: PlayMode-Library-
       - name: Run PlayMode Save/Load Tests
         shell: bash
@@ -483,6 +487,10 @@ jobs:
           echo "::add-mask::${UNITY_SERIAL}"
 
           python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
+
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
 
           RUNNER_SCRIPT="$(mktemp /tmp/unity-playmode-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
