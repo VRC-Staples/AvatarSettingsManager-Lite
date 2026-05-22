@@ -18,6 +18,100 @@ BASE_URL = (
 )
 BASE_SHA256 = "e4268b7677baedc50f15e22c5d7d73c8d173d39fa49d78821b3c23e1e9c6555e"
 
+BUILD_PIPELINE_FALLBACK_SOURCE = """using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+namespace VRC.SDKBase.Editor.BuildPipeline
+{
+    public enum VRCSDKRequestedBuildType
+    {
+        Avatar,
+        Scene,
+    }
+
+    public interface IVRCSDKBuildRequestedCallback
+    {
+        int callbackOrder { get; }
+        bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType);
+    }
+
+    public interface IVRCSDKPreprocessAvatarCallback
+    {
+        int callbackOrder { get; }
+        bool OnPreprocessAvatar(GameObject avatarGameObject);
+    }
+
+    public interface IVRCSDKPostprocessAvatarCallback
+    {
+        int callbackOrder { get; }
+        void OnPostprocessAvatar();
+    }
+
+    public static class VRCBuildPipelineCallbacks
+    {
+        private static readonly List<IVRCSDKPreprocessAvatarCallback> _preprocessAvatarCallbacks = new List<IVRCSDKPreprocessAvatarCallback>();
+
+        public static bool OnPreprocessAvatar(GameObject avatarGameObject)
+        {
+            RefreshPreprocessAvatarCallbacks();
+            foreach (var callback in _preprocessAvatarCallbacks.OrderBy(callback => callback.callbackOrder).ToArray())
+            {
+                if (!callback.OnPreprocessAvatar(avatarGameObject))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static void RefreshPreprocessAvatarCallbacks()
+        {
+            _preprocessAvatarCallbacks.Clear();
+            foreach (var type in TypeCache.GetTypesDerivedFrom<IVRCSDKPreprocessAvatarCallback>())
+            {
+                if (type.IsAbstract || type.IsInterface)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (Activator.CreateInstance(type) is IVRCSDKPreprocessAvatarCallback callback)
+                    {
+                        _preprocessAvatarCallbacks.Add(callback);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning($"Skipping preprocess callback {type.FullName}: {exception.Message}");
+                }
+            }
+        }
+    }
+}
+
+public class VRCExpressionsMenuEditor : Editor
+{
+}
+"""
+
+BUILD_PIPELINE_FALLBACK_META = """fileFormatVersion: 2
+guid: 8fc8b5e7cb6b4f8c9aafdf5d9c85fbd1
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData:
+  assetBundleName:
+  assetBundleVariant:
+"""
+
 REQUIRED_BASE_FILES = (
     "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll",
     "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll.meta",
@@ -29,6 +123,10 @@ REQUIRED_BASE_FILES = (
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.dll.meta",
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.dll",
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.dll.meta",
+    "Runtime/VRCSDK/Plugins/Harmony/0Harmony.dll",
+    "Runtime/VRCSDK/Plugins/Harmony/0Harmony.dll.meta",
+    "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRC.SDKBase.Editor.BuildPipeline.asmdef",
+    "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRC.SDKBase.Editor.BuildPipeline.asmdef.meta",
     "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.Editor.dll",
     "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.Editor.dll.meta",
     "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.Editor.dll",
@@ -96,6 +194,19 @@ def hydrate(repo: Path, cache: Path) -> list[Path]:
                 continue
             destination.write_bytes(content)
             written.append(destination.relative_to(repo))
+
+    fallback_files = {
+        "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs": BUILD_PIPELINE_FALLBACK_SOURCE,
+        "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs.meta": BUILD_PIPELINE_FALLBACK_META,
+    }
+    for name, content in fallback_files.items():
+        destination = project_base / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        data = content.encode("utf-8")
+        if destination.exists() and destination.read_bytes() == data:
+            continue
+        destination.write_bytes(data)
+        written.append(destination.relative_to(repo))
 
     return written
 

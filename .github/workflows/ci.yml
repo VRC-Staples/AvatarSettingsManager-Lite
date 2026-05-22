@@ -334,10 +334,6 @@ jobs:
 
           python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
 
-          mkdir -p Tools/ci/unity-project/Assets/Editor
-          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
-            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
-
           export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
 
           # Write the inner script to a temp file to avoid quoting issues
@@ -487,10 +483,6 @@ jobs:
           echo "::add-mask::${UNITY_SERIAL}"
 
           python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
-
-          mkdir -p Tools/ci/unity-project/Assets/Editor
-          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
-            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
 
           RUNNER_SCRIPT="$(mktemp /tmp/unity-playmode-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
