@@ -157,6 +157,10 @@ public static class AvatarDynamicsSetup
     public static void DoConvertUnityConstraints(object[] unityConstraints, object avatarDescriptor, bool isAutoFix)
     {
     }
+
+    public static void RebindConstraintAnimationClip(object clip)
+    {
+    }
 }
 
 namespace VRC.SDK3A.Editor
