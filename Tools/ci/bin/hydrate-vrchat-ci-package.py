@@ -24,6 +24,8 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
+#pragma warning disable 0067
+
 namespace VRC.SDKBase.Editor.BuildPipeline
 {
     public enum VRCSDKRequestedBuildType
@@ -120,6 +122,40 @@ namespace VF.Inspector
         public static void DrawWireCapsule(Vector3 worldPos, Quaternion worldRot, float worldLength, float worldRadius)
         {
         }
+    }
+}
+
+public static class VRCSdkControlPanel
+{
+    public static event EventHandler OnSdkPanelEnable;
+
+    public static bool TryGetBuilder<T>(out T builder)
+    {
+        builder = default(T);
+        return false;
+    }
+}
+
+public static class AvatarDynamicsSetup
+{
+    public static event Func<object, bool> IsUnityConstraintAutoConverted;
+    public static event Func<IEnumerable<GameObject>, bool, bool> OnConvertUnityConstraintsAcrossGameObjects;
+
+    public static bool TryGetSubstituteAnimationBinding(
+        Type type,
+        string propertyName,
+        out Type newType,
+        out string newPropertyName,
+        out bool isArrayProperty)
+    {
+        newType = type;
+        newPropertyName = propertyName;
+        isArrayProperty = false;
+        return false;
+    }
+
+    public static void DoConvertUnityConstraints(object[] unityConstraints, object avatarDescriptor, bool isAutoFix)
+    {
     }
 }
 
