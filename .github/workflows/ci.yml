@@ -235,7 +235,6 @@ jobs:
         with:
           path: Tools/ci/unity-project/Library
           key: Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
-          restore-keys: Library-
       - name: Run EditMode Tests
         shell: bash
         env:
@@ -444,7 +443,6 @@ jobs:
         with:
           path: Tools/ci/unity-project/Library
           key: PlayMode-Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
-          restore-keys: PlayMode-Library-
       - name: Run PlayMode Save/Load Tests
         shell: bash
         env:

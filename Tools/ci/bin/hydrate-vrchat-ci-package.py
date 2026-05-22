@@ -94,8 +94,54 @@ namespace VRC.SDKBase.Editor.BuildPipeline
     }
 }
 
+namespace VRC.SDKBase.Editor
+{
+    public static class VRC_SdkBuilder
+    {
+        public enum BuildType
+        {
+            None,
+            Avatar,
+            Scene,
+        }
+
+        public static BuildType ActiveBuildType => BuildType.None;
+    }
+}
+
 public class VRCExpressionsMenuEditor : Editor
 {
+}
+
+namespace VF.Inspector
+{
+    public static class HandlesUtil
+    {
+        public static void DrawWireCapsule(Vector3 worldPos, Quaternion worldRot, float worldLength, float worldRadius)
+        {
+        }
+    }
+}
+
+namespace VRC.SDK3A.Editor
+{
+    public interface IVRCSdkAvatarBuilderApi
+    {
+        event EventHandler<object> OnSdkBuildStart;
+        event EventHandler<object> OnSdkUploadFinish;
+        event EventHandler<object> OnSdkUploadSuccess;
+    }
+
+    public static class VRCSdkControlPanel
+    {
+        public static event EventHandler OnSdkPanelEnable;
+
+        public static bool TryGetBuilder<T>(out T builder)
+        {
+            builder = default(T);
+            return false;
+        }
+    }
 }
 
 namespace VRC.Editor
