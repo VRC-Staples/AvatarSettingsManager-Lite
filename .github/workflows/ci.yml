@@ -308,7 +308,7 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
-          SUITE_MAP_PATH="/github/workspace/Tools/ci/test-suites/suites.json"
+          SUITE_MAP_PATH="${GITHUB_WORKSPACE}/Tools/ci/test-suites/suites.json"
           if [ ! -f "${SUITE_MAP_PATH}" ]; then
             echo "::error::Missing canonical EditMode suite map: ${SUITE_MAP_PATH}"
             exit 1

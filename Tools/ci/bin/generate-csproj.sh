@@ -26,6 +26,7 @@ fi
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
 VRC_DYNAMICS="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
+VRC_BUILD_PIPELINE_STUB="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildRequestedCallback.cs"
 
 OUT_DIR="${REPO_ROOT}/${CI_PROJECT_PATH}"
 
@@ -73,6 +74,7 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="${REPO_ROOT}/${PACKAGE_PATH}/Editor/**/*.cs" />
+    <Compile Include="${VRC_BUILD_PIPELINE_STUB}" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine.CoreModule">
@@ -91,8 +93,20 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.TextRenderingModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIElementsModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEngine.UIElementsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEditor.CoreModule">
       <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEditor.UIElementsModule">
+      <HintPath>${REPO_ROOT}/${UNITY_PATH}/UnityEditor.UIElementsModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="VRCSDKBase">
