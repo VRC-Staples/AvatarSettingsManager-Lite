@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
@@ -17,16 +18,19 @@ namespace ASMLite.Tests.PlayMode
         private const BindingFlags InstanceBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const BindingFlags StaticBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
         private const string EmulatorObjectName = "ASMLite_AV3_SaveLoad_Runtime_Emulator";
+        private static bool _runtimeAssemblyResolverInstalled;
 
         internal static RuntimeTypeResolution ResolveRuntimeType(
             string fullTypeName = ExpectedRuntimeTypeName,
             string assemblyName = ExpectedRuntimeAssemblyName)
         {
+            InstallRuntimeAssemblyResolver();
             return ResolveType(fullTypeName, assemblyName);
         }
 
         internal static RuntimeTypeResolution ResolveEmulatorType()
         {
+            InstallRuntimeAssemblyResolver();
             return ResolveType(ExpectedEmulatorTypeName, ExpectedRuntimeAssemblyName);
         }
 
@@ -345,6 +349,58 @@ namespace ASMLite.Tests.PlayMode
             return RuntimeTypeResolution.Available(resolved, fullTypeName, assemblyName);
         }
 
+        private static void InstallRuntimeAssemblyResolver()
+        {
+            if (_runtimeAssemblyResolverInstalled)
+                return;
+
+            _runtimeAssemblyResolverInstalled = true;
+            AppDomain.CurrentDomain.AssemblyResolve += ResolveRuntimeDependency;
+        }
+
+        private static Assembly ResolveRuntimeDependency(object sender, ResolveEventArgs args)
+        {
+            var requestedName = new AssemblyName(args.Name).Name;
+            if (string.IsNullOrEmpty(requestedName))
+                return null;
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (string.Equals(assembly.GetName().Name, requestedName, StringComparison.Ordinal))
+                    return assembly;
+            }
+
+            foreach (var candidate in RuntimeDependencyCandidates(requestedName))
+            {
+                if (!File.Exists(candidate))
+                    continue;
+
+                try
+                {
+                    return Assembly.LoadFrom(candidate);
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            return null;
+        }
+
+        private static IEnumerable<string> RuntimeDependencyCandidates(string assemblyName)
+        {
+            var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            var packagePluginsRoot = Path.Combine(projectRoot, "Packages");
+            var assetsEditorRoot = Path.Combine(Application.dataPath, "Editor");
+            var fileName = assemblyName + ".dll";
+
+            yield return Path.Combine(assetsEditorRoot, fileName);
+            yield return Path.Combine(packagePluginsRoot, "com.vrchat.base", "Runtime", "VRCSDK", "Plugins", fileName);
+            yield return Path.Combine(packagePluginsRoot, "com.vrchat.avatars", "Runtime", "VRCSDK", "Plugins", fileName);
+            yield return Path.Combine(packagePluginsRoot, "com.vrchat.base", "Editor", "VRCSDK", "Dependencies", "VRChat", "BuildPipeline", fileName);
+        }
+
         private static void CaptureDictionaryKeys(object runtime, string fieldName, HashSet<string> names)
         {
             var dictionary = ReadFieldValue(runtime, fieldName) as IDictionary;
@@ -493,6 +549,7 @@ namespace ASMLite.Tests.PlayMode
         private static void ConfigureEmulator(object component)
         {
             SetBoolField(component, "RunPreprocessAvatarHook", false);
+            SetBoolField(component, "WorkaroundPlayModeScriptCompile", false);
             SetBoolField(component, "DisableShadowClone", true);
             SetBoolField(component, "DisableMirrorClone", true);
             SetBoolField(component, "CreateNonLocalClone", false);

@@ -419,6 +419,14 @@ jobs:
             --forbid-skipped-tests \
             --forbid-inconclusive-tests
           rm -f "${RUNNER_SCRIPT}"
+      - name: Restore generated package fixtures after Unity run
+        if: always()
+        run: |
+          git restore -- \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta
       - name: Verify package generated assets stayed clean
         run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
       - name: Upload NUnit results
@@ -557,6 +565,14 @@ jobs:
             --forbid-skipped-tests \
             --forbid-inconclusive-tests
           rm -f "${RUNNER_SCRIPT}"
+      - name: Restore generated package fixtures after Unity run
+        if: always()
+        run: |
+          git restore -- \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta
       - name: Verify package generated assets stayed clean
         run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
       - name: Upload PlayMode NUnit results
