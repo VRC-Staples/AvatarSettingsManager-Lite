@@ -19,6 +19,10 @@ BASE_URL = (
 BASE_SHA256 = "e4268b7677baedc50f15e22c5d7d73c8d173d39fa49d78821b3c23e1e9c6555e"
 
 REQUIRED_BASE_FILES = (
+    "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll",
+    "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll.meta",
+    "Runtime/VRCSDK/Plugins/VRCCore-Editor.dll",
+    "Runtime/VRCSDK/Plugins/VRCCore-Editor.dll.meta",
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.dll",
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.dll.meta",
     "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.dll",
