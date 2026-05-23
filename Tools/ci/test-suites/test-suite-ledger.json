@@ -14337,7 +14337,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadManualTests.cs",
       "class": "ASMLiteAv3SaveLoadManualTests",
       "method": "FuzzReplay_SaveLoadSlot1_ExercisesReplayableScaleCoverage",
-      "line": 44,
+      "line": 45,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
@@ -14394,7 +14394,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
       "class": "ASMLiteAv3SaveLoadRuntimeTests",
       "method": "Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed",
-      "line": 139,
+      "line": 142,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
@@ -14421,7 +14421,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
       "class": "ASMLiteAv3SaveLoadRuntimeTests",
       "method": "Av3SaveLoadSlot1_RestoresVrcFuryBrokeredBoolToggle",
-      "line": 57,
+      "line": 58,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",
@@ -14448,7 +14448,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteAv3SaveLoadRuntimeTests.cs",
       "class": "ASMLiteAv3SaveLoadRuntimeTests",
       "method": "Av3SaveLoadSlot2Untouched_ResetsVrcFurySurfaceToggleAndFullControllerParam",
-      "line": 87,
+      "line": 89,
       "attributes": [
         "TestFixture",
         "Category(\"PlayMode\")",

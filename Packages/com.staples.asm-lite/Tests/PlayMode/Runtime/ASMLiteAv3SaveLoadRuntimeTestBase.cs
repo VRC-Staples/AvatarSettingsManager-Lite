@@ -164,10 +164,13 @@ namespace ASMLite.Tests.PlayMode
             if (EditorApplication.isPlaying)
                 yield break;
 
+            yield return new EnterPlayMode();
+        }
+
+        protected static void ExpectAv3OscApiUserTypeLoadNoiseIfCi()
+        {
             if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase))
                 LogAssert.Expect(LogType.Exception, Av3OscApiUserTypeLoadNoise);
-
-            yield return new EnterPlayMode();
         }
 
         protected void BuildAndWireAvatarFixture(params VRCExpressionParameters.Parameter[] additionalSavedParameters)

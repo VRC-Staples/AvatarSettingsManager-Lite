@@ -28,6 +28,7 @@ namespace ASMLite.Tests.PlayMode
             }
 
             var setup = BuildAndWireRealUatAvatarFixture(selection);
+            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();
@@ -54,6 +55,7 @@ namespace ASMLite.Tests.PlayMode
                 Assert.Inconclusive(runtimeResolution.Diagnostic);
 
             BuildAndWireAvatarFixture();
+            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();
