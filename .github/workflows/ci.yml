@@ -569,6 +569,7 @@ jobs:
           docker run --rm \
             --workdir /github/workspace \
             --env HOME=/root \
+            --env CI="${CI:-false}" \
             --env UNITY_EMAIL \
             --env UNITY_PASSWORD \
             --env UNITY_SERIAL="${UNITY_SERIAL}" \
