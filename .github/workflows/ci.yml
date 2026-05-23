@@ -459,7 +459,7 @@ jobs:
   playmode-save-load:
     name: PlayMode Save/Load Tests
     runs-on: ubuntu-latest
-    needs: [identity-guard]
+    needs: [identity-guard, test]
     if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'dev'
     permissions:
       contents: read
