@@ -432,6 +432,15 @@ jobs:
       - name: Restore generated package fixtures after Unity run
         if: always()
         run: |
+          for path in \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta; do
+            if [ -e "${path}" ]; then
+              sudo chown -R "$(id -u):$(id -g)" "${path}" || true
+            fi
+          done
           git restore -- \
             Packages/com.staples.asm-lite/GeneratedAssets \
             Packages/com.staples.asm-lite/GeneratedAssets.meta \
@@ -590,6 +599,15 @@ jobs:
       - name: Restore generated package fixtures after Unity run
         if: always()
         run: |
+          for path in \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta; do
+            if [ -e "${path}" ]; then
+              sudo chown -R "$(id -u):$(id -g)" "${path}" || true
+            fi
+          done
           git restore -- \
             Packages/com.staples.asm-lite/GeneratedAssets \
             Packages/com.staples.asm-lite/GeneratedAssets.meta \
