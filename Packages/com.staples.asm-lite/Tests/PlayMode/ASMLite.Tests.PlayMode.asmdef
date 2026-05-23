@@ -20,7 +20,8 @@
         "VRCSDK3A.dll",
         "VRCSDK3A-Editor.dll",
         "VRCSDKBase.dll",
-        "VRCSDKBase-Editor.dll"
+        "VRCSDKBase-Editor.dll",
+        "VRC.SDKBase.Editor.BuildPipeline.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],

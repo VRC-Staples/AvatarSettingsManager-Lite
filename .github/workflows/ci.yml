@@ -383,6 +383,16 @@ jobs:
           # The Temp/ dir is gitignored but may be checked out from prior runs.
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
 
+          unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -projectPath Tools/ci/unity-project \
+            -logFile /github/workspace/artifacts/unity-resolve.log || true
+          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
+            /github/workspace/Tools/ci/unity-project
+          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
+            /github/workspace/Tools/ci/unity-project/Library/Bee
 
           # Run the chained EditMode selections against the shadow project in one Unity process.
           unity-editor \
@@ -532,6 +542,17 @@ jobs:
           rm -f "${ACTIVATE_LOG}"
 
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
+
+          unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -projectPath Tools/ci/unity-project \
+            -logFile /github/workspace/artifacts/playmode-unity-resolve.log || true
+          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
+            /github/workspace/Tools/ci/unity-project
+          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
+            /github/workspace/Tools/ci/unity-project/Library/Bee
 
           unity-editor \
             -batchmode \

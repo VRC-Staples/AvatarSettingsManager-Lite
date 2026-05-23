@@ -40,14 +40,32 @@ namespace ASMLite.Tests.PlayMode
             if (!resolution.IsAvailable)
                 throw new InvalidOperationException(resolution.Diagnostic);
 
+            ConfigureRuntimeStaticHooks();
+
             var existing = UnityEngine.Object.FindObjectOfType(resolution.Type);
             var component = existing as Component;
             var controlObject = component != null
                 ? component.gameObject
                 : GameObject.Find(EmulatorObjectName) ?? new GameObject(EmulatorObjectName);
 
-            component = controlObject.GetComponent(resolution.Type) ?? controlObject.AddComponent(resolution.Type);
-            ConfigureEmulator(component);
+            component = controlObject.GetComponent(resolution.Type);
+            if (component == null)
+            {
+                var wasActive = controlObject.activeSelf;
+                if (wasActive)
+                    controlObject.SetActive(false);
+
+                component = controlObject.AddComponent(resolution.Type);
+                ConfigureEmulator(component);
+
+                if (wasActive)
+                    controlObject.SetActive(true);
+            }
+            else
+            {
+                ConfigureEmulator(component);
+            }
+
             ScanForRuntimeAvatarsIfPlaying(component);
 
             return controlObject;
@@ -550,12 +568,54 @@ namespace ASMLite.Tests.PlayMode
         {
             SetBoolField(component, "RunPreprocessAvatarHook", false);
             SetBoolField(component, "WorkaroundPlayModeScriptCompile", false);
+            SetBoolField(component, "DisableAvatarDynamicsIntegration", true);
+            SetEnumField(component, "DescriptorColliders", "None");
+            SetBoolField(component, "ForceUpdateDescriptorColliders", false);
             SetBoolField(component, "DisableShadowClone", true);
             SetBoolField(component, "DisableMirrorClone", true);
             SetBoolField(component, "CreateNonLocalClone", false);
             SetIntField(component, "CreateNonLocalCloneCount", 0);
             SetBoolField(component, "SelectAvatarOnStartup", false);
             SetBoolField(component, "EnableAvatarOSC", false);
+        }
+
+        private static void ConfigureRuntimeStaticHooks()
+        {
+            var resolution = ResolveRuntimeType();
+            if (!resolution.IsAvailable)
+                return;
+
+            ConfigureDefaultAnimLayerControllerMap(resolution.Type);
+            SetStaticDelegate(resolution.Type, "ApplyOnEnableWorkaroundDelegate", nameof(NoOp));
+            SetStaticDelegate(resolution.Type, "convertDynamicBones", nameof(NoOpGameObject));
+            SetStaticDelegate(resolution.Type, "addRuntimeDelegate", nameof(ConfigureRuntimeForCi));
+            SetStaticDelegate(resolution.Type, "updateSelectionDelegate", nameof(NoOpObjectInt));
+            SetStaticDelegate(resolution.Type, "updateSceneLayersDelegate", nameof(NoOpInt));
+        }
+
+        private static void ConfigureDefaultAnimLayerControllerMap(Type runtimeType)
+        {
+            var field = runtimeType?.GetField("animLayerToDefaultController", StaticBindingFlags);
+            if (field == null || !(field.GetValue(null) is IDictionary controllers))
+                return;
+
+            var keyType = field.FieldType.GetGenericArguments().FirstOrDefault();
+            if (keyType == null || !keyType.IsEnum)
+                return;
+
+            foreach (var name in new[] { "TPose", "IKPose", "Base", "Sitting", "Additive", "FX", "Action", "Gesture" })
+            {
+                try
+                {
+                    var key = Enum.Parse(keyType, name);
+                    if (!controllers.Contains(key))
+                        controllers[key] = null;
+                }
+                catch
+                {
+                    // Optional Av3Emulator or SDK versions may expose a different layer enum.
+                }
+            }
         }
 
         private static void ScanForRuntimeAvatarsIfPlaying(object component)
@@ -565,6 +625,52 @@ namespace ASMLite.Tests.PlayMode
 
             var scanMethod = component.GetType().GetMethod("ScanForAvatars", InstanceBindingFlags);
             scanMethod?.Invoke(component, null);
+            ConfigureRuntimeInstances(component);
+        }
+
+        private static void ConfigureRuntimeInstances(object emulator)
+        {
+            if (emulator == null || !TryReadMember(emulator, "runtimes", out var runtimes) || !(runtimes is IEnumerable runtimeList))
+                return;
+
+            foreach (var runtime in runtimeList)
+                ConfigureRuntimeForCi(runtime as Component);
+        }
+
+        private static void ConfigureRuntimeForCi(Component runtime)
+        {
+            if (runtime == null)
+                return;
+
+            SetBoolField(runtime, "EnableAvatarOSC", false);
+            SetBoolField(runtime, "LogOSCWarnings", false);
+            ConfigureRuntimeOscFile(runtime);
+        }
+
+        private static void ConfigureRuntimeOscFile(object runtime)
+        {
+            if (runtime == null)
+                return;
+
+            var field = runtime.GetType().GetField("OSCConfigurationFile", InstanceBindingFlags);
+            if (field == null)
+                return;
+
+            var config = field.GetValue(runtime);
+            if (config == null)
+                return;
+
+            SetBoolField(config, "UseRealPipelineIdJSONFile", false);
+            SetBoolField(config, "GenerateOSCConfig", false);
+            SetBoolField(config, "LoadOSCConfig", false);
+            SetBoolField(config, "SaveOSCConfig", false);
+            SetStringField(config, "OSCAvatarID", "avtr_LyumaAv3Emulator_ASMLiteCiDefault");
+            field.SetValue(runtime, config);
+        }
+
+        private static void SetStringField(object target, string fieldName, string value)
+        {
+            SetField(target, fieldName, typeof(string), value);
         }
 
         private static void SetBoolField(object target, string fieldName, bool value)
@@ -575,6 +681,69 @@ namespace ASMLite.Tests.PlayMode
         private static void SetIntField(object target, string fieldName, int value)
         {
             SetField(target, fieldName, typeof(int), value);
+        }
+
+        private static void SetEnumField(object target, string fieldName, string valueName)
+        {
+            if (target == null || string.IsNullOrEmpty(valueName))
+                return;
+
+            var field = target.GetType().GetField(fieldName, InstanceBindingFlags | StaticBindingFlags);
+            if (field == null || !field.FieldType.IsEnum)
+                return;
+
+            try
+            {
+                var value = Enum.Parse(field.FieldType, valueName);
+                field.SetValue(field.IsStatic ? null : target, value);
+            }
+            catch
+            {
+                // Optional Av3Emulator versions may expose different enum values.
+            }
+        }
+
+        private static void SetStaticDelegate(Type targetType, string fieldName, string methodName)
+        {
+            if (targetType == null || string.IsNullOrEmpty(fieldName) || string.IsNullOrEmpty(methodName))
+                return;
+
+            var field = targetType.GetField(fieldName, StaticBindingFlags);
+            if (field == null || !typeof(Delegate).IsAssignableFrom(field.FieldType))
+                return;
+
+            var method = typeof(ASMLiteAv3RuntimeBridge).GetMethod(methodName, StaticBindingFlags);
+            if (method == null)
+                return;
+
+            try
+            {
+                field.SetValue(null, Delegate.CreateDelegate(field.FieldType, method));
+            }
+            catch
+            {
+                // Optional Av3Emulator versions may expose delegate signatures that differ.
+            }
+        }
+
+        private static void NoOp()
+        {
+        }
+
+        private static void NoOpGameObject(GameObject value)
+        {
+        }
+
+        private static void NoOpComponent(Component value)
+        {
+        }
+
+        private static void NoOpInt(int value)
+        {
+        }
+
+        private static void NoOpObjectInt(UnityEngine.Object value, int mode)
+        {
         }
 
         private static void SetField(object target, string fieldName, Type expectedType, object value)
