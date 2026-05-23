@@ -137,44 +137,17 @@ namespace ASMLite.Tests.PlayMode
 
         private const string Av3OscApiUserTypeLoadNoise = "TypeLoadException: VTable setup of type VRC.Core.APIUser failed";
 
-        private readonly List<string> _unexpectedFailingLogs = new List<string>();
         private AsmLiteTestContext _ctx;
         private GameObject _realUatRootInstance;
         private bool _hadVrcFuryPlayModePref;
         private bool _previousVrcFuryPlayMode;
         private bool _disabledVrcFuryPlayMode;
 
-        [SetUp]
-        public void SetUpFailingLogFilter()
-        {
-            _unexpectedFailingLogs.Clear();
-            LogAssert.ignoreFailingMessages = true;
-            Application.logMessageReceived += CaptureFailingLog;
-        }
-
         [TearDown]
         public void TearDown()
         {
-            Application.logMessageReceived -= CaptureFailingLog;
-            LogAssert.ignoreFailingMessages = false;
-
             if (!EditorApplication.isPlayingOrWillChangePlaymode)
                 DestroyTestAvatar();
-
-            if (_unexpectedFailingLogs.Count > 0)
-                Assert.Fail("Runtime: unexpected failing Unity logs: " + string.Join(" | ", _unexpectedFailingLogs));
-        }
-
-        private void CaptureFailingLog(string condition, string stackTrace, LogType type)
-        {
-            if (type != LogType.Exception && type != LogType.Error && type != LogType.Assert)
-                return;
-
-            string message = condition ?? string.Empty;
-            if (message.Contains(Av3OscApiUserTypeLoadNoise))
-                return;
-
-            _unexpectedFailingLogs.Add($"[{type}] {message}");
         }
 
         [UnityTearDown]
@@ -190,6 +163,9 @@ namespace ASMLite.Tests.PlayMode
         {
             if (EditorApplication.isPlaying)
                 yield break;
+
+            if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase))
+                LogAssert.Expect(LogType.Exception, Av3OscApiUserTypeLoadNoise);
 
             yield return new EnterPlayMode();
         }
