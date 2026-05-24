@@ -1,0 +1,14 @@
+{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "commandId": "cmd_000004_abort-run",
+  "commandSeq": 4,
+  "commandType": "abort-run",
+  "createdAtUtc": "2026-04-23T04:39:12Z",
+  "abortRun": {
+    "runId": "run-0001-lifecycle-roundtrip",
+    "suiteId": "lifecycle-roundtrip",
+    "requestedBy": "operator",
+    "reason": "operator-abort"
+  }
+}

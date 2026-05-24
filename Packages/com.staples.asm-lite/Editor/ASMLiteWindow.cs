@@ -1,9 +1,20 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Reflection;
+using System.Xml;
 using ASMLite;
 using UnityEditor;
+using UnityEditor.Animations;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 
 namespace ASMLite.Editor
 {
@@ -24,37 +35,125 @@ namespace ASMLite.Editor
         private VRCAvatarDescriptor _selectedAvatar;
         private Vector2             _scrollPos;
 
-        // Pending slot count: shown before the prefab is added, applied on add.
-        private int _pendingSlotCount = 3;
+        // Pending customization draft: shown before the prefab is added, applied on add,
+        // and refreshed from the selected avatar component when present.
+        private readonly ASMLiteCustomizationDraft _customizationDraft = ASMLiteCustomizationDraft.CreateDefault();
+
+        private int _pendingSlotCount { get => _customizationDraft.SlotCount; set => _customizationDraft.SlotCount = value; }
+        private IconMode _pendingIconMode { get => _customizationDraft.IconMode; set => _customizationDraft.IconMode = value; }
+        private int _pendingSelectedGearIndex { get => _customizationDraft.SelectedGearIndex; set => _customizationDraft.SelectedGearIndex = value; }
+        private bool _pendingUseCustomSlotIcons { get => _customizationDraft.UseCustomSlotIcons; set => _customizationDraft.UseCustomSlotIcons = value; }
+        private Texture2D[] _pendingCustomIcons { get => _customizationDraft.CustomIcons; set => _customizationDraft.CustomIcons = value; }
+        private ActionIconMode _pendingActionIconMode { get => _customizationDraft.ActionIconMode; set => _customizationDraft.ActionIconMode = value; }
+        private Texture2D _pendingCustomSaveIcon { get => _customizationDraft.CustomSaveIcon; set => _customizationDraft.CustomSaveIcon = value; }
+        private Texture2D _pendingCustomLoadIcon { get => _customizationDraft.CustomLoadIcon; set => _customizationDraft.CustomLoadIcon = value; }
+        private Texture2D _pendingCustomClearIcon { get => _customizationDraft.CustomClearIcon; set => _customizationDraft.CustomClearIcon = value; }
+        private bool _pendingUseCustomRootIcon { get => _customizationDraft.UseCustomRootIcon; set => _customizationDraft.UseCustomRootIcon = value; }
+        private Texture2D _pendingCustomRootIcon { get => _customizationDraft.CustomRootIcon; set => _customizationDraft.CustomRootIcon = value; }
+        private bool _pendingUseCustomRootName { get => _customizationDraft.UseCustomRootName; set => _customizationDraft.UseCustomRootName = value; }
+        private string _pendingCustomRootName { get => _customizationDraft.CustomRootName; set => _customizationDraft.CustomRootName = value; }
+        private string[] _pendingCustomPresetNames { get => _customizationDraft.CustomPresetNames; set => _customizationDraft.CustomPresetNames = value; }
+        private string _pendingCustomPresetNameFormat { get => _customizationDraft.CustomPresetNameFormat; set => _customizationDraft.CustomPresetNameFormat = value; }
+        private string _pendingCustomSaveLabel { get => _customizationDraft.CustomSaveLabel; set => _customizationDraft.CustomSaveLabel = value; }
+        private string _pendingCustomLoadLabel { get => _customizationDraft.CustomLoadLabel; set => _customizationDraft.CustomLoadLabel = value; }
+        private string _pendingCustomClearPresetLabel { get => _customizationDraft.CustomClearPresetLabel; set => _customizationDraft.CustomClearPresetLabel = value; }
+        private string _pendingCustomConfirmLabel { get => _customizationDraft.CustomConfirmLabel; set => _customizationDraft.CustomConfirmLabel = value; }
+        private bool _pendingUseCustomInstallPath { get => _customizationDraft.UseCustomInstallPath; set => _customizationDraft.UseCustomInstallPath = value; }
+        private string _pendingCustomInstallPath { get => _customizationDraft.CustomInstallPath; set => _customizationDraft.CustomInstallPath = value; }
+        private bool _pendingUseParameterExclusions { get => _customizationDraft.UseParameterExclusions; set => _customizationDraft.UseParameterExclusions = value; }
+        private string[] _pendingExcludedParameterNames { get => _customizationDraft.ExcludedParameterNames; set => _customizationDraft.ExcludedParameterNames = value; }
+        private bool _pendingUseVendorizedGeneratedAssets { get => _customizationDraft.UseVendorizedGeneratedAssets; set => _customizationDraft.UseVendorizedGeneratedAssets = value; }
+        private string _pendingVendorizedGeneratedAssetsPath { get => _customizationDraft.VendorizedGeneratedAssetsPath; set => _customizationDraft.VendorizedGeneratedAssetsPath = value; }
 
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
-
-        // Cached LINQ Count() result: avoids per-repaint enumeration.
-        // -1 means invalid; recomputed lazily in DrawStatus.
-        private int _cachedCustomParamCount = -1;
+        private ASMLiteInstallationState? _cachedToolState;
 
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
         private int _discoveredParamCount = -1;
 
-        // Pending icon mode: shown before the prefab is added, applied on add.
-        private IconMode _pendingIconMode = IconMode.MultiColor;
+        // Icon settings foldouts (hierarchy-style UI groups).
+        private bool _iconsRootFoldout = true;
+        private bool _iconsActionFoldout = true;
+        private bool _iconsSlotFoldout = true;
 
-        // Pending gear index: shown before the prefab is added, applied on add.
-        private int _pendingSelectedGearIndex = 0;
+        // Action hierarchy disclosure state. Advanced maintenance actions stay hidden
+        // until explicitly expanded by the user.
+        [SerializeField] private bool _showAdvancedActions;
+        [NonSerialized] private AsmLiteWindowAction? _queuedVisibleAutomationAction;
+        [NonSerialized] private VRCAvatarDescriptor _queuedVisibleAutomationAvatar;
+        [NonSerialized] private bool _queuedVisibleAutomationDispatchPending;
+        [NonSerialized] private string _visibleAutomationOverlayTitle = string.Empty;
+        [NonSerialized] private string _visibleAutomationOverlayStep = string.Empty;
+        [NonSerialized] private int _visibleAutomationOverlayStepIndex;
+        [NonSerialized] private int _visibleAutomationOverlayTotalSteps;
+        [NonSerialized] private VisibleAutomationOverlayState _visibleAutomationOverlayState = VisibleAutomationOverlayState.Running;
+        [NonSerialized] private bool _visibleAutomationOverlayPresentationMode;
+        [NonSerialized] private string[] _visibleAutomationChecklistItems = Array.Empty<string>();
+        [NonSerialized] private VisibleAutomationChecklistItemState[] _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+        [NonSerialized] private double[] _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+        [NonSerialized] private VisualElement _visibleAutomationOverlayCanvas;
+        [NonSerialized] private VisualElement _visibleAutomationWindowOverlayCanvas;
+        [NonSerialized] private Label _visibleAutomationWindowOverlayFallbackLabel;
+        [NonSerialized] private bool _visibleAutomationPreferScreenAnchoredOverlay = true;
+        [NonSerialized] private bool _visibleAutomationUsingHostWindowFallbackBounds;
+        [NonSerialized] private Rect _visibleAutomationScreenBounds;
+        [NonSerialized] private VisualElement _visibleAutomationStatusPanel;
+        [NonSerialized] private VisualElement _visibleAutomationStatusAccent;
+        [NonSerialized] private Label _visibleAutomationTitleLabel;
+        [NonSerialized] private Label _visibleAutomationMetaLabel;
+        [NonSerialized] private Label _visibleAutomationStepLabel;
+        [NonSerialized] private VisualElement _visibleAutomationBadgeElement;
+        [NonSerialized] private Label _visibleAutomationBadgeLabel;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistPanel;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistAccent;
+        [NonSerialized] private Label _visibleAutomationChecklistTitleLabel;
+        [NonSerialized] private Label _visibleAutomationChecklistMetaLabel;
+        [NonSerialized] private ScrollView _visibleAutomationChecklistScrollView;
+        [NonSerialized] private VisualElement _visibleAutomationChecklistItemsContainer;
+        [NonSerialized] private readonly List<VisibleAutomationChecklistVisualRefs> _visibleAutomationChecklistItemVisuals = new List<VisibleAutomationChecklistVisualRefs>();
+        [NonSerialized] private bool _visibleAutomationCompletionReviewVisible;
+        [NonSerialized] private bool _visibleAutomationCompletionReviewAcknowledged;
+        [NonSerialized] private string _visibleAutomationCompletionReviewTitle = string.Empty;
+        [NonSerialized] private string _visibleAutomationCompletionReviewMessage = string.Empty;
+        [NonSerialized] private VisibleAutomationStatusOverlayWindow _visibleAutomationStatusOverlayWindow;
+        [NonSerialized] private VisibleAutomationChecklistOverlayWindow _visibleAutomationChecklistOverlayWindow;
+        [NonSerialized] private VisibleAutomationCompletionReviewOverlayWindow _visibleAutomationCompletionReviewOverlayWindow;
+        [NonSerialized] private string _visibleAutomationExternalOverlayStatePath = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlayAckPath = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlaySessionId = string.Empty;
+        [NonSerialized] private int _visibleAutomationCompletionReviewRequestId;
+        [NonSerialized] private string _visibleAutomationExternalOverlayLastPublishedJson = string.Empty;
+        [NonSerialized] private string _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
 
-        // Pending custom icons: shown before the prefab is added, applied on add.
-        private Texture2D[] _pendingCustomIcons = new Texture2D[3];
+        // ── Install Path Tree ─────────────────────────────────────────────────
 
-        // Pending action icon mode: shown before the prefab is added, applied on add.
-        private ActionIconMode _pendingActionIconMode = ActionIconMode.Default;
+        // Which nodes in the install-path tree are expanded (keyed by full path).
+        private readonly HashSet<string> _expandedInstallPaths = new HashSet<string>(StringComparer.Ordinal);
 
-        // Pending custom action icons: used when _pendingActionIconMode is Custom.
-        private Texture2D _pendingCustomSaveIcon;
-        private Texture2D _pendingCustomLoadIcon;
-        private Texture2D _pendingCustomClearIcon;
+        // Scroll position for the install-path tree view.
+        private Vector2 _installPathTreeScrollPos;
 
+        // User-draggable height of the install-path tree scroll area.
+        private float _installPathTreeHeight = 240f;
+
+        // True while the user is dragging the tree resize handle.
+        private bool _isDraggingTreeResize;
+
+        // ── Parameter Checklist ───────────────────────────────────────────────
+
+        private Vector2 _paramChecklistScrollPos;
+        private float _paramChecklistHeight = 160f;
+        private bool _isDraggingParamResize;
+        private string[] _cachedParamList;
+        private VRCAvatarDescriptor _lastParamListAvatar;
+        private ParamTreeNode _cachedParamTree;
+        private readonly HashSet<string> _expandedParamMenuPaths = new HashSet<string>(StringComparer.Ordinal);
+
+        // Cached tree; rebuilt when the selected avatar changes.
+        private MenuTreeNode _cachedInstallPathTree;
+        private VRCAvatarDescriptor _lastInstallPathTreeAvatar;
 
         // ── Wheel Preview Cache ───────────────────────────────────────────────
 
@@ -76,8 +175,9 @@ namespace ASMLite.Editor
         private Texture2D[] _mainWheelIcons;
         private string[]    _mainWheelLabels;
 
-        // Sub-wheel arrays are invariant -- allocate once as static readonly.
-        private static readonly string[] s_subWheelLabels = { "Back", "Save", "Load", "Clear" };
+        // Sub-wheel arrays are invariant. Allocate once as static readonly.
+        private static readonly string s_subWheelBackLabel = "Back";
+
 
         // Fallback grey square drawn when a custom icon slot is unassigned.
         private Texture2D _previewFallback;
@@ -88,52 +188,181 @@ namespace ASMLite.Editor
         private Texture2D _cachedIconSave;
         private Texture2D _cachedIconLoad;
         private Texture2D _cachedIconClear;
+        private Texture2D _cachedFlowArrow;
 
         // ── Banner ────────────────────────────────────────────────────────────
 
         private const string BannerPath = "Packages/com.staples.asm-lite/Icons/banner.png";
+        private const float BannerMaxDrawWidth = 1200f;
+        private const float SectionGap = 12f;
 
         // ── Radial wheel style cache ──────────────────────────────────────────
 
-        // Colors declared once -- Color is a struct but declaring as static readonly
+        // Colors declared once. Color is a struct, and static readonly keeps intent explicit.
         // makes the intent explicit and avoids accidental per-call reconstruction.
         private static readonly Color s_wheelColorMain   = new Color(0.14f, 0.18f, 0.20f);
         private static readonly Color s_wheelColorBorder = new Color(0.10f, 0.35f, 0.38f);
         private static readonly Color s_wheelColorInner  = new Color(0.21f, 0.24f, 0.27f);
         private static readonly Color s_separatorColor   = new Color(0.10f, 0.35f, 0.38f, 0.20f);
+        private static readonly Color s_sectionBorderColor = new Color(0.10f, 0.35f, 0.38f, 0.32f);
+        private static readonly Color s_sectionTintColor = new Color(0.12f, 0.16f, 0.18f, 0.12f);
 
         // GUIStyle cached across repaints. Rebuilt lazily when null (domain reload).
         // Only fontSize is updated per call; cloning on every repaint is expensive.
         private GUIStyle _radialLabelStyle;
-        private const float  BannerAspect = 1200f / 520f; // slightly shorter so the UI, not the banner, remains dominant
-
+        private GUIStyle _sectionCardStyle;
+        private GUIStyle _sectionContentStyle;
         // Loaded once on first draw, never reloaded mid-session.
         private Texture2D _bannerTexture;
 
         // ── Static GUIContent ─────────────────────────────────────────────────
 
+        private const string SlotCountTooltipActive =
+            "How many presets your avatar has. Each preset can hold a full snapshot of your settings.";
+
+        private const string SlotCountTooltipPending =
+            "How many presets to add. Each preset lets you save and load a full set of avatar settings.";
+
+        private const string SlotColorLegendHelpText =
+            "Each preset uses a different gear color for quick visual scanning.\nPresets 1 to 4: Blue, Red, Green, Purple\nPresets 5 to 8: Cyan, Orange, Pink, Yellow";
+        private static readonly string[] GearColorNames = { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
+
+        private const string PreviewFlowSubtitle = "Flow: Root Menu → Presets Menu → Action Submenu";
+        private const string PreviewMiddleDialTitle = "Presets Menu";
+
+        private const string StatusPackageManagedText =
+            "Status: Ready to edit. ASM-Lite is attached to this avatar and can be updated here.";
+
+        private const string StatusVendorizedAttachedText =
+            "Status: Vendorized. ASM-Lite is still editable, and generated files are also copied to Assets/ASM-Lite.";
+
+        private const string StatusVendorizedDetachedText =
+            "Status: Vendorized. This avatar is using ASM-Lite files copied under Assets/ASM-Lite, but the editable ASM-Lite object is not attached.";
+
+        private const string StatusDetachedText =
+            "Status: Baked only. This avatar has ASM-Lite data, but the editable ASM-Lite object is not attached.";
+
+        private const string StatusNotInstalledText =
+            "Status: Not installed. ASM-Lite has not been added to this avatar yet.";
+
+        private const string AttachedComponentInfoText = "✓ ASM-Lite is attached to this avatar.";
+
+        private const string AttachedCountSummaryFormat =
+            "✓ {0} custom parameter(s) are being saved across {1} preset(s).";
+
+        private const string DescriptorCountSourceText =
+            "This count is based on the avatar settings currently loaded in the descriptor.";
+
+        private const string MissingExpressionParametersWarningText =
+            "⚠ This avatar has no Expression Parameters asset assigned yet.";
+
+        private const string ParameterImportPendingWarningText =
+            "⚠ Avatar parameter data is still importing in Unity. Please wait a moment.";
+
+        private const string ToggleBrokerCollisionWarningFormat =
+            "[Toggle Broker] Last setup reserved {0} name(s) and auto-adjusted conflicting names: preflight={1}, intra-candidate={2}.";
+
+        private const string ToggleBrokerNoCollisionInfoFormat =
+            "[Toggle Broker] Last setup reserved {0} name(s). No naming conflicts needed adjustment.";
+
+        private const string DetachedOrVendorizedNoComponentText =
+            "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.";
+
+        private const string NotInstalledNoComponentText =
+            "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".";
+
+        private const string DetachDescriptionText = AsmLiteWindowActionModel.DetachDescriptionText;
+
+        private const string ChangedPresetCountHelpText =
+            "Changed preset count? Click \"Rebuild ASM-Lite\" to apply it.";
+
+        private const string PresetIconsFoldoutTitle = "Preset Icons";
+        private const string PresetNameLabelFormat = "Preset {0}";
+        private const string ClearPresetLabel = "Clear Preset";
+        private const string PresetIconFieldLabelFormat = "Preset {0} Icon";
+        private const string ClearPresetIconFieldLabel = "Clear Preset Icon";
+        private const float VisibleAutomationScreenOverlayTopMargin = 18f;
+        private const float VisibleAutomationScreenOverlaySideMargin = 18f;
+        private const float VisibleAutomationScreenOverlayBottomMargin = 18f;
+        private const float VisibleAutomationScreenChecklistWidthFactor = 0.25f;
+        private const float VisibleAutomationScreenStatusMaxWidthFactor = 0.46f;
+        private const float VisibleAutomationScreenStatusMinWidth = 420f;
+        private const float VisibleAutomationScreenChecklistMinWidth = 260f;
+        private const float VisibleAutomationScreenStatusHeight = 136f;
+        private const float VisibleAutomationReviewPopupWidth = 440f;
+        private const float VisibleAutomationReviewPopupHeight = 210f;
+        private const float VisibleAutomationChecklistCompactItemHeight = 40f;
+        private const string VisibleAutomationScreenOverlayFallbackText =
+            "Screen-anchored overlay unavailable; using window-hosted overlay bounds.";
+        private const string RootMenuFieldLabel = "Root Menu";
+        private const string SaveFieldLabel = "Save";
+        private const string LoadFieldLabel = "Load";
+        private const string ConfirmFieldLabel = "Confirm";
+        private const string NameFallbackGuidanceText = "Leave any name field blank to use ASM-Lite's default menu name for that item.";
+        private const string NamingSectionRootHeader = "Root Menu Name";
+        private const string NamingSectionPresetHeader = "Preset Names";
+        private const string NamingSectionActionHeader = "Action Labels";
+
+        private const string PresetIconOverridesHelpText =
+            "A preset icon set here overrides the selected Icon Mode for that preset only.\nEmpty presets keep the normal Icon Mode icon.";
+
         private static readonly GUIContent s_slotCountLabelActive =
-            new GUIContent("Slot Count",
-                "How many preset slots your avatar has. Each slot can hold a full snapshot of your settings.");
+            new GUIContent("Preset Count", SlotCountTooltipActive);
 
         private static readonly GUIContent s_slotCountLabelPending =
-            new GUIContent("Slot Count",
-                "How many preset slots to add. Each slot lets you save and load a full set of avatar settings.");
+            new GUIContent("Preset Count", SlotCountTooltipPending);
 
         // ── Open ──────────────────────────────────────────────────────────────
 
         [MenuItem("Tools/.Staples./ASM-Lite")]
         public static void Open()
         {
+            OpenForAutomation();
+        }
+
+        internal static ASMLiteWindow OpenForAutomation()
+        {
             var win = GetWindow<ASMLiteWindow>(title: ".Staples. ASM-Lite");
             win.minSize = new Vector2(600, 680);
             win.Show();
+            win.Focus();
+            return win;
+        }
+
+        private void OnEnable()
+        {
+            Undo.undoRedoPerformed += HandleEditorStateChanged;
+            EditorApplication.hierarchyChanged += HandleEditorStateChanged;
+            EditorApplication.projectChanged += HandleEditorStateChanged;
+            EditorApplication.update += HandleVisibleAutomationOverlayAnimationTick;
+            EnsureVisibleAutomationOverlayVisualTree();
+            RegisterVisibleAutomationOverlayGeometryCallback();
+            RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        private void OnDisable()
+        {
+            Undo.undoRedoPerformed -= HandleEditorStateChanged;
+            EditorApplication.hierarchyChanged -= HandleEditorStateChanged;
+            EditorApplication.projectChanged -= HandleEditorStateChanged;
+            EditorApplication.update -= HandleVisibleAutomationOverlayAnimationTick;
+            UnregisterVisibleAutomationOverlayGeometryCallback();
+            CloseVisibleAutomationOverlayPopupWindows();
+        }
+
+        private void HandleEditorStateChanged()
+        {
+            InvalidateCachedEditorState();
+            Repaint();
         }
 
         // ── GUI ───────────────────────────────────────────────────────────────
 
         private void OnGUI()
         {
+            // Draw the banner outside the scroll view so it sits flush with the window top.
+            DrawHeader();
+
             _scrollPos = EditorGUILayout.BeginScrollView(
                 _scrollPos,
                 alwaysShowHorizontal: false,
@@ -144,23 +373,44 @@ namespace ASMLite.Editor
 
             try
             {
-                DrawHeader();
-
+                BeginSectionCard();
                 DrawAvatarPicker();
+                EndSectionCard();
 
                 if (_selectedAvatar != null)
                 {
-                    EditorGUILayout.Space(8);
+                    EditorGUILayout.Space(SectionGap);
+
+                    BeginSectionCard();
                     DrawSettings();
+                    EndSectionCard();
+
                     SectionSeparator();
+
+                    BeginSectionCard();
                     DrawIconSettingsSection();
+                    EndSectionCard();
+
                     SectionSeparator();
+
+                    BeginSectionCard();
+                    DrawCustomizeSection();
+                    EndSectionCard();
+
+                    SectionSeparator();
+
+                    BeginSectionCard();
                     DrawStatus();
-                    EditorGUILayout.Space(16);
+                    EndSectionCard();
+
+                    EditorGUILayout.Space(SectionGap);
+
+                    BeginSectionCard();
                     DrawActionButton();
+                    EndSectionCard();
                 }
 
-                EditorGUILayout.Space(8);
+                EditorGUILayout.Space(SectionGap);
             }
             catch (ExitGUIException) { throw; }
             catch (System.Exception ex)
@@ -174,6 +424,1649 @@ namespace ASMLite.Editor
             finally
             {
                 EditorGUILayout.EndScrollView();
+                ProcessQueuedVisibleAutomationAction();
+                RefreshVisibleAutomationOverlayVisuals();
+            }
+        }
+
+        private sealed class VisibleAutomationChecklistVisualRefs
+        {
+            public VisualElement Root;
+            public VisualElement Accent;
+            public Label Glyph;
+            public Label Text;
+            public VisualElement Badge;
+            public Label BadgeLabel;
+            public Label StepLabel;
+        }
+
+        private void EnsureVisibleAutomationOverlayVisualTree()
+        {
+            if (rootVisualElement == null)
+                return;
+
+            bool needsFullRebuild = false;
+            if (_visibleAutomationOverlayCanvas == null || _visibleAutomationOverlayCanvas.parent != rootVisualElement)
+                needsFullRebuild = true;
+            else if (_visibleAutomationWindowOverlayCanvas == null || _visibleAutomationWindowOverlayCanvas.parent != rootVisualElement)
+                needsFullRebuild = true;
+
+            if (!needsFullRebuild)
+                return;
+
+            _visibleAutomationOverlayCanvas?.RemoveFromHierarchy();
+            _visibleAutomationWindowOverlayCanvas?.RemoveFromHierarchy();
+            _visibleAutomationChecklistItemVisuals.Clear();
+            _visibleAutomationChecklistScrollView = null;
+            _visibleAutomationWindowOverlayFallbackLabel = null;
+
+            _visibleAutomationWindowOverlayCanvas = new VisualElement
+            {
+                name = "asm-lite-visible-automation-window-overlay-canvas",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationWindowOverlayCanvas.style.position = Position.Absolute;
+            _visibleAutomationWindowOverlayCanvas.style.left = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.top = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.right = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.bottom = 0f;
+            _visibleAutomationWindowOverlayCanvas.style.display = DisplayStyle.None;
+
+            _visibleAutomationWindowOverlayFallbackLabel = new Label(VisibleAutomationScreenOverlayFallbackText)
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationWindowOverlayFallbackLabel.style.position = Position.Absolute;
+            _visibleAutomationWindowOverlayFallbackLabel.style.left = 12f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.bottom = 12f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingLeft = 10f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingRight = 10f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingTop = 6f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.paddingBottom = 6f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.backgroundColor = new Color(0.16f, 0.10f, 0.04f, 0.92f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.color = new Color(1f, 0.92f, 0.72f, 1f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopWidth = 1f;
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
+            _visibleAutomationWindowOverlayFallbackLabel.style.fontSize = 10;
+            _visibleAutomationWindowOverlayFallbackLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _visibleAutomationWindowOverlayFallbackLabel.style.display = DisplayStyle.None;
+            _visibleAutomationWindowOverlayCanvas.Add(_visibleAutomationWindowOverlayFallbackLabel);
+            rootVisualElement.Add(_visibleAutomationWindowOverlayCanvas);
+
+            _visibleAutomationOverlayCanvas = new VisualElement
+            {
+                name = "asm-lite-visible-automation-overlay-canvas",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationOverlayCanvas.style.position = Position.Absolute;
+            _visibleAutomationOverlayCanvas.style.left = 0f;
+            _visibleAutomationOverlayCanvas.style.top = 0f;
+            _visibleAutomationOverlayCanvas.style.right = 0f;
+            _visibleAutomationOverlayCanvas.style.bottom = 0f;
+            _visibleAutomationOverlayCanvas.style.display = DisplayStyle.None;
+
+            _visibleAutomationStatusPanel = new VisualElement
+            {
+                name = "asm-lite-visible-automation-status-panel",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationStatusPanel.style.position = Position.Absolute;
+            _visibleAutomationStatusPanel.style.display = DisplayStyle.None;
+            _visibleAutomationStatusPanel.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationStatusPanel.style.overflow = Overflow.Hidden;
+
+            _visibleAutomationStatusAccent = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationStatusAccent.style.height = 4f;
+            _visibleAutomationStatusAccent.style.flexShrink = 0f;
+            _visibleAutomationStatusPanel.Add(_visibleAutomationStatusAccent);
+
+            var statusBody = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusBody.style.flexDirection = FlexDirection.Column;
+            statusBody.style.flexGrow = 1f;
+            statusBody.style.paddingLeft = 16f;
+            statusBody.style.paddingRight = 16f;
+            statusBody.style.paddingTop = 14f;
+            statusBody.style.paddingBottom = 14f;
+            _visibleAutomationStatusPanel.Add(statusBody);
+
+            var statusHeaderRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusHeaderRow.style.flexDirection = FlexDirection.Row;
+            statusHeaderRow.style.alignItems = Align.FlexStart;
+            statusHeaderRow.style.flexShrink = 0f;
+            statusBody.Add(statusHeaderRow);
+
+            var statusTitleColumn = new VisualElement { pickingMode = PickingMode.Ignore };
+            statusTitleColumn.style.flexDirection = FlexDirection.Column;
+            statusTitleColumn.style.flexGrow = 1f;
+            statusTitleColumn.style.marginRight = 12f;
+            statusHeaderRow.Add(statusTitleColumn);
+
+            _visibleAutomationTitleLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            statusTitleColumn.Add(_visibleAutomationTitleLabel);
+
+            _visibleAutomationMetaLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            statusTitleColumn.Add(_visibleAutomationMetaLabel);
+
+            _visibleAutomationBadgeElement = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationBadgeElement.style.minWidth = 96f;
+            _visibleAutomationBadgeElement.style.height = 22f;
+            _visibleAutomationBadgeElement.style.justifyContent = Justify.Center;
+            _visibleAutomationBadgeElement.style.alignItems = Align.Center;
+            _visibleAutomationBadgeElement.style.paddingLeft = 10f;
+            _visibleAutomationBadgeElement.style.paddingRight = 10f;
+            _visibleAutomationBadgeElement.style.flexShrink = 0f;
+            statusHeaderRow.Add(_visibleAutomationBadgeElement);
+
+            _visibleAutomationBadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationBadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationBadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationBadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _visibleAutomationBadgeElement.Add(_visibleAutomationBadgeLabel);
+
+            _visibleAutomationStepLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationStepLabel.style.whiteSpace = WhiteSpace.Normal;
+            _visibleAutomationStepLabel.style.unityTextAlign = TextAnchor.UpperLeft;
+            _visibleAutomationStepLabel.style.marginTop = 12f;
+            _visibleAutomationStepLabel.style.flexGrow = 1f;
+            statusBody.Add(_visibleAutomationStepLabel);
+
+            _visibleAutomationChecklistPanel = new VisualElement
+            {
+                name = "asm-lite-visible-automation-checklist-panel",
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationChecklistPanel.style.position = Position.Absolute;
+            _visibleAutomationChecklistPanel.style.display = DisplayStyle.None;
+            _visibleAutomationChecklistPanel.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationChecklistPanel.style.overflow = Overflow.Hidden;
+
+            _visibleAutomationChecklistAccent = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistAccent.style.height = 5f;
+            _visibleAutomationChecklistAccent.style.flexShrink = 0f;
+            _visibleAutomationChecklistPanel.Add(_visibleAutomationChecklistAccent);
+
+            var checklistBody = new VisualElement { pickingMode = PickingMode.Ignore };
+            checklistBody.style.flexDirection = FlexDirection.Column;
+            checklistBody.style.flexGrow = 1f;
+            checklistBody.style.paddingLeft = 16f;
+            checklistBody.style.paddingRight = 16f;
+            checklistBody.style.paddingTop = 16f;
+            checklistBody.style.paddingBottom = 16f;
+            _visibleAutomationChecklistPanel.Add(checklistBody);
+
+            _visibleAutomationChecklistTitleLabel = new Label("Visible Smoke Checklist") { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _visibleAutomationChecklistTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationChecklistTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            checklistBody.Add(_visibleAutomationChecklistTitleLabel);
+
+            _visibleAutomationChecklistMetaLabel = new Label { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            _visibleAutomationChecklistMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
+            _visibleAutomationChecklistMetaLabel.style.marginTop = 2f;
+            checklistBody.Add(_visibleAutomationChecklistMetaLabel);
+
+            _visibleAutomationChecklistScrollView = new ScrollView(ScrollViewMode.Vertical)
+            {
+                pickingMode = PickingMode.Ignore,
+            };
+            _visibleAutomationChecklistScrollView.style.flexGrow = 1f;
+            _visibleAutomationChecklistScrollView.style.marginTop = 12f;
+            _visibleAutomationChecklistScrollView.style.paddingRight = 2f;
+            _visibleAutomationChecklistScrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+            _visibleAutomationChecklistScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            checklistBody.Add(_visibleAutomationChecklistScrollView);
+
+            _visibleAutomationChecklistItemsContainer = new VisualElement { pickingMode = PickingMode.Ignore };
+            _visibleAutomationChecklistItemsContainer.style.flexDirection = FlexDirection.Column;
+            _visibleAutomationChecklistItemsContainer.style.flexGrow = 1f;
+            _visibleAutomationChecklistScrollView.Add(_visibleAutomationChecklistItemsContainer);
+
+            _visibleAutomationOverlayCanvas.Add(_visibleAutomationStatusPanel);
+            _visibleAutomationOverlayCanvas.Add(_visibleAutomationChecklistPanel);
+            rootVisualElement.Add(_visibleAutomationOverlayCanvas);
+            _visibleAutomationWindowOverlayCanvas.BringToFront();
+            _visibleAutomationOverlayCanvas.BringToFront();
+        }
+
+        private void RegisterVisibleAutomationOverlayGeometryCallback()
+        {
+            if (rootVisualElement == null)
+                return;
+
+            rootVisualElement.UnregisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+            rootVisualElement.RegisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+        }
+
+        private void UnregisterVisibleAutomationOverlayGeometryCallback()
+        {
+            rootVisualElement?.UnregisterCallback<GeometryChangedEvent>(HandleVisibleAutomationOverlayGeometryChanged);
+        }
+
+        private void HandleVisibleAutomationOverlayGeometryChanged(GeometryChangedEvent _)
+        {
+            RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        private void HandleVisibleAutomationOverlayAnimationTick()
+        {
+            UpdateVisibleAutomationCompletionReviewState();
+
+            if (!HasAnyVisibleAutomationOverlay())
+                return;
+
+            if (ShouldAnimateVisibleAutomationOverlay() || NeedsVisibleAutomationOverlayHostResync())
+                RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        private bool HasAnyVisibleAutomationOverlay()
+        {
+            return !string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                || HasVisibleAutomationChecklist()
+                || _visibleAutomationCompletionReviewVisible;
+        }
+
+        private bool NeedsVisibleAutomationOverlayHostResync()
+        {
+            if (!HasAnyVisibleAutomationOverlay())
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                && _visibleAutomationStatusOverlayWindow == null)
+                return true;
+
+            if (HasVisibleAutomationChecklist()
+                && _visibleAutomationChecklistOverlayWindow == null)
+                return true;
+
+            if (_visibleAutomationCompletionReviewVisible
+                && _visibleAutomationCompletionReviewOverlayWindow == null)
+                return true;
+
+            return false;
+        }
+
+        private bool RefreshVisibleAutomationOverlayVisuals()
+        {
+            bool hasStatusOverlay = !string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep);
+            bool hasChecklistOverlay = HasVisibleAutomationChecklist();
+            bool hasCompletionReview = _visibleAutomationCompletionReviewVisible;
+            bool hasAnyOverlay = hasStatusOverlay || hasChecklistOverlay || hasCompletionReview;
+
+            SyncVisibleAutomationExternalOverlayState(hasAnyOverlay);
+            if (UsesExternalVisibleAutomationOverlay())
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (!hasAnyOverlay)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            // Visible smoke uses detached auxiliary windows as its single hosting model.
+            // If monitor detection cannot resolve native display bounds, those windows still
+            // stay detached and fall back to the owner window's screen rect for anchoring.
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (hasStatusOverlay || hasChecklistOverlay)
+                TrySyncVisibleAutomationOverlayPopupWindows(hasStatusOverlay, hasChecklistOverlay);
+            else
+                CloseVisibleAutomationStatusOverlayWindow();
+
+            SyncVisibleAutomationCompletionReviewOverlayWindow();
+            return true;
+        }
+
+        private bool UsesExternalVisibleAutomationOverlay()
+        {
+            return !string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath);
+        }
+
+        private void SyncVisibleAutomationExternalOverlayState(bool hasAnyOverlay)
+        {
+            if (!UsesExternalVisibleAutomationOverlay())
+                return;
+
+            var document = new VisibleAutomationExternalOverlayStateDocument
+            {
+                sessionId = _visibleAutomationExternalOverlaySessionId,
+                sessionActive = hasAnyOverlay,
+                presentationMode = _visibleAutomationOverlayPresentationMode,
+                title = _visibleAutomationOverlayTitle ?? string.Empty,
+                step = _visibleAutomationOverlayStep ?? string.Empty,
+                stepIndex = _visibleAutomationOverlayStepIndex,
+                totalSteps = _visibleAutomationOverlayTotalSteps,
+                state = _visibleAutomationOverlayState.ToString(),
+                checklist = BuildVisibleAutomationExternalOverlayChecklist(),
+                completionReviewVisible = _visibleAutomationCompletionReviewVisible,
+                completionReviewRequestId = _visibleAutomationCompletionReviewRequestId,
+                completionReviewTitle = _visibleAutomationCompletionReviewTitle ?? string.Empty,
+                completionReviewMessage = _visibleAutomationCompletionReviewMessage ?? string.Empty,
+                completionReviewAcknowledged = _visibleAutomationCompletionReviewAcknowledged,
+                updatedUtcTicks = DateTime.UtcNow.Ticks,
+            };
+
+            string json = JsonUtility.ToJson(document, true);
+            if (string.Equals(json, _visibleAutomationExternalOverlayLastPublishedJson, StringComparison.Ordinal))
+                return;
+
+            TryWriteVisibleAutomationExternalOverlayStateFile(json);
+            _visibleAutomationExternalOverlayLastPublishedJson = json;
+        }
+
+        private VisibleAutomationExternalOverlayChecklistItem[] BuildVisibleAutomationExternalOverlayChecklist()
+        {
+            if (!HasVisibleAutomationChecklist())
+                return Array.Empty<VisibleAutomationExternalOverlayChecklistItem>();
+
+            var checklist = new VisibleAutomationExternalOverlayChecklistItem[_visibleAutomationChecklistItems.Length];
+            for (int i = 0; i < _visibleAutomationChecklistItems.Length; i++)
+            {
+                checklist[i] = new VisibleAutomationExternalOverlayChecklistItem
+                {
+                    text = _visibleAutomationChecklistItems[i] ?? string.Empty,
+                    state = i < _visibleAutomationChecklistStates.Length
+                        ? _visibleAutomationChecklistStates[i].ToString()
+                        : VisibleAutomationChecklistItemState.Pending.ToString(),
+                };
+            }
+
+            return checklist;
+        }
+
+        private void TryWriteVisibleAutomationExternalOverlayStateFile(string json)
+        {
+            if (string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath))
+                return;
+
+            try
+            {
+                string directory = Path.GetDirectoryName(_visibleAutomationExternalOverlayStatePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                    Directory.CreateDirectory(directory);
+
+                File.WriteAllText(_visibleAutomationExternalOverlayStatePath, json, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to write visible automation external overlay state: {ex.Message}");
+            }
+        }
+
+        private void DeleteVisibleAutomationExternalOverlayAckFile()
+        {
+            if (string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayAckPath))
+                return;
+
+            try
+            {
+                if (File.Exists(_visibleAutomationExternalOverlayAckPath))
+                    File.Delete(_visibleAutomationExternalOverlayAckPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to clear visible automation external overlay acknowledgement file: {ex.Message}");
+            }
+        }
+
+        private bool TryConsumeVisibleAutomationExternalOverlayAcknowledgement()
+        {
+            if (!_visibleAutomationCompletionReviewVisible
+                || !UsesExternalVisibleAutomationOverlay()
+                || string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayAckPath)
+                || !File.Exists(_visibleAutomationExternalOverlayAckPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                string json = File.ReadAllText(_visibleAutomationExternalOverlayAckPath);
+                if (string.IsNullOrWhiteSpace(json)
+                    || string.Equals(json, _visibleAutomationExternalOverlayLastAckPayload, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+
+                _visibleAutomationExternalOverlayLastAckPayload = json;
+                var acknowledgement = JsonUtility.FromJson<VisibleAutomationExternalOverlayAckDocument>(json);
+                if (acknowledgement == null
+                    || !acknowledgement.acknowledged
+                    || !string.Equals(acknowledgement.sessionId, _visibleAutomationExternalOverlaySessionId, StringComparison.Ordinal)
+                    || acknowledgement.completionReviewRequestId != _visibleAutomationCompletionReviewRequestId)
+                {
+                    return false;
+                }
+
+                DeleteVisibleAutomationExternalOverlayAckFile();
+                AcknowledgeVisibleAutomationCompletionReview();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to read visible automation external overlay acknowledgement: {ex.Message}");
+                return false;
+            }
+        }
+
+        private void UpdateVisibleAutomationStatusPanelGeometry(Rect? explicitStatusRect, Rect? checklistRect, float overlayMargin)
+        {
+            if (explicitStatusRect.HasValue)
+            {
+                Rect rect = explicitStatusRect.Value;
+                SetVisualElementRect(_visibleAutomationStatusPanel, rect.x, rect.y, rect.width, rect.height);
+                return;
+            }
+
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            float overlayHeight = presentationMode ? 132f : 102f;
+            float availableLeftWidth = checklistRect.HasValue
+                ? Mathf.Max(220f, checklistRect.Value.x - overlayMargin * 2f)
+                : Mathf.Max(220f, position.width - overlayMargin * 2f);
+            float preferredWidth = presentationMode
+                ? Mathf.Max(420f, availableLeftWidth * 0.68f)
+                : 360f;
+            float width = Mathf.Min(preferredWidth, availableLeftWidth);
+            float x = overlayMargin + Mathf.Max(0f, (availableLeftWidth - width) * 0.5f);
+            float y = overlayMargin;
+
+            SetVisualElementRect(_visibleAutomationStatusPanel, x, y, width, overlayHeight);
+        }
+
+        private void UpdateVisibleAutomationStatusPanelContent()
+        {
+            GetVisibleAutomationOverlayPalette(
+                _visibleAutomationOverlayState,
+                out Color accentColor,
+                out Color backgroundColor,
+                out Color borderColor,
+                out Color badgeColor,
+                out Color badgeTextColor);
+
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            _visibleAutomationStatusPanel.style.backgroundColor = backgroundColor;
+            SetVisualElementBorder(_visibleAutomationStatusPanel, borderColor);
+            _visibleAutomationStatusAccent.style.backgroundColor = accentColor;
+
+            string title = string.IsNullOrWhiteSpace(_visibleAutomationOverlayTitle)
+                ? "ASM-Lite visible smoke test"
+                : _visibleAutomationOverlayTitle;
+            _visibleAutomationTitleLabel.text = title;
+            _visibleAutomationTitleLabel.style.fontSize = presentationMode ? 15 : 12;
+            _visibleAutomationTitleLabel.style.color = Color.white;
+
+            string metaText = BuildVisibleAutomationOverlayMetaText();
+            _visibleAutomationMetaLabel.text = metaText;
+            _visibleAutomationMetaLabel.style.display = string.IsNullOrEmpty(metaText) ? DisplayStyle.None : DisplayStyle.Flex;
+            _visibleAutomationMetaLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationMetaLabel.style.color = new Color(0.74f, 0.82f, 0.91f, 0.96f);
+
+            _visibleAutomationStepLabel.text = _visibleAutomationOverlayStep;
+            _visibleAutomationStepLabel.style.fontSize = presentationMode ? 16 : 12;
+            _visibleAutomationStepLabel.style.color = new Color(0.95f, 0.97f, 0.99f, 1f);
+
+            _visibleAutomationBadgeElement.style.backgroundColor = badgeColor;
+            _visibleAutomationBadgeLabel.text = GetVisibleAutomationOverlayStatusLabel(_visibleAutomationOverlayState);
+            _visibleAutomationBadgeLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationBadgeLabel.style.color = badgeTextColor;
+        }
+
+        private void UpdateVisibleAutomationChecklistPanelGeometry(Rect overlayRect)
+        {
+            SetVisualElementRect(_visibleAutomationChecklistPanel, overlayRect.x, overlayRect.y, overlayRect.width, overlayRect.height);
+        }
+
+        private void UpdateVisibleAutomationChecklistPanelContent()
+        {
+            bool presentationMode = _visibleAutomationOverlayPresentationMode;
+            int totalItems = _visibleAutomationChecklistItems.Length;
+            int completedItems = CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+
+            _visibleAutomationChecklistPanel.style.backgroundColor = new Color(0.05f, 0.07f, 0.09f, 0.96f);
+            SetVisualElementBorder(_visibleAutomationChecklistPanel, new Color(0.14f, 0.39f, 0.43f, 0.96f));
+            _visibleAutomationChecklistAccent.style.backgroundColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+
+            _visibleAutomationChecklistTitleLabel.text = "Visible Smoke Checklist";
+            _visibleAutomationChecklistTitleLabel.style.fontSize = presentationMode ? 14 : 12;
+            _visibleAutomationChecklistTitleLabel.style.color = Color.white;
+
+            _visibleAutomationChecklistMetaLabel.text = $"Completed {completedItems}/{totalItems} • Right-side execution checklist";
+            _visibleAutomationChecklistMetaLabel.style.fontSize = presentationMode ? 11 : 10;
+            _visibleAutomationChecklistMetaLabel.style.color = new Color(0.76f, 0.84f, 0.92f, 0.95f);
+
+            if (_visibleAutomationChecklistScrollView != null)
+                _visibleAutomationChecklistScrollView.style.marginTop = presentationMode ? 14f : 12f;
+
+            EnsureVisibleAutomationChecklistVisualCount(totalItems);
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < totalItems; i++)
+                UpdateVisibleAutomationChecklistItemVisual(_visibleAutomationChecklistItemVisuals[i], i, now, totalItems);
+        }
+
+        private void EnsureVisibleAutomationChecklistVisualCount(int totalItems)
+        {
+            if (_visibleAutomationChecklistItemsContainer == null)
+                return;
+
+            while (_visibleAutomationChecklistItemVisuals.Count > totalItems)
+            {
+                int lastIndex = _visibleAutomationChecklistItemVisuals.Count - 1;
+                _visibleAutomationChecklistItemVisuals[lastIndex].Root.RemoveFromHierarchy();
+                _visibleAutomationChecklistItemVisuals.RemoveAt(lastIndex);
+            }
+
+            while (_visibleAutomationChecklistItemVisuals.Count < totalItems)
+            {
+                int itemIndex = _visibleAutomationChecklistItemVisuals.Count;
+                var refs = CreateVisibleAutomationChecklistVisual();
+                _visibleAutomationChecklistItemsContainer.Add(refs.Root);
+                _visibleAutomationChecklistItemVisuals.Add(refs);
+            }
+        }
+
+        private VisibleAutomationChecklistVisualRefs CreateVisibleAutomationChecklistVisual()
+        {
+            var refs = new VisibleAutomationChecklistVisualRefs();
+
+            refs.Root = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Root.style.flexDirection = FlexDirection.Row;
+            refs.Root.style.alignItems = Align.Stretch;
+            refs.Root.style.flexGrow = 1f;
+            refs.Root.style.minHeight = VisibleAutomationChecklistCompactItemHeight;
+            refs.Root.style.marginBottom = 6f;
+            refs.Root.style.overflow = Overflow.Hidden;
+
+            refs.Accent = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Accent.style.width = 4f;
+            refs.Accent.style.flexShrink = 0f;
+            refs.Root.Add(refs.Accent);
+
+            var content = new VisualElement { pickingMode = PickingMode.Ignore };
+            content.style.flexDirection = FlexDirection.Column;
+            content.style.flexGrow = 1f;
+            content.style.paddingLeft = 10f;
+            content.style.paddingRight = 10f;
+            content.style.paddingTop = 8f;
+            content.style.paddingBottom = 6f;
+            refs.Root.Add(content);
+
+            var topRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            topRow.style.flexDirection = FlexDirection.Row;
+            topRow.style.alignItems = Align.FlexStart;
+            topRow.style.flexGrow = 1f;
+            content.Add(topRow);
+
+            refs.Glyph = new Label { pickingMode = PickingMode.Ignore };
+            refs.Glyph.style.width = 24f;
+            refs.Glyph.style.minWidth = 24f;
+            refs.Glyph.style.marginRight = 6f;
+            refs.Glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+            refs.Glyph.style.unityTextAlign = TextAnchor.UpperCenter;
+            refs.Glyph.style.whiteSpace = WhiteSpace.NoWrap;
+            topRow.Add(refs.Glyph);
+
+            refs.Text = new Label { pickingMode = PickingMode.Ignore };
+            refs.Text.style.flexGrow = 1f;
+            refs.Text.style.whiteSpace = WhiteSpace.Normal;
+            refs.Text.style.unityTextAlign = TextAnchor.UpperLeft;
+            refs.Text.style.marginRight = 8f;
+            topRow.Add(refs.Text);
+
+            refs.Badge = new VisualElement { pickingMode = PickingMode.Ignore };
+            refs.Badge.style.minWidth = 60f;
+            refs.Badge.style.height = 20f;
+            refs.Badge.style.justifyContent = Justify.Center;
+            refs.Badge.style.alignItems = Align.Center;
+            refs.Badge.style.paddingLeft = 8f;
+            refs.Badge.style.paddingRight = 8f;
+            refs.Badge.style.flexShrink = 0f;
+            topRow.Add(refs.Badge);
+
+            refs.BadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+            refs.BadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            refs.BadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            refs.BadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            refs.Badge.Add(refs.BadgeLabel);
+
+            refs.StepLabel = new Label { pickingMode = PickingMode.Ignore };
+            refs.StepLabel.style.marginTop = 4f;
+            refs.StepLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            refs.StepLabel.style.unityTextAlign = TextAnchor.LowerLeft;
+            content.Add(refs.StepLabel);
+
+            return refs;
+        }
+
+        private void UpdateVisibleAutomationChecklistItemVisual(VisibleAutomationChecklistVisualRefs refs, int itemIndex, double now, int totalItems)
+        {
+            string itemLabel = _visibleAutomationChecklistItems[itemIndex];
+            var itemState = _visibleAutomationChecklistStates[itemIndex];
+            double changedAt = itemIndex < _visibleAutomationChecklistStateChangedAt.Length
+                ? _visibleAutomationChecklistStateChangedAt[itemIndex]
+                : now;
+            double stateAgeSeconds = Mathf.Max(0f, (float)(now - changedAt));
+
+            GetVisibleAutomationChecklistItemPalette(
+                itemState,
+                stateAgeSeconds,
+                now,
+                _visibleAutomationOverlayPresentationMode,
+                out Color backgroundColor,
+                out Color borderColor,
+                out Color accentColor,
+                out Color textColor,
+                out Color badgeColor,
+                out Color badgeTextColor,
+                out Color glyphColor);
+
+            refs.Root.style.backgroundColor = backgroundColor;
+            SetVisualElementBorder(refs.Root, borderColor);
+            refs.Root.style.minHeight = _visibleAutomationOverlayPresentationMode ? 48f : VisibleAutomationChecklistCompactItemHeight;
+            refs.Root.style.marginBottom = itemIndex < totalItems - 1 ? 6f : 0f;
+            refs.Accent.style.backgroundColor = accentColor;
+            refs.Glyph.text = GetVisibleAutomationChecklistItemGlyph(itemState);
+            refs.Glyph.style.fontSize = _visibleAutomationOverlayPresentationMode ? 18 : 16;
+            refs.Glyph.style.color = glyphColor;
+
+            refs.Text.text = itemLabel;
+            refs.Text.style.fontSize = _visibleAutomationOverlayPresentationMode ? 13 : 12;
+            refs.Text.style.color = textColor;
+
+            refs.Badge.style.backgroundColor = badgeColor;
+            refs.BadgeLabel.text = GetVisibleAutomationChecklistItemStatusLabel(itemState);
+            refs.BadgeLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
+            refs.BadgeLabel.style.color = badgeTextColor;
+
+            refs.StepLabel.text = $"Step {itemIndex + 1}";
+            refs.StepLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
+            refs.StepLabel.style.color = new Color(0.72f, 0.78f, 0.86f, 0.92f);
+        }
+
+        private static void SetVisualElementRect(VisualElement element, float x, float y, float width, float height)
+        {
+            if (element == null)
+                return;
+
+            element.style.left = x;
+            element.style.top = y;
+            element.style.width = width;
+            element.style.height = height;
+        }
+
+        private static void SetVisualElementBorder(VisualElement element, Color color, float width = 1f)
+        {
+            if (element == null)
+                return;
+
+            element.style.borderLeftWidth = width;
+            element.style.borderRightWidth = width;
+            element.style.borderTopWidth = width;
+            element.style.borderBottomWidth = width;
+            element.style.borderLeftColor = color;
+            element.style.borderRightColor = color;
+            element.style.borderTopColor = color;
+            element.style.borderBottomColor = color;
+        }
+
+        private bool TrySyncVisibleAutomationOverlayPopupWindows(bool hasStatusOverlay, bool hasChecklistOverlay)
+        {
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (!TryGetVisibleAutomationScreenOverlayRects(out Rect? statusRect, out Rect? checklistRect)
+                || !statusRect.HasValue
+                || !checklistRect.HasValue)
+            {
+                CloseVisibleAutomationOverlayPopupWindows();
+                return false;
+            }
+
+            if (hasStatusOverlay)
+            {
+                if (_visibleAutomationStatusOverlayWindow == null)
+                    _visibleAutomationStatusOverlayWindow = VisibleAutomationStatusOverlayWindow.Create(this);
+
+                _visibleAutomationStatusOverlayWindow.SyncFromOwner(this, statusRect.Value);
+            }
+            else
+            {
+                CloseVisibleAutomationStatusOverlayWindow();
+            }
+
+            if (hasChecklistOverlay)
+            {
+                if (_visibleAutomationChecklistOverlayWindow == null)
+                    _visibleAutomationChecklistOverlayWindow = VisibleAutomationChecklistOverlayWindow.Create(this);
+
+                _visibleAutomationChecklistOverlayWindow.SyncFromOwner(this, checklistRect.Value);
+            }
+            else
+            {
+                CloseVisibleAutomationChecklistOverlayWindow();
+            }
+
+            return true;
+        }
+
+        private void SyncVisibleAutomationCompletionReviewOverlayWindow()
+        {
+            if (!_visibleAutomationCompletionReviewVisible)
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (!TryGetVisibleAutomationCompletionReviewOverlayRect(out Rect reviewRect))
+            {
+                CloseVisibleAutomationCompletionReviewOverlayWindow();
+                return;
+            }
+
+            if (_visibleAutomationCompletionReviewOverlayWindow == null)
+                _visibleAutomationCompletionReviewOverlayWindow = VisibleAutomationCompletionReviewOverlayWindow.Create(this);
+
+            _visibleAutomationCompletionReviewOverlayWindow.SyncFromOwner(this, reviewRect);
+        }
+
+        private void CloseVisibleAutomationOverlayPopupWindows()
+        {
+            CloseVisibleAutomationStatusOverlayWindow();
+            CloseVisibleAutomationChecklistOverlayWindow();
+            CloseVisibleAutomationCompletionReviewOverlayWindow();
+        }
+
+        private void CloseVisibleAutomationStatusOverlayWindow()
+        {
+            if (_visibleAutomationStatusOverlayWindow == null)
+                return;
+
+            _visibleAutomationStatusOverlayWindow.Close();
+            _visibleAutomationStatusOverlayWindow = null;
+        }
+
+        private void CloseVisibleAutomationChecklistOverlayWindow()
+        {
+            if (_visibleAutomationChecklistOverlayWindow == null)
+                return;
+
+            _visibleAutomationChecklistOverlayWindow.Close();
+            _visibleAutomationChecklistOverlayWindow = null;
+        }
+
+        private void CloseVisibleAutomationCompletionReviewOverlayWindow()
+        {
+            if (_visibleAutomationCompletionReviewOverlayWindow == null)
+                return;
+
+            _visibleAutomationCompletionReviewOverlayWindow.Close();
+            _visibleAutomationCompletionReviewOverlayWindow = null;
+        }
+
+        private Rect GetVisibleAutomationChecklistOverlayRect(float overlayMargin)
+        {
+            float x = Mathf.Clamp(position.width * 0.75f, overlayMargin + 220f, Mathf.Max(overlayMargin + 220f, position.width - 280f));
+            float width = Mathf.Max(220f, position.width - x - overlayMargin);
+            float height = Mathf.Max(220f, position.height - overlayMargin * 2f);
+            return new Rect(x, overlayMargin, width, height);
+        }
+
+        private bool TryGetVisibleAutomationScreenOverlayRects(out Rect? statusRect, out Rect? checklistRect)
+        {
+            statusRect = null;
+            checklistRect = null;
+
+            if (!_visibleAutomationPreferScreenAnchoredOverlay)
+                return false;
+
+            if (!TryGetVisibleAutomationScreenBounds(out Rect screenBounds))
+                return false;
+
+            _visibleAutomationScreenBounds = screenBounds;
+
+            float topMargin = VisibleAutomationScreenOverlayTopMargin;
+            float sideMargin = VisibleAutomationScreenOverlaySideMargin;
+            float bottomMargin = VisibleAutomationScreenOverlayBottomMargin;
+            float availableWidth = Mathf.Max(680f, screenBounds.width - sideMargin * 2f);
+            float availableHeight = Mathf.Max(360f, screenBounds.height - topMargin - bottomMargin);
+            float checklistWidth = Mathf.Max(VisibleAutomationScreenChecklistMinWidth, availableWidth * VisibleAutomationScreenChecklistWidthFactor);
+            checklistWidth = Mathf.Min(checklistWidth, availableWidth * 0.42f);
+            float checklistX = screenBounds.xMax - sideMargin - checklistWidth;
+            float checklistY = screenBounds.yMin + topMargin;
+            float checklistHeight = availableHeight;
+
+            float leftAvailableWidth = Mathf.Max(VisibleAutomationScreenStatusMinWidth, checklistX - sideMargin - screenBounds.xMin - sideMargin);
+            float statusWidth = Mathf.Max(VisibleAutomationScreenStatusMinWidth, availableWidth * VisibleAutomationScreenStatusMaxWidthFactor);
+            statusWidth = Mathf.Min(statusWidth, leftAvailableWidth);
+            float statusHeight = _visibleAutomationOverlayPresentationMode
+                ? VisibleAutomationScreenStatusHeight + 12f
+                : VisibleAutomationScreenStatusHeight;
+            float statusX = screenBounds.xMin + sideMargin + Mathf.Max(0f, (leftAvailableWidth - statusWidth) * 0.5f);
+            float statusY = screenBounds.yMin + topMargin;
+
+            statusRect = new Rect(statusX, statusY, statusWidth, statusHeight);
+            checklistRect = new Rect(checklistX, checklistY, checklistWidth, checklistHeight);
+            return true;
+        }
+
+        private bool TryGetVisibleAutomationCompletionReviewOverlayRect(out Rect reviewRect)
+        {
+            reviewRect = default;
+
+            if (!_visibleAutomationPreferScreenAnchoredOverlay)
+                return false;
+
+            if (!TryGetVisibleAutomationScreenBounds(out Rect screenBounds))
+                return false;
+
+            _visibleAutomationScreenBounds = screenBounds;
+
+            float width = Mathf.Min(VisibleAutomationReviewPopupWidth, Mathf.Max(320f, screenBounds.width - VisibleAutomationScreenOverlaySideMargin * 2f));
+            float height = Mathf.Min(VisibleAutomationReviewPopupHeight, Mathf.Max(180f, screenBounds.height - VisibleAutomationScreenOverlayTopMargin * 2f));
+            float x = screenBounds.xMin + Mathf.Max(VisibleAutomationScreenOverlaySideMargin, (screenBounds.width - width) * 0.5f);
+            float y = screenBounds.yMin + Mathf.Max(VisibleAutomationScreenOverlayTopMargin * 2f, (screenBounds.height - height) * 0.34f);
+            x = Mathf.Min(x, screenBounds.xMax - VisibleAutomationScreenOverlaySideMargin - width);
+            y = Mathf.Min(y, screenBounds.yMax - VisibleAutomationScreenOverlayBottomMargin - height);
+            reviewRect = new Rect(x, y, width, height);
+            return reviewRect.width > 0f && reviewRect.height > 0f;
+        }
+
+        private bool TryGetVisibleAutomationScreenBounds(out Rect screenBounds)
+        {
+            screenBounds = default;
+
+            if (ShouldFreezeVisibleAutomationScreenBoundsToLastKnownRect())
+            {
+                screenBounds = _visibleAutomationScreenBounds;
+                return true;
+            }
+
+            _visibleAutomationUsingHostWindowFallbackBounds = false;
+
+            Rect referenceRect = position;
+            if (TryGetHostContainerScreenRect(out Rect hostContainerRect))
+                referenceRect = hostContainerRect;
+
+            if (referenceRect.width <= 0f || referenceRect.height <= 0f)
+            {
+                if (HasCachedVisibleAutomationScreenBounds())
+                {
+                    screenBounds = _visibleAutomationScreenBounds;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (TryGetDisplayBoundsFromNativeWindow(referenceRect.center, out screenBounds))
+            {
+                _visibleAutomationScreenBounds = screenBounds;
+                return true;
+            }
+
+            // Keep detached overlay windows as the only host model even when native
+            // monitor lookup is unavailable by anchoring them to the owner window rect.
+            _visibleAutomationUsingHostWindowFallbackBounds = true;
+            screenBounds = referenceRect;
+            _visibleAutomationScreenBounds = screenBounds;
+            return true;
+        }
+
+        private bool HasCachedVisibleAutomationScreenBounds()
+        {
+            return _visibleAutomationScreenBounds.width > 0f && _visibleAutomationScreenBounds.height > 0f;
+        }
+
+        private bool ShouldFreezeVisibleAutomationScreenBoundsToLastKnownRect()
+        {
+            return HasCachedVisibleAutomationScreenBounds()
+                && focusedWindow != this
+                && !hasFocus;
+        }
+
+        private bool TryGetHostContainerScreenRect(out Rect screenRect)
+        {
+            screenRect = default;
+
+            object hostView = typeof(EditorWindow)
+                .GetField("m_Parent", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.GetValue(this);
+            if (hostView == null)
+                return false;
+
+            if (TryReadRectMember(hostView, "screenPosition", out screenRect)
+                || TryReadRectMember(hostView, "windowPosition", out screenRect)
+                || TryReadRectMember(hostView, "position", out screenRect))
+            {
+                return screenRect.width > 0f && screenRect.height > 0f;
+            }
+
+            object containerWindow = hostView.GetType()
+                .GetProperty("window", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                ?.GetValue(hostView, null);
+            if (containerWindow == null)
+                return false;
+
+            if (TryReadRectMember(containerWindow, "position", out screenRect)
+                || TryReadRectMember(containerWindow, "screenPosition", out screenRect)
+                || TryReadRectMember(containerWindow, "windowPosition", out screenRect))
+            {
+                return screenRect.width > 0f && screenRect.height > 0f;
+            }
+
+            return false;
+        }
+
+        private static bool TryReadRectMember(object target, string memberName, out Rect rect)
+        {
+            rect = default;
+            if (target == null || string.IsNullOrWhiteSpace(memberName))
+                return false;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            Type targetType = target.GetType();
+
+            PropertyInfo property = targetType.GetProperty(memberName, flags);
+            if (property != null && property.PropertyType == typeof(Rect))
+            {
+                rect = (Rect)property.GetValue(target, null);
+                return true;
+            }
+
+            FieldInfo field = targetType.GetField(memberName, flags);
+            if (field != null && field.FieldType == typeof(Rect))
+            {
+                rect = (Rect)field.GetValue(target);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetDisplayBoundsFromNativeWindow(Vector2 referencePoint, out Rect screenBounds)
+        {
+            screenBounds = default;
+
+#if UNITY_EDITOR_WIN
+            if (!TryGetWin32MonitorBounds(referencePoint, out screenBounds))
+                return false;
+
+            return screenBounds.width > 0f && screenBounds.height > 0f;
+#else
+            return false;
+#endif
+        }
+
+#if UNITY_EDITOR_WIN
+        private static bool TryGetWin32MonitorBounds(Vector2 referencePoint, out Rect screenBounds)
+        {
+            screenBounds = default;
+
+            POINT point;
+            point.x = (int)Mathf.Round(referencePoint.x);
+            point.y = (int)Mathf.Round(referencePoint.y);
+            IntPtr monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+            if (monitor == IntPtr.Zero)
+                return false;
+
+            var monitorInfo = new MONITORINFO();
+            monitorInfo.cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+            if (!GetMonitorInfo(monitor, ref monitorInfo))
+                return false;
+
+            RECT workRect = monitorInfo.rcWork;
+            screenBounds = new Rect(
+                workRect.left,
+                workRect.top,
+                Mathf.Max(0, workRect.right - workRect.left),
+                Mathf.Max(0, workRect.bottom - workRect.top));
+            return screenBounds.width > 0f && screenBounds.height > 0f;
+        }
+
+        private const int MONITOR_DEFAULTTONEAREST = 2;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int x;
+            public int y;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int left;
+            public int top;
+            public int right;
+            public int bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct MONITORINFO
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(POINT pt, uint dwFlags);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+#endif
+
+        private bool HasVisibleAutomationChecklist()
+        {
+            return _visibleAutomationChecklistItems != null && _visibleAutomationChecklistItems.Length > 0;
+        }
+
+        private bool ShouldAnimateVisibleAutomationOverlay()
+        {
+            if (_visibleAutomationOverlayPresentationMode)
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(_visibleAutomationOverlayStep)
+                && _visibleAutomationOverlayState == VisibleAutomationOverlayState.Running)
+                return true;
+
+            if (!HasVisibleAutomationChecklist())
+                return false;
+
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                if (_visibleAutomationChecklistStates[i] == VisibleAutomationChecklistItemState.Active)
+                    return true;
+
+                if (i < _visibleAutomationChecklistStateChangedAt.Length
+                    && now - _visibleAutomationChecklistStateChangedAt[i] < 1.1d)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private int CountChecklistItemsWithState(VisibleAutomationChecklistItemState state)
+        {
+            if (_visibleAutomationChecklistStates == null)
+                return 0;
+
+            int count = 0;
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                if (_visibleAutomationChecklistStates[i] == state)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static string GetVisibleAutomationChecklistItemGlyph(VisibleAutomationChecklistItemState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    return "✓";
+                case VisibleAutomationChecklistItemState.Failed:
+                    return "!";
+                case VisibleAutomationChecklistItemState.Warning:
+                    return "!";
+                case VisibleAutomationChecklistItemState.Active:
+                    return "•";
+                default:
+                    return "○";
+            }
+        }
+
+        private static string GetVisibleAutomationChecklistItemStatusLabel(VisibleAutomationChecklistItemState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    return "DONE";
+                case VisibleAutomationChecklistItemState.Failed:
+                    return "FAIL";
+                case VisibleAutomationChecklistItemState.Warning:
+                    return "WARN";
+                case VisibleAutomationChecklistItemState.Active:
+                    return "LIVE";
+                default:
+                    return "WAIT";
+            }
+        }
+
+        private static void GetVisibleAutomationChecklistItemPalette(
+            VisibleAutomationChecklistItemState state,
+            double stateAgeSeconds,
+            double now,
+            bool presentationMode,
+            out Color backgroundColor,
+            out Color borderColor,
+            out Color accentColor,
+            out Color textColor,
+            out Color badgeColor,
+            out Color badgeTextColor,
+            out Color glyphColor)
+        {
+            switch (state)
+            {
+                case VisibleAutomationChecklistItemState.Completed:
+                    {
+                        if (presentationMode)
+                        {
+                            backgroundColor = new Color(0.12f, 0.26f, 0.18f, 0.97f);
+                            borderColor = new Color(0.28f, 0.64f, 0.44f, 0.98f);
+                            accentColor = new Color(0.34f, 0.82f, 0.56f, 1f);
+                            textColor = Color.white;
+                            badgeColor = new Color(0.24f, 0.58f, 0.40f, 1f);
+                            badgeTextColor = Color.white;
+                            glyphColor = new Color(0.84f, 1f, 0.90f, 1f);
+                            break;
+                        }
+
+                        float flash = Mathf.Clamp01(1f - (float)(stateAgeSeconds / 0.9d));
+                        backgroundColor = Color.Lerp(
+                            new Color(0.08f, 0.15f, 0.11f, 0.94f),
+                            new Color(0.18f, 0.34f, 0.24f, 0.98f),
+                            flash);
+                        borderColor = Color.Lerp(
+                            new Color(0.20f, 0.48f, 0.32f, 0.95f),
+                            new Color(0.34f, 0.78f, 0.54f, 1f),
+                            flash);
+                        accentColor = Color.Lerp(
+                            new Color(0.22f, 0.62f, 0.40f, 1f),
+                            new Color(0.40f, 0.95f, 0.63f, 1f),
+                            flash);
+                        textColor = Color.white;
+                        badgeColor = Color.Lerp(
+                            new Color(0.18f, 0.44f, 0.30f, 1f),
+                            new Color(0.28f, 0.70f, 0.46f, 1f),
+                            flash);
+                        badgeTextColor = Color.white;
+                        glyphColor = new Color(0.84f, 1f, 0.90f, 1f);
+                        break;
+                    }
+                case VisibleAutomationChecklistItemState.Failed:
+                    backgroundColor = new Color(0.15f, 0.08f, 0.09f, 0.98f);
+                    borderColor = new Color(0.66f, 0.24f, 0.24f, 0.96f);
+                    accentColor = new Color(0.88f, 0.32f, 0.32f, 1f);
+                    textColor = Color.white;
+                    badgeColor = new Color(0.58f, 0.20f, 0.20f, 1f);
+                    badgeTextColor = Color.white;
+                    glyphColor = new Color(1f, 0.88f, 0.88f, 1f);
+                    break;
+                case VisibleAutomationChecklistItemState.Warning:
+                    backgroundColor = new Color(0.15f, 0.12f, 0.07f, 0.98f);
+                    borderColor = new Color(0.72f, 0.54f, 0.16f, 0.96f);
+                    accentColor = new Color(0.94f, 0.72f, 0.20f, 1f);
+                    textColor = Color.white;
+                    badgeColor = new Color(0.66f, 0.50f, 0.14f, 1f);
+                    badgeTextColor = new Color(0.16f, 0.11f, 0.03f, 1f);
+                    glyphColor = new Color(1f, 0.95f, 0.78f, 1f);
+                    break;
+                case VisibleAutomationChecklistItemState.Active:
+                    {
+                        if (presentationMode)
+                        {
+                            backgroundColor = new Color(0.11f, 0.17f, 0.24f, 0.98f);
+                            borderColor = new Color(0.28f, 0.56f, 0.82f, 0.99f);
+                            accentColor = new Color(0.30f, 0.70f, 0.96f, 1f);
+                            textColor = Color.white;
+                            badgeColor = new Color(0.22f, 0.50f, 0.76f, 1f);
+                            badgeTextColor = Color.white;
+                            glyphColor = new Color(0.86f, 0.95f, 1f, 1f);
+                            break;
+                        }
+
+                        float pulse = 0.5f + 0.5f * Mathf.Sin((float)(now * 4.5d));
+                        backgroundColor = Color.Lerp(
+                            new Color(0.08f, 0.11f, 0.16f, 0.95f),
+                            new Color(0.12f, 0.20f, 0.28f, 0.99f),
+                            pulse);
+                        borderColor = Color.Lerp(
+                            new Color(0.20f, 0.40f, 0.58f, 0.96f),
+                            new Color(0.32f, 0.68f, 0.94f, 1f),
+                            pulse);
+                        accentColor = Color.Lerp(
+                            new Color(0.20f, 0.48f, 0.76f, 1f),
+                            new Color(0.34f, 0.78f, 1f, 1f),
+                            pulse);
+                        textColor = Color.white;
+                        badgeColor = Color.Lerp(
+                            new Color(0.16f, 0.40f, 0.62f, 1f),
+                            new Color(0.26f, 0.62f, 0.90f, 1f),
+                            pulse);
+                        badgeTextColor = Color.white;
+                        glyphColor = new Color(0.86f, 0.95f, 1f, 1f);
+                        break;
+                    }
+                default:
+                    backgroundColor = new Color(0.08f, 0.10f, 0.13f, 0.92f);
+                    borderColor = new Color(0.19f, 0.25f, 0.31f, 0.90f);
+                    accentColor = new Color(0.25f, 0.31f, 0.37f, 0.92f);
+                    textColor = new Color(0.84f, 0.88f, 0.93f, 0.95f);
+                    badgeColor = new Color(0.16f, 0.19f, 0.23f, 1f);
+                    badgeTextColor = new Color(0.77f, 0.82f, 0.88f, 0.95f);
+                    glyphColor = new Color(0.74f, 0.79f, 0.85f, 0.95f);
+                    break;
+            }
+        }
+
+        private string BuildVisibleAutomationOverlayMetaText()
+        {
+            string progressText = BuildVisibleAutomationOverlayProgressText(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayTotalSteps);
+            if (_visibleAutomationOverlayPresentationMode)
+            {
+                return string.IsNullOrEmpty(progressText)
+                    ? "Presentation Mode"
+                    : progressText + " • Presentation Mode";
+            }
+
+            return progressText;
+        }
+
+        internal VisibleAutomationOverlayHostSnapshot GetVisibleAutomationOverlayHostSnapshotForTesting()
+        {
+            if (UsesExternalVisibleAutomationOverlay())
+                RefreshVisibleAutomationOverlayVisuals();
+            else if (NeedsVisibleAutomationOverlayHostResync())
+                RefreshVisibleAutomationOverlayVisuals();
+
+            Rect screenBounds = _visibleAutomationScreenBounds;
+            if (screenBounds.width <= 0f || screenBounds.height <= 0f)
+                TryGetVisibleAutomationScreenBounds(out screenBounds);
+
+            if (UsesExternalVisibleAutomationOverlay())
+            {
+                return new VisibleAutomationOverlayHostSnapshot(
+                    VisibleAutomationOverlayHostKind.ExternalPythonProcess,
+                    screenBounds,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    _visibleAutomationUsingHostWindowFallbackBounds,
+                    _visibleAutomationExternalOverlayStatePath,
+                    _visibleAutomationExternalOverlayAckPath,
+                    File.Exists(_visibleAutomationExternalOverlayStatePath));
+            }
+
+            return new VisibleAutomationOverlayHostSnapshot(
+                VisibleAutomationOverlayHostKind.DetachedAuxiliaryWindows,
+                screenBounds,
+                _visibleAutomationStatusOverlayWindow != null,
+                _visibleAutomationStatusOverlayWindow != null ? _visibleAutomationStatusOverlayWindow.position : default,
+                _visibleAutomationChecklistOverlayWindow != null,
+                _visibleAutomationChecklistOverlayWindow != null ? _visibleAutomationChecklistOverlayWindow.position : default,
+                _visibleAutomationCompletionReviewOverlayWindow != null,
+                _visibleAutomationCompletionReviewOverlayWindow != null ? _visibleAutomationCompletionReviewOverlayWindow.position : default,
+                _visibleAutomationUsingHostWindowFallbackBounds,
+                _visibleAutomationExternalOverlayStatePath,
+                _visibleAutomationExternalOverlayAckPath,
+                false);
+        }
+
+        internal VisibleAutomationExternalOverlayStateDocument GetVisibleAutomationExternalOverlayStateForTesting()
+        {
+            if (!UsesExternalVisibleAutomationOverlay() || string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlayStatePath))
+                return null;
+
+            if (!File.Exists(_visibleAutomationExternalOverlayStatePath))
+                return null;
+
+            try
+            {
+                string json = File.ReadAllText(_visibleAutomationExternalOverlayStatePath);
+                if (string.IsNullOrWhiteSpace(json))
+                    return null;
+
+                return JsonUtility.FromJson<VisibleAutomationExternalOverlayStateDocument>(json);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[ASM-Lite] Failed to read visible automation external overlay state for testing: {ex.Message}");
+                return null;
+            }
+        }
+
+        internal bool TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting()
+        {
+            return TryConsumeVisibleAutomationExternalOverlayAcknowledgement();
+        }
+
+        internal void ShowVisibleAutomationCompletionReview(string title = null, string message = null)
+        {
+            _visibleAutomationCompletionReviewTitle = string.IsNullOrWhiteSpace(title)
+                ? "Visible smoke results ready"
+                : title.Trim();
+            _visibleAutomationCompletionReviewMessage = string.IsNullOrWhiteSpace(message)
+                ? BuildVisibleAutomationCompletionReviewMessage()
+                : message.Trim();
+            _visibleAutomationCompletionReviewAcknowledged = false;
+            _visibleAutomationCompletionReviewVisible = true;
+            _visibleAutomationCompletionReviewRequestId++;
+            _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
+            DeleteVisibleAutomationExternalOverlayAckFile();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal void AcknowledgeVisibleAutomationCompletionReview()
+        {
+            _visibleAutomationCompletionReviewAcknowledged = true;
+            _visibleAutomationCompletionReviewVisible = false;
+            CloseVisibleAutomationCompletionReviewOverlayWindow();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal bool IsVisibleAutomationCompletionReviewVisibleForAutomation()
+        {
+            return _visibleAutomationCompletionReviewVisible;
+        }
+
+        internal bool WasVisibleAutomationCompletionReviewAcknowledgedForAutomation()
+        {
+            return _visibleAutomationCompletionReviewAcknowledged;
+        }
+
+        private void UpdateVisibleAutomationCompletionReviewState()
+        {
+            if (TryConsumeVisibleAutomationExternalOverlayAcknowledgement())
+                return;
+
+            if (!_visibleAutomationCompletionReviewVisible)
+                return;
+
+            if (_visibleAutomationCompletionReviewOverlayWindow != null)
+                _visibleAutomationCompletionReviewOverlayWindow.Repaint();
+        }
+
+        private string BuildVisibleAutomationCompletionReviewMessage()
+        {
+            int totalItems = _visibleAutomationChecklistItems?.Length ?? 0;
+            int completedItems = CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+            string progressText = BuildVisibleAutomationOverlayProgressText(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayTotalSteps);
+            string statusLabel = GetVisibleAutomationOverlayStatusLabel(_visibleAutomationOverlayState);
+            string summaryText = totalItems > 0
+                ? $"Checklist complete: {completedItems}/{totalItems} steps finished."
+                : "Checklist complete.";
+
+            if (!string.IsNullOrWhiteSpace(progressText))
+                return $"{statusLabel} • {progressText}\n{summaryText}\nReview the overlays, then click Accept and close when you are ready to approve this run.";
+
+            return $"{statusLabel}\n{summaryText}\nReview the overlays, then click Accept and close when you are ready to approve this run.";
+        }
+
+        private void SetVisibleAutomationChecklistItems(string[] checklistItems)
+        {
+            if (checklistItems == null || checklistItems.Length == 0)
+            {
+                _visibleAutomationChecklistItems = Array.Empty<string>();
+                _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+                _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+                EnsureVisibleAutomationChecklistVisualCount(0);
+                return;
+            }
+
+            var sanitized = checklistItems
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => item.Trim())
+                .ToArray();
+
+            bool sameItems = _visibleAutomationChecklistItems != null
+                && sanitized.Length == _visibleAutomationChecklistItems.Length;
+            if (sameItems)
+            {
+                for (int i = 0; i < sanitized.Length; i++)
+                {
+                    if (!string.Equals(sanitized[i], _visibleAutomationChecklistItems[i], StringComparison.Ordinal))
+                    {
+                        sameItems = false;
+                        break;
+                    }
+                }
+            }
+
+            if (sameItems)
+                return;
+
+            _visibleAutomationChecklistItems = sanitized;
+            _visibleAutomationChecklistStates = new VisibleAutomationChecklistItemState[sanitized.Length];
+            _visibleAutomationChecklistStateChangedAt = new double[sanitized.Length];
+            double now = EditorApplication.timeSinceStartup;
+            for (int i = 0; i < sanitized.Length; i++)
+                _visibleAutomationChecklistStateChangedAt[i] = now;
+
+            EnsureVisibleAutomationChecklistVisualCount(sanitized.Length);
+        }
+
+        private void UpdateVisibleAutomationChecklistProgress(int stepIndex, VisibleAutomationOverlayState overlayState)
+        {
+            if (!HasVisibleAutomationChecklist())
+                return;
+
+            int clampedActiveIndex = Mathf.Clamp(stepIndex - 1, 0, _visibleAutomationChecklistItems.Length - 1);
+            bool hasActiveIndex = stepIndex > 0 && _visibleAutomationChecklistItems.Length > 0;
+
+            for (int i = 0; i < _visibleAutomationChecklistStates.Length; i++)
+            {
+                VisibleAutomationChecklistItemState desiredState;
+                if (!hasActiveIndex)
+                {
+                    desiredState = overlayState == VisibleAutomationOverlayState.Success
+                        ? VisibleAutomationChecklistItemState.Completed
+                        : VisibleAutomationChecklistItemState.Pending;
+                }
+                else if (i < clampedActiveIndex)
+                {
+                    desiredState = VisibleAutomationChecklistItemState.Completed;
+                }
+                else if (i > clampedActiveIndex)
+                {
+                    desiredState = VisibleAutomationChecklistItemState.Pending;
+                }
+                else
+                {
+                    desiredState = overlayState switch
+                    {
+                        VisibleAutomationOverlayState.Success => VisibleAutomationChecklistItemState.Completed,
+                        VisibleAutomationOverlayState.Failure => VisibleAutomationChecklistItemState.Failed,
+                        VisibleAutomationOverlayState.Warning => VisibleAutomationChecklistItemState.Warning,
+                        _ => VisibleAutomationChecklistItemState.Active,
+                    };
+                }
+
+                if (_visibleAutomationChecklistStates[i] != desiredState)
+                {
+                    _visibleAutomationChecklistStates[i] = desiredState;
+                    if (i < _visibleAutomationChecklistStateChangedAt.Length)
+                        _visibleAutomationChecklistStateChangedAt[i] = EditorApplication.timeSinceStartup;
+                }
+            }
+        }
+
+        private static string BuildVisibleAutomationOverlayProgressText(int stepIndex, int totalSteps)
+        {
+            if (stepIndex > 0 && totalSteps > 0)
+                return $"Step {stepIndex}/{totalSteps}";
+
+            if (stepIndex > 0)
+                return $"Step {stepIndex}";
+
+            return string.Empty;
+        }
+
+        private static string GetVisibleAutomationOverlayStatusLabel(VisibleAutomationOverlayState state)
+        {
+            switch (state)
+            {
+                case VisibleAutomationOverlayState.Success:
+                    return "PASSED";
+                case VisibleAutomationOverlayState.Failure:
+                    return "FAILED";
+                case VisibleAutomationOverlayState.Warning:
+                    return "NOTICE";
+                default:
+                    return "RUNNING";
+            }
+        }
+
+        private static void GetVisibleAutomationOverlayPalette(
+            VisibleAutomationOverlayState state,
+            out Color accentColor,
+            out Color backgroundColor,
+            out Color borderColor,
+            out Color badgeColor,
+            out Color badgeTextColor)
+        {
+            switch (state)
+            {
+                case VisibleAutomationOverlayState.Success:
+                    accentColor = new Color(0.22f, 0.75f, 0.45f, 1f);
+                    backgroundColor = new Color(0.06f, 0.11f, 0.08f, 0.96f);
+                    borderColor = new Color(0.24f, 0.60f, 0.39f, 0.95f);
+                    badgeColor = new Color(0.18f, 0.46f, 0.30f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+                case VisibleAutomationOverlayState.Failure:
+                    accentColor = new Color(0.86f, 0.30f, 0.30f, 1f);
+                    backgroundColor = new Color(0.13f, 0.07f, 0.08f, 0.97f);
+                    borderColor = new Color(0.58f, 0.22f, 0.22f, 0.96f);
+                    badgeColor = new Color(0.52f, 0.18f, 0.18f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+                case VisibleAutomationOverlayState.Warning:
+                    accentColor = new Color(0.90f, 0.67f, 0.22f, 1f);
+                    backgroundColor = new Color(0.13f, 0.10f, 0.06f, 0.97f);
+                    borderColor = new Color(0.62f, 0.47f, 0.17f, 0.95f);
+                    badgeColor = new Color(0.60f, 0.45f, 0.14f, 1f);
+                    badgeTextColor = new Color(0.12f, 0.08f, 0.02f, 1f);
+                    break;
+                default:
+                    accentColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+                    backgroundColor = new Color(0.07f, 0.08f, 0.10f, 0.94f);
+                    borderColor = new Color(0.14f, 0.39f, 0.43f, 0.96f);
+                    badgeColor = new Color(0.15f, 0.39f, 0.43f, 1f);
+                    badgeTextColor = Color.white;
+                    break;
+            }
+        }
+
+        private void ProcessQueuedVisibleAutomationAction()
+        {
+            if (!_queuedVisibleAutomationAction.HasValue)
+                return;
+
+            if (Event.current.type == EventType.Repaint)
+                ScheduleQueuedVisibleAutomationAction();
+        }
+
+        private void ScheduleQueuedVisibleAutomationAction()
+        {
+            if (!_queuedVisibleAutomationAction.HasValue || _queuedVisibleAutomationDispatchPending)
+                return;
+
+            _queuedVisibleAutomationDispatchPending = true;
+            EditorApplication.delayCall += ExecuteQueuedVisibleAutomationAction;
+        }
+
+        private void ExecuteQueuedVisibleAutomationAction()
+        {
+            _queuedVisibleAutomationDispatchPending = false;
+
+            if (this == null || !_queuedVisibleAutomationAction.HasValue)
+                return;
+
+            var queuedAction = _queuedVisibleAutomationAction.Value;
+            var queuedAvatar = _queuedVisibleAutomationAvatar;
+            _queuedVisibleAutomationAction = null;
+            _queuedVisibleAutomationAvatar = null;
+
+            if (queuedAvatar != null && queuedAvatar != _selectedAvatar)
+            {
+                _selectedAvatar = queuedAvatar;
+                Selection.activeGameObject = queuedAvatar.gameObject;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+            }
+
+            var component = GetOrRefreshComponent();
+            var toolState = GetOrRefreshToolState(component);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            if (!hierarchy.TryGetDescriptor(queuedAction, out var descriptor))
+            {
+                Debug.LogWarning($"[ASM-Lite] Visible automation skipped unavailable action '{queuedAction}' for current tool state '{toolState}'.");
+                return;
+            }
+
+            ExecuteVisibleAutomationAction(descriptor);
+        }
+
+        private void ExecuteVisibleAutomationAction(AsmLiteWindowActionDescriptor descriptor)
+        {
+            if (!descriptor.SupportsVisibleAutomation)
+            {
+                Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{descriptor.Action}'.");
+                return;
+            }
+
+            if (!descriptor.IsEnabled)
+            {
+                Debug.LogWarning($"[ASM-Lite] Visible automation skipped disabled action '{descriptor.Action}'.");
+                return;
+            }
+
+            switch (descriptor.Execution)
+            {
+                case AsmLiteWindowActionExecution.AddPrefab:
+                    AddPrefabForAutomation();
+                    break;
+                case AsmLiteWindowActionExecution.Rebuild:
+                    RebuildForAutomation();
+                    break;
+                case AsmLiteWindowActionExecution.ReturnToPackageManaged:
+                    ReturnToPackageManagedForAutomation();
+                    break;
+                case AsmLiteWindowActionExecution.Detach:
+                    DetachForAutomation();
+                    break;
+                case AsmLiteWindowActionExecution.Vendorize:
+                    VendorizeForAutomation();
+                    break;
+                default:
+                    Debug.LogWarning($"[ASM-Lite] Visible automation does not support queued action '{descriptor.Action}'.");
+                    break;
             }
         }
 
@@ -185,10 +2078,58 @@ namespace ASMLite.Editor
         /// </summary>
         private static void SectionSeparator()
         {
-            EditorGUILayout.Space(6);
-            Rect r = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
-            EditorGUI.DrawRect(r, s_separatorColor);
-            EditorGUILayout.Space(6);
+            GUILayoutUtility.GetRect(1f, SectionGap * 0.5f, GUILayout.ExpandWidth(true));
+            Rect lineRect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
+            GUILayoutUtility.GetRect(1f, SectionGap * 0.5f, GUILayout.ExpandWidth(true));
+
+            if (Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(lineRect, s_separatorColor);
+        }
+
+        private void EnsureSectionStyles()
+        {
+            if (_sectionCardStyle == null)
+            {
+                _sectionCardStyle = new GUIStyle(EditorStyles.helpBox)
+                {
+                    padding = new RectOffset(12, 12, 10, 12),
+                    margin = new RectOffset(0, 0, 0, 0),
+                    stretchWidth = true,
+                };
+            }
+
+            if (_sectionContentStyle == null)
+            {
+                _sectionContentStyle = new GUIStyle()
+                {
+                    padding = new RectOffset(0, 0, 0, 0),
+                    margin = new RectOffset(0, 0, 0, 0),
+                    stretchWidth = true,
+                };
+            }
+        }
+
+        private void BeginSectionCard()
+        {
+            EnsureSectionStyles();
+
+            EditorGUILayout.BeginVertical(_sectionCardStyle);
+
+            Rect accentRect = GUILayoutUtility.GetRect(0f, 4f, GUILayout.ExpandWidth(true));
+            if (Event.current.type == EventType.Repaint)
+            {
+                EditorGUI.DrawRect(accentRect, s_sectionTintColor);
+                EditorGUI.DrawRect(new Rect(accentRect.x, accentRect.y, accentRect.width, 1f), s_sectionBorderColor);
+            }
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.BeginVertical(_sectionContentStyle);
+        }
+
+        private static void EndSectionCard()
+        {
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.EndVertical();
         }
 
         private void DrawHeader()
@@ -199,20 +2140,22 @@ namespace ASMLite.Editor
 
             if (_bannerTexture != null)
             {
-                // Scale to full available width, clamp height to preserve 4:1 aspect.
-                float availableWidth = EditorGUIUtility.currentViewWidth - 4f; // 2px padding each side
-                float bannerHeight   = Mathf.Round(availableWidth / BannerAspect);
+                float aspect = (float)_bannerTexture.width / _bannerTexture.height;
+                float availableWidth = EditorGUIUtility.currentViewWidth;
+                float drawWidth = Mathf.Min(availableWidth, BannerMaxDrawWidth);
+                float drawX = Mathf.Max(0f, (availableWidth - drawWidth) * 0.5f);
+                float bannerHeight = Mathf.Round(drawWidth / aspect);
 
-                // Reserve layout space so the scroll view accounts for the banner height.
-                Rect bannerRect = GUILayoutUtility.GetRect(availableWidth, bannerHeight,
-                    GUILayout.ExpandWidth(true));
+                // Draw at the top with a capped width so very wide editor windows don't let
+                // the banner dominate the whole viewport.
+                GUI.DrawTexture(
+                    new Rect(drawX, 0f, drawWidth, bannerHeight),
+                    _bannerTexture,
+                    ScaleMode.StretchToFill,
+                    alphaBlend: true);
 
-                // Draw flush to the left edge of the window.
-                bannerRect.x      = 0f;
-                bannerRect.width  = availableWidth + 4f;
-
-                GUI.DrawTexture(bannerRect, _bannerTexture, ScaleMode.ScaleToFit, alphaBlend: false);
-                EditorGUILayout.Space(4);
+                // Consume the height in the layout system so content below doesn't overlap.
+                GUILayout.Space(bannerHeight + 4f);
             }
             else
             {
@@ -227,6 +2170,10 @@ namespace ASMLite.Editor
         {
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Avatar", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Choose the avatar root you want to inspect and configure.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var newAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField(
                 label:             "Avatar Root",
@@ -237,9 +2184,7 @@ namespace ASMLite.Editor
             if (newAvatar != _selectedAvatar)
             {
                 _selectedAvatar = newAvatar;
-                _cachedComponent = null;
-                _cachedCustomParamCount = -1;
-                _discoveredParamCount = -1;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
                 if (_selectedAvatar != null)
                     SyncPendingSlotCountFromAvatar();
@@ -250,7 +2195,7 @@ namespace ASMLite.Editor
             if (_selectedAvatar == null)
             {
                 EditorGUILayout.HelpBox(
-                    "Select the VRC Avatar Descriptor in your scene hierarchy to get started.",
+                    "Select your avatar in the Hierarchy (the object with a VRC Avatar Descriptor) to begin.",
                     MessageType.Info);
             }
         }
@@ -258,6 +2203,10 @@ namespace ASMLite.Editor
         private void DrawSettings()
         {
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Set the preset count first. Everything else adapts around that choice.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var component = GetOrRefreshComponent();
 
@@ -279,7 +2228,7 @@ namespace ASMLite.Editor
                 }
 
                 EditorGUILayout.HelpBox(
-                    "Click \"Rebuild ASM-Lite\" to apply slot count changes.",
+                    ChangedPresetCountHelpText,
                     MessageType.None);
             }
             else
@@ -296,58 +2245,2217 @@ namespace ASMLite.Editor
         private void DrawIconSettingsSection()
         {
             EditorGUILayout.LabelField("Icon Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Tune slot icon behavior here. The preview below stays as the source of truth for how the menu will look.",
+                EditorStyles.wordWrappedMiniLabel);
             EditorGUILayout.Space(6);
 
-            EditorGUILayout.BeginVertical("box");
-            DrawIconMode();
-            EditorGUILayout.EndVertical();
+            var component = GetOrRefreshComponent();
 
-            EditorGUILayout.Space(6);
-
-            EditorGUILayout.BeginVertical("box");
-            DrawActionIcons();
-            EditorGUILayout.EndVertical();
+            // Icon mode stays directly under section title.
+            DrawIconMode(component);
 
             EditorGUILayout.Space(8);
             DrawWheelPreview();
         }
 
-        private void DrawIconMode()
+        private static string[] ParseExcludedParameterNames(string rawValue)
         {
+            if (string.IsNullOrWhiteSpace(rawValue))
+                return Array.Empty<string>();
+
+            return SanitizeExcludedParameterNames(
+                rawValue
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(v => v.Trim())
+                    .ToArray());
+        }
+
+        private void SetComponentBool(ASMLiteComponent component, string undoLabel, ref bool target, bool value)
+        {
+            if (target == value)
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentTexture(ASMLiteComponent component, string undoLabel, ref Texture2D target, Texture2D value)
+        {
+            if (target == value)
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentString(ASMLiteComponent component, string undoLabel, ref string target, string value)
+        {
+            string normalized = NormalizeOptionalString(value);
+            if (string.Equals(target, normalized, StringComparison.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = normalized;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentRawString(ASMLiteComponent component, string undoLabel, ref string target, string value)
+        {
+            if (string.Equals(target, value, StringComparison.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            target = value ?? string.Empty;
+            EditorUtility.SetDirty(component);
+        }
+
+        private void SetComponentStringArray(ASMLiteComponent component, string undoLabel, ref string[] target, string[] value)
+        {
+            string[] next = value ?? Array.Empty<string>();
+            string[] current = target ?? Array.Empty<string>();
+
+            if (current.Length == next.Length)
+            {
+                bool equal = true;
+                for (int i = 0; i < current.Length; i++)
+                {
+                    if (!string.Equals(current[i], next[i], StringComparison.Ordinal))
+                    {
+                        equal = false;
+                        break;
+                    }
+                }
+
+                if (equal)
+                    return;
+            }
+
+            Undo.RecordObject(component, undoLabel);
+            target = CloneStrings(next);
+            EditorUtility.SetDirty(component);
+        }
+
+        private static string DrawTextFieldWithFocusCue(string label, string value, string controlName)
+        {
+            Rect rect = EditorGUILayout.GetControlRect();
+            int id = GUIUtility.GetControlID(FocusType.Keyboard, rect);
+            Rect fieldRect = EditorGUI.PrefixLabel(rect, id, new GUIContent(label));
+
+            GUI.SetNextControlName(controlName);
+            return ShouldDelayTextFieldCommit(controlName)
+                ? EditorGUI.DelayedTextField(fieldRect, value ?? string.Empty)
+                : EditorGUI.TextField(fieldRect, value ?? string.Empty);
+        }
+
+        private static bool ShouldDelayTextFieldCommit(string controlName)
+        {
+            // Keep all customization text fields on the immediate IMGUI path.
+            // DelayedTextField has been regressing visible caret and selection
+            // rendering after focus moves between custom name inputs and the
+            // install-path tree, even though the fields remain editable.
+            return false;
+        }
+
+        private static bool ShouldRenderWheelPreview(EventType eventType)
+        {
+            return eventType == EventType.Repaint;
+        }
+
+        private static bool ShouldDeferImmediateInstallPathRefresh(string contextLabel)
+        {
+            if (string.IsNullOrEmpty(contextLabel))
+                return false;
+
+            return string.Equals(contextLabel, "Customize Toggle", StringComparison.Ordinal)
+                || string.Equals(contextLabel, "Customize Text", StringComparison.Ordinal)
+                || string.Equals(contextLabel, "Customize Tree", StringComparison.Ordinal);
+        }
+
+        private static bool IsNamedTextFieldFocused(string controlName)
+        {
+            return string.Equals(GUI.GetNameOfFocusedControl(), controlName, StringComparison.Ordinal);
+        }
+
+        private void CommitDraftRawStringIfBlurred(ASMLiteComponent component, string controlName, string undoLabel, ref string target, string draftValue)
+        {
+            if (component == null || IsNamedTextFieldFocused(controlName))
+                return;
+
+            SetComponentRawString(component, undoLabel, ref target, draftValue ?? string.Empty);
+        }
+
+        private void CommitDraftStringIfBlurred(ASMLiteComponent component, string controlName, string undoLabel, ref string target, string draftValue)
+        {
+            if (component == null || IsNamedTextFieldFocused(controlName))
+                return;
+
+            SetComponentString(component, undoLabel, ref target, draftValue);
+        }
+
+        private void CommitDraftStringArrayIfBlurred(ASMLiteComponent component, string[] controlNames, string undoLabel, ref string[] target, string[] draftValue)
+        {
+            if (component == null)
+                return;
+
+            if (controlNames != null)
+            {
+                for (int i = 0; i < controlNames.Length; i++)
+                {
+                    if (IsNamedTextFieldFocused(controlNames[i]))
+                        return;
+                }
+            }
+
+            SetComponentStringArray(component, undoLabel, ref target, draftValue);
+        }
+
+        private void CommitInstallPathDraftIfBlurred(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            CommitDraftStringIfBlurred(component, "asm_install_path", "Change ASM-Lite Install Path", ref component.customInstallPath, _pendingCustomInstallPath);
+        }
+
+        private static string ResolveVisibleInstallPathDraft(ASMLiteComponent component, string pendingDraft, bool isFocused)
+        {
+            if (component == null || isFocused)
+                return NormalizeOptionalString(pendingDraft);
+
+            return NormalizeOptionalString(component.customInstallPath);
+        }
+
+        private void SetComponentExcludedNames(ASMLiteComponent component, string undoLabel, string[] value)
+        {
+            string[] sanitized = SanitizeExcludedParameterNames(value);
+
+            if (component.excludedParameterNames != null && component.excludedParameterNames.SequenceEqual(sanitized, StringComparer.Ordinal))
+                return;
+
+            Undo.RecordObject(component, undoLabel);
+            component.excludedParameterNames = sanitized;
+            EditorUtility.SetDirty(component);
+        }
+
+        private string ResolveEffectiveRootNameForPreview(ASMLiteComponent component)
+        {
+            return component
+                ? ASMLiteBuilder.ResolveEffectiveRootControlName(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomRootName)
+                    ? NormalizeOptionalString(_pendingCustomRootName)
+                    : ASMLiteBuilder.DefaultRootControlName);
+        }
+
+        private string[] ResolveEffectiveActionLabelsForPreview(ASMLiteComponent component)
+        {
+            string save = component
+                ? ASMLiteBuilder.ResolveEffectiveSaveLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomSaveLabel)
+                    ? NormalizeOptionalString(_pendingCustomSaveLabel)
+                    : ASMLiteBuilder.DefaultSaveLabel);
+
+            string load = component
+                ? ASMLiteBuilder.ResolveEffectiveLoadLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomLoadLabel)
+                    ? NormalizeOptionalString(_pendingCustomLoadLabel)
+                    : ASMLiteBuilder.DefaultLoadLabel);
+
+            string clear = component
+                ? ASMLiteBuilder.ResolveEffectiveClearPresetLabel(component)
+                : (_pendingUseCustomRootName && !string.IsNullOrWhiteSpace(_pendingCustomClearPresetLabel)
+                    ? NormalizeOptionalString(_pendingCustomClearPresetLabel)
+                    : ASMLiteBuilder.DefaultClearPresetLabel);
+
+            return new[] { s_subWheelBackLabel, save, load, clear };
+        }
+
+        private string ResolveEffectivePendingPresetLabelForPreview(int presetIndex)
+        {
+            int slot = presetIndex + 1;
+            if (!_pendingUseCustomRootName)
+                return ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+            string[] presetNames = EnsureSizedStringArray(_pendingCustomPresetNames, Mathf.Max(_pendingSlotCount, slot));
+            string candidate = presetIndex < presetNames.Length ? NormalizeOptionalString(presetNames[presetIndex]) : string.Empty;
+            if (!string.IsNullOrWhiteSpace(candidate))
+                return candidate;
+
+            string legacyFormat = NormalizeOptionalString(_pendingCustomPresetNameFormat);
+            if (!string.IsNullOrWhiteSpace(legacyFormat) && legacyFormat.IndexOf("{slot}", StringComparison.OrdinalIgnoreCase) >= 0)
+                return legacyFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+            return ASMLiteBuilder.DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+        }
+
+        private static ActionIconMode ResolvePreviewActionIconMode(
+            ASMLiteComponent component,
+            bool pendingUseCustomSlotIcons,
+            ActionIconMode pendingActionIconMode)
+        {
+            if (component)
+                return component.useCustomSlotIcons ? component.actionIconMode : ActionIconMode.Default;
+
+            return pendingUseCustomSlotIcons ? pendingActionIconMode : ActionIconMode.Default;
+        }
+
+        private void DrawCustomizeSection()
+        {
+            EditorGUILayout.LabelField("Customize", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Everything here is optional. If you leave these toggles off, ASM-Lite keeps its default look and behavior.",
+                MessageType.None);
+            EditorGUILayout.Space(6);
+
             var component = GetOrRefreshComponent();
 
-            EditorGUILayout.LabelField("Slot Icons", EditorStyles.miniBoldLabel);
-
-            // Determine current mode and slot count based on whether component exists
-            int currentSlotCount = component ? component.slotCount : _pendingSlotCount;
-            IconMode currentMode = component ? component.iconMode : _pendingIconMode;
-            int currentGearIndex = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
-            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
-
-            // Always resize customIcons to match slotCount before any indexing.
-            if (currentCustomIcons == null || currentCustomIcons.Length != currentSlotCount)
+            EditorGUILayout.BeginVertical("box");
+            try
             {
-                var resized = new Texture2D[currentSlotCount];
-                if (currentCustomIcons != null)
-                {
-                    int copy = Mathf.Min(currentCustomIcons.Length, currentSlotCount);
-                    System.Array.Copy(currentCustomIcons, resized, copy);
-                }
-                currentCustomIcons = resized;
-
+                bool useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+                bool newUseCustomSlotIcons = EditorGUILayout.ToggleLeft("Use custom icons", useCustomSlotIcons);
                 if (component)
                 {
-                    component.customIcons = resized;
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Slot Icons", ref component.useCustomSlotIcons, newUseCustomSlotIcons);
+
+                    if (!newUseCustomSlotIcons && component.actionIconMode != ActionIconMode.Default)
+                    {
+                        Undo.RecordObject(component, "Disable ASM-Lite Custom Action Icons");
+                        component.actionIconMode = ActionIconMode.Default;
+                        EditorUtility.SetDirty(component);
+                    }
+                }
+                else
+                {
+                    _pendingUseCustomSlotIcons = newUseCustomSlotIcons;
+                    if (!newUseCustomSlotIcons)
+                        _pendingActionIconMode = ActionIconMode.Default;
+                }
+
+                if (newUseCustomSlotIcons)
+                {
+                    EditorGUILayout.BeginVertical("box");
+
+                    _iconsRootFoldout = EditorGUILayout.Foldout(_iconsRootFoldout, "Root Icon", true);
+                    if (_iconsRootFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawRootIconSettings(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    _iconsActionFoldout = EditorGUILayout.Foldout(_iconsActionFoldout, "Action Icons", true);
+                    if (_iconsActionFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawActionIcons(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.Space(4);
+                    _iconsSlotFoldout = EditorGUILayout.Foldout(_iconsSlotFoldout, PresetIconsFoldoutTitle, true);
+                    if (_iconsSlotFoldout)
+                    {
+                        EditorGUI.indentLevel++;
+                        DrawSlotIconSelectors(component);
+                        EditorGUI.indentLevel--;
+                    }
+
+                    EditorGUILayout.EndVertical();
+                }
+
+                EditorGUILayout.Space(6);
+                bool useCustomRootName = component ? component.useCustomRootName : _pendingUseCustomRootName;
+                bool newUseCustomRootName = EditorGUILayout.ToggleLeft("Use custom name", useCustomRootName);
+                if (component)
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, newUseCustomRootName);
+                else
+                    _pendingUseCustomRootName = newUseCustomRootName;
+
+                if (newUseCustomRootName)
+                {
+                    int nameSlotCount = component ? component.slotCount : _pendingSlotCount;
+
+                    // ── Root Menu Name ───────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionRootHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_root", "Change ASM-Lite Root Menu Name", ref component.customRootName, _pendingCustomRootName);
+                    }
+                    else
+                    {
+                        _pendingCustomRootName = DrawTextFieldWithFocusCue(RootMenuFieldLabel, _pendingCustomRootName, "asm_name_root_pending") ?? string.Empty;
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    // ── Preset Names ────────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionPresetHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                        string[] controlNames = new string[nameSlotCount];
+                        for (int i = 0; i < nameSlotCount; i++)
+                        {
+                            string controlName = $"asm_name_preset_{i + 1}";
+                            controlNames[i] = controlName;
+                            _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], controlName) ?? string.Empty;
+                        }
+
+                        CommitDraftStringArrayIfBlurred(component, controlNames, "Change ASM-Lite Preset Name", ref component.customPresetNames, _pendingCustomPresetNames);
+                    }
+                    else
+                    {
+                        _pendingCustomPresetNames = EnsureSizedStringArray(_pendingCustomPresetNames, nameSlotCount);
+                        for (int i = 0; i < nameSlotCount; i++)
+                        {
+                            _pendingCustomPresetNames[i] = DrawTextFieldWithFocusCue(string.Format(PresetNameLabelFormat, i + 1), _pendingCustomPresetNames[i], $"asm_name_preset_pending_{i + 1}") ?? string.Empty;
+                        }
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    // ── Action Labels ───────────────────────────────────────────────
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.LabelField(NamingSectionActionHeader, EditorStyles.miniBoldLabel);
+                    EditorGUI.indentLevel++;
+
+                    if (component)
+                    {
+                        _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_save", "Change ASM-Lite Save Label", ref component.customSaveLabel, _pendingCustomSaveLabel);
+
+                        _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_load", "Change ASM-Lite Load Label", ref component.customLoadLabel, _pendingCustomLoadLabel);
+
+                        _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_clear", "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, _pendingCustomClearPresetLabel);
+
+                        _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm") ?? string.Empty;
+                        CommitDraftRawStringIfBlurred(component, "asm_name_confirm", "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, _pendingCustomConfirmLabel);
+                    }
+                    else
+                    {
+                        _pendingCustomSaveLabel = DrawTextFieldWithFocusCue(SaveFieldLabel, _pendingCustomSaveLabel, "asm_name_save_pending") ?? string.Empty;
+                        _pendingCustomLoadLabel = DrawTextFieldWithFocusCue(LoadFieldLabel, _pendingCustomLoadLabel, "asm_name_load_pending") ?? string.Empty;
+                        _pendingCustomClearPresetLabel = DrawTextFieldWithFocusCue(ClearPresetLabel, _pendingCustomClearPresetLabel, "asm_name_clear_pending") ?? string.Empty;
+                        _pendingCustomConfirmLabel = DrawTextFieldWithFocusCue(ConfirmFieldLabel, _pendingCustomConfirmLabel, "asm_name_confirm_pending") ?? string.Empty;
+                    }
+
+                    EditorGUI.indentLevel--;
+
+                    EditorGUILayout.Space(4);
+                    EditorGUILayout.HelpBox(
+                        NameFallbackGuidanceText,
+                        MessageType.None);
+                }
+
+                EditorGUILayout.Space(6);
+
+                bool useCustomInstallPath = component ? component.useCustomInstallPath : _pendingUseCustomInstallPath;
+                bool newUseCustomInstallPath = EditorGUILayout.ToggleLeft("Use custom install path", useCustomInstallPath);
+                if (component)
+                {
+                    bool installToggleChanged = component.useCustomInstallPath != newUseCustomInstallPath;
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, newUseCustomInstallPath);
+                    if (installToggleChanged)
+                        TryRefreshInstallPathPrefix(component, "Customize Toggle");
+                }
+                else
+                {
+                    _pendingUseCustomInstallPath = newUseCustomInstallPath;
+                }
+
+                if (newUseCustomInstallPath)
+                {
+                    bool installPathFocused = IsNamedTextFieldFocused("asm_install_path");
+                    string currentInstallPath = ResolveVisibleInstallPathDraft(component, _pendingCustomInstallPath, installPathFocused);
+
+                    EditorGUI.BeginChangeCheck();
+                    string newInstallPath = DrawTextFieldWithFocusCue("Install Path", currentInstallPath, "asm_install_path");
+                    if (EditorGUI.EndChangeCheck())
+                        _pendingCustomInstallPath = NormalizeOptionalString(newInstallPath);
+
+                    CommitInstallPathDraftIfBlurred(component);
+                    if (component && !installPathFocused)
+                        TryRefreshInstallPathPrefix(component, "Customize Text");
+
+                    DrawInstallPathTree(component);
+                }
+
+                EditorGUILayout.Space(6);
+
+                bool useParameterExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
+                bool newUseParameterExclusions = EditorGUILayout.ToggleLeft("Customize parameter backup", useParameterExclusions);
+                if (component)
+                    SetComponentBool(component, "Toggle ASM-Lite Parameter Backup Customization", ref component.useParameterExclusions, newUseParameterExclusions);
+                else
+                    _pendingUseParameterExclusions = newUseParameterExclusions;
+
+                if (newUseParameterExclusions)
+                    DrawParameterChecklist(component);
+            }
+            finally
+            {
+                EditorGUILayout.EndVertical();
+            }
+        }
+
+        private void ApplyInstallPathSelection(ASMLiteComponent component, string selectedPath)
+        {
+            string normalized = NormalizeInstallPath(selectedPath);
+            _pendingCustomInstallPath = normalized;
+
+            if (component)
+            {
+                bool enableToggle = !string.IsNullOrEmpty(normalized) && !component.useCustomInstallPath;
+
+                if (enableToggle)
+                    SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, true);
+
+                SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
+                // Defer live VRCFury install-prefix refresh until Bake/Build.
+                // Immediate Customize-time refreshes can trip VRCFury editor debug
+                // rebuild paths before a safe anim object context is available.
+                TryRefreshInstallPathPrefix(component, "Customize Tree");
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(normalized))
+                    _pendingUseCustomInstallPath = true;
+            }
+        }
+
+        private static void TryRefreshInstallPathPrefix(ASMLiteComponent component, string contextLabel)
+        {
+            if (component == null)
+                return;
+
+            if (ShouldDeferImmediateInstallPathRefresh(contextLabel))
+                return;
+
+            if (!TryRefreshLiveInstallPathPrefix(component, contextLabel))
+            {
+                Debug.LogWarning($"[ASM-Lite] {contextLabel}: Install-path update did not refresh live FullController menu prefix immediately. Rebuild/upload will retry.");
+            }
+        }
+
+        // ── Install Path Tree UI ──────────────────────────────────────────────
+
+        private void DrawInstallPathTree(ASMLiteComponent component)
+        {
+            // Invalidate cached tree when avatar changes.
+            if (_lastInstallPathTreeAvatar != _selectedAvatar)
+            {
+                _cachedInstallPathTree = null;
+                _lastInstallPathTreeAvatar = _selectedAvatar;
+                _expandedInstallPaths.Clear();
+            }
+
+            if (_cachedInstallPathTree == null)
+                _cachedInstallPathTree = BuildInstallPathTree(_selectedAvatar);
+
+            string currentPath = component
+                ? NormalizeOptionalString(component.customInstallPath)
+                : NormalizeOptionalString(_pendingCustomInstallPath);
+
+            EditorGUILayout.Space(2f);
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Install Location", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button("↻", GUILayout.Width(22f), GUILayout.Height(14f)))
+            {
+                _cachedInstallPathTree = BuildInstallPathTree(_selectedAvatar);
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+
+            if (_cachedInstallPathTree == null || _cachedInstallPathTree.Children.Count == 0)
+            {
+                EditorGUILayout.HelpBox("No expression menu paths were found on this avatar yet.", MessageType.None);
+                return;
+            }
+
+            // Root row. Selects empty install path (menu root).
+            bool rootSelected = string.IsNullOrEmpty(currentPath);
+            var rootRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            if (rootSelected && Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(rootRect, new Color(0.24f, 0.49f, 0.91f, 0.30f));
+            if (GUI.Button(rootRect, rootSelected ? "(root)" : "(root)", rootSelected ? EditorStyles.boldLabel : EditorStyles.label))
+            {
+                ApplyInstallPathSelection(component, string.Empty);
+                Repaint();
+            }
+
+            _installPathTreeScrollPos = EditorGUILayout.BeginScrollView(
+                _installPathTreeScrollPos, GUILayout.Height(_installPathTreeHeight));
+
+            foreach (var child in _cachedInstallPathTree.Children)
+                DrawInstallPathTreeNode(child, component, currentPath, 0);
+
+            EditorGUILayout.EndScrollView();
+
+            // ── Resize handle ─────────────────────────────────────────────────
+            // A narrow strip at the bottom-right that the user can drag up/down.
+            var handleRect = EditorGUILayout.GetControlRect(false, 8f);
+            handleRect = new Rect(handleRect.xMax - 24f, handleRect.y, 24f, 8f);
+
+            EditorGUIUtility.AddCursorRect(handleRect, MouseCursor.ResizeVertical);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                // Draw three small dots as a visual grip indicator.
+                var dotColor = new Color(0.55f, 0.55f, 0.55f, 0.80f);
+                float cx = handleRect.x + handleRect.width / 2f;
+                float cy = handleRect.y + handleRect.height / 2f;
+                for (int d = -1; d <= 1; d++)
+                    EditorGUI.DrawRect(new Rect(cx + d * 5f - 1f, cy - 1f, 2f, 2f), dotColor);
+            }
+
+            if (Event.current.type == EventType.MouseDown && handleRect.Contains(Event.current.mousePosition))
+            {
+                _isDraggingTreeResize = true;
+                Event.current.Use();
+            }
+
+            if (_isDraggingTreeResize)
+            {
+                if (Event.current.type == EventType.MouseDrag)
+                {
+                    _installPathTreeHeight = Mathf.Clamp(
+                        _installPathTreeHeight + Event.current.delta.y, 80f, 600f);
+                    Event.current.Use();
+                    Repaint();
+                }
+                else if (Event.current.type == EventType.MouseUp)
+                {
+                    _isDraggingTreeResize = false;
+                    Event.current.Use();
+                }
+            }
+        }
+
+        private void DrawInstallPathTreeNode(
+            MenuTreeNode node,
+            ASMLiteComponent component,
+            string currentPath,
+            int depth)
+        {
+            bool isSelected = string.Equals(currentPath, node.FullPath, StringComparison.Ordinal);
+            bool hasChildren = node.Children.Count > 0;
+            bool isExpanded = _expandedInstallPaths.Contains(node.FullPath);
+
+            var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+            float indentPx = depth * 14f + 2f;
+            var activeRect = new Rect(rowRect.x + indentPx, rowRect.y, rowRect.width - indentPx, rowRect.height);
+
+            // Selection highlight.
+            if (isSelected && Event.current.type == EventType.Repaint)
+                EditorGUI.DrawRect(activeRect, new Color(0.24f, 0.49f, 0.91f, 0.30f));
+
+            // Foldout arrow. Toggles expand/collapse without selecting.
+            if (hasChildren)
+            {
+                var arrowRect = new Rect(activeRect.x, activeRect.y, 14f, activeRect.height);
+                bool toggled = EditorGUI.Foldout(arrowRect, isExpanded, GUIContent.none, true);
+                if (toggled != isExpanded)
+                {
+                    if (toggled) _expandedInstallPaths.Add(node.FullPath);
+                    else _expandedInstallPaths.Remove(node.FullPath);
+                    isExpanded = toggled;
+                    Repaint();
+                }
+            }
+
+            // Label. Clicking selects this path as the install location.
+            var labelRect = new Rect(
+                activeRect.x + 14f, activeRect.y,
+                activeRect.width - 14f, activeRect.height);
+
+            if (GUI.Button(labelRect, node.Name, isSelected ? EditorStyles.boldLabel : EditorStyles.label))
+            {
+                ApplyInstallPathSelection(component, node.FullPath);
+                Repaint();
+            }
+
+            if (hasChildren && isExpanded)
+            {
+                foreach (var child in node.Children)
+                    DrawInstallPathTreeNode(child, component, currentPath, depth + 1);
+            }
+        }
+
+        private static MenuTreeNode BuildInstallPathTree(VRCAvatarDescriptor avatar)
+        {
+            var root = new MenuTreeNode { Name = string.Empty, FullPath = string.Empty };
+            if (avatar == null)
+                return root;
+
+            var allPaths = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var p in GetAvatarSubmenuPaths(avatar)) allPaths.Add(p);
+            foreach (var p in GetVrcFuryMenuPrefixes(avatar)) allPaths.Add(p);
+
+            // Apply VRCFury MoveMenuItem remaps so install-path choices reflect
+            // the effective post-move menu layout (destination paths) instead of
+            // exposing stale pre-move source locations.
+            var moveRemaps = GetVrcFuryMoveMenuPathRemaps(avatar);
+            ApplyInstallPathMoveRemaps(allPaths, moveRemaps);
+
+            var nodeMap = new Dictionary<string, MenuTreeNode>(StringComparer.Ordinal);
+            nodeMap[string.Empty] = root;
+
+            foreach (var path in allPaths.OrderBy(p => p, StringComparer.Ordinal))
+                EnsureTreeNodeExists(nodeMap, path);
+
+            SortTreeChildren(root);
+            return root;
+        }
+
+        internal static string[] GetVisibleInstallPathOptionsForTesting(VRCAvatarDescriptor avatar)
+        {
+            var paths = new List<string>();
+            CollectTreePaths(BuildInstallPathTree(avatar), paths);
+            return paths
+                .Where(path => !string.IsNullOrEmpty(path))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        internal static string[] GetVisibleParameterBackupOptionsForTesting(VRCAvatarDescriptor avatar)
+        {
+            return ASMLiteParameterBackupPresetResolver.NormalizeVisibleNames(GetBackableParameterNames(avatar));
+        }
+
+        private static MenuTreeNode EnsureTreeNodeExists(
+            Dictionary<string, MenuTreeNode> nodeMap, string path)
+        {
+            if (nodeMap.TryGetValue(path, out var existing))
+                return existing;
+
+            int slash = path.LastIndexOf('/');
+            string parentPath = slash < 0 ? string.Empty : path.Substring(0, slash);
+            string name = slash < 0 ? path : path.Substring(slash + 1);
+
+            var parent = EnsureTreeNodeExists(nodeMap, parentPath);
+            var node = new MenuTreeNode { Name = name, FullPath = path };
+            parent.Children.Add(node);
+            nodeMap[path] = node;
+            return node;
+        }
+
+        private static void SortTreeChildren(MenuTreeNode node)
+        {
+            node.Children.Sort((a, b) =>
+                string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+            foreach (var child in node.Children)
+                SortTreeChildren(child);
+        }
+
+        private static void CollectTreePaths(MenuTreeNode node, List<string> paths)
+        {
+            if (node == null || paths == null)
+                return;
+
+            if (!string.IsNullOrEmpty(node.FullPath))
+                paths.Add(node.FullPath);
+
+            for (int i = 0; i < node.Children.Count; i++)
+                CollectTreePaths(node.Children[i], paths);
+        }
+
+        private static Dictionary<string, string> GetVrcFuryMoveMenuPathRemaps(VRCAvatarDescriptor avatar)
+        {
+            var remaps = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (avatar == null)
+                return remaps;
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                var iterator = so.GetIterator();
+                if (!iterator.NextVisible(true))
+                    continue;
+
+                var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+                do
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                        continue;
+
+                    string managedRefType = iterator.managedReferenceFullTypename;
+                    if (string.IsNullOrWhiteSpace(managedRefType)
+                        || managedRefType.IndexOf("MoveMenuItem", StringComparison.OrdinalIgnoreCase) < 0)
+                        continue;
+
+                    string managedPath = iterator.propertyPath;
+                    if (!seenPaths.Add(managedPath))
+                        continue;
+
+                    var fromProp = so.FindProperty(managedPath + ".fromPath");
+                    var toProp = so.FindProperty(managedPath + ".toPath");
+                    if (fromProp == null || toProp == null)
+                        continue;
+                    if (fromProp.propertyType != SerializedPropertyType.String
+                        || toProp.propertyType != SerializedPropertyType.String)
+                        continue;
+
+                    string fromPath = NormalizeSlashPath(fromProp.stringValue);
+                    string toPath = NormalizeSlashPath(toProp.stringValue);
+                    if (string.IsNullOrWhiteSpace(toPath))
+                        continue;
+
+                    if (!remaps.ContainsKey(fromPath ?? string.Empty))
+                        remaps[fromPath ?? string.Empty] = toPath;
+                } while (iterator.NextVisible(true));
+            }
+
+            return remaps;
+        }
+
+        private static void ApplyInstallPathMoveRemaps(HashSet<string> allPaths, Dictionary<string, string> remaps)
+        {
+            if (allPaths == null || remaps == null || remaps.Count == 0)
+                return;
+
+            foreach (var kv in remaps)
+            {
+                string fromPath = kv.Key ?? string.Empty;
+                string toPath = kv.Value ?? string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(fromPath))
+                {
+                    allPaths.RemoveWhere(path =>
+                        string.Equals(path, fromPath, StringComparison.Ordinal)
+                        || path.StartsWith(fromPath + "/", StringComparison.Ordinal));
+                }
+
+                AddPathAndParents(allPaths, toPath);
+            }
+        }
+
+        private static void AddPathAndParents(HashSet<string> allPaths, string fullPath)
+        {
+            if (allPaths == null || string.IsNullOrWhiteSpace(fullPath))
+                return;
+
+            string normalized = NormalizeSlashPath(fullPath);
+            if (string.IsNullOrWhiteSpace(normalized))
+                return;
+
+            string[] segments = normalized.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return;
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < segments.Length; i++)
+            {
+                if (sb.Length > 0)
+                    sb.Append('/');
+                sb.Append(segments[i]);
+                allPaths.Add(sb.ToString());
+            }
+        }
+
+        // ── Parameter Backup Tree UI ──────────────────────────────────────────
+
+        private static Dictionary<string, string> BuildHiddenAssignedByVisibleOriginalMap(IReadOnlyCollection<string> visibleParamNames)
+        {
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (visibleParamNames == null || visibleParamNames.Count == 0)
+                return map;
+
+            var visibleSet = new HashSet<string>(visibleParamNames, StringComparer.Ordinal);
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return map;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                if (!visibleSet.Contains(mapping.OriginalGlobalParam))
+                    continue;
+                if (visibleSet.Contains(mapping.AssignedGlobalParam))
+                    continue;
+
+                if (!map.ContainsKey(mapping.OriginalGlobalParam))
+                    map.Add(mapping.OriginalGlobalParam, mapping.AssignedGlobalParam);
+            }
+
+            return map;
+        }
+
+        private static HashSet<string> NormalizeExcludedSetForVisibleRows(
+            IEnumerable<string> excludedRaw,
+            Dictionary<string, string> hiddenAssignedByVisibleOriginal)
+        {
+            var normalized = new HashSet<string>(StringComparer.Ordinal);
+            if (excludedRaw != null)
+            {
+                foreach (var name in excludedRaw)
+                {
+                    if (!string.IsNullOrWhiteSpace(name))
+                        normalized.Add(name);
+                }
+            }
+
+            if (hiddenAssignedByVisibleOriginal != null)
+            {
+                foreach (var kv in hiddenAssignedByVisibleOriginal)
+                {
+                    string original = kv.Key;
+                    string assigned = kv.Value;
+                    if (normalized.Contains(assigned))
+                        normalized.Add(original);
+                }
+            }
+
+            return normalized;
+        }
+
+        private static string[] ExpandExcludedForStorage(
+            HashSet<string> visibleExcluded,
+            Dictionary<string, string> hiddenAssignedByVisibleOriginal)
+        {
+            var expanded = new HashSet<string>(visibleExcluded ?? new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+
+            if (hiddenAssignedByVisibleOriginal != null)
+            {
+                foreach (var kv in hiddenAssignedByVisibleOriginal)
+                {
+                    if (expanded.Contains(kv.Key))
+                        expanded.Add(kv.Value);
+                }
+            }
+
+            return expanded.OrderBy(p => p, StringComparer.Ordinal).ToArray();
+        }
+
+        private void DrawParameterChecklist(ASMLiteComponent component)
+        {
+            if (_lastParamListAvatar != _selectedAvatar)
+            {
+                _cachedParamList = null;
+                _cachedParamTree = null;
+                _expandedParamMenuPaths.Clear();
+                _lastParamListAvatar = _selectedAvatar;
+            }
+            if (_cachedParamList == null)
+                _cachedParamList = GetBackableParameterNames(_selectedAvatar);
+            if (_cachedParamTree == null)
+                _cachedParamTree = BuildParamTree(_selectedAvatar);
+
+            EditorGUILayout.Space(2f);
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Parameter Backup", EditorStyles.miniBoldLabel);
+            if (GUILayout.Button("↻", GUILayout.Width(22f), GUILayout.Height(14f)))
+            {
+                _cachedParamList = GetBackableParameterNames(_selectedAvatar);
+                _cachedParamTree = BuildParamTree(_selectedAvatar);
+                Repaint();
+            }
+            EditorGUILayout.EndHorizontal();
+            EditorGUILayout.LabelField("Uncheck parameters to exclude them from backup.", EditorStyles.wordWrappedMiniLabel);
+
+            if (_cachedParamList == null || _cachedParamList.Length == 0)
+            {
+                EditorGUILayout.HelpBox("No expression parameters were found on this avatar yet.", MessageType.None);
+                return;
+            }
+
+            // Build hidden mapping: visible original param -> hidden assigned ASM_VF_* alias.
+            var hiddenAssignedByVisibleOriginal = BuildHiddenAssignedByVisibleOriginalMap(_cachedParamList);
+
+            // Build mutable exclusion set from current component/pending state.
+            string[] currentExcluded = component
+                ? SanitizeExcludedParameterNames(component.excludedParameterNames)
+                : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+            var excludedSet = NormalizeExcludedSetForVisibleRows(currentExcluded, hiddenAssignedByVisibleOriginal);
+            var originalExcluded = new HashSet<string>(excludedSet, StringComparer.Ordinal);
+
+            _paramChecklistScrollPos = EditorGUILayout.BeginScrollView(
+                _paramChecklistScrollPos, GUILayout.Height(_paramChecklistHeight));
+
+            foreach (var child in _cachedParamTree.Children)
+                DrawParamTreeNode(child, excludedSet, 0);
+
+            EditorGUILayout.EndScrollView();
+
+            // Write back if anything changed.
+            if (!excludedSet.SetEquals(originalExcluded))
+            {
+                string[] newExcluded = ExpandExcludedForStorage(excludedSet, hiddenAssignedByVisibleOriginal);
+                if (component)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Parameter Backup");
+                    component.excludedParameterNames = newExcluded;
                     EditorUtility.SetDirty(component);
                 }
                 else
                 {
-                    _pendingCustomIcons = resized;
+                    _pendingExcludedParameterNames = newExcluded;
+                }
+                Repaint();
+            }
+
+            // ── Resize handle ─────────────────────────────────────────────────
+            var handleRect = EditorGUILayout.GetControlRect(false, 8f);
+            handleRect = new Rect(handleRect.xMax - 24f, handleRect.y, 24f, 8f);
+            EditorGUIUtility.AddCursorRect(handleRect, MouseCursor.ResizeVertical);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                var dotColor = new Color(0.55f, 0.55f, 0.55f, 0.80f);
+                float cx = handleRect.x + handleRect.width / 2f;
+                float cy = handleRect.y + handleRect.height / 2f;
+                for (int d = -1; d <= 1; d++)
+                    EditorGUI.DrawRect(new Rect(cx + d * 5f - 1f, cy - 1f, 2f, 2f), dotColor);
+            }
+
+            if (Event.current.type == EventType.MouseDown && handleRect.Contains(Event.current.mousePosition))
+            {
+                _isDraggingParamResize = true;
+                Event.current.Use();
+            }
+
+            if (_isDraggingParamResize)
+            {
+                if (Event.current.type == EventType.MouseDrag)
+                {
+                    _paramChecklistHeight = Mathf.Clamp(
+                        _paramChecklistHeight + Event.current.delta.y, 60f, 400f);
+                    Event.current.Use();
+                    Repaint();
+                }
+                else if (Event.current.type == EventType.MouseUp)
+                {
+                    _isDraggingParamResize = false;
+                    Event.current.Use();
+                }
+            }
+        }
+
+        private void DrawParamTreeNode(ParamTreeNode node, HashSet<string> excludedSet, int depth)
+        {
+            float indentPx = depth * 14f + 2f;
+
+            if (node.IsParam)
+            {
+                // Checkbox row for a parameter leaf.
+                // Add extra offset so child-item checkboxes sit to the right of
+                // category checkboxes/foldouts and read as subordinate rows.
+                const float childItemOffset = 12f;
+                var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                var labelRect = new Rect(rowRect.x + indentPx + childItemOffset, rowRect.y, rowRect.width - indentPx - childItemOffset, rowRect.height);
+                bool isIncluded = !excludedSet.Contains(node.ParamName);
+                bool newIncluded = EditorGUI.ToggleLeft(labelRect, node.Name, isIncluded);
+                if (newIncluded != isIncluded)
+                {
+                    if (newIncluded) excludedSet.Remove(node.ParamName);
+                    else             excludedSet.Add(node.ParamName);
+                }
+            }
+            else
+            {
+                // Folder row. Foldout arrow + category checkbox + label.
+                bool isExpanded = _expandedParamMenuPaths.Contains(node.MenuPath);
+                var rowRect = EditorGUILayout.GetControlRect(false, EditorGUIUtility.singleLineHeight);
+                var activeRect = new Rect(rowRect.x + indentPx, rowRect.y, rowRect.width - indentPx, rowRect.height);
+
+                var arrowRect = new Rect(activeRect.x, activeRect.y, 14f, activeRect.height);
+                bool toggled = EditorGUI.Foldout(arrowRect, isExpanded, GUIContent.none, true);
+                if (toggled != isExpanded)
+                {
+                    if (toggled) _expandedParamMenuPaths.Add(node.MenuPath);
+                    else         _expandedParamMenuPaths.Remove(node.MenuPath);
+                    Repaint();
+                }
+
+                int totalLeafCount = CountParamLeafNodes(node);
+                int includedLeafCount = CountIncludedParamLeafNodes(node, excludedSet);
+                bool allIncluded = totalLeafCount > 0 && includedLeafCount == totalLeafCount;
+                bool mixed = includedLeafCount > 0 && includedLeafCount < totalLeafCount;
+
+                var toggleRect = new Rect(activeRect.x + 14f, activeRect.y, 16f, activeRect.height);
+                EditorGUI.showMixedValue = mixed;
+                bool newAllIncluded = EditorGUI.Toggle(toggleRect, allIncluded);
+                EditorGUI.showMixedValue = false;
+
+                if (newAllIncluded != allIncluded || (mixed && Event.current.type == EventType.MouseUp && toggleRect.Contains(Event.current.mousePosition)))
+                {
+                    SetFolderIncludedState(node, excludedSet, newAllIncluded);
+                }
+
+                var labelRect = new Rect(activeRect.x + 32f, activeRect.y, activeRect.width - 32f, activeRect.height);
+                EditorGUI.LabelField(labelRect, node.Name, EditorStyles.boldLabel);
+
+                if (toggled)
+                    foreach (var child in node.Children)
+                        DrawParamTreeNode(child, excludedSet, depth + 1);
+            }
+        }
+
+        private static int CountParamLeafNodes(ParamTreeNode node)
+        {
+            if (node == null)
+                return 0;
+            if (node.IsParam)
+                return 1;
+
+            int count = 0;
+            for (int i = 0; i < node.Children.Count; i++)
+                count += CountParamLeafNodes(node.Children[i]);
+            return count;
+        }
+
+        private static int CountIncludedParamLeafNodes(ParamTreeNode node, HashSet<string> excludedSet)
+        {
+            if (node == null)
+                return 0;
+
+            if (node.IsParam)
+                return excludedSet.Contains(node.ParamName) ? 0 : 1;
+
+            int count = 0;
+            for (int i = 0; i < node.Children.Count; i++)
+                count += CountIncludedParamLeafNodes(node.Children[i], excludedSet);
+            return count;
+        }
+
+        private static void SetFolderIncludedState(ParamTreeNode node, HashSet<string> excludedSet, bool include)
+        {
+            if (node == null)
+                return;
+
+            if (node.IsParam)
+            {
+                if (include) excludedSet.Remove(node.ParamName);
+                else         excludedSet.Add(node.ParamName);
+                return;
+            }
+
+            for (int i = 0; i < node.Children.Count; i++)
+                SetFolderIncludedState(node.Children[i], excludedSet, include);
+        }
+
+        private static ParamTreeNode BuildParamTree(VRCAvatarDescriptor avatar)
+        {
+            var root = new ParamTreeNode { Name = string.Empty, MenuPath = string.Empty };
+            if (avatar == null) return root;
+
+            string[] backableParams = GetBackableParameterNames(avatar);
+            if (backableParams.Length == 0) return root;
+
+            // Build VRCFury Toggle metadata so ASM_VF_* global parameters can be
+            // grouped under their real menu paths with friendly labels instead of
+            // falling into the "(No menu)" bucket with raw global names.
+            var vrcFuryMeta = BuildVrcFuryGlobalParamMetadata(avatar);
+
+            // Reuse the same VRCFury menu-prefix discovery strategy as the custom
+            // install-path tree, then map each normalized prefix token so ASM_VF_*
+            // deterministic names can be mapped back to real menu folders.
+            var sanitizedPrefixToMenuPath = new Dictionary<string, string>(StringComparer.Ordinal);
+            var vrcFuryMenuPrefixes = GetVrcFuryMenuPrefixes(avatar);
+            for (int i = 0; i < vrcFuryMenuPrefixes.Length; i++)
+            {
+                string menuPrefix = vrcFuryMenuPrefixes[i];
+                if (string.IsNullOrWhiteSpace(menuPrefix))
+                    continue;
+
+                string token = ASMLiteToggleNameBroker.SanitizePathToken(menuPrefix);
+                if (string.IsNullOrWhiteSpace(token))
+                    continue;
+
+                if (!sanitizedPrefixToMenuPath.ContainsKey(token))
+                    sanitizedPrefixToMenuPath[token] = menuPrefix;
+            }
+
+            // Map each param name → the menu folder path where it appears.
+            var paramToMenuPath = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (avatar.expressionsMenu != null)
+                ScanMenuForParamLocations(avatar.expressionsMenu, string.Empty, paramToMenuPath,
+                    new HashSet<VRCExpressionsMenu>());
+
+            // Augment with VRCFury-assigned global parameters (ASM_VF_*) when a menu
+            // path hint is available. This keeps Toggle-generated parameters out of
+            // the "(No menu)" catch-all when they are actually driven from a menu.
+            foreach (var kvp in vrcFuryMeta)
+            {
+                string paramName = kvp.Key;
+                var meta = kvp.Value;
+                if (string.IsNullOrEmpty(meta.MenuPath))
+                    continue;
+                if (!paramToMenuPath.ContainsKey(paramName))
+                    paramToMenuPath[paramName] = meta.MenuPath;
+            }
+
+            // Build folder nodes mirroring the menu hierarchy.
+            var menuNodes = new Dictionary<string, ParamTreeNode>(StringComparer.Ordinal);
+            menuNodes[string.Empty] = root;
+
+            var unassigned = new List<string>();
+            var assigned = new List<(string MenuPath, string DisplayName, string ParamName)>();
+            foreach (var paramName in backableParams)
+            {
+                string menuPath = null;
+                if (paramToMenuPath.TryGetValue(paramName, out string mappedPath) && mappedPath != null)
+                    menuPath = mappedPath;
+
+                string displayName = paramName;
+                if (vrcFuryMeta.TryGetValue(paramName, out var meta) && !string.IsNullOrEmpty(meta.DisplayName))
+                    displayName = meta.DisplayName;
+
+                // For deterministic ASM_VF_* names, always infer display + parent
+                // folder from the encoded menu token so rows appear as user-facing
+                // toggle labels at the correct menu level.
+                if (paramName.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal)
+                    && TryInferMenuPathAndDisplayNameFromAsmVfGlobalName(
+                        paramName,
+                        sanitizedPrefixToMenuPath,
+                        out string inferredAsmMenuPath,
+                        out string inferredAsmDisplayName))
+                {
+                    menuPath = inferredAsmMenuPath;
+                    displayName = inferredAsmDisplayName;
+                }
+
+                // Fallback: when a parameter name itself encodes a menu-like path
+                // (common in some VRCFury Toggle outputs), infer folder + label
+                // directly from that path so it does not land in "(No menu)".
+                if (string.IsNullOrEmpty(menuPath)
+                    && TryInferMenuPathAndDisplayNameFromParamName(paramName, out string inferredMenuPath, out string inferredDisplayName))
+                {
+                    menuPath = inferredMenuPath;
+                    if (string.IsNullOrEmpty(displayName) || string.Equals(displayName, paramName, StringComparison.Ordinal))
+                        displayName = inferredDisplayName;
+                }
+
+                if (string.IsNullOrEmpty(menuPath))
+                {
+                    unassigned.Add(paramName);
+                    continue;
+                }
+
+                assigned.Add((menuPath, string.IsNullOrWhiteSpace(displayName) ? paramName : displayName, paramName));
+            }
+
+            // Suffix duplicate display names within the same menu folder so they are
+            // distinguishable (Rezz1, Rezz2, ...).
+            var totalByKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < assigned.Count; i++)
+            {
+                var entry = assigned[i];
+                string key = entry.MenuPath + "\u001F" + entry.DisplayName;
+                totalByKey[key] = totalByKey.TryGetValue(key, out int count) ? count + 1 : 1;
+            }
+
+            var nextIndexByKey = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < assigned.Count; i++)
+            {
+                var entry = assigned[i];
+                string key = entry.MenuPath + "\u001F" + entry.DisplayName;
+
+                string finalDisplayName = entry.DisplayName;
+                if (totalByKey.TryGetValue(key, out int total) && total > 1)
+                {
+                    int idx = nextIndexByKey.TryGetValue(key, out int next) ? next : 1;
+                    nextIndexByKey[key] = idx + 1;
+                    finalDisplayName = entry.DisplayName + idx;
+                }
+
+                var folderNode = EnsureParamMenuNode(menuNodes, entry.MenuPath);
+                folderNode.Children.Add(new ParamTreeNode { Name = finalDisplayName, ParamName = entry.ParamName });
+            }
+
+            // Unassigned params shown in a catch-all group.
+            if (unassigned.Count > 0)
+            {
+                const string unassignedPath = "\x01unassigned";
+                var group = new ParamTreeNode { Name = "(No menu)", MenuPath = unassignedPath };
+                foreach (var p in unassigned)
+                {
+                    string displayName = p;
+                    if (vrcFuryMeta.TryGetValue(p, out var meta) && !string.IsNullOrEmpty(meta.DisplayName))
+                        displayName = meta.DisplayName;
+
+                    group.Children.Add(new ParamTreeNode { Name = displayName, ParamName = p });
+                }
+                root.Children.Add(group);
+            }
+
+            SortParamTreeChildren(root);
+            return root;
+        }
+
+        /// <summary>
+        /// Builds a map from VRCFury toggle-like managed-reference payloads to
+        /// parameter metadata (menu path + friendly display name).
+        ///
+        /// This intentionally does not hard-require a specific managed-reference type
+        /// name so it remains compatible across VRCFury schema variants.
+        /// </summary>
+        private static Dictionary<string, (string MenuPath, string DisplayName)> BuildVrcFuryGlobalParamMetadata(VRCAvatarDescriptor avatar)
+        {
+            var result = new Dictionary<string, (string MenuPath, string DisplayName)>(StringComparer.Ordinal);
+            if (avatar == null)
+                return result;
+
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                var iterator = so.GetIterator();
+                if (!iterator.NextVisible(true))
+                    continue;
+
+                var seenPaths = new HashSet<string>(StringComparer.Ordinal);
+                do
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference)
+                        continue;
+
+                    string togglePropertyPath = iterator.propertyPath;
+                    if (!seenPaths.Add(togglePropertyPath))
+                        continue;
+
+                    var useGlobalProp = so.FindProperty(togglePropertyPath + ".useGlobalParam");
+                    var globalParamProp = so.FindProperty(togglePropertyPath + ".globalParam");
+                    var menuPathProp = so.FindProperty(togglePropertyPath + ".menuPath");
+                    var nameProp = so.FindProperty(togglePropertyPath + ".name");
+                    var labelProp = so.FindProperty(togglePropertyPath + ".label");
+                    var paramNameProp = so.FindProperty(togglePropertyPath + ".paramName");
+
+                    bool hasAnyToggleFields = useGlobalProp != null
+                        || globalParamProp != null
+                        || menuPathProp != null
+                        || nameProp != null
+                        || labelProp != null
+                        || paramNameProp != null;
+
+                    if (!hasAnyToggleFields)
+                        continue;
+
+                    bool useGlobal = useGlobalProp != null
+                        && useGlobalProp.propertyType == SerializedPropertyType.Boolean
+                        && useGlobalProp.boolValue;
+
+                    string globalName = globalParamProp != null && globalParamProp.propertyType == SerializedPropertyType.String
+                        ? (globalParamProp.stringValue ?? string.Empty).Trim()
+                        : string.Empty;
+
+                    string rawMenuPath = menuPathProp != null && menuPathProp.propertyType == SerializedPropertyType.String
+                        ? menuPathProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawName = nameProp != null && nameProp.propertyType == SerializedPropertyType.String
+                        ? nameProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawLabel = labelProp != null && labelProp.propertyType == SerializedPropertyType.String
+                        ? labelProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawParamName = paramNameProp != null && paramNameProp.propertyType == SerializedPropertyType.String
+                        ? paramNameProp.stringValue ?? string.Empty
+                        : string.Empty;
+
+                    string rawNamePath = !string.IsNullOrWhiteSpace(rawName) && rawName.IndexOf('/') >= 0
+                        ? rawName
+                        : string.Empty;
+
+                    string resolvedPathSource = !string.IsNullOrWhiteSpace(rawMenuPath)
+                        ? rawMenuPath
+                        : rawNamePath;
+
+                    string normalizedFullPath = NormalizeSlashPath(resolvedPathSource);
+                    string normalizedMenuPath = normalizedFullPath;
+                    string displayName = string.Empty;
+
+                    if (!string.IsNullOrWhiteSpace(rawLabel))
+                    {
+                        displayName = rawLabel.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawNamePath))
+                    {
+                        string[] nameParts = NormalizeSlashPath(rawNamePath).Split('/');
+                        if (nameParts.Length > 0)
+                        {
+                            displayName = nameParts[nameParts.Length - 1];
+                            if (nameParts.Length > 1)
+                                normalizedMenuPath = string.Join("/", nameParts.Take(nameParts.Length - 1));
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawName))
+                    {
+                        displayName = rawName.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(rawParamName))
+                    {
+                        displayName = rawParamName.Trim();
+                    }
+
+                    if (string.IsNullOrWhiteSpace(displayName))
+                    {
+                        if (!string.IsNullOrWhiteSpace(normalizedFullPath))
+                        {
+                            int lastSlash = normalizedFullPath.LastIndexOf('/');
+                            if (lastSlash >= 0 && lastSlash < normalizedFullPath.Length - 1)
+                            {
+                                displayName = normalizedFullPath.Substring(lastSlash + 1);
+                                normalizedMenuPath = normalizedFullPath.Substring(0, lastSlash);
+                            }
+                            else
+                            {
+                                displayName = normalizedFullPath;
+                            }
+                        }
+                    }
+
+                    // Candidate parameter names this toggle payload may emit.
+                    var candidateParamNames = new List<string>(3);
+                    if (useGlobal && !string.IsNullOrWhiteSpace(globalName))
+                        candidateParamNames.Add(globalName);
+                    if (!string.IsNullOrWhiteSpace(rawParamName))
+                        candidateParamNames.Add(rawParamName.Trim());
+                    if (!string.IsNullOrWhiteSpace(rawName) && rawName.IndexOf('/') < 0)
+                        candidateParamNames.Add(rawName.Trim());
+
+                    for (int c = 0; c < candidateParamNames.Count; c++)
+                    {
+                        string candidate = candidateParamNames[c];
+                        if (string.IsNullOrWhiteSpace(candidate))
+                            continue;
+                        if (result.ContainsKey(candidate))
+                            continue;
+
+                        string resolvedDisplay = string.IsNullOrWhiteSpace(displayName) ? candidate : displayName;
+                        if (candidate.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal))
+                            resolvedDisplay = candidate;
+
+                        result[candidate] = (normalizedMenuPath, resolvedDisplay);
+                    }
+                } while (iterator.NextVisible(true));
+            }
+
+            // Also include deterministic names for eligible toggle candidates that
+            // are not currently materialized into avatar expression parameters.
+            if (avatar.gameObject != null)
+            {
+                var reserved = new HashSet<string>(result.Keys, StringComparer.Ordinal);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var candidate = candidates[i];
+                    string deterministic = ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                        candidate.MenuPathHint,
+                        candidate.ObjectPath,
+                        reserved);
+
+                    if (string.IsNullOrWhiteSpace(deterministic) || result.ContainsKey(deterministic))
+                        continue;
+
+                    string menuPath = NormalizeSlashPath(candidate.MenuPathHint);
+                    string displayName = deterministic;
+
+                    result[deterministic] = (menuPath, displayName);
                 }
             }
 
-            // Mode selector.
-            var newMode = (IconMode)EditorGUILayout.EnumPopup("Icon Mode", currentMode);
+            return result;
+        }
+
+        private static string NormalizeSlashPath(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            string normalized = value.Replace('\\', '/');
+            var rawSegments = normalized.Split('/');
+            var cleanSegments = new List<string>(rawSegments.Length);
+            for (int i = 0; i < rawSegments.Length; i++)
+            {
+                string segment = NormalizeMenuPathSegment(rawSegments[i]);
+                if (!string.IsNullOrEmpty(segment))
+                    cleanSegments.Add(segment);
+            }
+
+            return cleanSegments.Count == 0 ? string.Empty : string.Join("/", cleanSegments);
+        }
+
+        private static bool TryInferMenuPathAndDisplayNameFromAsmVfGlobalName(
+            string paramName,
+            Dictionary<string, string> sanitizedPrefixToMenuPath,
+            out string menuPath,
+            out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(paramName))
+                return false;
+            if (!paramName.StartsWith(ASMLiteToggleNameBroker.GlobalPrefix, StringComparison.Ordinal))
+                return false;
+
+            string withoutPrefix = paramName.Substring(ASMLiteToggleNameBroker.GlobalPrefix.Length);
+            int split = withoutPrefix.IndexOf("__", StringComparison.Ordinal);
+            if (split <= 0)
+                return false;
+
+            string menuToken = withoutPrefix.Substring(0, split);
+
+            // First try exact token->path match from discovered VRCFury menu prefixes.
+            if (sanitizedPrefixToMenuPath != null
+                && sanitizedPrefixToMenuPath.TryGetValue(menuToken, out string exactPath)
+                && !string.IsNullOrWhiteSpace(exactPath))
+            {
+                string normalized = NormalizeSlashPath(exactPath);
+                if (TrySplitMenuPathForLabel(normalized, out menuPath, out displayName))
+                    return true;
+            }
+
+            // Then try longest discovered prefix token match. This handles deterministic
+            // names where menuToken includes the leaf label (e.g. prefix + _Bass).
+            if (sanitizedPrefixToMenuPath != null && sanitizedPrefixToMenuPath.Count > 0)
+            {
+                string bestKey = null;
+                string bestPath = null;
+                foreach (var kvp in sanitizedPrefixToMenuPath)
+                {
+                    string key = kvp.Key;
+                    if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(kvp.Value))
+                        continue;
+
+                    if (string.Equals(menuToken, key, StringComparison.Ordinal)
+                        || menuToken.StartsWith(key + "_", StringComparison.Ordinal))
+                    {
+                        if (bestKey == null || key.Length > bestKey.Length)
+                        {
+                            bestKey = key;
+                            bestPath = kvp.Value;
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(bestKey) && !string.IsNullOrWhiteSpace(bestPath))
+                {
+                    string remainder = menuToken.Length > bestKey.Length
+                        ? menuToken.Substring(bestKey.Length).TrimStart('_')
+                        : string.Empty;
+
+                    string normalizedParent = NormalizeSlashPath(bestPath);
+                    if (!string.IsNullOrWhiteSpace(remainder))
+                    {
+                        string remainderLabel = DecodeAsmVfTokenToWords(remainder);
+                        if (!string.IsNullOrWhiteSpace(normalizedParent)
+                            && !string.IsNullOrWhiteSpace(remainderLabel))
+                        {
+                            menuPath = normalizedParent;
+                            displayName = remainderLabel;
+                            return true;
+                        }
+                    }
+
+                    if (TrySplitMenuPathForLabel(normalizedParent, out menuPath, out displayName))
+                        return true;
+                }
+            }
+
+            // Final fallback when no discoverable prefix exists: decode token into
+            // a reasonable flat folder+label shape instead of deep underscore nesting.
+            string[] words = SplitAsmVfTokenWords(menuToken);
+            if (words.Length < 2)
+                return false;
+
+            menuPath = string.Join(" ", words.Take(words.Length - 1));
+            displayName = words[words.Length - 1];
+            return !string.IsNullOrWhiteSpace(menuPath) && !string.IsNullOrWhiteSpace(displayName);
+        }
+
+        private static bool TrySplitMenuPathForLabel(string fullPath, out string menuPath, out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return false;
+
+            var segments = fullPath.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+            if (segments.Length == 0)
+                return false;
+
+            displayName = segments[segments.Length - 1];
+            menuPath = segments.Length > 1
+                ? string.Join("/", segments.Take(segments.Length - 1))
+                : segments[0];
+
+            return !string.IsNullOrWhiteSpace(menuPath) && !string.IsNullOrWhiteSpace(displayName);
+        }
+
+        private static string[] SplitAsmVfTokenWords(string token)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return Array.Empty<string>();
+
+            return token
+                .Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToArray();
+        }
+
+        private static string DecodeAsmVfTokenToWords(string token)
+        {
+            var words = SplitAsmVfTokenWords(token);
+            if (words.Length == 0)
+                return string.Empty;
+
+            return string.Join(" ", words);
+        }
+
+        private static bool TryInferMenuPathAndDisplayNameFromParamName(
+            string paramName,
+            out string menuPath,
+            out string displayName)
+        {
+            menuPath = string.Empty;
+            displayName = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(paramName))
+                return false;
+
+            string normalized = paramName.Replace('\\', '/').Trim();
+            if (normalized.IndexOf('/') < 0)
+                return false;
+
+            var rawSegments = normalized.Split('/');
+            var cleanSegments = new List<string>(rawSegments.Length);
+            for (int i = 0; i < rawSegments.Length; i++)
+            {
+                string segment = NormalizeMenuPathSegment(rawSegments[i]);
+                if (!string.IsNullOrEmpty(segment))
+                    cleanSegments.Add(segment);
+            }
+
+            if (cleanSegments.Count < 2)
+                return false;
+
+            displayName = cleanSegments[cleanSegments.Count - 1];
+            menuPath = string.Join("/", cleanSegments.Take(cleanSegments.Count - 1));
+
+            return !string.IsNullOrEmpty(menuPath) && !string.IsNullOrEmpty(displayName);
+        }
+
+        private static void ScanMenuForParamLocations(
+            VRCExpressionsMenu menu, string parentPath,
+            Dictionary<string, string> paramToPath,
+            HashSet<VRCExpressionsMenu> visited)
+        {
+            if (menu == null || !visited.Add(menu) || menu.controls == null) return;
+
+            foreach (var control in menu.controls)
+            {
+                if (control == null) continue;
+
+                // Main control parameter.
+                if (!string.IsNullOrEmpty(control.parameter?.name)
+                    && !paramToPath.ContainsKey(control.parameter.name))
+                    paramToPath[control.parameter.name] = parentPath;
+
+                // Sub-parameters (radial / 2-axis / 4-axis puppets).
+                if (control.subParameters != null)
+                    foreach (var sub in control.subParameters)
+                        if (sub != null && !string.IsNullOrEmpty(sub.name)
+                            && !paramToPath.ContainsKey(sub.name))
+                            paramToPath[sub.name] = parentPath;
+
+                // Recurse into submenus.
+                if (control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                    && control.subMenu != null)
+                {
+                    string seg = NormalizeMenuPathSegment(control.name);
+                    string childPath = string.IsNullOrEmpty(parentPath) ? seg
+                        : string.IsNullOrEmpty(seg) ? parentPath
+                        : parentPath + "/" + seg;
+                    ScanMenuForParamLocations(control.subMenu, childPath, paramToPath, visited);
+                }
+            }
+        }
+
+        private static ParamTreeNode EnsureParamMenuNode(
+            Dictionary<string, ParamTreeNode> nodeMap, string path)
+        {
+            if (nodeMap.TryGetValue(path, out var existing)) return existing;
+
+            int slash = path.LastIndexOf('/');
+            string parentPath = slash < 0 ? string.Empty : path.Substring(0, slash);
+            string name       = slash < 0 ? path          : path.Substring(slash + 1);
+
+            var parent = EnsureParamMenuNode(nodeMap, parentPath);
+            var node   = new ParamTreeNode { Name = name, MenuPath = path };
+            parent.Children.Add(node);
+            nodeMap[path] = node;
+            return node;
+        }
+
+        private static void SortParamTreeChildren(ParamTreeNode node)
+        {
+            // Folder nodes first, then param leaves, each group alphabetical.
+            node.Children.Sort((a, b) =>
+            {
+                if (a.IsParam != b.IsParam) return a.IsParam ? 1 : -1;
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+            foreach (var child in node.Children)
+                if (!child.IsParam) SortParamTreeChildren(child);
+        }
+
+        private static string[] GetBackableParameterNames(VRCAvatarDescriptor avatar)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+
+            // 1) Existing avatar expression parameters (current runtime truth).
+            if (avatar?.expressionParameters?.parameters != null)
+            {
+                foreach (var p in avatar.expressionParameters.parameters)
+                {
+                    if (p == null || string.IsNullOrEmpty(p.name))
+                        continue;
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name))
+                        continue;
+                    if (p.valueType != VRCExpressionParameters.ValueType.Bool
+                        && p.valueType != VRCExpressionParameters.ValueType.Int
+                        && p.valueType != VRCExpressionParameters.ValueType.Float)
+                        continue;
+
+                    names.Add(p.name);
+                }
+            }
+
+            // 2) VRCFury FullController referenced parameter assets (content.prms).
+            //    Include these pre-bake so package/prefab-provided parameter files
+            //    (for example media-control prefabs) are available in backup UI.
+            if (avatar?.gameObject != null)
+            {
+                var referencedVfParams = GetVrcFuryReferencedParameterNames(avatar);
+                for (int i = 0; i < referencedVfParams.Length; i++)
+                {
+                    string paramName = referencedVfParams[i];
+                    if (string.IsNullOrWhiteSpace(paramName))
+                        continue;
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(paramName))
+                        continue;
+
+                    names.Add(paramName);
+                }
+            }
+
+            // 3) VRCFury Toggle globals already assigned on serialized toggle payloads.
+            //    Include them pre-bake so Parameter Backup customization can target
+            //    prefab-driven toggles (e.g., nested utility prefabs) even before
+            //    expressionParameters has been rebuilt.
+            if (avatar?.gameObject != null)
+            {
+                var assignedGlobals = ASMLiteToggleNameBroker.DiscoverAssignedToggleGlobalParams(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
+                for (int i = 0; i < assignedGlobals.Count; i++)
+                {
+                    string assigned = assignedGlobals[i];
+                    if (string.IsNullOrWhiteSpace(assigned))
+                        continue;
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(assigned))
+                        continue;
+
+                    names.Add(assigned);
+                }
+            }
+
+            // 4) VRCFury Toggle candidates that will be deterministically promoted to
+            //    globals during build-request enrollment. Include them pre-bake so
+            //    Parameter Backup customization can target not-yet-assigned toggles.
+            //    When a candidate already carries a legacy/non-deterministic source
+            //    global name, suppress that stale visible name in favor of the
+            //    deterministic ASM_VF_* name ASM-Lite will actually back up after
+            //    build-request enrollment.
+            if (avatar?.gameObject != null)
+            {
+                var reserved = new HashSet<string>(names, StringComparer.Ordinal);
+                var candidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(
+                    avatar.gameObject,
+                    requireAsmLiteScope: false);
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    var candidate = candidates[i];
+                    string deterministic = ASMLiteToggleNameBroker.BuildDeterministicGlobalName(
+                        candidate.MenuPathHint,
+                        candidate.ObjectPath,
+                        reserved);
+
+                    if (string.IsNullOrWhiteSpace(deterministic))
+                        continue;
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(deterministic))
+                        continue;
+
+                    if (!string.IsNullOrWhiteSpace(candidate.GlobalParam)
+                        && !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(candidate.GlobalParam))
+                    {
+                        names.Remove(candidate.GlobalParam.Trim());
+                    }
+
+                    names.Add(deterministic);
+                }
+            }
+
+            // If both sides of a broker mapping are present, show only the
+            // original discovered parameter in the checklist and keep the
+            // deterministic ASM_VF_* side hidden.
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings != null && mappings.Length > 0)
+            {
+                for (int i = 0; i < mappings.Length; i++)
+                {
+                    var mapping = mappings[i];
+                    if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                        || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                        continue;
+
+                    if (names.Contains(mapping.OriginalGlobalParam)
+                        && names.Contains(mapping.AssignedGlobalParam))
+                    {
+                        names.Remove(mapping.AssignedGlobalParam);
+                    }
+                }
+            }
+
+            return names
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static string[] GetAvatarSubmenuPaths(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null || avatar.expressionsMenu == null)
+                return Array.Empty<string>();
+
+            var allPaths = new HashSet<string>(StringComparer.Ordinal);
+            var parentPaths = new HashSet<string>(StringComparer.Ordinal);
+            var visitedMenus = new HashSet<VRCExpressionsMenu>();
+            CollectSubmenuPathsRecursive(avatar.expressionsMenu, string.Empty, allPaths, parentPaths, visitedMenus);
+
+            // Return every submenu path. Parent folders are valid install locations too.
+            return allPaths
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static bool IsAsmLiteGeneratedPresetsMenu(VRCExpressionsMenu menu)
+        {
+            return ASMLiteWindowOperations.IsGeneratedPresetsMenu(menu);
+        }
+
+        private static bool IsAsmLiteGeneratedMenuAsset(VRCExpressionsMenu menu)
+        {
+            return ASMLiteWindowOperations.IsGeneratedMenuAsset(menu);
+        }
+
+        private static string[] GetVrcFuryMenuPrefixes(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return Array.Empty<string>();
+
+            var paths = new HashSet<string>(StringComparer.Ordinal);
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                // FullController: content.menus array with prefix + menu asset pairs.
+                var menusProperty = so.FindProperty("content.menus");
+                if (menusProperty != null && menusProperty.isArray)
+                {
+                    for (int menuIndex = 0; menuIndex < menusProperty.arraySize; menuIndex++)
+                    {
+                        var menuEntry = menusProperty.GetArrayElementAtIndex(menuIndex);
+                        if (menuEntry == null)
+                            continue;
+
+                        var prefixProperty = menuEntry.FindPropertyRelative("prefix");
+                        string normalizedPrefix = prefixProperty == null
+                            ? string.Empty
+                            : NormalizeMenuPathSegment(prefixProperty.stringValue);
+
+                        if (!string.IsNullOrEmpty(normalizedPrefix))
+                            paths.Add(normalizedPrefix);
+
+                        var menuObjRef = FindVrcFuryMenuObjectReference(menuEntry);
+                        var menuAsset = menuObjRef != null ? menuObjRef.objectReferenceValue as VRCExpressionsMenu : null;
+                        if (menuAsset != null)
+                        {
+                            var visitedMenus = new HashSet<VRCExpressionsMenu>();
+                            CollectVrcFuryMenuPathsRecursive(menuAsset, normalizedPrefix, paths, visitedMenus);
+                        }
+                    }
+                }
+
+                // Toggle / SPS / other features: iterate ALL string properties under
+                // "content" whose name starts with "menu". This is robust across VRCFury
+                // versions without hardcoding per-type field names like "menuPath".
+                ScanVrcFuryContentForMenuPaths(so, paths);
+            }
+
+            return paths
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static string[] GetVrcFuryReferencedParameterNames(VRCAvatarDescriptor avatar)
+        {
+            if (avatar == null)
+                return Array.Empty<string>();
+
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            var behaviours = avatar.GetComponentsInChildren<MonoBehaviour>(includeInactive: true);
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                    continue;
+
+                var type = behaviour.GetType();
+                if (type == null || !string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
+                    continue;
+
+                var so = new SerializedObject(behaviour);
+                so.Update();
+
+                var prmsProperty = so.FindProperty("content.prms");
+                if (prmsProperty == null || !prmsProperty.isArray)
+                    continue;
+
+                for (int entryIndex = 0; entryIndex < prmsProperty.arraySize; entryIndex++)
+                {
+                    var entry = prmsProperty.GetArrayElementAtIndex(entryIndex);
+                    if (entry == null)
+                        continue;
+
+                    var parametersRefProp = FindVrcFuryParametersObjectReference(entry);
+                    var parametersIdProp = entry.FindPropertyRelative("parameters.id");
+
+                    VRCExpressionParameters referencedParams = null;
+                    if (parametersRefProp != null)
+                        referencedParams = parametersRefProp.objectReferenceValue as VRCExpressionParameters;
+
+                    if (referencedParams == null && parametersIdProp != null)
+                    {
+                        string referencedPath = ParseVrcFuryReferencePath(parametersIdProp.stringValue);
+                        if (!string.IsNullOrWhiteSpace(referencedPath))
+                            referencedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(referencedPath);
+                    }
+
+                    if (referencedParams?.parameters == null)
+                        continue;
+
+                    for (int paramIndex = 0; paramIndex < referencedParams.parameters.Length; paramIndex++)
+                    {
+                        var param = referencedParams.parameters[paramIndex];
+                        if (param == null || string.IsNullOrWhiteSpace(param.name))
+                            continue;
+
+                        if (param.valueType != VRCExpressionParameters.ValueType.Bool
+                            && param.valueType != VRCExpressionParameters.ValueType.Int
+                            && param.valueType != VRCExpressionParameters.ValueType.Float)
+                            continue;
+
+                        names.Add(param.name);
+                    }
+                }
+            }
+
+            return names
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private static SerializedProperty FindVrcFuryParametersObjectReference(SerializedProperty prmsEntry)
+        {
+            if (prmsEntry == null)
+                return null;
+
+            var direct = prmsEntry.FindPropertyRelative("parameters.objRef");
+            if (direct != null)
+                return direct;
+
+            return prmsEntry.FindPropertyRelative("parameters");
+        }
+
+        private static string ParseVrcFuryReferencePath(string serializedId)
+        {
+            if (string.IsNullOrWhiteSpace(serializedId))
+                return string.Empty;
+
+            string trimmed = serializedId.Trim();
+            int split = trimmed.IndexOf('|');
+            if (split >= 0 && split < trimmed.Length - 1)
+                return trimmed.Substring(split + 1).Trim();
+
+            return trimmed;
+        }
+
+        /// <summary>
+        /// Iterates all serialized string properties under a VRCFury component's "content"
+        /// managed reference and collects parent path segments from any property whose name
+        /// starts with "menu". Works across VRCFury versions (Toggle, SPS, etc.) without
+        /// hardcoding per-type field names.
+        /// </summary>
+        private static void ScanVrcFuryContentForMenuPaths(SerializedObject so, HashSet<string> paths)
+        {
+            var contentProp = so.FindProperty("content");
+            if (contentProp == null)
+                return;
+
+            var it = contentProp.Copy();
+
+            // Enter the managed reference's first child property.
+            if (!it.Next(true))
+                return;
+
+            int baseDepth = contentProp.depth;
+
+            while (it.depth > baseDepth)
+            {
+                if (it.propertyType == SerializedPropertyType.String)
+                {
+                    string val = it.stringValue;
+                    if (!string.IsNullOrWhiteSpace(val))
+                    {
+                        string lowerName = it.name.ToLowerInvariant();
+
+                        // Match fields whose name starts with "menu" (e.g. FullController
+                        // menuPath variants), OR known path/name carriers used by VRCFury
+                        // features:
+                        //   - name with slash (Toggle-style menu/item path)
+                        //   - *Path fields (e.g. MoveMenuItem.toPath, legacy content.path)
+                        bool isMenuField = lowerName.StartsWith("menu", StringComparison.Ordinal);
+                        bool isNamePath = lowerName == "name" && val.IndexOf('/') >= 0;
+                        bool isPathField = lowerName.EndsWith("path", StringComparison.Ordinal) && val.IndexOf('/') >= 0;
+
+                        if (isMenuField || isNamePath || isPathField)
+                        {
+                            string[] segs = val.Split('/');
+                            // For Toggle "name" fields the last segment is the item name, not a
+                            // folder. Stop one short so only real parent menus are offered.
+                            // For menu/path destination fields (menuPath, toPath, path), include
+                            // all segments because the full value is itself a folder path.
+                            int segLimit = isNamePath ? segs.Length - 1 : segs.Length;
+                            var sb = new System.Text.StringBuilder();
+                            for (int si = 0; si < segLimit; si++)
+                            {
+                                string seg = NormalizeMenuPathSegment(segs[si]);
+                                if (string.IsNullOrEmpty(seg)) continue;
+                                if (sb.Length > 0) sb.Append('/');
+                                sb.Append(seg);
+                                paths.Add(sb.ToString());
+                            }
+                        }
+                    }
+                }
+
+                // Enter children up to 4 levels deep inside content; skip deeper subtrees.
+                if (!it.Next(it.depth < baseDepth + 4))
+                    break;
+            }
+        }
+
+        private static SerializedProperty FindVrcFuryMenuObjectReference(SerializedProperty menuEntry)
+        {
+            if (menuEntry == null)
+                return null;
+
+            // Most common FullController schema path.
+            var direct = menuEntry.FindPropertyRelative("menu.objRef");
+            if (direct != null)
+                return direct;
+
+            // Fallback for nested serialized layouts.
+            var menuProperty = menuEntry.FindPropertyRelative("menu");
+            if (menuProperty == null)
+                return null;
+
+            return menuProperty.FindPropertyRelative("objRef");
+        }
+
+        private static void CollectVrcFuryMenuPathsRecursive(
+            VRCExpressionsMenu menu,
+            string parentPath,
+            HashSet<string> paths,
+            HashSet<VRCExpressionsMenu> visitedMenus)
+        {
+            if (menu == null || !visitedMenus.Add(menu) || menu.controls == null)
+                return;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
+                    continue;
+
+                if (IsAsmLiteGeneratedMenuAsset(control.subMenu))
+                    continue;
+
+                string segment = NormalizeMenuPathSegment(control.name);
+                string fullPath = string.IsNullOrEmpty(parentPath)
+                    ? segment
+                    : (string.IsNullOrEmpty(segment) ? parentPath : $"{parentPath}/{segment}");
+
+                if (!string.IsNullOrEmpty(fullPath))
+                    paths.Add(fullPath);
+
+                CollectVrcFuryMenuPathsRecursive(control.subMenu, fullPath, paths, visitedMenus);
+            }
+        }
+
+        private static void CollectSubmenuPathsRecursive(
+            VRCExpressionsMenu menu,
+            string parentPath,
+            HashSet<string> allPaths,
+            HashSet<string> parentPaths,
+            HashSet<VRCExpressionsMenu> visitedMenus)
+        {
+            if (menu == null || !visitedMenus.Add(menu) || menu.controls == null)
+                return;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
+                    continue;
+
+                if (IsAsmLiteGeneratedPresetsMenu(control.subMenu))
+                    continue;
+
+                string segment = NormalizeMenuPathSegment(control.name);
+                string fullPath = string.IsNullOrEmpty(parentPath)
+                    ? segment
+                    : (string.IsNullOrEmpty(segment) ? parentPath : $"{parentPath}/{segment}");
+
+                if (string.IsNullOrEmpty(fullPath))
+                    continue;
+
+                allPaths.Add(fullPath);
+                if (HasSubmenuChildren(control.subMenu))
+                    parentPaths.Add(fullPath);
+
+                CollectSubmenuPathsRecursive(control.subMenu, fullPath, allPaths, parentPaths, visitedMenus);
+            }
+        }
+
+        private static bool HasSubmenuChildren(VRCExpressionsMenu menu)
+        {
+            if (menu == null || menu.controls == null)
+                return false;
+
+            for (int i = 0; i < menu.controls.Count; i++)
+            {
+                var control = menu.controls[i];
+                if (control != null && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static string NormalizeMenuPathSegment(string value)
+        {
+            string normalized = NormalizeOptionalString(value)
+                .Replace('\\', '/')
+                .Trim('/');
+
+            return normalized;
+        }
+
+        private void DrawRootIconSettings(ASMLiteComponent component)
+        {
+            Texture2D currentRootIcon = component ? component.customRootIcon : _pendingCustomRootIcon;
+            Texture2D newRootIcon = (Texture2D)EditorGUILayout.ObjectField("Root Icon", currentRootIcon, typeof(Texture2D), false);
+
+            if (component)
+            {
+                SetComponentTexture(component, "Change ASM-Lite Root Icon", ref component.customRootIcon, newRootIcon);
+            }
+            else
+            {
+                _pendingCustomRootIcon = newRootIcon;
+            }
+
+            EditorGUILayout.HelpBox(
+                "If this is empty, ASM-Lite uses its built-in root icon.",
+                MessageType.None);
+        }
+
+        private void DrawIconMode(ASMLiteComponent component)
+        {
+            IconMode currentMode = component ? component.iconMode : _pendingIconMode;
+            int currentGearIndex = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
+
+            // Slot icon mode selector intentionally excludes Custom.
+            // Existing Custom values are migrated to MultiColor the first time this UI is drawn.
+            if (currentMode == IconMode.Custom)
+            {
+                currentMode = IconMode.MultiColor;
+                if (component)
+                {
+                    Undo.RecordObject(component, "Migrate ASM-Lite Slot Icon Mode");
+                    component.iconMode = currentMode;
+                    EditorUtility.SetDirty(component);
+                }
+                else
+                {
+                    _pendingIconMode = currentMode;
+                }
+            }
+
+            var modeOptions = new[] { "MultiColor", "SameColor" };
+            int currentModeIndex = currentMode == IconMode.SameColor ? 1 : 0;
+            int newModeIndex = EditorGUILayout.Popup("Icon Mode", currentModeIndex, modeOptions);
+            IconMode newMode = newModeIndex == 1 ? IconMode.SameColor : IconMode.MultiColor;
+
             if (newMode != currentMode)
             {
                 if (component)
@@ -362,143 +4470,133 @@ namespace ASMLite.Editor
                 }
             }
 
-            // Per-mode controls.
-            switch (newMode)
+            if (newMode == IconMode.SameColor)
             {
-                case IconMode.SameColor:
+                int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, GearColorNames);
+                if (newIndex != currentGearIndex)
                 {
-                    var colorNames = new[] { "Blue", "Red", "Green", "Purple", "Cyan", "Orange", "Pink", "Yellow" };
-                    int newIndex = EditorGUILayout.Popup("Gear Color", currentGearIndex, colorNames);
-                    if (newIndex != currentGearIndex)
+                    if (component)
                     {
-                        if (component)
-                        {
-                            Undo.RecordObject(component, "Change ASM-Lite Gear Color");
-                            component.selectedGearIndex = newIndex;
-                            EditorUtility.SetDirty(component);
-                        }
-                        else
-                        {
-                            _pendingSelectedGearIndex = newIndex;
-                        }
+                        Undo.RecordObject(component, "Change ASM-Lite Gear Color");
+                        component.selectedGearIndex = newIndex;
+                        EditorUtility.SetDirty(component);
                     }
-                    break;
-                }
-
-                case IconMode.MultiColor:
-                {
-                    EditorGUILayout.HelpBox(
-                        "Each slot gets a unique gear color.\nSlots 1-4: Blue, Red, Green, Purple\nSlots 5-8: Cyan, Orange, Pink, Yellow",
-                        MessageType.None);
-                    break;
-                }
-
-                case IconMode.Custom:
-                {
-                    for (int i = 0; i < currentSlotCount; i++)
+                    else
                     {
-                        var newTex = (Texture2D)EditorGUILayout.ObjectField(
-                            $"Slot {i + 1} Icon",
-                            currentCustomIcons[i],
-                            typeof(Texture2D),
-                            allowSceneObjects: false);
-                        if (newTex != currentCustomIcons[i])
-                        {
-                            currentCustomIcons[i] = newTex;
-                            if (component)
-                            {
-                                Undo.RecordObject(component, "Change ASM-Lite Custom Icon");
-                                component.customIcons[i] = newTex;
-                                EditorUtility.SetDirty(component);
-                            }
-                            else
-                            {
-                                _pendingCustomIcons[i] = newTex;
-                            }
-                        }
+                        _pendingSelectedGearIndex = newIndex;
                     }
-                    break;
                 }
+                return;
             }
+
+            EditorGUILayout.HelpBox(
+                SlotColorLegendHelpText,
+                MessageType.None);
         }
 
-        /// <summary>
-        /// Draws the Action Icons section. Allows the user to choose between the
-        /// bundled Save/Load/Clear Preset icons (Default) or custom Texture2D icons
-        /// (Custom). Custom icons apply globally: the same three textures are used
-        /// across all slot submenus.
-        /// </summary>
-        private void DrawActionIcons()
+        private void DrawSlotIconSelectors(ASMLiteComponent component)
         {
-            var component = GetOrRefreshComponent();
+            int slotCount = component ? component.slotCount : _pendingSlotCount;
+            Texture2D[] currentCustomIcons = component ? component.customIcons : _pendingCustomIcons;
 
-            EditorGUILayout.LabelField("Action Icons", EditorStyles.miniBoldLabel);
-
-            ActionIconMode currentMode = component ? component.actionIconMode : _pendingActionIconMode;
-
-            var newMode = (ActionIconMode)EditorGUILayout.EnumPopup("Action Icon Mode", currentMode);
-            if (newMode != currentMode)
+            if (currentCustomIcons == null || currentCustomIcons.Length != slotCount)
             {
+                var resized = new Texture2D[slotCount];
+                if (currentCustomIcons != null)
+                {
+                    int copy = Mathf.Min(currentCustomIcons.Length, slotCount);
+                    Array.Copy(currentCustomIcons, resized, copy);
+                }
+
+                currentCustomIcons = resized;
                 if (component)
                 {
-                    Undo.RecordObject(component, "Change ASM-Lite Action Icon Mode");
-                    component.actionIconMode = newMode;
+                    Undo.RecordObject(component, "Resize ASM-Lite Slot Icons");
+                    component.customIcons = resized;
                     EditorUtility.SetDirty(component);
                 }
                 else
                 {
-                    _pendingActionIconMode = newMode;
+                    _pendingCustomIcons = resized;
                 }
             }
 
-            if (newMode == ActionIconMode.Custom)
+            for (int i = 0; i < slotCount; i++)
             {
-                Texture2D currentSave  = component ? component.customSaveIcon  : _pendingCustomSaveIcon;
-                Texture2D currentLoad  = component ? component.customLoadIcon  : _pendingCustomLoadIcon;
-                Texture2D currentClear = component ? component.customClearIcon : _pendingCustomClearIcon;
+                Texture2D newTex = (Texture2D)EditorGUILayout.ObjectField(
+                    string.Format(PresetIconFieldLabelFormat, i + 1),
+                    currentCustomIcons[i],
+                    typeof(Texture2D),
+                    allowSceneObjects: false);
 
-                // Save icon
-                var newSave = (Texture2D)EditorGUILayout.ObjectField(
-                    "Save Icon", currentSave, typeof(Texture2D), allowSceneObjects: false);
-                if (newSave != currentSave)
+                if (newTex == currentCustomIcons[i])
+                    continue;
+
+                currentCustomIcons[i] = newTex;
+                if (component)
                 {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Save Icon");
-                        component.customSaveIcon = newSave;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomSaveIcon = newSave; }
+                    Undo.RecordObject(component, "Change ASM-Lite Slot Icon");
+                    component.customIcons[i] = newTex;
+                    EditorUtility.SetDirty(component);
                 }
-
-                // Load icon
-                var newLoad = (Texture2D)EditorGUILayout.ObjectField(
-                    "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
-                if (newLoad != currentLoad)
+                else
                 {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Load Icon");
-                        component.customLoadIcon = newLoad;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomLoadIcon = newLoad; }
-                }
-
-                // Clear Preset icon
-                var newClear = (Texture2D)EditorGUILayout.ObjectField(
-                    "Clear Preset Icon", currentClear, typeof(Texture2D), allowSceneObjects: false);
-                if (newClear != currentClear)
-                {
-                    if (component)
-                    {
-                        Undo.RecordObject(component, "Change ASM-Lite Clear Preset Icon");
-                        component.customClearIcon = newClear;
-                        EditorUtility.SetDirty(component);
-                    }
-                    else { _pendingCustomClearIcon = newClear; }
+                    _pendingCustomIcons[i] = newTex;
                 }
             }
+
+            EditorGUILayout.HelpBox(
+                PresetIconOverridesHelpText,
+                MessageType.None);
+        }
+
+        /// <summary>
+        /// Draws Action Icon controls (Save/Load/Clear). Mode auto-derived:
+        /// any assigned icon => Custom, all empty => Default.
+        /// </summary>
+        private void DrawActionIcons(ASMLiteComponent component)
+        {
+            Texture2D currentSave = component ? component.customSaveIcon : _pendingCustomSaveIcon;
+            Texture2D currentLoad = component ? component.customLoadIcon : _pendingCustomLoadIcon;
+            Texture2D currentClear = component ? component.customClearIcon : _pendingCustomClearIcon;
+
+            var newSave = (Texture2D)EditorGUILayout.ObjectField(
+                "Save Icon", currentSave, typeof(Texture2D), allowSceneObjects: false);
+            var newLoad = (Texture2D)EditorGUILayout.ObjectField(
+                "Load Icon", currentLoad, typeof(Texture2D), allowSceneObjects: false);
+            var newClear = (Texture2D)EditorGUILayout.ObjectField(
+                ClearPresetIconFieldLabel, currentClear, typeof(Texture2D), allowSceneObjects: false);
+
+            ActionIconMode desiredMode = (newSave != null || newLoad != null || newClear != null)
+                ? ActionIconMode.Custom
+                : ActionIconMode.Default;
+
+            if (component)
+            {
+                bool changed = newSave != currentSave || newLoad != currentLoad || newClear != currentClear;
+                bool modeChanged = component.actionIconMode != desiredMode;
+
+                if (changed || modeChanged)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Action Icons");
+                    component.customSaveIcon = newSave;
+                    component.customLoadIcon = newLoad;
+                    component.customClearIcon = newClear;
+                    component.actionIconMode = desiredMode;
+                    EditorUtility.SetDirty(component);
+                }
+            }
+            else
+            {
+                _pendingCustomSaveIcon = newSave;
+                _pendingCustomLoadIcon = newLoad;
+                _pendingCustomClearIcon = newClear;
+                _pendingActionIconMode = desiredMode;
+            }
+
+            EditorGUILayout.HelpBox(
+                "Leave any icon field empty to use ASM-Lite's built-in icon for that action.",
+                MessageType.None);
         }
 
         // ── Wheel Preview ─────────────────────────────────────────────────────
@@ -509,11 +4607,29 @@ namespace ASMLite.Editor
         /// </summary>
         private void RefreshPreviewCache(
             int slotCount, IconMode iconMode, int gearIndex,
+            bool useCustomSlotIcons,
             ActionIconMode actionIconMode,
             Texture2D[] customIcons, Texture2D customSave, Texture2D customLoad, Texture2D customClear)
         {
             int modeInt       = (int)iconMode;
             int actionModeInt = (int)actionIconMode;
+
+            if (_previewFallback == null)
+            {
+                _previewFallback = new Texture2D(1, 1);
+                _previewFallback.SetPixel(0, 0, new Color(0.35f, 0.35f, 0.35f));
+                _previewFallback.Apply();
+            }
+
+            // Load bundled defaults once; used for preview fallback even in custom mode.
+            _cachedIconSave   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
+            _cachedIconLoad   ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
+            _cachedIconClear  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
+            _cachedFlowArrow  ??= AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/com.staples.asm-lite/Icons/FlowArrow.png");
+
+            Texture2D bundledSave   = _cachedIconSave ?? _previewFallback;
+            Texture2D bundledLoad   = _cachedIconLoad ?? _previewFallback;
+            Texture2D bundledClear  = _cachedIconClear ?? _previewFallback;
 
             bool dirty = _previewSlotCount      != slotCount
                       || _previewIconMode       != modeInt
@@ -523,70 +4639,90 @@ namespace ASMLite.Editor
             if (!dirty && _previewGearTextures != null
                 && _previewGearTextures.Length == slotCount)
             {
-                if (iconMode == IconMode.Custom && customIcons != null)
+                for (int i = 0; i < slotCount; i++)
                 {
-                    for (int i = 0; i < slotCount; i++)
+                    Texture2D expected;
+                    if (useCustomSlotIcons
+                        && customIcons != null
+                        && i < customIcons.Length
+                        && customIcons[i] != null)
                     {
-                        var expected = (i < customIcons.Length) ? customIcons[i] : null;
-                        if (_previewGearTextures[i] != expected) { dirty = true; break; }
+                        expected = customIcons[i];
                     }
+                    else
+                    {
+                        if (iconMode == IconMode.SameColor)
+                        {
+                            expected = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                                ASMLiteAssetPaths.GearIconPaths[gearIndex]) ?? _previewFallback;
+                        }
+                        else
+                        {
+                            expected = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                                ASMLiteAssetPaths.GearIconPaths[i % ASMLiteAssetPaths.GearIconPaths.Length]) ?? _previewFallback;
+                        }
+                    }
+
+                    if (_previewGearTextures[i] != expected) { dirty = true; break; }
                 }
-                if (actionIconMode == ActionIconMode.Custom
-                    && (_previewSaveIcon  != customSave
-                     || _previewLoadIcon  != customLoad
-                     || _previewClearIcon != customClear))
+
+                Texture2D expectedSave = actionIconMode == ActionIconMode.Custom
+                    ? (customSave ?? bundledSave)
+                    : bundledSave;
+                Texture2D expectedLoad = actionIconMode == ActionIconMode.Custom
+                    ? (customLoad ?? bundledLoad)
+                    : bundledLoad;
+                Texture2D expectedClear = actionIconMode == ActionIconMode.Custom
+                    ? (customClear ?? bundledClear)
+                    : bundledClear;
+
+                if (_previewSaveIcon != expectedSave
+                    || _previewLoadIcon != expectedLoad
+                    || _previewClearIcon != expectedClear)
                     dirty = true;
             }
             else dirty = true;
 
             if (!dirty) return;
 
-            if (_previewFallback == null)
-            {
-                _previewFallback = new Texture2D(1, 1);
-                _previewFallback.SetPixel(0, 0, new Color(0.35f, 0.35f, 0.35f));
-                _previewFallback.Apply();
-            }
-
             _previewGearTextures = new Texture2D[slotCount];
             for (int slot = 1; slot <= slotCount; slot++)
             {
                 Texture2D tex = null;
-                switch (iconMode)
+                int idx = slot - 1;
+
+                if (useCustomSlotIcons
+                    && customIcons != null
+                    && idx < customIcons.Length
+                    && customIcons[idx] != null)
                 {
-                    case IconMode.SameColor:
-                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                            ASMLiteAssetPaths.GearIconPaths[gearIndex]);
-                        break;
-                    case IconMode.MultiColor:
-                        tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-                            ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length]);
-                        break;
-                    case IconMode.Custom:
-                        int idx = slot - 1;
-                        if (customIcons != null && idx < customIcons.Length)
-                            tex = customIcons[idx];
-                        break;
+                    tex = customIcons[idx];
                 }
-                _previewGearTextures[slot - 1] = tex != null ? tex : _previewFallback;
+                else if (iconMode == IconMode.SameColor)
+                {
+                    tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[gearIndex]);
+                }
+                else
+                {
+                    tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+                        ASMLiteAssetPaths.GearIconPaths[idx % ASMLiteAssetPaths.GearIconPaths.Length]);
+                }
+
+                _previewGearTextures[idx] = tex != null ? tex : _previewFallback;
             }
 
             if (actionIconMode == ActionIconMode.Custom)
             {
-                _previewSaveIcon  = customSave  != null ? customSave  : _previewFallback;
-                _previewLoadIcon  = customLoad  != null ? customLoad  : _previewFallback;
-                _previewClearIcon = customClear != null ? customClear : _previewFallback;
+                _previewSaveIcon  = customSave  != null ? customSave  : bundledSave;
+                _previewLoadIcon  = customLoad  != null ? customLoad  : bundledLoad;
+                _previewClearIcon = customClear != null ? customClear : bundledClear;
             }
             else
             {
-                // Load once and hold -- these paths never change. The ??= null check
-                // also handles post-domain-reload resets (Unity clears instance fields).
-                _cachedIconSave  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconSave);
-                _cachedIconLoad  ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconLoad);
-                _cachedIconClear ??= AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
-                _previewSaveIcon  = _cachedIconSave  ?? _previewFallback;
-                _previewLoadIcon  = _cachedIconLoad  ?? _previewFallback;
-                _previewClearIcon = _cachedIconClear ?? _previewFallback;
+                _previewSaveIcon  = bundledSave;
+                _previewLoadIcon  = bundledLoad;
+                _previewClearIcon = bundledClear;
             }
 
             _previewSlotCount      = slotCount;
@@ -596,92 +4732,173 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Draws a VRC-style radial menu preview: main slot wheel and inset
-        /// Save/Load/Clear sub-wheel for slot 1.
+        /// Draws expression menu preview flow: Root Menu → Slots Menu → Action Submenu.
+        /// All three dials use same size and sit in one horizontal flow with arrows.
         /// </summary>
         private void DrawWheelPreview()
         {
+            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
+            EditorGUILayout.LabelField(PreviewFlowSubtitle, EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(6f);
+
+            float availWidth = EditorGUIUtility.currentViewWidth - 40f;
+            const float connectorWidth = 60f;
+            const float gap = 8f;
+            const float titleHeight = 16f;
+
+            float dialSize = Mathf.Clamp((availWidth - (connectorWidth * 2f) - (gap * 4f)) / 3f, 120f, 220f);
+            float rootIconSize = Mathf.Clamp(dialSize * 0.22f, 28f, 54f);
+
+            float totalWidth = dialSize * 3f + connectorWidth * 2f + gap * 4f;
+            float rowHeight = titleHeight + dialSize + 2f;
+            Rect rowRect = GUILayoutUtility.GetRect(0f, rowHeight, GUILayout.ExpandWidth(true));
+
+            if (!ShouldRenderWheelPreview(Event.current.type))
+                return;
+
             var component = GetOrRefreshComponent();
 
-            int            slotCount   = component ? component.slotCount          : _pendingSlotCount;
-            IconMode       iconMode    = component ? component.iconMode            : _pendingIconMode;
-            int            gearIndex   = component ? component.selectedGearIndex   : _pendingSelectedGearIndex;
-            ActionIconMode actionMode  = component ? component.actionIconMode      : _pendingActionIconMode;
+            int            slotCount   = component ? component.slotCount        : _pendingSlotCount;
+            IconMode       iconMode    = component ? component.iconMode          : _pendingIconMode;
+            int            gearIndex   = component ? component.selectedGearIndex : _pendingSelectedGearIndex;
+            bool           useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+            ActionIconMode actionMode  = ResolvePreviewActionIconMode(
+                component,
+                _pendingUseCustomSlotIcons,
+                _pendingActionIconMode);
             Texture2D[]    customIcons = component ? component.customIcons         : _pendingCustomIcons;
             Texture2D      customSave  = component ? component.customSaveIcon      : _pendingCustomSaveIcon;
             Texture2D      customLoad  = component ? component.customLoadIcon      : _pendingCustomLoadIcon;
             Texture2D      customClear = component ? component.customClearIcon     : _pendingCustomClearIcon;
 
-            RefreshPreviewCache(slotCount, iconMode, gearIndex, actionMode,
+            RefreshPreviewCache(slotCount, iconMode, gearIndex, useCustomSlotIcons, actionMode,
                 customIcons, customSave, customLoad, customClear);
 
-            // Load back arrow once.
             if (_previewBackIcon == null)
                 _previewBackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(
                     ASMLiteAssetPaths.IconBackArrow) ?? _previewFallback;
 
-            EditorGUILayout.LabelField("Expression Menu Preview", EditorStyles.miniBoldLabel);
-            EditorGUILayout.LabelField(
-                "Preview of generated menu icon placement.",
-                EditorStyles.wordWrappedMiniLabel);
-            EditorGUILayout.Space(4);
+            Texture2D rootFallbackIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets) ?? _previewFallback;
+            Texture2D rootPreviewIcon = component
+                ? ASMLiteBuilder.ResolveEffectiveRootControlIcon(component, rootFallbackIcon)
+                : ((useCustomSlotIcons && _pendingCustomRootIcon != null) ? _pendingCustomRootIcon : rootFallbackIcon);
+            string rootPreviewName = ResolveEffectiveRootNameForPreview(component);
+            string[] actionLabels = ResolveEffectiveActionLabelsForPreview(component);
 
-            float availWidth = EditorGUIUtility.currentViewWidth - 32f;
+            float startX = rowRect.x + Mathf.Max(0f, (rowRect.width - totalWidth) * 0.5f);
+            float y = rowRect.y;
 
-            // GestureManager canonical size is 300px. Keep the preview one step
-            // smaller than the settings controls so it reads as confirmation,
-            // not the primary focal point.
-            float mainSize = Mathf.Clamp(availWidth * 0.46f, 150f, 260f);
-            float subSize  = Mathf.Round(mainSize * 0.46f);
+            Rect rootDialRect = new Rect(startX, y + titleHeight, dialSize, dialSize);
+            Rect arrow1Rect = new Rect(rootDialRect.xMax + gap, rootDialRect.y, connectorWidth, dialSize);
+            Rect presetsDialRect = new Rect(arrow1Rect.xMax + gap, rootDialRect.y, dialSize, dialSize);
+            Rect arrow2Rect = new Rect(presetsDialRect.xMax + gap, rootDialRect.y, connectorWidth, dialSize);
+            Rect actionDialRect = new Rect(arrow2Rect.xMax + gap, rootDialRect.y, dialSize, dialSize);
 
-            Rect rowRect = GUILayoutUtility.GetRect(availWidth, mainSize + subSize * 0.35f + 4f);
+            var titleStyle = new GUIStyle(EditorStyles.miniBoldLabel) { alignment = TextAnchor.UpperCenter };
+            GUI.Label(new Rect(rootDialRect.x, y, rootDialRect.width, titleHeight), "Root Menu", titleStyle);
+            GUI.Label(new Rect(presetsDialRect.x, y, presetsDialRect.width, titleHeight), PreviewMiddleDialTitle, titleStyle);
+            GUI.Label(new Rect(actionDialRect.x, y, actionDialRect.width, titleHeight), "Action Submenu", titleStyle);
 
-            // Main wheel: left-center.
-            Rect mainRect = new Rect(
-                rowRect.x + availWidth * 0.24f - mainSize * 0.5f,
-                rowRect.y,
-                mainSize, mainSize);
-
-            // Sub-wheel: offset down and right so it reads as a drill-down from the main wheel.
-            Rect subRect = new Rect(
-                rowRect.x + availWidth * 0.63f,
-                rowRect.y + mainSize * 0.36f,
-                subSize, subSize);
-
-            if (Event.current.type != EventType.Repaint)
-                return;
-
-            // Main wheel: Back at top, then user slot icons.
-            // Rebuild cached arrays only when size or content changed (handled by
-            // RefreshPreviewCache above which sets _previewSlotCount when dirty).
             if (_mainWheelIcons == null || _mainWheelIcons.Length != slotCount + 1
                 || _mainWheelLabels == null || _mainWheelLabels.Length != slotCount + 1)
             {
                 _mainWheelIcons  = new Texture2D[slotCount + 1];
                 _mainWheelLabels = new string[slotCount + 1];
-                _mainWheelLabels[0] = "Back";
-                for (int i = 0; i < slotCount; i++)
-                    _mainWheelLabels[i + 1] = $"Slot {i + 1}";
             }
+
+            _mainWheelLabels[0] = "Back";
+            for (int i = 0; i < slotCount; i++)
+            {
+                _mainWheelLabels[i + 1] = component
+                    ? ASMLiteBuilder.ResolveEffectivePresetControlName(component, i + 1)
+                    : ResolveEffectivePendingPresetLabelForPreview(i);
+            }
+
             _mainWheelIcons[0] = _previewBackIcon;
             for (int i = 0; i < slotCount; i++)
                 _mainWheelIcons[i + 1] = _previewGearTextures[i];
 
-            DrawRadialWheel(mainRect, _mainWheelIcons, _mainWheelLabels);
+            DrawRootDialPreview(rootDialRect, rootPreviewIcon, rootPreviewName, rootIconSize);
+            DrawFlowArrow(arrow1Rect);
+            DrawRadialWheel(presetsDialRect, _mainWheelIcons, _mainWheelLabels);
+            DrawFlowArrow(arrow2Rect);
+            DrawRadialWheel(actionDialRect, new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon }, actionLabels);
+        }
 
-            // Sub-wheel: Back at top, then Save/Load/Clear.
-            // Icon array must be rebuilt each repaint (action icons can change), but
-            // the label array is static readonly -- no per-frame allocation.
-            var subIcons = new[] { _previewBackIcon, _previewSaveIcon, _previewLoadIcon, _previewClearIcon };
-            DrawRadialWheel(subRect, subIcons, s_subWheelLabels);
+        private void DrawRootDialPreview(Rect cropRect, Texture2D icon, string rootName, float iconSize)
+        {
+            // Clip all drawing to crop rect so overhang is naturally cut off.
+            GUI.BeginGroup(cropRect);
 
-            // Connector line.
-            var origHandles = Handles.color;
-            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.6f);
-            Handles.DrawLine(
-                new Vector3(mainRect.xMax, mainRect.center.y),
-                new Vector3(subRect.xMin,  subRect.center.y));
-            Handles.color = origHandles;
+            // Zoomed crop of left wheel segment (Slot-3-like wedge).
+            float cx = cropRect.width * 0.90f;
+            float cy = cropRect.height * 0.50f;
+
+            // Keep original circle scale; clipping removes overhang.
+            float outerR = Mathf.Min(cropRect.width, cropRect.height) * 0.90f;
+            float innerR = outerR / 3f;
+
+            var oldHandles = Handles.color;
+
+            // Fill dial body only (outside curve remains transparent).
+            Handles.color = s_wheelColorMain;
+            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, outerR - 1f);
+
+            Handles.color = new Color(s_wheelColorBorder.r, s_wheelColorBorder.g, s_wheelColorBorder.b, 0.55f);
+
+            float a1 = Mathf.Deg2Rad * 135f;
+            float a2 = Mathf.Deg2Rad * 225f;
+            var p1Inner = new Vector3(cx + Mathf.Cos(a1) * innerR, cy + Mathf.Sin(a1) * innerR, 0f);
+            var p1Outer = new Vector3(cx + Mathf.Cos(a1) * (outerR - 1f), cy + Mathf.Sin(a1) * (outerR - 1f), 0f);
+            var p2Inner = new Vector3(cx + Mathf.Cos(a2) * innerR, cy + Mathf.Sin(a2) * innerR, 0f);
+            var p2Outer = new Vector3(cx + Mathf.Cos(a2) * (outerR - 1f), cy + Mathf.Sin(a2) * (outerR - 1f), 0f);
+            Handles.DrawLine(p1Inner, p1Outer);
+            Handles.DrawLine(p2Inner, p2Outer);
+
+            Handles.color = s_wheelColorBorder;
+            Handles.DrawWireArc(new Vector3(cx, cy, 0f), Vector3.forward, new Vector3(Mathf.Cos(a1), Mathf.Sin(a1), 0f), 90f, outerR - 1f);
+
+            Handles.color = s_wheelColorInner;
+            Handles.DrawSolidDisc(new Vector3(cx, cy, 0f), Vector3.forward, innerR);
+            Handles.color = s_wheelColorBorder;
+            Handles.DrawWireDisc(new Vector3(cx, cy, 0f), Vector3.forward, innerR);
+            Handles.color = oldHandles;
+
+            // Icon centered in zoomed wedge around 180°.
+            float iconRadius = outerR * 0.66f;
+            float ix = cx - iconRadius - iconSize * 0.5f;
+            float iy = cy - iconSize * 0.5f;
+            Rect iconRect = new Rect(ix, iy, iconSize, iconSize);
+            GUI.DrawTexture(iconRect, icon ?? _previewFallback, ScaleMode.ScaleToFit, true);
+
+            string displayName = string.IsNullOrWhiteSpace(rootName)
+                ? ASMLiteBuilder.DefaultRootControlName
+                : rootName;
+            var centeredMini = new GUIStyle(EditorStyles.miniLabel)
+            {
+                alignment = TextAnchor.UpperCenter
+            };
+            Rect labelRect = new Rect(iconRect.x - 24f, iconRect.yMax + 2f, iconRect.width + 48f, 16f);
+            GUI.Label(labelRect, displayName, centeredMini);
+
+            GUI.EndGroup();
+        }
+
+             private void DrawFlowArrow(Rect rect)
+        {
+            // Draw cached arrow icon centered in rect with small margin.
+            if (_cachedFlowArrow != null)
+            {
+                float margin = 8f;
+                float iconWidth = rect.width - margin * 2f;
+                float iconHeight = rect.height - margin * 2f;
+                Rect iconRect = new Rect(
+                    rect.center.x - iconWidth * 0.5f,
+                    rect.center.y - iconHeight * 0.5f,
+                    iconWidth,
+                    iconHeight);
+                GUI.DrawTexture(iconRect, _cachedFlowArrow, ScaleMode.ScaleToFit);
+            }
         }
 
         /// <summary>
@@ -707,10 +4924,9 @@ namespace ASMLite.Editor
             var origColor   = GUI.color;
             var origHandles = Handles.color;
 
-            // Background fill (full circle approximated by square: Handles clips it).
-            GUI.color = s_wheelColorMain;
-            GUI.DrawTexture(rect, Texture2D.whiteTexture);
-            GUI.color = origColor;
+            // Fill dial body only (outside circle stays transparent).
+            Handles.color = s_wheelColorMain;
+            Handles.DrawSolidDisc(new Vector3(cx, cy), Vector3.forward, outerR - 1f);
 
             // Outer ring.
             Handles.color = s_wheelColorBorder;
@@ -734,7 +4950,7 @@ namespace ASMLite.Editor
             Handles.DrawWireDisc(new Vector3(cx, cy), Vector3.forward, innerR);
 
             // Icons and labels.
-            // Reuse cached GUIStyle -- only update fontSize (depends on scale).
+            // Reuse cached GUIStyle. Only update fontSize (depends on scale).
             if (_radialLabelStyle == null)
             {
                 _radialLabelStyle = new GUIStyle(EditorStyles.miniLabel)
@@ -768,52 +4984,98 @@ namespace ASMLite.Editor
             GUI.color     = origColor;
         }
 
+        private int GetEffectiveBackedUpParameterCount(ASMLiteComponent component)
+        {
+            if (_selectedAvatar == null)
+                return -1;
+
+            var exprParams = _selectedAvatar.expressionParameters;
+            if (exprParams == null || exprParams.parameters == null)
+                return -1;
+
+            bool useExclusions = component ? component.useParameterExclusions : _pendingUseParameterExclusions;
+            if (!useExclusions)
+            {
+                var discovered = ASMLiteBuilder.GetFinalAvatarParams(_selectedAvatar, null, out _);
+                return discovered?.Count ?? 0;
+            }
+
+            string[] rawExcluded = component
+                ? SanitizeExcludedParameterNames(component.excludedParameterNames)
+                : SanitizeExcludedParameterNames(_pendingExcludedParameterNames);
+
+            var canonicalExcluded = new HashSet<string>(StringComparer.Ordinal);
+            if (rawExcluded != null)
+            {
+                for (int i = 0; i < rawExcluded.Length; i++)
+                {
+                    var candidate = rawExcluded[i];
+                    if (!string.IsNullOrWhiteSpace(candidate))
+                        canonicalExcluded.Add(candidate);
+                }
+            }
+
+            var expandedExcluded = ExpandExcludedNamesWithToggleMappingsForUi(canonicalExcluded);
+            var filtered = ASMLiteBuilder.GetFinalAvatarParams(_selectedAvatar, expandedExcluded, out _);
+            return filtered?.Count ?? 0;
+        }
+
+        private static HashSet<string> ExpandExcludedNamesWithToggleMappingsForUi(HashSet<string> excludedCanonicalNames)
+        {
+            var expanded = excludedCanonicalNames != null
+                ? new HashSet<string>(excludedCanonicalNames, StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+
+            if (expanded.Count == 0)
+                return expanded;
+
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return expanded;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                bool excludeOriginal = expanded.Contains(mapping.OriginalGlobalParam);
+                bool excludeAssigned = expanded.Contains(mapping.AssignedGlobalParam);
+                if (!excludeOriginal && !excludeAssigned)
+                    continue;
+
+                expanded.Add(mapping.OriginalGlobalParam);
+                expanded.Add(mapping.AssignedGlobalParam);
+            }
+
+            return expanded;
+        }
+
         private void DrawStatus()
         {
             EditorGUILayout.LabelField("Status", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(
+                "Use this section to confirm whether the avatar is attached, baked-only, or vendorized before taking action.",
+                EditorStyles.wordWrappedMiniLabel);
+            EditorGUILayout.Space(4);
 
             var component = GetOrRefreshComponent();
+            bool hasComponent = component;
+            var toolState = GetOrRefreshToolState(component);
 
-            if (component)
+            int? backedUpCount = null;
+            bool parameterImportPending = false;
+
+            if (hasComponent)
             {
-                EditorGUILayout.HelpBox(
-                    "✓ ASM-Lite prefab is present on this avatar.",
-                    MessageType.Info);
-
                 // Guard against mid-reimport state: expressionParameters or its
                 // parameters array can be transiently null while Unity is importing.
                 try
                 {
-                    if (_discoveredParamCount >= 0)
-                    {
-                        // Post-build count: includes VRCFury Toggle/FullController params.
-                        EditorGUILayout.HelpBox(
-                            $"✓ {_discoveredParamCount} custom parameter(s) backed up across " +
-                            $"{component.slotCount} slot(s).",
-                            MessageType.Info);
-                    }
-                    else
-                    {
-                        var exprParams = _selectedAvatar.expressionParameters;
-                        if (exprParams != null && exprParams.parameters != null)
-                        {
-                            if (_cachedCustomParamCount < 0)
-                            {
-                                _cachedCustomParamCount = exprParams.parameters
-                                    .Count(p => !string.IsNullOrEmpty(p.name) && !p.name.StartsWith("ASMLite_", StringComparison.Ordinal));
-                            }
-
-                            EditorGUILayout.HelpBox(
-                                $"✓ {_cachedCustomParamCount} custom parameter(s) detected: rebuild to include VRCFury parameters.",
-                                MessageType.Info);
-                        }
-                        else
-                        {
-                            EditorGUILayout.HelpBox(
-                                "⚠ No VRCExpressionParameters asset assigned on avatar descriptor.",
-                                MessageType.Warning);
-                        }
-                    }
+                    int computedCount = GetEffectiveBackedUpParameterCount(component);
+                    if (computedCount >= 0)
+                        backedUpCount = computedCount;
                 }
                 catch (System.Exception ex)
                 {
@@ -826,88 +5088,509 @@ namespace ASMLite.Editor
                         Debug.LogWarning($"[ASM-Lite] Expression parameters draw failed: {ex.GetType().Name}: {ex.Message}");
                         Repaint();
                     }
-                    EditorGUILayout.HelpBox(
-                        "⚠ Expression parameters are currently being imported. Please wait.",
-                        MessageType.Warning);
-                }
 
-                DrawToggleBrokerStatus();
+                    parameterImportPending = true;
+                }
             }
-            else
+
+            bool hasToggleBrokerReport = ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var toggleBrokerReport);
+            var snapshot = BuildStatusPanelSnapshot(new StatusPanelSnapshotInput(
+                toolState,
+                hasComponent,
+                component != null ? component.slotCount : 0,
+                _discoveredParamCount,
+                backedUpCount,
+                parameterImportPending,
+                hasToggleBrokerReport,
+                toggleBrokerReport.PreReservedNameCount,
+                toggleBrokerReport.PreflightCollisionAdjustments,
+                toggleBrokerReport.CandidateCollisionAdjustments));
+
+            EditorGUILayout.HelpBox(BuildCombinedStatusMessage(snapshot), ToMessageType(GetCombinedStatusSeverity(snapshot)));
+        }
+
+        private static string ResolveStatusCopy(ASMLiteInstallationState toolState, bool hasComponent)
+        {
+            switch (toolState)
             {
-                EditorGUILayout.HelpBox(
-                    "ASM-Lite prefab has not been added to this avatar yet.\n" +
-                    "Configure settings above, then click \"Add ASM-Lite Prefab\".",
-                    MessageType.Warning);
+                case ASMLiteInstallationState.PackageManaged:
+                    return StatusPackageManagedText;
+                case ASMLiteInstallationState.Vendorized:
+                    return hasComponent ? StatusVendorizedAttachedText : StatusVendorizedDetachedText;
+                case ASMLiteInstallationState.Detached:
+                    return StatusDetachedText;
+                default:
+                    return StatusNotInstalledText;
             }
         }
 
-        private void DrawToggleBrokerStatus()
+        private static MessageType ResolveStatusMessageType(ASMLiteInstallationState toolState)
         {
-            if (!ASMLiteToggleNameBroker.TryGetLatestEnrollmentReport(out var report))
-                return;
+            return toolState == ASMLiteInstallationState.NotInstalled
+                ? MessageType.None
+                : MessageType.Info;
+        }
 
-            int totalAdjustments = report.PreflightCollisionAdjustments + report.CandidateCollisionAdjustments;
-            if (totalAdjustments > 0)
+        internal enum StatusDetailSeverity
+        {
+            Neutral,
+            Info,
+            Warning,
+            Error,
+        }
+
+        internal readonly struct StatusDetailEntry
+        {
+            public StatusDetailEntry(string text, StatusDetailSeverity severity)
             {
-                EditorGUILayout.HelpBox(
-                    $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) and adjusted deterministic assignments: preflight={report.PreflightCollisionAdjustments}, intra-candidate={report.CandidateCollisionAdjustments}.",
-                    MessageType.Warning);
-                return;
+                Text = text ?? string.Empty;
+                Severity = severity;
             }
 
-            EditorGUILayout.HelpBox(
-                $"[Toggle Broker] Last enrollment reserved {report.PreReservedNameCount} descriptor name(s) with no deterministic suffix adjustments needed.",
-                MessageType.None);
+            public string Text { get; }
+            public StatusDetailSeverity Severity { get; }
+        }
+
+        internal readonly struct StatusPanelSnapshotInput
+        {
+            public StatusPanelSnapshotInput(
+                ASMLiteInstallationState toolState,
+                bool hasComponent,
+                int slotCount,
+                int discoveredParamCount,
+                int? backedUpCount,
+                bool parameterImportPending,
+                bool hasToggleBrokerReport,
+                int toggleBrokerPreReservedNameCount,
+                int toggleBrokerPreflightCollisionAdjustments,
+                int toggleBrokerCandidateCollisionAdjustments)
+            {
+                ToolState = toolState;
+                HasComponent = hasComponent;
+                SlotCount = slotCount;
+                DiscoveredParamCount = discoveredParamCount;
+                BackedUpCount = backedUpCount;
+                ParameterImportPending = parameterImportPending;
+                HasToggleBrokerReport = hasToggleBrokerReport;
+                ToggleBrokerPreReservedNameCount = toggleBrokerPreReservedNameCount;
+                ToggleBrokerPreflightCollisionAdjustments = toggleBrokerPreflightCollisionAdjustments;
+                ToggleBrokerCandidateCollisionAdjustments = toggleBrokerCandidateCollisionAdjustments;
+            }
+
+            public ASMLiteInstallationState ToolState { get; }
+            public bool HasComponent { get; }
+            public int SlotCount { get; }
+            public int DiscoveredParamCount { get; }
+            public int? BackedUpCount { get; }
+            public bool ParameterImportPending { get; }
+            public bool HasToggleBrokerReport { get; }
+            public int ToggleBrokerPreReservedNameCount { get; }
+            public int ToggleBrokerPreflightCollisionAdjustments { get; }
+            public int ToggleBrokerCandidateCollisionAdjustments { get; }
+        }
+
+        internal readonly struct StatusPanelSnapshot
+        {
+            public StatusPanelSnapshot(string summaryText, StatusDetailSeverity summarySeverity, StatusDetailEntry[] detailEntries)
+            {
+                SummaryText = summaryText ?? string.Empty;
+                SummarySeverity = summarySeverity;
+                DetailEntries = detailEntries ?? Array.Empty<StatusDetailEntry>();
+            }
+
+            public string SummaryText { get; }
+            public StatusDetailSeverity SummarySeverity { get; }
+            public StatusDetailEntry[] DetailEntries { get; }
+        }
+
+        internal static StatusPanelSnapshot BuildStatusPanelSnapshot(StatusPanelSnapshotInput input)
+        {
+            var details = new List<StatusDetailEntry>();
+
+            if (input.HasComponent)
+            {
+                details.Add(new StatusDetailEntry(AttachedComponentInfoText, StatusDetailSeverity.Info));
+
+                if (input.ParameterImportPending)
+                {
+                    details.Add(new StatusDetailEntry(ParameterImportPendingWarningText, StatusDetailSeverity.Warning));
+                }
+                else if (input.BackedUpCount.HasValue)
+                {
+                    details.Add(new StatusDetailEntry(
+                        string.Format(AttachedCountSummaryFormat, input.BackedUpCount.Value, input.SlotCount),
+                        StatusDetailSeverity.Info));
+
+                    if (input.DiscoveredParamCount < 0)
+                    {
+                        details.Add(new StatusDetailEntry(
+                            DescriptorCountSourceText,
+                            StatusDetailSeverity.Neutral));
+                    }
+                }
+                else
+                {
+                    details.Add(new StatusDetailEntry(
+                        MissingExpressionParametersWarningText,
+                        StatusDetailSeverity.Warning));
+                }
+
+                if (input.HasToggleBrokerReport)
+                {
+                    int totalAdjustments = input.ToggleBrokerPreflightCollisionAdjustments + input.ToggleBrokerCandidateCollisionAdjustments;
+                    if (totalAdjustments > 0)
+                    {
+                        details.Add(new StatusDetailEntry(
+                            string.Format(
+                                ToggleBrokerCollisionWarningFormat,
+                                input.ToggleBrokerPreReservedNameCount,
+                                input.ToggleBrokerPreflightCollisionAdjustments,
+                                input.ToggleBrokerCandidateCollisionAdjustments),
+                            StatusDetailSeverity.Warning));
+                    }
+                    else
+                    {
+                        details.Add(new StatusDetailEntry(
+                            string.Format(ToggleBrokerNoCollisionInfoFormat, input.ToggleBrokerPreReservedNameCount),
+                            StatusDetailSeverity.Neutral));
+                    }
+                }
+            }
+            else if (input.ToolState == ASMLiteInstallationState.Detached || input.ToolState == ASMLiteInstallationState.Vendorized)
+            {
+                details.Add(new StatusDetailEntry(DetachedOrVendorizedNoComponentText, StatusDetailSeverity.Info));
+            }
+            else if (input.ToolState == ASMLiteInstallationState.NotInstalled)
+            {
+                details.Add(new StatusDetailEntry(NotInstalledNoComponentText, StatusDetailSeverity.Warning));
+            }
+
+            var summarySeverity = ResolveStatusMessageType(input.ToolState) == MessageType.None
+                ? StatusDetailSeverity.Neutral
+                : StatusDetailSeverity.Info;
+
+            return new StatusPanelSnapshot(
+                ResolveStatusCopy(input.ToolState, input.HasComponent),
+                summarySeverity,
+                details.ToArray());
+        }
+
+        internal static string BuildCombinedStatusMessage(StatusPanelSnapshot snapshot)
+        {
+            var lines = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(snapshot.SummaryText))
+                lines.Add(snapshot.SummaryText.Trim());
+
+            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+            {
+                string detailText = snapshot.DetailEntries[i].Text;
+                if (!string.IsNullOrWhiteSpace(detailText))
+                    lines.Add($"• {detailText.Trim()}");
+            }
+
+            return string.Join("\n", lines);
+        }
+
+        internal static StatusDetailSeverity GetCombinedStatusSeverity(StatusPanelSnapshot snapshot)
+        {
+            StatusDetailSeverity highest = snapshot.SummarySeverity;
+
+            for (int i = 0; i < snapshot.DetailEntries.Length; i++)
+            {
+                if ((int)snapshot.DetailEntries[i].Severity > (int)highest)
+                    highest = snapshot.DetailEntries[i].Severity;
+            }
+
+            return highest;
+        }
+
+        private static MessageType ToMessageType(StatusDetailSeverity severity)
+        {
+            switch (severity)
+            {
+                case StatusDetailSeverity.Info:
+                    return MessageType.Info;
+                case StatusDetailSeverity.Warning:
+                    return MessageType.Warning;
+                case StatusDetailSeverity.Error:
+                    return MessageType.Error;
+                default:
+                    return MessageType.None;
+            }
+        }
+
+        internal enum NamingGroupFlowState
+        {
+            Attached,
+            PendingInstall,
+        }
+
+        internal readonly struct NamingGroupSectionSnapshot
+        {
+            public NamingGroupSectionSnapshot(string header, string[] orderedFieldLabels)
+            {
+                Header = header ?? string.Empty;
+                OrderedFieldLabels = orderedFieldLabels ?? Array.Empty<string>();
+            }
+
+            public string Header { get; }
+            public string[] OrderedFieldLabels { get; }
+        }
+
+        internal readonly struct NamingGroupSnapshot
+        {
+            public NamingGroupSnapshot(NamingGroupFlowState flowState, NamingGroupSectionSnapshot[] sections, string fallbackGuidance)
+            {
+                FlowState = flowState;
+                Sections = sections ?? Array.Empty<NamingGroupSectionSnapshot>();
+                FallbackGuidance = fallbackGuidance ?? string.Empty;
+
+                var flattened = new List<string>();
+                for (int i = 0; i < Sections.Length; i++)
+                {
+                    var section = Sections[i];
+                    for (int j = 0; j < section.OrderedFieldLabels.Length; j++)
+                        flattened.Add(section.OrderedFieldLabels[j]);
+                }
+
+                OrderedFieldLabels = flattened.ToArray();
+            }
+
+            public NamingGroupFlowState FlowState { get; }
+            public NamingGroupSectionSnapshot[] Sections { get; }
+            public string[] OrderedFieldLabels { get; }
+            public string FallbackGuidance { get; }
+        }
+
+        internal static NamingGroupSnapshot GetNamingGroupSnapshot(NamingGroupFlowState flowState, int presetCount)
+        {
+            int normalizedPresetCount = Mathf.Max(1, presetCount);
+
+            var sections = new[]
+            {
+                new NamingGroupSectionSnapshot(NamingSectionRootHeader, new[] { RootMenuFieldLabel }),
+                new NamingGroupSectionSnapshot(NamingSectionPresetHeader, BuildPresetNameFieldLabels(normalizedPresetCount)),
+                new NamingGroupSectionSnapshot(
+                    NamingSectionActionHeader,
+                    new[] { SaveFieldLabel, LoadFieldLabel, ClearPresetLabel, ConfirmFieldLabel }),
+            };
+
+            return new NamingGroupSnapshot(flowState, sections, NameFallbackGuidanceText);
+        }
+
+        private static string[] BuildPresetNameFieldLabels(int presetCount)
+        {
+            int normalizedPresetCount = Mathf.Max(1, presetCount);
+            var fieldLabels = new string[normalizedPresetCount];
+            for (int i = 0; i < normalizedPresetCount; i++)
+                fieldLabels[i] = string.Format(PresetNameLabelFormat, i + 1);
+
+            return fieldLabels;
+        }
+
+        internal readonly struct TerminologySnapshot
+        {
+            public TerminologySnapshot(string[] alwaysVisibleCopy, string[] stateSpecificCopy)
+            {
+                AlwaysVisibleCopy = alwaysVisibleCopy ?? Array.Empty<string>();
+                StateSpecificCopy = stateSpecificCopy ?? Array.Empty<string>();
+            }
+
+            public string[] AlwaysVisibleCopy { get; }
+            public string[] StateSpecificCopy { get; }
+
+            public IEnumerable<string> EnumerateAllCopy()
+            {
+                for (int i = 0; i < AlwaysVisibleCopy.Length; i++)
+                    yield return AlwaysVisibleCopy[i];
+
+                for (int i = 0; i < StateSpecificCopy.Length; i++)
+                    yield return StateSpecificCopy[i];
+            }
+        }
+
+        internal static TerminologySnapshot GetTerminologySnapshot(ASMLiteInstallationState toolState, bool hasComponent)
+        {
+            var alwaysVisible = new[]
+            {
+                s_slotCountLabelActive.text,
+                s_slotCountLabelPending.text,
+                s_slotCountLabelActive.tooltip,
+                s_slotCountLabelPending.tooltip,
+                ChangedPresetCountHelpText,
+                SlotColorLegendHelpText,
+                PreviewFlowSubtitle,
+                PreviewMiddleDialTitle,
+                PresetIconsFoldoutTitle,
+                string.Format(PresetNameLabelFormat, 1),
+                ClearPresetLabel,
+                string.Format(PresetIconFieldLabelFormat, 1),
+                ClearPresetIconFieldLabel,
+                PresetIconOverridesHelpText,
+                AttachedCountSummaryFormat,
+                DetachDescriptionText,
+            };
+
+            var stateSpecific = new List<string>
+            {
+                ResolveStatusCopy(toolState, hasComponent),
+            };
+
+            if (toolState == ASMLiteInstallationState.Detached || toolState == ASMLiteInstallationState.Vendorized)
+                stateSpecific.Add(DetachedOrVendorizedNoComponentText);
+
+            if (toolState == ASMLiteInstallationState.NotInstalled)
+                stateSpecific.Add(NotInstalledNoComponentText);
+
+            return new TerminologySnapshot(alwaysVisible, stateSpecific.ToArray());
         }
 
         private void DrawActionButton()
         {
             var component = GetOrRefreshComponent();
+            var toolState = GetOrRefreshToolState(component);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
 
-            if (component)
+            EditorGUILayout.BeginVertical("box");
+            for (int i = 0; i < hierarchy.PrimaryDescriptors.Length; i++)
             {
-                // Two-button layout: Rebuild and Remove
-                EditorGUILayout.BeginHorizontal();
+                if (hierarchy.PrimaryDescriptors[i].IsVisible)
+                    DrawActionControl(hierarchy.PrimaryDescriptors[i], component, toolState);
+            }
+            EditorGUILayout.EndVertical();
 
-                if (GUILayout.Button("Rebuild ASM-Lite", GUILayout.Height(36), GUILayout.MinWidth(220)))
+            if (!hierarchy.HasAdvancedActions)
+                return;
+
+            EditorGUILayout.Space(8f);
+            EditorGUILayout.LabelField("Maintenance / Advanced", EditorStyles.miniBoldLabel);
+            EditorGUILayout.Space(2f);
+
+            EditorGUILayout.BeginVertical("box");
+            _showAdvancedActions = EditorGUILayout.Foldout(_showAdvancedActions, "Advanced Actions", true);
+            if (_showAdvancedActions)
+            {
+                EditorGUILayout.Space(6f);
+                for (int i = 0; i < hierarchy.AdvancedDescriptors.Length; i++)
                 {
-                    // Defer past the current OnGUI pass so AssetDatabase operations
-                    // don't corrupt the layout group stack mid-frame.
-                    var captured = component;
-                    EditorApplication.delayCall += () => BakeAssets(captured);
+                    if (hierarchy.AdvancedDescriptors[i].IsVisible)
+                        DrawActionControl(hierarchy.AdvancedDescriptors[i], component, toolState);
                 }
-
-                var prevColor = GUI.color;
-                GUI.color = new Color(1f, 0.45f, 0.45f);
-                bool removeClicked = GUILayout.Button("Remove Prefab", GUILayout.Height(32), GUILayout.MinWidth(110));
-                GUI.color = prevColor;
-                if (removeClicked)
-                {
-                    bool confirm = EditorUtility.DisplayDialog(
-                        "Remove ASM-Lite Prefab",
-                        "Are you sure you want to remove the ASM-Lite prefab from this avatar?\n\n" +
-                        "Any unsaved changes will be lost, but your avatar and expression parameters will not be affected.",
-                        "Remove", "Cancel");
-
-                    if (confirm)
-                    {
-                        EditorApplication.delayCall += () => RemovePrefab(component);
-                    }
-                }
-
-                EditorGUILayout.EndHorizontal();
             }
             else
             {
-                if (GUILayout.Button("Add ASM-Lite Prefab", GUILayout.Height(36)))
+                EditorGUILayout.LabelField(
+                    "Maintenance and destructive actions stay hidden until you expand Advanced.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawActionControl(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component, ASMLiteInstallationState toolState)
+        {
+            EditorGUI.BeginDisabledGroup(!descriptor.IsEnabled);
+            try
+            {
+                switch (descriptor.Execution)
                 {
-                    // Defer past the current OnGUI pass: CreatePrefab calls
-                    // AssetDatabase.Refresh() which can trigger re-entrant layout
-                    // events and leave BeginScrollView unmatched.
-                    EditorApplication.delayCall += AddPrefabToAvatar;
+                    case AsmLiteWindowActionExecution.AddPrefab:
+                        if (GUILayout.Button(descriptor.Label, GUILayout.Height(40), GUILayout.ExpandWidth(true)))
+                            EditorApplication.delayCall += () => AddPrefabToAvatar();
+                        break;
+                    case AsmLiteWindowActionExecution.Rebuild:
+                        if (GUILayout.Button(descriptor.Label, GUILayout.Height(40), GUILayout.MinWidth(220), GUILayout.ExpandWidth(true)))
+                        {
+                            var captured = component;
+                            EditorApplication.delayCall += () => BakeAssets(captured);
+                        }
+                        break;
+                    case AsmLiteWindowActionExecution.ReturnToPackageManaged:
+                        DrawReturnToPackageManagedAction(descriptor);
+                        break;
+                    case AsmLiteWindowActionExecution.RemovePrefab:
+                        DrawRemovePrefabAction(descriptor, component);
+                        break;
+                    case AsmLiteWindowActionExecution.Detach:
+                        DrawDetachAction(descriptor, component);
+                        break;
+                    case AsmLiteWindowActionExecution.Vendorize:
+                        DrawVendorizeAction(descriptor, component, toolState);
+                        break;
                 }
             }
+            finally
+            {
+                EditorGUI.EndDisabledGroup();
+            }
+        }
+
+        private void DrawReturnToPackageManagedAction(AsmLiteWindowActionDescriptor descriptor)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            float buttonHeight = descriptor.IsMaintenance ? 22f : 32f;
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(buttonHeight), GUILayout.ExpandWidth(true)))
+                EditorApplication.delayCall += () => ReturnToPackageManaged();
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawRemovePrefabAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component)
+        {
+            var prevColor = GUI.color;
+            GUI.color = new Color(1f, 0.45f, 0.45f);
+            bool removeClicked = GUILayout.Button(descriptor.Label, GUILayout.Height(32), GUILayout.MinWidth(110));
+            GUI.color = prevColor;
+            if (!removeClicked)
+                return;
+
+            var confirmation = descriptor.Confirmation;
+            bool confirm = !confirmation.Required || EditorUtility.DisplayDialog(
+                confirmation.Title,
+                confirmation.Message,
+                confirmation.ConfirmLabel,
+                confirmation.CancelLabel);
+
+            if (confirm)
+                EditorApplication.delayCall += () => RemovePrefab(component);
+        }
+
+        private void DrawDetachAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(24)))
+            {
+                var captured = component;
+                EditorApplication.delayCall += () => DetachAsmLite(captured, vendorizeToAssets: false);
+            }
+            EditorGUILayout.EndVertical();
+        }
+
+        private void DrawVendorizeAction(AsmLiteWindowActionDescriptor descriptor, ASMLiteComponent component, ASMLiteInstallationState toolState)
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField(descriptor.Heading, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(descriptor.Description, EditorStyles.wordWrappedMiniLabel);
+            if (GUILayout.Button(descriptor.Label, GUILayout.Height(24)))
+            {
+                var captured = component;
+                EditorApplication.delayCall += () => VendorizeAsmLite(captured);
+            }
+
+            if (toolState == ASMLiteInstallationState.Vendorized)
+            {
+                string currentVendorizedPath = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+                if (string.IsNullOrWhiteSpace(currentVendorizedPath))
+                    currentVendorizedPath = "(path pending sync)";
+
+                EditorGUILayout.Space(2f);
+                EditorGUILayout.LabelField("Current vendorized folder:", EditorStyles.miniBoldLabel);
+                EditorGUILayout.SelectableLabel(currentVendorizedPath, EditorStyles.textField, GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
+            EditorGUILayout.EndVertical();
         }
 
         // ── Logic ─────────────────────────────────────────────────────────────
@@ -915,11 +5598,154 @@ namespace ASMLite.Editor
         // Per-frame component cache: refreshed once per OnGUI call, not once per draw section.
         private int _lastRefreshFrame = -1;
 
+        internal enum AsmLiteWindowAction
+        {
+            AddPrefab,
+            Rebuild,
+            ReturnToPackageManaged,
+            RemovePrefab,
+            Detach,
+            Vendorize,
+            ReturnAttachedVendorizedToPackageManaged,
+        }
+
+        internal readonly struct AsmLiteActionHierarchy
+        {
+            public AsmLiteActionHierarchy(AsmLiteWindowActionDescriptor[] descriptors, bool advancedDisclosureExpanded)
+            {
+                Descriptors = descriptors ?? Array.Empty<AsmLiteWindowActionDescriptor>();
+                AdvancedDisclosureExpanded = advancedDisclosureExpanded;
+
+                var primaryActions = new List<AsmLiteWindowAction>();
+                var advancedActions = new List<AsmLiteWindowAction>();
+                var primaryDescriptors = new List<AsmLiteWindowActionDescriptor>();
+                var advancedDescriptors = new List<AsmLiteWindowActionDescriptor>();
+
+                for (int i = 0; i < Descriptors.Length; i++)
+                {
+                    var descriptor = Descriptors[i];
+                    if (descriptor.Group == AsmLiteWindowActionGroup.Primary)
+                    {
+                        primaryActions.Add(descriptor.Action);
+                        primaryDescriptors.Add(descriptor);
+                    }
+                    else
+                    {
+                        advancedActions.Add(descriptor.Action);
+                        advancedDescriptors.Add(descriptor);
+                    }
+                }
+
+                PrimaryActions = primaryActions.ToArray();
+                AdvancedActions = advancedActions.ToArray();
+                PrimaryDescriptors = primaryDescriptors.ToArray();
+                AdvancedDescriptors = advancedDescriptors.ToArray();
+            }
+
+            public AsmLiteWindowActionDescriptor[] Descriptors { get; }
+            public AsmLiteWindowActionDescriptor[] PrimaryDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] AdvancedDescriptors { get; }
+            public AsmLiteWindowAction[] PrimaryActions { get; }
+            public AsmLiteWindowAction[] AdvancedActions { get; }
+            public bool AdvancedDisclosureExpanded { get; }
+            public bool HasAdvancedActions => AdvancedDescriptors.Length > 0;
+
+            public bool HasPrimaryAction(AsmLiteWindowAction action)
+            {
+                for (int i = 0; i < PrimaryDescriptors.Length; i++)
+                {
+                    if (PrimaryDescriptors[i].Action == action)
+                        return true;
+                }
+
+                return false;
+            }
+
+            public bool HasAdvancedAction(AsmLiteWindowAction action)
+            {
+                for (int i = 0; i < AdvancedDescriptors.Length; i++)
+                {
+                    if (AdvancedDescriptors[i].Action == action)
+                        return true;
+                }
+
+                return false;
+            }
+
+            public AsmLiteWindowActionDescriptor GetDescriptor(AsmLiteWindowAction action)
+            {
+                if (TryGetDescriptor(action, out var descriptor))
+                    return descriptor;
+
+                throw new ArgumentOutOfRangeException(nameof(action), action, "Action is not available in this hierarchy.");
+            }
+
+            public bool TryGetDescriptor(AsmLiteWindowAction action, out AsmLiteWindowActionDescriptor descriptor)
+            {
+                for (int i = 0; i < Descriptors.Length; i++)
+                {
+                    if (Descriptors[i].Action == action)
+                    {
+                        descriptor = Descriptors[i];
+                        return true;
+                    }
+                }
+
+                descriptor = default;
+                return false;
+            }
+        }
+
+        internal AsmLiteActionHierarchy GetActionHierarchyContract()
+        {
+            var component = GetOrRefreshComponent();
+            var toolState = GetOrRefreshToolState(component);
+            return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+        }
+
+        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(ASMLiteInstallationState toolState, bool hasComponent, bool advancedDisclosureExpanded)
+        {
+            return AsmLiteWindowActionModel.Build(toolState, hasComponent, advancedDisclosureExpanded);
+        }
+
+        internal static bool IsMaintenanceAction(AsmLiteWindowAction action)
+        {
+            return AsmLiteWindowActionModel.IsMaintenanceAction(action);
+        }
+
+        private ASMLiteInstallationState GetOrRefreshToolState(ASMLiteComponent component)
+        {
+            if (_cachedToolState.HasValue)
+                return _cachedToolState.Value;
+
+            var toolState = GetAsmLiteToolState(_selectedAvatar, component);
+            _cachedToolState = toolState;
+            return toolState;
+        }
+
+        private void InvalidateCachedEditorState(bool resetDiscoveredParamCount = false)
+        {
+            _cachedComponent = null;
+            _lastRefreshFrame = -1;
+            _cachedToolState = null;
+            _cachedParamList = null;
+            _cachedParamTree = null;
+            _cachedInstallPathTree = null;
+
+            if (resetDiscoveredParamCount)
+                _discoveredParamCount = -1;
+        }
+
+        internal static ASMLiteInstallationState GetAsmLiteToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
+        {
+            return ASMLiteWindowOperations.GetAsmLiteToolState(avatar, component);
+        }
+
         private ASMLiteComponent GetOrRefreshComponent()
         {
             if (!_selectedAvatar)
             {
-                _cachedComponent = null;
+                InvalidateCachedEditorState();
                 return null;
             }
 
@@ -936,7 +5762,342 @@ namespace ASMLite.Editor
             return _cachedComponent;
         }
 
-        private void AddPrefabToAvatar()
+        private static Texture2D[] CloneTextures(Texture2D[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<Texture2D>();
+
+            var clone = new Texture2D[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string[] CloneStrings(string[] source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<string>();
+
+            var clone = new string[source.Length];
+            Array.Copy(source, clone, source.Length);
+            return clone;
+        }
+
+        private static string[] EnsureSizedStringArray(string[] source, int size)
+        {
+            if (size <= 0)
+                return Array.Empty<string>();
+
+            if (source != null && source.Length == size)
+                return source;
+
+            var resized = new string[size];
+            if (source != null)
+                Array.Copy(source, resized, Mathf.Min(source.Length, size));
+
+            for (int i = 0; i < resized.Length; i++)
+                resized[i] ??= string.Empty;
+
+            return resized;
+        }
+
+        private static string[] NormalizePresetNamesBySlot(string[] source, int slotCount)
+        {
+            if (slotCount <= 0)
+                return Array.Empty<string>();
+
+            var normalized = new string[slotCount];
+            for (int i = 0; i < normalized.Length; i++)
+            {
+                string candidate = source != null && i < source.Length ? source[i] : string.Empty;
+                normalized[i] = NormalizeOptionalString(candidate);
+            }
+
+            return normalized;
+        }
+
+        private static int ResolveSnapshotSlotCount(string[] presetNamesBySlot)
+        {
+            return presetNamesBySlot == null || presetNamesBySlot.Length == 0 ? 0 : presetNamesBySlot.Length;
+        }
+
+        private static string NormalizeOptionalString(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+        }
+
+        private static string NormalizeInstallPath(string value)
+        {
+            return NormalizeSlashPath(value);
+        }
+
+        private static string[] SanitizeExcludedParameterNames(string[] names)
+        {
+            if (names == null || names.Length == 0)
+                return Array.Empty<string>();
+
+            var sanitized = new List<string>(names.Length);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < names.Length; i++)
+            {
+                string candidate = ASMLiteParameterBackupPresetResolver.NormalizeVisibleName(names[i]);
+                if (string.IsNullOrEmpty(candidate) || !seen.Add(candidate))
+                    continue;
+
+                sanitized.Add(candidate);
+            }
+
+            return sanitized.Count == 0 ? Array.Empty<string>() : sanitized.ToArray();
+        }
+
+        private static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
+        {
+            return ASMLiteWindowOperations.TryRefreshLiveInstallPathPrefix(component, contextLabel);
+        }
+
+        private static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
+        {
+            return ASMLiteWindowOperations.TryRestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
+        }
+
+        private static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
+        {
+            return ASMLiteWindowOperations.TryDeleteVendorizedGeneratedAssetsFolder(vendorizedDir);
+        }
+
+        private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
+        {
+            return ASMLiteWindowOperations.TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out vendorizedDir);
+        }
+
+        private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
+        {
+            return ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, generatedDir);
+        }
+
+        internal static bool TryReturnAttachedVendorizedToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
+        {
+            return ASMLiteWindowOperations.TryReturnAttachedVendorizedToPackageManaged(component, avatar);
+        }
+
+        private void VendorizeAsmLite(ASMLiteComponent component, bool requireConfirmation = true, bool showDialogs = true)
+        {
+            if (component == null)
+                return;
+
+            const string modeLabel = "Vendorize ASM-Lite (Keep Attached)";
+            if (requireConfirmation && showDialogs)
+            {
+                bool confirm = EditorUtility.DisplayDialog(
+                    modeLabel,
+                    "This will keep ASM-Lite attached and editable, mirror generated payload files into Assets/ASM-Lite/<AvatarName>/GeneratedAssets, and switch this avatar to those mirrored files. Continue?",
+                    "Continue",
+                    "Cancel");
+                if (!confirm)
+                    return;
+            }
+
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
+            if (avatar == null)
+            {
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, "No VRCAvatarDescriptor found for this ASM-Lite component.", "OK");
+                return;
+            }
+
+            var result = ASMLiteWindowOperations.ExecuteAttachedVendorize(component, avatar);
+            if (!result.Success)
+            {
+                Debug.LogError(result.ToLogString());
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, result.Message, "OK");
+                return;
+            }
+
+            if (result.DiscoveredParamCount >= 0)
+                _discoveredParamCount = result.DiscoveredParamCount;
+
+            InvalidateCachedEditorState();
+
+            string vendorizedDir = result.MirrorResult?.TargetPath ?? component.vendorizedGeneratedAssetsPath;
+            Debug.Log(result.Message);
+            if (showDialogs)
+                EditorUtility.DisplayDialog(modeLabel + " Complete", $"Vendorized assets folder:\n{vendorizedDir}\n\nASM-Lite remains attached and editable on this avatar.", "OK");
+            Repaint();
+        }
+
+        private void DetachAsmLite(ASMLiteComponent component, bool vendorizeToAssets, bool requireConfirmation = true, bool showDialogs = true)
+        {
+            if (component == null)
+                return;
+
+            string modeLabel = vendorizeToAssets ? "Vendorize + Detach" : "Detach ASM-Lite";
+            if (requireConfirmation && showDialogs)
+            {
+                bool confirm = EditorUtility.DisplayDialog(
+                    modeLabel,
+                    vendorizeToAssets
+                        ? "This will stage vendorized generated assets, verify the vendorized refs, bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object only after the combined transaction verifies successfully. Continue?"
+                        : "This will bake ASM-Lite directly into avatar assets, then remove the ASM-Lite prefab object only after detach verification succeeds. Continue?",
+                    "Continue",
+                    "Cancel");
+
+                if (!confirm)
+                    return;
+            }
+
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>();
+            var result = vendorizeToAssets
+                ? ASMLiteWindowOperations.ExecuteVendorizeAndDetach(component, avatar)
+                : ASMLiteWindowOperations.ExecuteDetachToDirectDelivery(component, avatar);
+            if (!result.Success)
+            {
+                Debug.LogError(result.ToLogString());
+                if (showDialogs)
+                    EditorUtility.DisplayDialog(modeLabel, result.Message, "OK");
+                return;
+            }
+
+            string vendorizedDir = vendorizeToAssets ? NormalizeOptionalString(component.vendorizedGeneratedAssetsPath) : string.Empty;
+            CopyComponentCustomizationToPending(component);
+
+            Undo.SetCurrentGroupName(modeLabel);
+            int group = Undo.GetCurrentGroup();
+            Undo.DestroyObjectImmediate(component.gameObject);
+            Undo.CollapseUndoOperations(group);
+
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+
+            string completion;
+            if (vendorizeToAssets && !string.IsNullOrWhiteSpace(vendorizedDir))
+            {
+                completion = $"{result.Message}\n\nVendorized assets folder:\n{vendorizedDir}";
+                Debug.Log($"{result.Message} Vendorized generated assets to '{vendorizedDir}'.");
+            }
+            else
+            {
+                completion = result.Message;
+                Debug.Log(result.Message);
+            }
+
+            if (showDialogs)
+                EditorUtility.DisplayDialog(modeLabel + " Complete", completion, "OK");
+            Repaint();
+        }
+
+        private void ReturnToPackageManaged(bool showDialogs = true)
+        {
+            if (_selectedAvatar == null)
+                return;
+
+            var existing = GetOrRefreshComponent();
+            if (existing != null)
+            {
+                if (!existing.useVendorizedGeneratedAssets)
+                {
+                    if (showDialogs)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Already Package Managed",
+                            "This avatar already has an ASM-Lite component attached and editable.",
+                            "OK");
+                    }
+                    return;
+                }
+
+                Undo.RecordObject(existing, "Disable ASM-Lite Vendorized Assets");
+                if (!TryReturnAttachedVendorizedToPackageManaged(existing, _selectedAvatar))
+                {
+                    if (showDialogs)
+                    {
+                        EditorUtility.DisplayDialog(
+                            "Return to Package Managed",
+                            "Failed to restore package-managed ASM-Lite references or clean vendorized generated assets on the attached avatar.",
+                            "OK");
+                    }
+                    return;
+                }
+
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Package Managed Restored",
+                        "ASM-Lite remains attached and editable. This avatar now uses package-managed generated payload references again.",
+                        "OK");
+                }
+                Repaint();
+                return;
+            }
+
+            var pendingSnapshot = CapturePendingCustomizationSnapshot();
+            var result = ASMLiteWindowOperations.ExecuteDetachedReturnToPackageManagedRecovery(_selectedAvatar, pendingSnapshot);
+            if (!result.Success)
+            {
+                Debug.LogError(result.ToLogString());
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "Return to Package Managed",
+                        result.Message,
+                        "OK");
+                }
+                return;
+            }
+
+            if (result.DiscoveredParamCount >= 0)
+                _discoveredParamCount = result.DiscoveredParamCount;
+
+            InvalidateCachedEditorState(resetDiscoveredParamCount: false);
+            var recoveredComponent = GetOrRefreshComponent();
+            if (recoveredComponent != null)
+                CopyComponentCustomizationToPending(recoveredComponent);
+
+            Debug.Log(result.ToLogString());
+            if (showDialogs)
+            {
+                EditorUtility.DisplayDialog(
+                    "Package Managed Restored",
+                    "ASM-Lite has been re-attached in package-managed mode for this avatar.\n\nYou can now edit settings and rebuild normally.",
+                    "OK");
+            }
+            Repaint();
+        }
+
+        private ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot CapturePendingCustomizationSnapshot()
+        {
+            return _customizationDraft.ToComponentSnapshot();
+        }
+
+        private void CopyPendingCustomizationToComponent(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            _customizationDraft.ApplyToComponent(component, "Apply ASM-Lite Pending Customization");
+        }
+
+        private void CopyComponentCustomizationToPending(ASMLiteComponent component)
+        {
+            if (component == null)
+                return;
+
+            _customizationDraft.RefreshFromComponent(component);
+        }
+
+        private static bool TryAdoptInstallPathFromMoveMenu(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            out string adoptedInstallPrefix,
+            out int removedMoveComponents)
+        {
+            var adoption = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(component, avatar);
+            adoptedInstallPrefix = adoption.AdoptedInstallPrefix;
+            removedMoveComponents = adoption.RemovedMoveComponents;
+            return adoption.HasChanges;
+        }
+
+        private void AddPrefabToAvatar(bool showDialogs = true)
         {
             if (_selectedAvatar == null)
                 return;
@@ -944,6 +6105,12 @@ namespace ASMLite.Editor
             var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
             if (existing != null)
             {
+                if (!showDialogs)
+                {
+                    Debug.LogWarning($"[ASM-Lite] Add Prefab: no-dialog mode skipped duplicate add because an ASM-Lite component is already attached to '{_selectedAvatar.gameObject.name}'.");
+                    return;
+                }
+
                 bool replace = EditorUtility.DisplayDialog(
                     "ASM-Lite Already Present",
                     "An ASM-Lite component is already on this avatar.\n\n" +
@@ -953,16 +6120,20 @@ namespace ASMLite.Editor
                     return;
             }
 
-            ASMLitePrefabCreator.CreatePrefab();
+            ASMLiteWindowOperations.CreatePrefab();
 
             var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
 
             if (prefabAsset == null)
             {
-                EditorUtility.DisplayDialog(
-                    "ASM-Lite: Error",
-                    $"Could not load prefab at {ASMLiteAssetPaths.Prefab}.\nCheck the Console for details.",
-                    "OK");
+                Debug.LogError($"[ASM-Lite] Could not load prefab at {ASMLiteAssetPaths.Prefab}.");
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "ASM-Lite: Error",
+                        $"Could not load prefab at {ASMLiteAssetPaths.Prefab}.\nCheck the Console for details.",
+                        "OK");
+                }
                 return;
             }
 
@@ -975,27 +6146,19 @@ namespace ASMLite.Editor
             var component = instance.GetComponent<ASMLiteComponent>();
             if (component != null)
             {
-                component.slotCount = _pendingSlotCount;
-                component.iconMode = _pendingIconMode;
-                component.selectedGearIndex = _pendingSelectedGearIndex;
-                component.actionIconMode = _pendingActionIconMode;
-                component.customSaveIcon  = _pendingCustomSaveIcon;
-                component.customLoadIcon  = _pendingCustomLoadIcon;
-                component.customClearIcon = _pendingCustomClearIcon;
-
-                // Resize and copy custom icons
-                if (_pendingCustomIcons != null)
+                CopyPendingCustomizationToComponent(component);
+                if (!ASMLiteWindowOperations.TryRefreshLiveFullControllerWiring(instance, component, "Add Prefab"))
                 {
-                    component.customIcons = new Texture2D[_pendingCustomIcons.Length];
-                    System.Array.Copy(_pendingCustomIcons, component.customIcons, _pendingCustomIcons.Length);
+                    Debug.LogError("[ASM-Lite] Failed to refresh live FullController wiring on newly added prefab instance.");
+                    Undo.DestroyObjectImmediate(instance);
+                    return;
                 }
             }
 
             Undo.RegisterCreatedObjectUndo(instance, "Add ASM-Lite Prefab");
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;   // force cache refresh on next draw
+            InvalidateCachedEditorState();
             Selection.activeGameObject = instance;
             EditorGUIUtility.PingObject(instance);
 
@@ -1004,16 +6167,15 @@ namespace ASMLite.Editor
             // Immediately bake so assets are populated before the user hits Play.
             // Invalidate and re-fetch through the cache so the component reference
             // is consistent with subsequent GetOrRefreshComponent() calls.
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;
+            InvalidateCachedEditorState();
             component = GetOrRefreshComponent();
             if (component != null)
-                BakeAssets(component);
+                BakeAssets(component, showDialogs, stagePackageManagedGeneratedAssets: false);
 
             Repaint();
         }
 
-        private void BakeAssets(ASMLiteComponent component)
+        private void BakeAssets(ASMLiteComponent component, bool showDialogs = true, bool stagePackageManagedGeneratedAssets = true)
         {
             if (component == null)
                 return;
@@ -1021,28 +6183,20 @@ namespace ASMLite.Editor
             // Check for stale prms entry from pre-1.0.5 prefab instances. If present,
             // destroy the old instance and re-add a fresh prefab so the double-path
             // that produces 2 extra synced parameters is removed before baking.
-            if (ASMLitePrefabCreator.HasStalePrmsEntry(component.gameObject))
+            if (ASMLiteWindowOperations.HasStalePrmsEntry(component.gameObject))
             {
                 Debug.Log("[ASM-Lite] Stale prms entry detected on prefab instance (pre-1.0.5). Replacing with current prefab to remove the double-registration path.");
 
                 // Capture settings before destroying the instance.
-                int savedSlotCount          = component.slotCount;
-                IconMode savedIconMode      = component.iconMode;
-                int savedGearIndex          = component.selectedGearIndex;
-                ActionIconMode savedActionIconMode = component.actionIconMode;
-                Texture2D savedCustomSave   = component.customSaveIcon;
-                Texture2D savedCustomLoad   = component.customLoadIcon;
-                Texture2D savedCustomClear  = component.customClearIcon;
-                Texture2D[] savedCustomIcons = component.customIcons != null
-                    ? (Texture2D[])component.customIcons.Clone() : new Texture2D[0];
-                Transform savedParent       = component.gameObject.transform.parent;
+                var migrationSnapshot = ASMLiteCustomizationDraft.CaptureFromComponent(component).ToComponentSnapshot();
+                Transform savedParent = component.gameObject.transform.parent;
 
                 Undo.SetCurrentGroupName("Rebuild ASM-Lite (migration)");
                 int group = Undo.GetCurrentGroup();
 
                 Undo.DestroyObjectImmediate(component.gameObject);
 
-                ASMLitePrefabCreator.CreatePrefab();
+                ASMLiteWindowOperations.CreatePrefab();
                 var prefabAsset = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
                 if (prefabAsset == null)
                 {
@@ -1054,21 +6208,19 @@ namespace ASMLite.Editor
                 var newComponent = instance.GetComponent<ASMLiteComponent>();
                 if (newComponent != null)
                 {
-                    newComponent.slotCount         = savedSlotCount;
-                    newComponent.iconMode          = savedIconMode;
-                    newComponent.selectedGearIndex = savedGearIndex;
-                    newComponent.actionIconMode    = savedActionIconMode;
-                    newComponent.customSaveIcon    = savedCustomSave;
-                    newComponent.customLoadIcon    = savedCustomLoad;
-                    newComponent.customClearIcon   = savedCustomClear;
-                    newComponent.customIcons       = savedCustomIcons;
+                    ASMLiteCustomizationDraft.FromSnapshot(migrationSnapshot).ApplyToComponent(newComponent, "Rebuild ASM-Lite (migration)");
+
+                    if (!ASMLiteWindowOperations.TryRefreshLiveFullControllerWiring(instance, newComponent, "Bake Migration"))
+                    {
+                        Debug.LogError("[ASM-Lite] Migration rebuild failed to refresh live FullController wiring. Aborting rebuild.");
+                        return;
+                    }
                 }
 
                 Undo.RegisterCreatedObjectUndo(instance, "Rebuild ASM-Lite (migration)");
                 Undo.CollapseUndoOperations(group);
 
-                _cachedComponent  = null;
-                _lastRefreshFrame = -1;
+                InvalidateCachedEditorState();
                 component = GetOrRefreshComponent();
 
                 if (component == null)
@@ -1082,25 +6234,263 @@ namespace ASMLite.Editor
 
             try
             {
-                // Rebuild-prep contract for the reverted VF delivery path:
-                // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
-                // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
-                //    so rebuild input reflects generated assets + VF wiring only.
-                var migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
+                var rebuildAvatar = ResolveRebuildAvatar(component, _selectedAvatar);
+                bool wasUsingVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
+                bool shouldIsolateGeneratedOutputs = wasUsingVendorizedGeneratedAssets || stagePackageManagedGeneratedAssets;
+                if (stagePackageManagedGeneratedAssets
+                    && !wasUsingVendorizedGeneratedAssets
+                    && !TryValidatePackageManagedRebuildAvatar(rebuildAvatar, out string packageManagedValidationFailure))
+                {
+                    Debug.LogWarning("[ASM-Lite] Package-managed rebuild aborted because avatar descriptor generated-asset references could not be safely retargeted. " + packageManagedValidationFailure);
+                    return;
+                }
 
-                int count = ASMLiteBuilder.Build(component);
-                if (count >= 0)
-                    _discoveredParamCount = count;
+                ASMLitePackageGeneratedOutputSnapshot packageOutputSnapshot = shouldIsolateGeneratedOutputs
+                    ? ASMLitePackageGeneratedOutputSnapshot.Capture()
+                    : null;
+                bool rebuildCompleted = false;
+                bool rebuildAbortedBeforeBuild = false;
+                Exception rebuildException = null;
+                Exception packageOutputRestoreException = null;
+                ASMLiteBuilder.RebuildMigrationReport migrationReport = default;
+                try
+                {
+                    // Rebuild-prep contract for the reverted VF delivery path:
+                    // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
+                    // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
+                    //    so rebuild input reflects generated assets + VF wiring only.
+                    migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
+
+                    if (!TryRefreshLiveInstallPathPrefix(component, "Bake"))
+                    {
+                        Debug.LogError("[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+                        rebuildAbortedBeforeBuild = true;
+                    }
+                    else
+                    {
+                        int count = ASMLiteBuilder.Build(component);
+                        var buildDiagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
+                        if (count < 0 || buildDiagnostic == null || !buildDiagnostic.Success)
+                        {
+                            Debug.LogError(buildDiagnostic != null
+                                ? buildDiagnostic.ToLogString()
+                                : "[ASM-Lite] Generated asset build failed without a specific diagnostic.");
+                        }
+                        else
+                        {
+                            _discoveredParamCount = count;
+
+                            if (!shouldIsolateGeneratedOutputs)
+                            {
+                                rebuildCompleted = true;
+                            }
+                            else if (TryStageRebuildGeneratedAssetsToAvatarLocal(
+                                component,
+                                rebuildAvatar,
+                                wasUsingVendorizedGeneratedAssets,
+                                out string syncedDir))
+                            {
+                                rebuildCompleted = true;
+                                Debug.Log(wasUsingVendorizedGeneratedAssets
+                                    ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
+                                    : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    rebuildException = ex;
+                }
+                finally
+                {
+                    if (packageOutputSnapshot != null)
+                    {
+                        try
+                        {
+                            packageOutputSnapshot.Restore();
+                        }
+                        catch (Exception ex)
+                        {
+                            packageOutputRestoreException = ex;
+                        }
+                    }
+                }
+
+                if (packageOutputRestoreException != null)
+                {
+                    Debug.LogError($"[ASM-Lite] Failed to restore package generated outputs after rebuild. Context: '{ASMLiteAssetPaths.GeneratedDir}; {ASMLiteAssetPaths.Prefab}'. Remediation: Restore the protected package generated outputs before rebuilding again. {packageOutputRestoreException.Message}");
+                    return;
+                }
+
+                if (rebuildException != null)
+                {
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(rebuildException).Throw();
+                    return;
+                }
+
+                if (rebuildAbortedBeforeBuild || !rebuildCompleted)
+                    return;
+
                 AssetDatabase.Refresh();
-                Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. migrationRemoved={migrationReport.StaleVrcFuryRemoved}, cleanupFxLayers={migrationReport.Cleanup.FxLayersRemoved}, cleanupFxParams={migrationReport.Cleanup.FxParamsRemoved}, cleanupExprParams={migrationReport.Cleanup.ExprParamsRemoved}, cleanupMenuControls={migrationReport.Cleanup.MenuControlsRemoved}.");
+                var migrationOutcome = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                    ASMLiteBuilder.GetLatestLegacyAliasContinuityReport(),
+                    migrationReport,
+                    default);
+                string migrationSummary = migrationOutcome.ToCompactSummary();
+                if (migrationOutcome.HasNonCriticalSignals)
+                    Debug.LogWarning($"[ASM-Lite] Migration outcome: {migrationSummary}");
+                else
+                    Debug.Log($"[ASM-Lite] Assets baked for '{component.gameObject.name}' via generated assets + VRCFury FullController wiring. {migrationSummary}");
             }
             catch (System.Exception ex)
             {
-                EditorUtility.DisplayDialog(
-                    "ASM-Lite: Build Error",
-                    $"An error occurred while baking assets:\n\n{ex.Message}\n\nCheck the Console for details.",
-                    "OK");
+                if (showDialogs)
+                {
+                    EditorUtility.DisplayDialog(
+                        "ASM-Lite: Build Error",
+                        $"An error occurred while baking assets:\n\n{ex.Message}\n\nCheck the Console for details.",
+                        "OK");
+                }
                 Debug.LogException(ex);
+            }
+        }
+
+        private static VRCAvatarDescriptor ResolveRebuildAvatar(ASMLiteComponent component, VRCAvatarDescriptor selectedAvatar)
+        {
+            if (selectedAvatar != null)
+                return selectedAvatar;
+
+            return component != null
+                ? component.GetComponentInParent<VRCAvatarDescriptor>(includeInactive: true)
+                : null;
+        }
+
+        private static bool TryValidatePackageManagedRebuildAvatar(VRCAvatarDescriptor avatar, out string failureMessage)
+        {
+            if (avatar == null)
+            {
+                failureMessage = "No VRCAvatarDescriptor was available for avatar-local generated-asset staging.";
+                return false;
+            }
+
+            if (avatar.baseAnimationLayers == null)
+            {
+                failureMessage = "The avatar descriptor base animation layers array was null.";
+                return false;
+            }
+
+            failureMessage = string.Empty;
+            return true;
+        }
+
+        private static bool TryStageRebuildGeneratedAssetsToAvatarLocal(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            bool wasUsingVendorizedGeneratedAssets,
+            out string syncedDir)
+        {
+            syncedDir = string.Empty;
+            if (component == null)
+            {
+                Debug.LogError("[ASM-Lite] Rebuild generated-asset staging failed because the ASM-Lite component was null.");
+                return false;
+            }
+
+            if (avatar == null)
+            {
+                Debug.LogError("[ASM-Lite] Rebuild generated-asset staging failed because the avatar descriptor was null.");
+                return false;
+            }
+
+            string previousVendorizedDir = NormalizeOptionalString(component.vendorizedGeneratedAssetsPath);
+            bool restoredExistingVendorizedReferencesToPackage = false;
+            if (wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir))
+            {
+                var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, previousVendorizedDir);
+                if (!descriptorRestoreResult.Success)
+                {
+                    Debug.LogError(descriptorRestoreResult.ToLogString());
+                    return false;
+                }
+
+                if (!ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(
+                    component,
+                    ASMLiteAssetPaths.GeneratedDir))
+                {
+                    ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    return false;
+                }
+
+                restoredExistingVendorizedReferencesToPackage = true;
+            }
+
+            var mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
+            if (!mirrorResult.Success)
+            {
+                Debug.LogError(mirrorResult.ToLogString());
+                if (restoredExistingVendorizedReferencesToPackage)
+                {
+                    var descriptorRollbackResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    if (!descriptorRollbackResult.Success)
+                        Debug.LogError(descriptorRollbackResult.ToLogString());
+
+                    ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, previousVendorizedDir);
+                }
+
+                return false;
+            }
+
+            bool descriptorRetargeted = false;
+            bool shouldRollbackMirror = true;
+            try
+            {
+                var descriptorResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, mirrorResult.TargetPath);
+                if (!descriptorResult.Success)
+                {
+                    Debug.LogError(descriptorResult.ToLogString());
+                    return false;
+                }
+
+                descriptorRetargeted = true;
+
+                if (!ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath))
+                {
+                    return false;
+                }
+
+                var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirrorResult);
+                if (!finalizeResult.Success)
+                {
+                    Debug.LogError(finalizeResult.ToLogString());
+                    return false;
+                }
+
+                shouldRollbackMirror = false;
+                component.useVendorizedGeneratedAssets = true;
+                component.vendorizedGeneratedAssetsPath = mirrorResult.TargetPath;
+                EditorUtility.SetDirty(component);
+                AssetDatabase.SaveAssets();
+                syncedDir = mirrorResult.TargetPath;
+                return true;
+            }
+            finally
+            {
+                if (shouldRollbackMirror)
+                {
+                    if (descriptorRetargeted)
+                    {
+                        var descriptorRestoreResult = wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir)
+                            ? ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir)
+                            : ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult.TargetPath);
+                        if (!descriptorRestoreResult.Success)
+                            Debug.LogError(descriptorRestoreResult.ToLogString());
+                    }
+
+                    var rollbackResult = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(mirrorResult);
+                    if (!rollbackResult.Success)
+                        Debug.LogError(rollbackResult.ToLogString());
+                }
             }
         }
 
@@ -1109,23 +6499,35 @@ namespace ASMLite.Editor
             if (component == null || component.gameObject == null)
                 return;
 
-            // Remove-path cleanup strips only direct-injection-era descriptor remnants.
-            ASMLiteBuilder.CleanupReport removeCleanupReport = default;
-            if (_selectedAvatar != null)
-                removeCleanupReport = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(_selectedAvatar);
+            var avatar = component.GetComponentInParent<VRCAvatarDescriptor>(includeInactive: true) ?? _selectedAvatar;
 
             Undo.SetCurrentGroupName("Remove ASM-Lite Prefab");
             int group = Undo.GetCurrentGroup();
 
+            int removedRoutingHelpers = 0;
+            if (avatar != null)
+            {
+                Transform routingTransform = avatar.transform.Find("ASM-Lite Install Path Routing");
+                if (routingTransform != null)
+                {
+                    Undo.DestroyObjectImmediate(routingTransform.gameObject);
+                    removedRoutingHelpers++;
+                }
+            }
+
             var prefabRoot = component.gameObject;
             Undo.DestroyObjectImmediate(prefabRoot);
 
+            // Remove-path cleanup strips only direct-injection-era descriptor remnants.
+            ASMLiteBuilder.CleanupReport removeCleanupReport = default;
+            if (avatar != null)
+                removeCleanupReport = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);
+
             Undo.CollapseUndoOperations(group);
 
-            _cachedComponent  = null;
-            _lastRefreshFrame = -1;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
 
-            Debug.Log($"[ASM-Lite] Prefab removed from avatar. cleanupFxLayers={removeCleanupReport.FxLayersRemoved}, cleanupFxParams={removeCleanupReport.FxParamsRemoved}, cleanupExprParams={removeCleanupReport.ExprParamsRemoved}, cleanupMenuControls={removeCleanupReport.MenuControlsRemoved}.");
+            Debug.Log($"[ASM-Lite] Prefab removed from avatar. removedRoutingHelpers={removedRoutingHelpers}, cleanupFxLayers={removeCleanupReport.FxLayersRemoved}, cleanupFxParams={removeCleanupReport.FxParamsRemoved}, cleanupExprParams={removeCleanupReport.ExprParamsRemoved}, cleanupMenuControls={removeCleanupReport.MenuControlsRemoved}.");
             Repaint();
         }
 
@@ -1141,21 +6543,22 @@ namespace ASMLite.Editor
             var existing = GetOrRefreshComponent();
             if (existing != null)
             {
-                _pendingSlotCount = existing.slotCount;
-                _pendingIconMode = existing.iconMode;
-                _pendingSelectedGearIndex = existing.selectedGearIndex;
-                _pendingActionIconMode = existing.actionIconMode;
-                _pendingCustomSaveIcon  = existing.customSaveIcon;
-                _pendingCustomLoadIcon  = existing.customLoadIcon;
-                _pendingCustomClearIcon = existing.customClearIcon;
-
-                // Sync custom icons array
-                if (existing.customIcons != null)
+                var adoption = ASMLiteMigrationContinuityService.TryAdoptInstallPathFromMoveMenu(existing, _selectedAvatar);
+                if (adoption.HasChanges)
                 {
-                    _pendingCustomIcons = new Texture2D[existing.customIcons.Length];
-                    System.Array.Copy(existing.customIcons, _pendingCustomIcons, existing.customIcons.Length);
+                    var adoptionReport = ASMLiteMigrationContinuityService.CreateOutcomeReport(
+                        default,
+                        default,
+                        adoption);
+                    Debug.Log($"[ASM-Lite] Migration outcome: {adoptionReport.ToCompactSummary()}");
                 }
+
+                CopyComponentCustomizationToPending(existing);
+                return;
             }
+
+            _pendingUseVendorizedGeneratedAssets = false;
+            _pendingVendorizedGeneratedAssetsPath = string.Empty;
         }
 
         private void OnSelectionChange()
@@ -1170,13 +6573,1857 @@ namespace ASMLite.Editor
             if (descriptor != null && descriptor != _selectedAvatar)
             {
                 _selectedAvatar  = descriptor;
-                _cachedComponent = null;
-                _cachedCustomParamCount = -1;
-                _discoveredParamCount = -1;
+                InvalidateCachedEditorState(resetDiscoveredParamCount: true);
                 SyncPendingSlotCountFromAvatar();
 
                 Repaint();
             }
+        }
+
+        internal void QueueVisibleAutomationAction(AsmLiteWindowAction action)
+        {
+            _queuedVisibleAutomationAction = action;
+            _queuedVisibleAutomationAvatar = _selectedAvatar;
+            ScheduleQueuedVisibleAutomationAction();
+            Repaint();
+        }
+
+        internal void ConfigureExternalVisibleAutomationOverlay(string statePath, string ackPath)
+        {
+            string normalizedStatePath = string.IsNullOrWhiteSpace(statePath)
+                ? string.Empty
+                : Path.GetFullPath(statePath.Trim());
+            string normalizedAckPath = string.IsNullOrWhiteSpace(ackPath)
+                ? string.Empty
+                : Path.GetFullPath(ackPath.Trim());
+            bool changed = !string.Equals(_visibleAutomationExternalOverlayStatePath, normalizedStatePath, StringComparison.Ordinal)
+                || !string.Equals(_visibleAutomationExternalOverlayAckPath, normalizedAckPath, StringComparison.Ordinal);
+
+            if (!changed
+                && string.Equals(_visibleAutomationExternalOverlayStatePath, normalizedStatePath, StringComparison.Ordinal)
+                && string.Equals(_visibleAutomationExternalOverlayAckPath, normalizedAckPath, StringComparison.Ordinal)
+                && (!string.IsNullOrWhiteSpace(_visibleAutomationExternalOverlaySessionId) || string.IsNullOrWhiteSpace(normalizedStatePath)))
+            {
+                return;
+            }
+
+            _visibleAutomationExternalOverlayStatePath = normalizedStatePath;
+            _visibleAutomationExternalOverlayAckPath = normalizedAckPath;
+            _visibleAutomationExternalOverlaySessionId = string.IsNullOrWhiteSpace(normalizedStatePath)
+                ? string.Empty
+                : Guid.NewGuid().ToString("N");
+            _visibleAutomationExternalOverlayLastPublishedJson = string.Empty;
+            _visibleAutomationExternalOverlayLastAckPayload = string.Empty;
+            _visibleAutomationCompletionReviewRequestId = 0;
+            DeleteVisibleAutomationExternalOverlayAckFile();
+            RefreshVisibleAutomationOverlayVisuals();
+        }
+
+        internal void SetVisibleAutomationOverlayStatus(
+            string title,
+            string step,
+            int stepIndex = 0,
+            int totalSteps = 0,
+            VisibleAutomationOverlayState state = VisibleAutomationOverlayState.Running,
+            bool presentationMode = false,
+            string[] checklistItems = null)
+        {
+            _visibleAutomationOverlayTitle = string.IsNullOrWhiteSpace(title)
+                ? "ASM-Lite visible smoke test"
+                : title.Trim();
+            _visibleAutomationOverlayStep = string.IsNullOrWhiteSpace(step)
+                ? string.Empty
+                : step.Trim();
+            _visibleAutomationOverlayStepIndex = Mathf.Max(0, stepIndex);
+            _visibleAutomationOverlayTotalSteps = Mathf.Max(0, totalSteps);
+            _visibleAutomationOverlayState = state;
+            _visibleAutomationOverlayPresentationMode = presentationMode;
+
+            if (checklistItems != null)
+                SetVisibleAutomationChecklistItems(checklistItems);
+
+            UpdateVisibleAutomationChecklistProgress(_visibleAutomationOverlayStepIndex, _visibleAutomationOverlayState);
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal void ClearVisibleAutomationOverlay()
+        {
+            _visibleAutomationOverlayTitle = string.Empty;
+            _visibleAutomationOverlayStep = string.Empty;
+            _visibleAutomationOverlayStepIndex = 0;
+            _visibleAutomationOverlayTotalSteps = 0;
+            _visibleAutomationOverlayState = VisibleAutomationOverlayState.Running;
+            _visibleAutomationOverlayPresentationMode = false;
+            _visibleAutomationChecklistItems = Array.Empty<string>();
+            _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
+            _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
+            _visibleAutomationCompletionReviewVisible = false;
+            _visibleAutomationCompletionReviewAcknowledged = false;
+            _visibleAutomationCompletionReviewTitle = string.Empty;
+            _visibleAutomationCompletionReviewMessage = string.Empty;
+            _visibleAutomationUsingHostWindowFallbackBounds = false;
+            EnsureVisibleAutomationChecklistVisualCount(0);
+            CloseVisibleAutomationOverlayPopupWindows();
+            RefreshVisibleAutomationOverlayVisuals();
+            Repaint();
+        }
+
+        internal enum VisibleAutomationOverlayHostKind
+        {
+            DetachedAuxiliaryWindows,
+            ExternalPythonProcess,
+        }
+
+        internal readonly struct VisibleAutomationOverlayHostSnapshot
+        {
+            internal VisibleAutomationOverlayHostSnapshot(
+                VisibleAutomationOverlayHostKind hostKind,
+                Rect screenBounds,
+                bool hasStatusWindow,
+                Rect statusWindowRect,
+                bool hasChecklistWindow,
+                Rect checklistWindowRect,
+                bool hasCompletionReviewWindow,
+                Rect completionReviewWindowRect,
+                bool usingHostWindowFallbackBounds,
+                string externalOverlayStatePath,
+                string externalOverlayAckPath,
+                bool externalOverlayStateFileExists)
+            {
+                HostKind = hostKind;
+                ScreenBounds = screenBounds;
+                HasStatusWindow = hasStatusWindow;
+                StatusWindowRect = statusWindowRect;
+                HasChecklistWindow = hasChecklistWindow;
+                ChecklistWindowRect = checklistWindowRect;
+                HasCompletionReviewWindow = hasCompletionReviewWindow;
+                CompletionReviewWindowRect = completionReviewWindowRect;
+                UsingHostWindowFallbackBounds = usingHostWindowFallbackBounds;
+                ExternalOverlayStatePath = externalOverlayStatePath ?? string.Empty;
+                ExternalOverlayAckPath = externalOverlayAckPath ?? string.Empty;
+                ExternalOverlayStateFileExists = externalOverlayStateFileExists;
+            }
+
+            public VisibleAutomationOverlayHostKind HostKind { get; }
+            public Rect ScreenBounds { get; }
+            public bool HasStatusWindow { get; }
+            public Rect StatusWindowRect { get; }
+            public bool HasChecklistWindow { get; }
+            public Rect ChecklistWindowRect { get; }
+            public bool HasCompletionReviewWindow { get; }
+            public Rect CompletionReviewWindowRect { get; }
+            public bool UsingHostWindowFallbackBounds { get; }
+            public string ExternalOverlayStatePath { get; }
+            public string ExternalOverlayAckPath { get; }
+            public bool ExternalOverlayStateFileExists { get; }
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayChecklistItem
+        {
+            public string text = string.Empty;
+            public string state = string.Empty;
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayStateDocument
+        {
+            public string sessionId = string.Empty;
+            public bool sessionActive;
+            public bool presentationMode;
+            public string title = string.Empty;
+            public string step = string.Empty;
+            public int stepIndex;
+            public int totalSteps;
+            public string state = string.Empty;
+            public VisibleAutomationExternalOverlayChecklistItem[] checklist = Array.Empty<VisibleAutomationExternalOverlayChecklistItem>();
+            public bool completionReviewVisible;
+            public int completionReviewRequestId;
+            public string completionReviewTitle = string.Empty;
+            public string completionReviewMessage = string.Empty;
+            public bool completionReviewAcknowledged;
+            public long updatedUtcTicks;
+        }
+
+        [Serializable]
+        internal sealed class VisibleAutomationExternalOverlayAckDocument
+        {
+            public string sessionId = string.Empty;
+            public int completionReviewRequestId;
+            public bool acknowledged;
+            public long acknowledgedUtcTicks;
+        }
+
+        internal enum VisibleAutomationOverlayState
+        {
+            Running,
+            Success,
+            Failure,
+            Warning,
+        }
+
+        internal enum VisibleAutomationChecklistItemState
+        {
+            Pending,
+            Active,
+            Completed,
+            Failed,
+            Warning,
+        }
+
+        internal struct PendingCustomizationSnapshot
+        {
+            public PendingCustomizationSnapshot(
+                VRCAvatarDescriptor selectedAvatar,
+                bool useCustomRootIcon,
+                bool useCustomRootName,
+                string customRootName,
+                string[] presetNamesBySlot,
+                string saveLabel,
+                string loadLabel,
+                string clearLabel,
+                string confirmLabel,
+                bool useCustomInstallPath,
+                string customInstallPath,
+                bool useParameterExclusions,
+                string[] excludedParameterNames,
+                Texture2D[] customIcons,
+                bool useVendorizedGeneratedAssets,
+                string vendorizedGeneratedAssetsPath)
+            {
+                SelectedAvatar = selectedAvatar;
+                UseCustomRootIcon = useCustomRootIcon;
+                UseCustomRootName = useCustomRootName;
+                CustomRootName = NormalizeOptionalString(customRootName);
+                PresetNamesBySlot = NormalizePresetNamesBySlot(presetNamesBySlot, ResolveSnapshotSlotCount(presetNamesBySlot));
+                SaveLabel = NormalizeOptionalString(saveLabel);
+                LoadLabel = NormalizeOptionalString(loadLabel);
+                ClearLabel = NormalizeOptionalString(clearLabel);
+                ConfirmLabel = NormalizeOptionalString(confirmLabel);
+                UseCustomInstallPath = useCustomInstallPath;
+                CustomInstallPath = customInstallPath ?? string.Empty;
+                UseParameterExclusions = useParameterExclusions;
+                ExcludedParameterNames = SanitizeExcludedParameterNames(excludedParameterNames);
+                CustomIcons = customIcons ?? Array.Empty<Texture2D>();
+                UseVendorizedGeneratedAssets = useVendorizedGeneratedAssets;
+                VendorizedGeneratedAssetsPath = vendorizedGeneratedAssetsPath ?? string.Empty;
+            }
+
+            public VRCAvatarDescriptor SelectedAvatar { get; }
+            public bool UseCustomRootIcon { get; }
+            public bool UseCustomRootName { get; }
+            public string CustomRootName { get; }
+            public string[] PresetNamesBySlot { get; }
+            public string SaveLabel { get; }
+            public string LoadLabel { get; }
+            public string ClearLabel { get; }
+            public string ConfirmLabel { get; }
+            public bool UseCustomInstallPath { get; }
+            public string CustomInstallPath { get; }
+            public bool UseParameterExclusions { get; }
+            public string[] ExcludedParameterNames { get; }
+            public Texture2D[] CustomIcons { get; }
+            public bool UseVendorizedGeneratedAssets { get; }
+            public string VendorizedGeneratedAssetsPath { get; }
+        }
+
+        private static string FormatIconModeForAutomationSnapshot(IconMode iconMode)
+        {
+            switch (iconMode)
+            {
+                case ASMLite.IconMode.SameColor:
+                    return "sameColor";
+                case ASMLite.IconMode.MultiColor:
+                case ASMLite.IconMode.Custom:
+                default:
+                    return "multiColor";
+            }
+        }
+
+        private static string FormatActionIconModeForAutomationSnapshot(ActionIconMode actionIconMode)
+        {
+            return actionIconMode == ASMLite.ActionIconMode.Custom ? "custom" : "default";
+        }
+
+        private static int NormalizeGearIndexForAutomation(int selectedGearIndex)
+        {
+            return selectedGearIndex >= 0 && selectedGearIndex < GearColorNames.Length ? selectedGearIndex : 0;
+        }
+
+        private static string FormatGearColorForAutomationSnapshot(int selectedGearIndex)
+        {
+            int normalized = NormalizeGearIndexForAutomation(selectedGearIndex);
+            return GearColorNames[normalized].ToLowerInvariant();
+        }
+
+        private static string[] EmptyFixtureIdsBySlot(int slotCount)
+        {
+            int normalizedSlotCount = Mathf.Max(0, slotCount);
+            var fixtureIds = new string[normalizedSlotCount];
+            for (int index = 0; index < normalizedSlotCount; index++)
+                fixtureIds[index] = string.Empty;
+            return fixtureIds;
+        }
+
+        private static string[] NormalizeSlotIconFixtureIdsForAutomationSnapshot(Texture2D[] textures, int slotCount)
+        {
+            int normalizedSlotCount = Mathf.Max(0, slotCount);
+            var fixtureIds = new string[normalizedSlotCount];
+            textures = textures ?? Array.Empty<Texture2D>();
+            int copyCount = Mathf.Min(textures.Length, normalizedSlotCount);
+            for (int index = 0; index < copyCount; index++)
+                fixtureIds[index] = ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(textures[index]);
+            return fixtureIds;
+        }
+
+        internal readonly struct CustomizationAutomationSnapshot
+        {
+            internal CustomizationAutomationSnapshot(
+                VRCAvatarDescriptor selectedAvatar,
+                ASMLiteComponent component,
+                ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization,
+                ASMLiteInstallationState toolState,
+                AsmLiteActionHierarchy actionHierarchy)
+            {
+                SelectedAvatar = selectedAvatar;
+                Component = component;
+                Customization = customization;
+                ComponentCustomization = customization;
+                ToolState = toolState;
+                SlotCount = customization.SlotCount;
+                IconMode = FormatIconModeForAutomationSnapshot(customization.IconMode);
+                SelectedGearIndex = NormalizeGearIndexForAutomation(customization.SelectedGearIndex);
+                GearColor = FormatGearColorForAutomationSnapshot(SelectedGearIndex);
+                UseCustomSlotIcons = customization.UseCustomSlotIcons;
+                UseCustomRootName = customization.UseCustomRootName;
+                CustomRootName = NormalizeOptionalString(customization.CustomRootName);
+                PresetNamesBySlot = NormalizePresetNamesBySlot(customization.CustomPresetNames, customization.SlotCount);
+                SaveLabel = NormalizeOptionalString(customization.CustomSaveLabel);
+                LoadLabel = NormalizeOptionalString(customization.CustomLoadLabel);
+                ClearLabel = NormalizeOptionalString(customization.CustomClearPresetLabel);
+                ConfirmLabel = NormalizeOptionalString(customization.CustomConfirmLabel);
+                UseCustomInstallPath = customization.UseCustomInstallPath;
+                CustomInstallPath = customization.CustomInstallPath ?? string.Empty;
+                NormalizedEffectivePath = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(
+                    customization.UseCustomInstallPath,
+                    customization.CustomInstallPath);
+                UseParameterExclusions = customization.UseParameterExclusions;
+                ExcludedParameterNames = SanitizeExcludedParameterNames(customization.ExcludedParameterNames);
+                ActionIconMode = FormatActionIconModeForAutomationSnapshot(customization.UseCustomSlotIcons ? customization.ActionIconMode : ASMLite.ActionIconMode.Default);
+                RootIconFixtureId = customization.UseCustomSlotIcons ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomRootIcon) : string.Empty;
+                SlotIconFixtureIdsBySlot = customization.UseCustomSlotIcons
+                    ? NormalizeSlotIconFixtureIdsForAutomationSnapshot(customization.CustomIcons, customization.SlotCount)
+                    : EmptyFixtureIdsBySlot(customization.SlotCount);
+                SaveIconFixtureId = customization.UseCustomSlotIcons && customization.ActionIconMode == ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomSaveIcon) : string.Empty;
+                LoadIconFixtureId = customization.UseCustomSlotIcons && customization.ActionIconMode == ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomLoadIcon) : string.Empty;
+                ClearIconFixtureId = customization.UseCustomSlotIcons && customization.ActionIconMode == ASMLite.ActionIconMode.Custom ? ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(customization.CustomClearIcon) : string.Empty;
+                CustomRootIconFixtureId = RootIconFixtureId;
+                CustomSlotIconFixtureIds = (string[])SlotIconFixtureIdsBySlot.Clone();
+                CustomSaveIconFixtureId = SaveIconFixtureId;
+                CustomLoadIconFixtureId = LoadIconFixtureId;
+                CustomClearIconFixtureId = ClearIconFixtureId;
+                HasAttachedComponent = component != null;
+                ActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.Descriptors.Clone();
+                PrimaryActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.PrimaryDescriptors.Clone();
+                AdvancedActionDescriptors = (AsmLiteWindowActionDescriptor[])actionHierarchy.AdvancedDescriptors.Clone();
+                HasPrimaryAction = PrimaryActionDescriptors.Length > 0;
+                PrimaryActionDescriptor = HasPrimaryAction ? PrimaryActionDescriptors[0] : default;
+                PrimaryAction = HasPrimaryAction ? PrimaryActionDescriptor.Action : default;
+                PrimaryActions = (AsmLiteWindowAction[])actionHierarchy.PrimaryActions.Clone();
+                AdvancedActions = (AsmLiteWindowAction[])actionHierarchy.AdvancedActions.Clone();
+            }
+
+            public VRCAvatarDescriptor SelectedAvatar { get; }
+            public ASMLiteComponent Component { get; }
+            public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot Customization { get; }
+            public ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot ComponentCustomization { get; }
+            public ASMLiteInstallationState ToolState { get; }
+            public int SlotCount { get; }
+            public string IconMode { get; }
+            public int SelectedGearIndex { get; }
+            public string GearColor { get; }
+            public bool UseCustomSlotIcons { get; }
+            public string iconMode => IconMode;
+            public int selectedGearIndex => SelectedGearIndex;
+            public string gearColor => GearColor;
+            public bool useCustomSlotIcons => UseCustomSlotIcons;
+            public bool UseCustomRootName { get; }
+            public string CustomRootName { get; }
+            public string[] PresetNamesBySlot { get; }
+            public string SaveLabel { get; }
+            public string LoadLabel { get; }
+            public string ClearLabel { get; }
+            public string ConfirmLabel { get; }
+            public bool UseCustomInstallPath { get; }
+            public string CustomInstallPath { get; }
+            public string NormalizedEffectivePath { get; }
+            public string EffectiveInstallPath => NormalizedEffectivePath;
+            public bool UseParameterExclusions { get; }
+            public string[] ExcludedParameterNames { get; }
+            public bool useParameterExclusions => UseParameterExclusions;
+            public string[] excludedParameterNames => ExcludedParameterNames;
+            public string ActionIconMode { get; }
+            public string RootIconFixtureId { get; }
+            public string[] SlotIconFixtureIdsBySlot { get; }
+            public string SaveIconFixtureId { get; }
+            public string LoadIconFixtureId { get; }
+            public string ClearIconFixtureId { get; }
+            public string actionIconMode => ActionIconMode;
+            public string rootIconFixtureId => RootIconFixtureId;
+            public string[] slotIconFixtureIdsBySlot => SlotIconFixtureIdsBySlot;
+            public string saveIconFixtureId => SaveIconFixtureId;
+            public string loadIconFixtureId => LoadIconFixtureId;
+            public string clearIconFixtureId => ClearIconFixtureId;
+            public string CustomRootIconFixtureId { get; }
+            public string[] CustomSlotIconFixtureIds { get; }
+            public string CustomSaveIconFixtureId { get; }
+            public string CustomLoadIconFixtureId { get; }
+            public string CustomClearIconFixtureId { get; }
+            public bool HasAttachedComponent { get; }
+            public bool HasComponent => HasAttachedComponent;
+            public bool HasPrimaryAction { get; }
+            public AsmLiteWindowActionDescriptor[] ActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] PrimaryActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor[] AdvancedActionDescriptors { get; }
+            public AsmLiteWindowActionDescriptor PrimaryActionDescriptor { get; }
+            public AsmLiteWindowAction PrimaryAction { get; }
+            public AsmLiteWindowAction[] PrimaryActions { get; }
+            public AsmLiteWindowAction[] AdvancedActions { get; }
+        }
+
+        internal void SelectAvatarForAutomation(VRCAvatarDescriptor avatar)
+        {
+            _selectedAvatar = avatar;
+            InvalidateCachedEditorState(resetDiscoveredParamCount: true);
+            SyncPendingSlotCountFromAvatar();
+        }
+
+        internal void SetSlotCountForAutomation(int slotCount)
+        {
+            ValidateAutomationSlotCount(slotCount);
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                if (component.slotCount != slotCount)
+                {
+                    Undo.RecordObject(component, "Change ASM-Lite Slot Count");
+                    component.slotCount = slotCount;
+                    EditorUtility.SetDirty(component);
+                }
+
+                _customizationDraft.SetSlotCount(slotCount);
+                return;
+            }
+
+            _customizationDraft.SetSlotCount(slotCount);
+        }
+
+        internal void SetInstallPathStateForAutomation(bool useCustomInstallPath, string customInstallPath)
+        {
+            string normalized = useCustomInstallPath ? NormalizeInstallPath(customInstallPath) : string.Empty;
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(component, "Toggle ASM-Lite Custom Install Path", ref component.useCustomInstallPath, useCustomInstallPath);
+                SetComponentString(component, "Change ASM-Lite Install Path", ref component.customInstallPath, normalized);
+            }
+
+            _customizationDraft.SetInstallPathState(useCustomInstallPath, normalized);
+        }
+
+        internal void SetParameterBackupExclusionsForAutomation(bool enabled, IEnumerable<string> exactVisibleNames)
+        {
+            SetParameterBackupStateForAutomation(enabled, exactVisibleNames);
+        }
+
+        internal void SetRootNameStateForAutomation(bool enabled, string value)
+        {
+            string normalized = enabled ? NormalizeOptionalString(value) : string.Empty;
+            if (enabled && string.IsNullOrWhiteSpace(normalized))
+                throw new ArgumentException("ASM-Lite custom root name cannot be blank when custom menu naming is enabled.", nameof(value));
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(component, "Toggle ASM-Lite Custom Menu Names", ref component.useCustomRootName, enabled);
+                SetComponentRawString(component, "Change ASM-Lite Root Menu Name", ref component.customRootName, normalized);
+            }
+
+            _customizationDraft.SetRootNameState(enabled, normalized);
+        }
+
+        internal void SetPresetNameMaskForAutomation(IReadOnlyDictionary<int, string> presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            string[] current = clearExisting
+                ? new string[slotCount]
+                : ResolveCurrentPresetNamesBySlot(slotCount);
+
+            if (presetNamesBySlot != null)
+            {
+                foreach (var kvp in presetNamesBySlot)
+                {
+                    ValidateAutomationPresetSlot(kvp.Key, slotCount);
+                    current[kvp.Key - 1] = NormalizeOptionalString(kvp.Value);
+                }
+            }
+
+            ApplyPresetNameMaskForAutomation(current, clearExisting);
+        }
+
+        internal void SetPresetNameMaskForAutomation(string[] presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            if (presetNamesBySlot != null && presetNamesBySlot.Length > slotCount)
+                throw new ArgumentOutOfRangeException(nameof(presetNamesBySlot), presetNamesBySlot.Length, $"ASM-Lite preset name mask cannot contain more than {slotCount} slot value(s) for the current avatar.");
+
+            string[] current = clearExisting
+                ? new string[slotCount]
+                : ResolveCurrentPresetNamesBySlot(slotCount);
+
+            if (presetNamesBySlot != null)
+            {
+                for (int i = 0; i < presetNamesBySlot.Length; i++)
+                    current[i] = NormalizeOptionalString(presetNamesBySlot[i]);
+            }
+
+            ApplyPresetNameMaskForAutomation(current, clearExisting);
+        }
+
+        internal void SetActionLabelMaskForAutomation(IReadOnlyDictionary<string, string> actionLabelsByKey, bool clearExisting)
+        {
+            var component = GetOrRefreshComponent();
+            string save = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customSaveLabel : _pendingCustomSaveLabel);
+            string load = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customLoadLabel : _pendingCustomLoadLabel);
+            string clear = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customClearPresetLabel : _pendingCustomClearPresetLabel);
+            string confirm = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customConfirmLabel : _pendingCustomConfirmLabel);
+
+            if (actionLabelsByKey != null)
+            {
+                foreach (var kvp in actionLabelsByKey)
+                {
+                    switch (NormalizeActionLabelKey(kvp.Key))
+                    {
+                        case "save":
+                            save = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "load":
+                            load = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "clear":
+                            clear = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "confirm":
+                            confirm = NormalizeOptionalString(kvp.Value);
+                            break;
+                    }
+                }
+            }
+
+            ApplyActionLabelMaskForAutomation(save, load, clear, confirm);
+        }
+
+        internal void SetActionLabelMaskForAutomation(string saveLabel, string loadLabel, string clearLabel, string confirmLabel, bool clearExisting)
+        {
+            var component = GetOrRefreshComponent();
+            string save = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customSaveLabel : _pendingCustomSaveLabel);
+            string load = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customLoadLabel : _pendingCustomLoadLabel);
+            string clear = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customClearPresetLabel : _pendingCustomClearPresetLabel);
+            string confirm = clearExisting ? string.Empty : NormalizeOptionalString(component ? component.customConfirmLabel : _pendingCustomConfirmLabel);
+
+            if (saveLabel != null)
+                save = NormalizeOptionalString(saveLabel);
+            if (loadLabel != null)
+                load = NormalizeOptionalString(loadLabel);
+            if (clearLabel != null)
+                clear = NormalizeOptionalString(clearLabel);
+            if (confirmLabel != null)
+                confirm = NormalizeOptionalString(confirmLabel);
+
+            ApplyActionLabelMaskForAutomation(save, load, clear, confirm);
+        }
+
+        internal void SetIconModeForAutomation(string iconMode)
+        {
+            SetIconModeForAutomation(ParseIconModeForAutomation(iconMode, nameof(iconMode)));
+        }
+
+        internal void SetIconModeForAutomation(IconMode iconMode)
+        {
+            IconMode normalized = ValidateIconModeForAutomation(iconMode, nameof(iconMode));
+            var component = GetOrRefreshComponent();
+            if (component && component.iconMode != normalized)
+            {
+                Undo.RecordObject(component, "Change ASM-Lite Icon Mode");
+                component.iconMode = normalized;
+                EditorUtility.SetDirty(component);
+            }
+
+            _pendingIconMode = normalized;
+        }
+
+        internal void SetGearColorForAutomation(int selectedGearIndex)
+        {
+            ValidateGearIndexForAutomation(selectedGearIndex, nameof(selectedGearIndex));
+            var component = GetOrRefreshComponent();
+            if (component && component.selectedGearIndex != selectedGearIndex)
+            {
+                Undo.RecordObject(component, "Change ASM-Lite Gear Color");
+                component.selectedGearIndex = selectedGearIndex;
+                EditorUtility.SetDirty(component);
+            }
+
+            _pendingSelectedGearIndex = selectedGearIndex;
+        }
+
+        internal void SetGearColorForAutomation(string gearColor)
+        {
+            SetGearColorForAutomation(ParseGearColorForAutomation(gearColor, nameof(gearColor)));
+        }
+
+        internal void SetCustomIconsEnabledForAutomation(bool enabled)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            Texture2D[] normalizedIcons = enabled
+                ? EnsureSizedTextureArray(ResolveCurrentSlotIconsForAutomation(slotCount), slotCount)
+                : new Texture2D[slotCount];
+
+            _customizationDraft.SetCustomIconsEnabled(enabled);
+            _pendingCustomIcons = normalizedIcons;
+            if (!enabled)
+            {
+                _pendingUseCustomRootIcon = false;
+                _pendingCustomRootIcon = null;
+                _pendingActionIconMode = ActionIconMode.Default;
+                _pendingCustomSaveIcon = null;
+                _pendingCustomLoadIcon = null;
+                _pendingCustomClearIcon = null;
+            }
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            bool changed = component.useCustomSlotIcons != enabled
+                || component.customIcons == null
+                || component.customIcons.Length != normalizedIcons.Length
+                || !TextureArraysEqual(component.customIcons, normalizedIcons)
+                || (!enabled && (component.useCustomRootIcon
+                    || component.customRootIcon != null
+                    || component.actionIconMode != ActionIconMode.Default
+                    || component.customSaveIcon != null
+                    || component.customLoadIcon != null
+                    || component.customClearIcon != null));
+
+            if (!changed)
+                return;
+
+            Undo.RecordObject(component, enabled ? "Enable ASM-Lite Custom Icons" : "Disable ASM-Lite Custom Icons");
+            component.useCustomSlotIcons = enabled;
+            component.customIcons = CloneTextures(normalizedIcons);
+            if (!enabled)
+            {
+                component.useCustomRootIcon = false;
+                component.customRootIcon = null;
+                component.actionIconMode = ActionIconMode.Default;
+                component.customSaveIcon = null;
+                component.customLoadIcon = null;
+                component.customClearIcon = null;
+            }
+            EditorUtility.SetDirty(component);
+        }
+
+        internal void SetRootIconFixtureForAutomation(string rootIconFixtureId)
+        {
+            Texture2D rootIcon = ResolveOptionalIconFixtureForAutomation(
+                rootIconFixtureId,
+                ASMLiteIconFixtureKind.Root,
+                nameof(rootIconFixtureId));
+
+            if (rootIcon != null)
+                SetCustomIconsEnabledForAutomation(true);
+
+            _customizationDraft.SetRootIcon(rootIcon);
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            bool changed = component.useCustomRootIcon != (rootIcon != null) || component.customRootIcon != rootIcon;
+            if (!changed)
+                return;
+
+            Undo.RecordObject(component, "Set ASM-Lite Root Icon Fixture");
+            component.useCustomRootIcon = rootIcon != null;
+            component.customRootIcon = rootIcon;
+            EditorUtility.SetDirty(component);
+        }
+
+        internal void SetSlotIconMaskForAutomation(string[] slotIconFixtureIds)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            if (slotIconFixtureIds != null && slotIconFixtureIds.Length != slotCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(slotIconFixtureIds),
+                    slotIconFixtureIds.Length,
+                    $"ASM-Lite slot icon fixture mask must contain exactly {slotCount} slot value(s) for the current avatar.");
+            }
+
+            string[] normalizedIds = slotIconFixtureIds ?? new string[slotCount];
+            Texture2D[] slotIcons = ResolveSlotIconFixturesForAutomation(normalizedIds, slotCount);
+
+            SetCustomIconsEnabledForAutomation(true);
+            _customizationDraft.SetSlotIcons(slotIcons);
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            if (component.customIcons != null
+                && component.customIcons.Length == slotIcons.Length
+                && TextureArraysEqual(component.customIcons, slotIcons)
+                && component.useCustomSlotIcons)
+            {
+                return;
+            }
+
+            Undo.RecordObject(component, "Set ASM-Lite Slot Icon Fixtures");
+            component.useCustomSlotIcons = true;
+            component.customIcons = CloneTextures(slotIcons);
+            EditorUtility.SetDirty(component);
+        }
+
+        internal void SetSlotIconMaskForAutomation(IReadOnlyDictionary<int, string> slotIconFixtureIdsBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            string[] current = clearExisting
+                ? new string[slotCount]
+                : ResolveCurrentSlotIconFixtureIdsForAutomation(slotCount);
+
+            if (slotIconFixtureIdsBySlot != null)
+            {
+                foreach (var kvp in slotIconFixtureIdsBySlot)
+                {
+                    ValidateAutomationPresetSlot(kvp.Key, slotCount);
+                    current[kvp.Key - 1] = NormalizeOptionalString(kvp.Value);
+                }
+            }
+
+            SetSlotIconMaskForAutomation(current);
+        }
+
+        internal void SetActionIconMaskForAutomation(string saveIconFixtureId, string loadIconFixtureId, string clearIconFixtureId)
+        {
+            Texture2D saveIcon = ResolveOptionalActionIconFixtureForAutomation(saveIconFixtureId, "save", nameof(saveIconFixtureId));
+            Texture2D loadIcon = ResolveOptionalActionIconFixtureForAutomation(loadIconFixtureId, "load", nameof(loadIconFixtureId));
+            Texture2D clearIcon = ResolveOptionalActionIconFixtureForAutomation(clearIconFixtureId, "clear", nameof(clearIconFixtureId));
+            ApplyActionIconMaskForAutomation(saveIcon, loadIcon, clearIcon);
+        }
+
+        internal void SetActionIconMaskForAutomation(IReadOnlyDictionary<string, string> actionIconFixtureIdsByKey, bool clearExisting)
+        {
+            string save = clearExisting ? string.Empty : ResolveCurrentActionIconFixtureIdForAutomation("save");
+            string load = clearExisting ? string.Empty : ResolveCurrentActionIconFixtureIdForAutomation("load");
+            string clear = clearExisting ? string.Empty : ResolveCurrentActionIconFixtureIdForAutomation("clear");
+
+            if (actionIconFixtureIdsByKey != null)
+            {
+                foreach (var kvp in actionIconFixtureIdsByKey)
+                {
+                    switch (NormalizeActionIconKey(kvp.Key))
+                    {
+                        case "save":
+                            save = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "load":
+                            load = NormalizeOptionalString(kvp.Value);
+                            break;
+                        case "clear":
+                            clear = NormalizeOptionalString(kvp.Value);
+                            break;
+                    }
+                }
+            }
+
+            SetActionIconMaskForAutomation(save, load, clear);
+        }
+
+        internal void SetIconFixturesForAutomation(
+            string rootIconFixtureId,
+            string[] slotIconFixtureIds,
+            string saveIconFixtureId,
+            string loadIconFixtureId,
+            string clearIconFixtureId)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            if (slotIconFixtureIds != null && slotIconFixtureIds.Length != slotCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(slotIconFixtureIds),
+                    slotIconFixtureIds.Length,
+                    $"ASM-Lite slot icon fixture mask must contain exactly {slotCount} slot value(s) for the current avatar.");
+            }
+
+            Texture2D rootIcon = ResolveOptionalIconFixtureForAutomation(
+                rootIconFixtureId,
+                ASMLiteIconFixtureKind.Root,
+                nameof(rootIconFixtureId));
+            Texture2D[] slotIcons = ResolveSlotIconFixturesForAutomation(slotIconFixtureIds ?? new string[slotCount], slotCount);
+            Texture2D saveIcon = ResolveOptionalActionIconFixtureForAutomation(saveIconFixtureId, "save", nameof(saveIconFixtureId));
+            Texture2D loadIcon = ResolveOptionalActionIconFixtureForAutomation(loadIconFixtureId, "load", nameof(loadIconFixtureId));
+            Texture2D clearIcon = ResolveOptionalActionIconFixtureForAutomation(clearIconFixtureId, "clear", nameof(clearIconFixtureId));
+            ActionIconMode actionIconMode = saveIcon != null || loadIcon != null || clearIcon != null
+                ? ActionIconMode.Custom
+                : ActionIconMode.Default;
+
+            _customizationDraft.SetIconFixtureTextures(rootIcon, slotIcons, saveIcon, loadIcon, clearIcon);
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            Undo.RecordObject(component, "Set ASM-Lite Icon Fixtures");
+            component.useCustomSlotIcons = true;
+            component.customIcons = CloneTextures(slotIcons);
+            component.useCustomRootIcon = rootIcon != null;
+            component.customRootIcon = rootIcon;
+            component.actionIconMode = actionIconMode;
+            component.customSaveIcon = saveIcon;
+            component.customLoadIcon = loadIcon;
+            component.customClearIcon = clearIcon;
+            EditorUtility.SetDirty(component);
+        }
+
+        private static IconMode ParseIconModeForAutomation(string iconMode, string fieldName)
+        {
+            string normalized = NormalizeOptionalString(iconMode).Replace("-", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            switch (normalized)
+            {
+                case "multicolor":
+                case "multi":
+                    return IconMode.MultiColor;
+                case "samecolor":
+                case "same":
+                    return IconMode.SameColor;
+                default:
+                    throw new ArgumentException("ASM-Lite icon mode must be one of: multiColor, sameColor.", fieldName);
+            }
+        }
+
+        private static IconMode ValidateIconModeForAutomation(IconMode iconMode, string fieldName)
+        {
+            switch (iconMode)
+            {
+                case IconMode.MultiColor:
+                case IconMode.SameColor:
+                    return iconMode;
+                default:
+                    throw new ArgumentOutOfRangeException(fieldName, iconMode, "ASM-Lite icon mode must be MultiColor or SameColor for automation. Use SetCustomIconsEnabledForAutomation for custom icon overrides.");
+            }
+        }
+
+        private static int ParseGearColorForAutomation(string gearColor, string fieldName)
+        {
+            string normalized = NormalizeOptionalString(gearColor).Replace("-", string.Empty).Replace("_", string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+            for (int index = 0; index < GearColorNames.Length; index++)
+            {
+                if (string.Equals(GearColorNames[index].ToLowerInvariant(), normalized, StringComparison.Ordinal))
+                    return index;
+            }
+
+            throw new ArgumentException($"ASM-Lite gear color must be one of: {string.Join(", ", GearColorNames)}.", fieldName);
+        }
+
+        private static void ValidateGearIndexForAutomation(int selectedGearIndex, string fieldName)
+        {
+            if (selectedGearIndex < 0 || selectedGearIndex >= GearColorNames.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    fieldName,
+                    selectedGearIndex,
+                    $"ASM-Lite gear color index must be between 0 and {GearColorNames.Length - 1}.");
+            }
+        }
+
+        private static Texture2D[] EnsureSizedTextureArray(Texture2D[] source, int size)
+        {
+            if (size <= 0)
+                return Array.Empty<Texture2D>();
+
+            var resized = new Texture2D[size];
+            if (source != null)
+                Array.Copy(source, resized, Mathf.Min(source.Length, size));
+            return resized;
+        }
+
+        private static bool TextureArraysEqual(Texture2D[] left, Texture2D[] right)
+        {
+            left = left ?? Array.Empty<Texture2D>();
+            right = right ?? Array.Empty<Texture2D>();
+            if (left.Length != right.Length)
+                return false;
+
+            for (int index = 0; index < left.Length; index++)
+            {
+                if (left[index] != right[index])
+                    return false;
+            }
+
+            return true;
+        }
+
+        private Texture2D[] ResolveCurrentSlotIconsForAutomation(int slotCount)
+        {
+            var component = GetOrRefreshComponent();
+            return EnsureSizedTextureArray(component ? component.customIcons : _pendingCustomIcons, slotCount);
+        }
+
+        private string[] ResolveCurrentSlotIconFixtureIdsForAutomation(int slotCount)
+        {
+            var component = GetOrRefreshComponent();
+            return NormalizeSlotIconFixtureIdsForAutomationSnapshot(component ? component.customIcons : _pendingCustomIcons, slotCount);
+        }
+
+        private string ResolveCurrentActionIconFixtureIdForAutomation(string actionName)
+        {
+            var component = GetOrRefreshComponent();
+            bool useCustomSlotIcons = component ? component.useCustomSlotIcons : _pendingUseCustomSlotIcons;
+            ActionIconMode actionIconMode = component ? component.actionIconMode : _pendingActionIconMode;
+            if (!useCustomSlotIcons || actionIconMode != ActionIconMode.Custom)
+                return string.Empty;
+
+            switch (actionName)
+            {
+                case "save":
+                    return ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component ? component.customSaveIcon : _pendingCustomSaveIcon);
+                case "load":
+                    return ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component ? component.customLoadIcon : _pendingCustomLoadIcon);
+                case "clear":
+                    return ASMLiteIconFixtureRegistry.GetFixtureIdOrEmpty(component ? component.customClearIcon : _pendingCustomClearIcon);
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static Texture2D[] ResolveSlotIconFixturesForAutomation(string[] fixtureIds, int slotCount)
+        {
+            var icons = new Texture2D[slotCount];
+            for (int index = 0; index < slotCount; index++)
+            {
+                icons[index] = ResolveOptionalIconFixtureForAutomation(
+                    fixtureIds[index],
+                    ASMLiteIconFixtureKind.Slot,
+                    $"slotIconFixtureIds[{index}]");
+            }
+            return icons;
+        }
+
+        private static Texture2D ResolveOptionalActionIconFixtureForAutomation(string fixtureId, string actionName, string fieldName)
+        {
+            return ResolveOptionalIconFixtureForAutomation(
+                fixtureId,
+                ASMLiteIconFixtureKind.Action,
+                fieldName,
+                actionName);
+        }
+
+        private static Texture2D ResolveOptionalIconFixtureForAutomation(
+            string fixtureId,
+            ASMLiteIconFixtureKind expectedKind,
+            string fieldName,
+            string expectedActionName = "")
+        {
+            if (string.IsNullOrWhiteSpace(fixtureId))
+                return null;
+
+            if (!ASMLiteIconFixtureRegistry.TryResolveFixture(fixtureId, out var fixture))
+            {
+                throw new ArgumentException(
+                    $"Unknown ASM-Lite icon fixture ID '{NormalizeOptionalString(fixtureId)}' for field '{fieldName}'. Use a stable ASMLiteIconFixtureRegistry ID.",
+                    fieldName);
+            }
+
+            if (fixture.Kind != expectedKind)
+            {
+                throw new ArgumentException(
+                    $"ASM-Lite icon fixture field '{fieldName}' expects a {expectedKind} fixture ID but received {fixture.Kind} fixture '{fixture.Id}'.",
+                    fieldName);
+            }
+
+            if (!string.IsNullOrEmpty(expectedActionName) && !string.Equals(fixture.ActionName, expectedActionName, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"ASM-Lite action icon fixture field '{fieldName}' expects the '{expectedActionName}' action fixture but received '{fixture.Id}'.",
+                    fieldName);
+            }
+
+            return ASMLiteIconFixtureRegistry.ResolveTexture(fixture.Id);
+        }
+
+        private static string NormalizeActionIconKey(string key)
+        {
+            string normalized = NormalizeOptionalString(key).Replace("-", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            switch (normalized)
+            {
+                case "save":
+                    return "save";
+                case "load":
+                    return "load";
+                case "clear":
+                case "clearpreset":
+                    return "clear";
+                default:
+                    throw new ArgumentException($"Unsupported ASM-Lite action icon key '{key}'. Expected one of: save, load, clear.", nameof(key));
+            }
+        }
+
+        private void ApplyActionIconMaskForAutomation(Texture2D saveIcon, Texture2D loadIcon, Texture2D clearIcon)
+        {
+            bool hasCustomActionIcon = saveIcon != null || loadIcon != null || clearIcon != null;
+            if (hasCustomActionIcon)
+                SetCustomIconsEnabledForAutomation(true);
+
+            ActionIconMode actionIconMode = hasCustomActionIcon ? ActionIconMode.Custom : ActionIconMode.Default;
+            _customizationDraft.SetActionIcons(saveIcon, loadIcon, clearIcon);
+
+            var component = GetOrRefreshComponent();
+            if (!component)
+                return;
+
+            bool changed = component.actionIconMode != actionIconMode
+                || component.customSaveIcon != saveIcon
+                || component.customLoadIcon != loadIcon
+                || component.customClearIcon != clearIcon;
+            if (!changed)
+                return;
+
+            Undo.RecordObject(component, "Set ASM-Lite Action Icon Fixtures");
+            component.actionIconMode = actionIconMode;
+            component.customSaveIcon = saveIcon;
+            component.customLoadIcon = loadIcon;
+            component.customClearIcon = clearIcon;
+            EditorUtility.SetDirty(component);
+        }
+
+        internal void SelectInstallPathForAutomation(string selectedPath)
+        {
+            ApplyInstallPathSelection(GetOrRefreshComponent(), selectedPath);
+        }
+
+        internal string[] GetVisibleParameterBackupOptionsForAutomation()
+        {
+            return GetVisibleParameterBackupOptionsForTesting(_selectedAvatar);
+        }
+
+        internal static string[] NormalizeParameterBackupOptionNamesForAutomation(IEnumerable<string> names)
+        {
+            return ASMLiteParameterBackupPresetResolver.NormalizeVisibleNames(names);
+        }
+
+        internal string[] GetParameterBackupPresetIdsForAutomation()
+        {
+            return ASMLiteParameterBackupPresetResolver.StablePresetIds;
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions)
+        {
+            ApplyParameterBackupStateForAutomation(
+                useParameterExclusions,
+                ResolveCurrentExcludedParameterNamesForAutomation(useParameterExclusions));
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions, string presetId)
+        {
+            if (!useParameterExclusions)
+            {
+                ApplyParameterBackupStateForAutomation(false, Array.Empty<string>());
+                return;
+            }
+
+            SetParameterBackupPresetForAutomation(presetId);
+        }
+
+        internal void SetParameterBackupStateForAutomation(bool useParameterExclusions, IEnumerable<string> exactExcludedParameterNames)
+        {
+            if (!useParameterExclusions)
+            {
+                ApplyParameterBackupStateForAutomation(false, Array.Empty<string>());
+                return;
+            }
+
+            SetParameterBackupExclusionsForAutomation(exactExcludedParameterNames);
+        }
+
+        internal void SetParameterBackupPresetForAutomation(string presetId)
+        {
+            string[] excluded = ASMLiteParameterBackupPresetResolver.ResolvePresetExcludedNames(
+                presetId,
+                GetVisibleParameterBackupOptionsForAutomation());
+            ApplyParameterBackupStateForAutomation(true, excluded);
+        }
+
+        internal void SetParameterBackupExclusionsForAutomation(IEnumerable<string> exactExcludedParameterNames)
+        {
+            string[] excluded = ASMLiteParameterBackupPresetResolver.ResolveExactExcludedNames(
+                exactExcludedParameterNames,
+                GetVisibleParameterBackupOptionsForAutomation());
+            ApplyParameterBackupStateForAutomation(true, excluded);
+        }
+
+        private string[] ResolveCurrentExcludedParameterNamesForAutomation(bool useParameterExclusions)
+        {
+            if (!useParameterExclusions)
+                return Array.Empty<string>();
+
+            var component = GetOrRefreshComponent();
+            return SanitizeExcludedParameterNames(component ? component.excludedParameterNames : _pendingExcludedParameterNames);
+        }
+
+        private void ApplyParameterBackupStateForAutomation(bool useParameterExclusions, string[] excludedParameterNames)
+        {
+            string[] normalizedExcluded = useParameterExclusions
+                ? SanitizeExcludedParameterNames(excludedParameterNames)
+                : Array.Empty<string>();
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentBool(
+                    component,
+                    "Toggle ASM-Lite Parameter Backup Customization",
+                    ref component.useParameterExclusions,
+                    useParameterExclusions);
+                SetComponentExcludedNames(
+                    component,
+                    "Change ASM-Lite Parameter Backup",
+                    normalizedExcluded);
+            }
+
+            _customizationDraft.SetParameterExclusions(useParameterExclusions, normalizedExcluded);
+            _cachedParamList = null;
+            _cachedParamTree = null;
+        }
+
+        internal CustomizationAutomationSnapshot GetPendingCustomizationSnapshotForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            return CreateCustomizationAutomationSnapshot(component, CapturePendingCustomizationSnapshot());
+        }
+
+        internal CustomizationAutomationSnapshot GetAttachedCustomizationSnapshotForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            var customization = component
+                ? ASMLiteCustomizationDraft.CaptureFromComponent(component).ToComponentSnapshot()
+                : default;
+            return CreateCustomizationAutomationSnapshot(component, customization);
+        }
+
+        internal PendingCustomizationSnapshot GetPendingCustomizationSnapshotForTesting()
+        {
+            return _customizationDraft.ToPendingSnapshot(_selectedAvatar);
+        }
+
+        private static void ValidateAutomationSlotCount(int slotCount)
+        {
+            if (slotCount < 1 || slotCount > 8)
+                throw new ArgumentOutOfRangeException(nameof(slotCount), slotCount, "ASM-Lite slot count must be between 1 and 8.");
+        }
+
+        private int GetCurrentSlotCountForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            int slotCount = component ? component.slotCount : _pendingSlotCount;
+            ValidateAutomationSlotCount(slotCount);
+            return slotCount;
+        }
+
+        private void ValidateAutomationPresetSlot(int slot, int slotCount)
+        {
+            if (slot < 1 || slot > slotCount)
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, $"ASM-Lite preset name slot must be between 1 and the current slot count ({slotCount}).");
+        }
+
+        private string[] ResolveCurrentPresetNamesBySlot(int slotCount)
+        {
+            var component = GetOrRefreshComponent();
+            return NormalizePresetNamesBySlot(component ? component.customPresetNames : _pendingCustomPresetNames, slotCount);
+        }
+
+        private void ApplyPresetNameMaskForAutomation(string[] presetNamesBySlot, bool clearExisting)
+        {
+            int slotCount = GetCurrentSlotCountForAutomation();
+            string[] normalized = NormalizePresetNamesBySlot(presetNamesBySlot, slotCount);
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentStringArray(component, "Change ASM-Lite Preset Names", ref component.customPresetNames, normalized);
+                if (clearExisting)
+                    SetComponentRawString(component, "Clear ASM-Lite Legacy Preset Name Format", ref component.customPresetNameFormat, string.Empty);
+            }
+
+            _customizationDraft.SetPresetNames(normalized, clearExisting);
+        }
+
+        private static string NormalizeActionLabelKey(string key)
+        {
+            string normalized = NormalizeOptionalString(key).Replace("-", string.Empty).Replace("_", string.Empty).ToLowerInvariant();
+            switch (normalized)
+            {
+                case "save":
+                    return "save";
+                case "load":
+                    return "load";
+                case "clear":
+                case "clearpreset":
+                    return "clear";
+                case "confirm":
+                    return "confirm";
+                default:
+                    throw new ArgumentException($"Unsupported ASM-Lite action label key '{key}'. Expected one of: save, load, clear, confirm.", nameof(key));
+            }
+        }
+
+        private void ApplyActionLabelMaskForAutomation(string saveLabel, string loadLabel, string clearLabel, string confirmLabel)
+        {
+            string save = NormalizeOptionalString(saveLabel);
+            string load = NormalizeOptionalString(loadLabel);
+            string clear = NormalizeOptionalString(clearLabel);
+            string confirm = NormalizeOptionalString(confirmLabel);
+
+            var component = GetOrRefreshComponent();
+            if (component)
+            {
+                SetComponentRawString(component, "Change ASM-Lite Save Label", ref component.customSaveLabel, save);
+                SetComponentRawString(component, "Change ASM-Lite Load Label", ref component.customLoadLabel, load);
+                SetComponentRawString(component, "Change ASM-Lite Clear Preset Label", ref component.customClearPresetLabel, clear);
+                SetComponentRawString(component, "Change ASM-Lite Confirm Label", ref component.customConfirmLabel, confirm);
+            }
+
+            _customizationDraft.SetActionLabels(save, load, clear, confirm);
+        }
+
+        private CustomizationAutomationSnapshot CreateCustomizationAutomationSnapshot(
+            ASMLiteComponent component,
+            ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization)
+        {
+            var toolState = GetOrRefreshToolState(component);
+            var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            return ASMLiteCustomizationDraft.CreateAutomationSnapshot(
+                _selectedAvatar,
+                component,
+                customization,
+                toolState,
+                actionHierarchy);
+        }
+
+        internal void AddPrefabForAutomation()
+        {
+            try
+            {
+                AddPrefabToAvatar(showDialogs: false);
+            }
+            finally
+            {
+                RestoreAvatarSelectionForAutomation();
+            }
+        }
+
+        private void RestoreAvatarSelectionForAutomation()
+        {
+            if (_selectedAvatar == null || _selectedAvatar.gameObject == null)
+                return;
+
+            Selection.activeGameObject = _selectedAvatar.gameObject;
+        }
+
+        internal void RebuildForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                BakeAssets(component, showDialogs: false);
+        }
+
+        internal void VendorizeForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                VendorizeAsmLite(component, requireConfirmation: false, showDialogs: false);
+        }
+
+        internal void DetachForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                DetachAsmLite(component, vendorizeToAssets: false, requireConfirmation: false, showDialogs: false);
+        }
+
+        internal static bool TryRetargetLiveFullControllerGeneratedAssetsForTesting(ASMLiteComponent component, string generatedDir)
+        {
+            return TryRetargetLiveFullControllerGeneratedAssets(component, generatedDir);
+        }
+
+        internal void RemovePrefabForAutomation()
+        {
+            var component = GetOrRefreshComponent();
+            if (component != null)
+                RemovePrefab(component);
+        }
+
+        internal void ReturnToPackageManagedForAutomation()
+        {
+            ReturnToPackageManaged(showDialogs: false);
+        }
+
+        private abstract class VisibleAutomationOverlayPopupWindowBase : EditorWindow
+        {
+            private const float PositionSyncEpsilon = 0.5f;
+
+            protected ASMLiteWindow Owner;
+            private bool _hasBeenShown;
+
+            protected static void ApplyBorder(VisualElement element, Color color, float width = 1f)
+            {
+                if (element == null)
+                    return;
+
+                element.style.borderLeftWidth = width;
+                element.style.borderRightWidth = width;
+                element.style.borderTopWidth = width;
+                element.style.borderBottomWidth = width;
+                element.style.borderLeftColor = color;
+                element.style.borderRightColor = color;
+                element.style.borderTopColor = color;
+                element.style.borderBottomColor = color;
+            }
+
+            protected void PrepareWindow(ASMLiteWindow owner)
+            {
+                Owner = owner;
+                titleContent = GUIContent.none;
+                minSize = new Vector2(120f, 60f);
+                maxSize = new Vector2(10000f, 10000f);
+            }
+
+            protected void ShowOverlayWindow(Rect rect)
+            {
+                if (!_hasBeenShown)
+                {
+                    position = rect;
+                    ShowAuxWindow();
+                    position = rect;
+                    _hasBeenShown = true;
+                    return;
+                }
+
+                if (!HasMeaningfulPositionChange(position, rect))
+                    return;
+
+                position = rect;
+                Repaint();
+            }
+
+            private static bool HasMeaningfulPositionChange(Rect current, Rect next)
+            {
+                return Mathf.Abs(current.x - next.x) > PositionSyncEpsilon
+                    || Mathf.Abs(current.y - next.y) > PositionSyncEpsilon
+                    || Mathf.Abs(current.width - next.width) > PositionSyncEpsilon
+                    || Mathf.Abs(current.height - next.height) > PositionSyncEpsilon;
+            }
+
+            protected virtual void OnDisable()
+            {
+                _hasBeenShown = false;
+            }
+        }
+
+        private sealed class VisibleAutomationStatusOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _metaLabel;
+            private Label _stepLabel;
+            private VisualElement _badge;
+            private Label _badgeLabel;
+
+            internal static VisibleAutomationStatusOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationStatusOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.style.paddingLeft = 0f;
+                rootVisualElement.style.paddingRight = 0f;
+                rootVisualElement.style.paddingTop = 0f;
+                rootVisualElement.style.paddingBottom = 0f;
+                rootVisualElement.pickingMode = PickingMode.Ignore;
+
+                _panel = new VisualElement { pickingMode = PickingMode.Ignore };
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                _accent.style.height = 4f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement { pickingMode = PickingMode.Ignore };
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 16f;
+                body.style.paddingRight = 16f;
+                body.style.paddingTop = 14f;
+                body.style.paddingBottom = 14f;
+                _panel.Add(body);
+
+                var headerRow = new VisualElement { pickingMode = PickingMode.Ignore };
+                headerRow.style.flexDirection = FlexDirection.Row;
+                headerRow.style.alignItems = Align.FlexStart;
+                body.Add(headerRow);
+
+                var titleColumn = new VisualElement { pickingMode = PickingMode.Ignore };
+                titleColumn.style.flexDirection = FlexDirection.Column;
+                titleColumn.style.flexGrow = 1f;
+                titleColumn.style.marginRight = 12f;
+                headerRow.Add(titleColumn);
+
+                _titleLabel = new Label { pickingMode = PickingMode.Ignore };
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                titleColumn.Add(_titleLabel);
+
+                _metaLabel = new Label { pickingMode = PickingMode.Ignore };
+                titleColumn.Add(_metaLabel);
+
+                _badge = new VisualElement { pickingMode = PickingMode.Ignore };
+                _badge.style.minWidth = 96f;
+                _badge.style.height = 22f;
+                _badge.style.justifyContent = Justify.Center;
+                _badge.style.alignItems = Align.Center;
+                _badge.style.paddingLeft = 10f;
+                _badge.style.paddingRight = 10f;
+                headerRow.Add(_badge);
+
+                _badgeLabel = new Label { pickingMode = PickingMode.Ignore };
+                _badgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _badge.Add(_badgeLabel);
+
+                _stepLabel = new Label { pickingMode = PickingMode.Ignore };
+                _stepLabel.style.whiteSpace = WhiteSpace.Normal;
+                _stepLabel.style.marginTop = 12f;
+                _stepLabel.style.flexGrow = 1f;
+                body.Add(_stepLabel);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                GetVisibleAutomationOverlayPalette(
+                    owner._visibleAutomationOverlayState,
+                    out Color accentColor,
+                    out Color backgroundColor,
+                    out Color borderColor,
+                    out Color badgeColor,
+                    out Color badgeTextColor);
+
+                bool presentationMode = owner._visibleAutomationOverlayPresentationMode;
+                _panel.style.backgroundColor = backgroundColor;
+                ApplyBorder(_panel, borderColor);
+                _accent.style.backgroundColor = accentColor;
+                _titleLabel.text = string.IsNullOrWhiteSpace(owner._visibleAutomationOverlayTitle)
+                    ? "ASM-Lite visible smoke test"
+                    : owner._visibleAutomationOverlayTitle;
+                _titleLabel.style.fontSize = presentationMode ? 15 : 12;
+                _titleLabel.style.color = Color.white;
+
+                string metaText = owner.BuildVisibleAutomationOverlayMetaText();
+                _metaLabel.text = metaText;
+                _metaLabel.style.display = string.IsNullOrEmpty(metaText) ? DisplayStyle.None : DisplayStyle.Flex;
+                _metaLabel.style.fontSize = presentationMode ? 11 : 10;
+                _metaLabel.style.color = new Color(0.74f, 0.82f, 0.91f, 0.96f);
+
+                _stepLabel.text = owner._visibleAutomationOverlayStep;
+                _stepLabel.style.fontSize = presentationMode ? 16 : 12;
+                _stepLabel.style.color = new Color(0.95f, 0.97f, 0.99f, 1f);
+
+                _badge.style.backgroundColor = badgeColor;
+                _badgeLabel.text = GetVisibleAutomationOverlayStatusLabel(owner._visibleAutomationOverlayState);
+                _badgeLabel.style.fontSize = presentationMode ? 11 : 10;
+                _badgeLabel.style.color = badgeTextColor;
+            }
+        }
+
+        private sealed class VisibleAutomationChecklistOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _metaLabel;
+            private ScrollView _scrollView;
+            private VisualElement _itemsContainer;
+            private readonly List<VisibleAutomationChecklistVisualRefs> _itemVisuals = new List<VisibleAutomationChecklistVisualRefs>();
+
+            internal static VisibleAutomationChecklistOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationChecklistOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.pickingMode = PickingMode.Ignore;
+
+                _panel = new VisualElement { pickingMode = PickingMode.Ignore };
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                _accent.style.height = 5f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement { pickingMode = PickingMode.Ignore };
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 12f;
+                body.style.paddingRight = 10f;
+                body.style.paddingTop = 12f;
+                body.style.paddingBottom = 12f;
+                _panel.Add(body);
+
+                _titleLabel = new Label("Visible Smoke Checklist") { pickingMode = PickingMode.Ignore };
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                body.Add(_titleLabel);
+
+                _metaLabel = new Label { pickingMode = PickingMode.Ignore };
+                _metaLabel.style.marginTop = 2f;
+                body.Add(_metaLabel);
+
+                _scrollView = new ScrollView(ScrollViewMode.Vertical)
+                {
+                    pickingMode = PickingMode.Ignore,
+                };
+                _scrollView.style.flexGrow = 1f;
+                _scrollView.style.marginTop = 10f;
+                _scrollView.style.paddingRight = 2f;
+                _scrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
+                _scrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+                body.Add(_scrollView);
+
+                _itemsContainer = new VisualElement { pickingMode = PickingMode.Ignore };
+                _itemsContainer.style.flexDirection = FlexDirection.Column;
+                _itemsContainer.style.flexGrow = 1f;
+                _scrollView.Add(_itemsContainer);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                bool presentationMode = owner._visibleAutomationOverlayPresentationMode;
+                int totalItems = owner._visibleAutomationChecklistItems.Length;
+                int completedItems = owner.CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
+
+                _panel.style.backgroundColor = new Color(0.05f, 0.07f, 0.09f, 0.96f);
+                ApplyBorder(_panel, new Color(0.14f, 0.39f, 0.43f, 0.96f));
+                _accent.style.backgroundColor = new Color(0.18f, 0.65f, 0.70f, 1f);
+
+                _titleLabel.text = "Visible Smoke Checklist";
+                _titleLabel.style.fontSize = presentationMode ? 13 : 11;
+                _titleLabel.style.color = Color.white;
+
+                _metaLabel.text = $"Completed {completedItems}/{totalItems} • Scroll for full test list";
+                _metaLabel.style.fontSize = presentationMode ? 10 : 9;
+                _metaLabel.style.color = new Color(0.76f, 0.84f, 0.92f, 0.95f);
+
+                if (_scrollView != null)
+                    _scrollView.style.marginTop = presentationMode ? 12f : 10f;
+
+                EnsureVisualCount(totalItems);
+                double now = EditorApplication.timeSinceStartup;
+                for (int i = 0; i < totalItems; i++)
+                    UpdateItemVisual(owner, _itemVisuals[i], i, now, totalItems);
+            }
+
+            private void EnsureVisualCount(int totalItems)
+            {
+                if (_itemsContainer == null)
+                    return;
+
+                while (_itemVisuals.Count > totalItems)
+                {
+                    int last = _itemVisuals.Count - 1;
+                    _itemVisuals[last].Root.RemoveFromHierarchy();
+                    _itemVisuals.RemoveAt(last);
+                }
+
+                while (_itemVisuals.Count < totalItems)
+                {
+                    var refs = CreateChecklistVisual();
+                    _itemsContainer.Add(refs.Root);
+                    _itemVisuals.Add(refs);
+                }
+            }
+
+            private static VisibleAutomationChecklistVisualRefs CreateChecklistVisual()
+            {
+                var refs = new VisibleAutomationChecklistVisualRefs();
+                refs.Root = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Root.style.flexDirection = FlexDirection.Row;
+                refs.Root.style.alignItems = Align.Stretch;
+                refs.Root.style.flexGrow = 1f;
+                refs.Root.style.minHeight = VisibleAutomationChecklistCompactItemHeight;
+                refs.Root.style.marginBottom = 6f;
+                refs.Root.style.overflow = Overflow.Hidden;
+
+                refs.Accent = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Accent.style.width = 4f;
+                refs.Accent.style.flexShrink = 0f;
+                refs.Root.Add(refs.Accent);
+
+                var content = new VisualElement { pickingMode = PickingMode.Ignore };
+                content.style.flexDirection = FlexDirection.Column;
+                content.style.flexGrow = 1f;
+                content.style.paddingLeft = 9f;
+                content.style.paddingRight = 8f;
+                content.style.paddingTop = 7f;
+                content.style.paddingBottom = 5f;
+                refs.Root.Add(content);
+
+                var topRow = new VisualElement { pickingMode = PickingMode.Ignore };
+                topRow.style.flexDirection = FlexDirection.Row;
+                topRow.style.alignItems = Align.FlexStart;
+                topRow.style.flexGrow = 1f;
+                content.Add(topRow);
+
+                refs.Glyph = new Label { pickingMode = PickingMode.Ignore };
+                refs.Glyph.style.width = 20f;
+                refs.Glyph.style.minWidth = 20f;
+                refs.Glyph.style.marginRight = 6f;
+                refs.Glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
+                refs.Glyph.style.unityTextAlign = TextAnchor.UpperCenter;
+                refs.Glyph.style.whiteSpace = WhiteSpace.NoWrap;
+                topRow.Add(refs.Glyph);
+
+                refs.Text = new Label { pickingMode = PickingMode.Ignore };
+                refs.Text.style.flexGrow = 1f;
+                refs.Text.style.whiteSpace = WhiteSpace.Normal;
+                refs.Text.style.unityTextAlign = TextAnchor.UpperLeft;
+                refs.Text.style.marginRight = 6f;
+                topRow.Add(refs.Text);
+
+                refs.Badge = new VisualElement { pickingMode = PickingMode.Ignore };
+                refs.Badge.style.minWidth = 52f;
+                refs.Badge.style.height = 18f;
+                refs.Badge.style.justifyContent = Justify.Center;
+                refs.Badge.style.alignItems = Align.Center;
+                refs.Badge.style.paddingLeft = 6f;
+                refs.Badge.style.paddingRight = 6f;
+                refs.Badge.style.flexShrink = 0f;
+                topRow.Add(refs.Badge);
+
+                refs.BadgeLabel = new Label { pickingMode = PickingMode.Ignore };
+                refs.BadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                refs.BadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                refs.BadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
+                refs.Badge.Add(refs.BadgeLabel);
+
+                refs.StepLabel = new Label { pickingMode = PickingMode.Ignore };
+                refs.StepLabel.style.marginTop = 3f;
+                refs.StepLabel.style.whiteSpace = WhiteSpace.NoWrap;
+                refs.StepLabel.style.unityTextAlign = TextAnchor.LowerLeft;
+                content.Add(refs.StepLabel);
+                return refs;
+            }
+
+            private static void UpdateItemVisual(ASMLiteWindow owner, VisibleAutomationChecklistVisualRefs refs, int itemIndex, double now, int totalItems)
+            {
+                string itemLabel = owner._visibleAutomationChecklistItems[itemIndex];
+                var itemState = owner._visibleAutomationChecklistStates[itemIndex];
+                double changedAt = itemIndex < owner._visibleAutomationChecklistStateChangedAt.Length
+                    ? owner._visibleAutomationChecklistStateChangedAt[itemIndex]
+                    : now;
+                double stateAgeSeconds = Mathf.Max(0f, (float)(now - changedAt));
+
+                GetVisibleAutomationChecklistItemPalette(
+                    itemState,
+                    stateAgeSeconds,
+                    now,
+                    owner._visibleAutomationOverlayPresentationMode,
+                    out Color backgroundColor,
+                    out Color borderColor,
+                    out Color accentColor,
+                    out Color textColor,
+                    out Color badgeColor,
+                    out Color badgeTextColor,
+                    out Color glyphColor);
+
+                refs.Root.style.backgroundColor = backgroundColor;
+                ApplyBorder(refs.Root, borderColor);
+                refs.Root.style.minHeight = owner._visibleAutomationOverlayPresentationMode ? 48f : VisibleAutomationChecklistCompactItemHeight;
+                refs.Root.style.marginBottom = itemIndex < totalItems - 1 ? 6f : 0f;
+                refs.Accent.style.backgroundColor = accentColor;
+                refs.Glyph.text = GetVisibleAutomationChecklistItemGlyph(itemState);
+                refs.Glyph.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 16 : 14;
+                refs.Glyph.style.color = glyphColor;
+
+                refs.Text.text = itemLabel;
+                refs.Text.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 12 : 11;
+                refs.Text.style.color = textColor;
+
+                refs.Badge.style.backgroundColor = badgeColor;
+                refs.BadgeLabel.text = GetVisibleAutomationChecklistItemStatusLabel(itemState);
+                refs.BadgeLabel.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 9 : 8;
+                refs.BadgeLabel.style.color = badgeTextColor;
+
+                refs.StepLabel.text = $"Step {itemIndex + 1}";
+                refs.StepLabel.style.fontSize = owner._visibleAutomationOverlayPresentationMode ? 9 : 8;
+                refs.StepLabel.style.color = new Color(0.72f, 0.78f, 0.86f, 0.92f);
+            }
+        }
+
+        private sealed class VisibleAutomationCompletionReviewOverlayWindow : VisibleAutomationOverlayPopupWindowBase
+        {
+            private VisualElement _panel;
+            private VisualElement _accent;
+            private Label _titleLabel;
+            private Label _messageLabel;
+            private Label _hintLabel;
+            private Button _finishButton;
+
+            internal static VisibleAutomationCompletionReviewOverlayWindow Create(ASMLiteWindow owner)
+            {
+                var window = CreateInstance<VisibleAutomationCompletionReviewOverlayWindow>();
+                window.PrepareWindow(owner);
+                return window;
+            }
+
+            public void CreateGUI()
+            {
+                rootVisualElement.style.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                rootVisualElement.style.paddingLeft = 0f;
+                rootVisualElement.style.paddingRight = 0f;
+                rootVisualElement.style.paddingTop = 0f;
+                rootVisualElement.style.paddingBottom = 0f;
+
+                _panel = new VisualElement();
+                _panel.style.flexDirection = FlexDirection.Column;
+                _panel.style.flexGrow = 1f;
+                _panel.style.overflow = Overflow.Hidden;
+                rootVisualElement.Add(_panel);
+
+                _accent = new VisualElement();
+                _accent.style.height = 5f;
+                _panel.Add(_accent);
+
+                var body = new VisualElement();
+                body.style.flexDirection = FlexDirection.Column;
+                body.style.flexGrow = 1f;
+                body.style.paddingLeft = 18f;
+                body.style.paddingRight = 18f;
+                body.style.paddingTop = 16f;
+                body.style.paddingBottom = 16f;
+                _panel.Add(body);
+
+                _titleLabel = new Label();
+                _titleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+                _titleLabel.style.fontSize = 15;
+                _titleLabel.style.color = Color.white;
+                _titleLabel.style.whiteSpace = WhiteSpace.Normal;
+                body.Add(_titleLabel);
+
+                _messageLabel = new Label();
+                _messageLabel.style.marginTop = 10f;
+                _messageLabel.style.whiteSpace = WhiteSpace.Normal;
+                _messageLabel.style.flexGrow = 1f;
+                _messageLabel.style.color = new Color(0.92f, 0.96f, 0.99f, 1f);
+                _messageLabel.style.fontSize = 12;
+                body.Add(_messageLabel);
+
+                _hintLabel = new Label();
+                _hintLabel.style.marginTop = 10f;
+                _hintLabel.style.color = new Color(0.77f, 0.84f, 0.91f, 0.96f);
+                _hintLabel.style.fontSize = 10;
+                _hintLabel.style.whiteSpace = WhiteSpace.Normal;
+                body.Add(_hintLabel);
+
+                _finishButton = new Button(() => Owner?.AcknowledgeVisibleAutomationCompletionReview())
+                {
+                    text = "Accept and close"
+                };
+                _finishButton.style.marginTop = 14f;
+                _finishButton.style.height = 28f;
+                _finishButton.style.unityFontStyleAndWeight = FontStyle.Bold;
+                body.Add(_finishButton);
+            }
+
+            internal void SyncFromOwner(ASMLiteWindow owner, Rect rect)
+            {
+                if (owner == null)
+                    return;
+
+                PrepareWindow(owner);
+                ShowOverlayWindow(rect);
+                if (_panel == null)
+                    return;
+
+                _panel.style.backgroundColor = new Color(0.06f, 0.09f, 0.12f, 0.98f);
+                ApplyBorder(_panel, new Color(0.24f, 0.53f, 0.62f, 0.98f));
+                _accent.style.backgroundColor = new Color(0.22f, 0.74f, 0.83f, 1f);
+
+                _titleLabel.text = string.IsNullOrWhiteSpace(owner._visibleAutomationCompletionReviewTitle)
+                    ? "Visible smoke results ready"
+                    : owner._visibleAutomationCompletionReviewTitle;
+                _messageLabel.text = owner._visibleAutomationCompletionReviewMessage ?? string.Empty;
+
+                _hintLabel.text = "Review the overlays before exiting, then click Accept and close to approve this visible smoke run.";
+            }
+        }
+
+        // ── Nested types ──────────────────────────────────────────────────────
+
+        private class MenuTreeNode
+        {
+            public string Name;
+            public string FullPath;
+            public readonly List<MenuTreeNode> Children = new List<MenuTreeNode>();
+        }
+
+        /// <summary>
+        /// Node in the parameter-backup tree. Leaf nodes (IsParam == true) represent
+        /// individual parameters with a checkbox. Interior nodes are menu folders.
+        /// </summary>
+        private class ParamTreeNode
+        {
+            public string Name;
+            public string MenuPath;   // non-null / set for folder nodes
+            public string ParamName;  // non-null for leaf param nodes
+            public bool IsParam => ParamName != null;
+            public readonly List<ParamTreeNode> Children = new List<ParamTreeNode>();
         }
     }
 }

@@ -18,7 +18,7 @@ Policy regarding the use of Agentic AI Tooling view [AIPOLICY.md](AIPOLICY.md) f
 
 ASM-Lite lets you save your current expression parameter values into preset slots, reload them at any time, or clear a slot back to defaults, all from the in-game expression menu.
 
-You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count and icon style, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, regenerates its managed FX/parameter/menu assets, and delivers them through the prefab's VRCFury FullController wiring.
+You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lite**): pick your avatar, choose a slot count, menu labels, icon style, install path, and optional parameter backup presets, then click **Add ASM-Lite Prefab**. At build time, ASM-Lite scans the avatar's expression parameters, regenerates its managed FX/parameter/menu assets, and delivers them through the prefab's VRCFury FullController wiring.
 
 ---
 
@@ -52,13 +52,7 @@ You configure ASM-Lite from the editor window (**Tools → .Staples. → ASM-Lit
 
 ### Developer Git Identity Guard
 
-Run this once after cloning to enable repository hooks:
-
-```bash
-bash Tools/ci/setup-git-hooks.sh
-```
-
-The hooks block commits that use banned personal identity metadata or blocked co-author trailers. CI also enforces the same checks on push and pull request.
+CI blocks commits that use banned personal identity metadata or blocked co-author trailers on push and pull request.
 
 ---
 
@@ -70,12 +64,18 @@ The hooks block commits that use banned personal identity metadata or blocked co
 2. Select your avatar from the **Avatar Root** field.
 3. Configure your settings (all options are available before adding the prefab):
    - **Slot Count** - number of preset slots (1-8).
-   - **Icon Mode** - what icons appear in the expression menu for each slot (see below).
+   - **Menu Labels** - optional custom root, preset, action, and confirmation labels.
+   - **Icon Mode** - what icons appear in the expression menu root and preset slots (see below).
    - **Action Icon Mode** - default bundled action icons or custom Save/Load/Clear icons.
+   - **Install Path** - optional expression-menu path where ASM-Lite should appear.
+   - **Parameter Backups** - optional presets for excluding parameters from Save/Load storage.
 4. Click **Add ASM-Lite Prefab**.
 
-Once the prefab is added, two buttons appear:
-- **Rebuild ASM-Lite** - regenerates all assets after changing slot count or icon settings.
+Once the prefab is added, management actions appear:
+- **Rebuild ASM-Lite** - regenerates payload assets and refreshes live wiring after changing settings.
+- **Detach ASM-Lite** - bakes ASM-Lite runtime data into avatar assets, then removes the editable ASM-Lite GameObject from the avatar.
+- **Vendorize (Keep Attached)** - mirrors generated payload assets into `Assets/ASM-Lite/<AvatarName>/GeneratedAssets` and retargets live references there while keeping ASM-Lite editable.
+- **Return to Package Managed** - when vendorized/detached state is detected, restores the normal package-managed editable workflow.
 - **Remove Prefab** - removes the ASM-Lite prefab from the avatar hierarchy and cleans up ASM-Lite managed state, including legacy direct-injection remnants on older avatars.
 
 ### In-Game
@@ -95,9 +95,21 @@ Once the prefab is added, two buttons appear:
 
 The number of independent preset slots ASM-Lite manages, from 1 to 8. Each slot stores a full snapshot of every expression parameter on the avatar. Changes take effect after a rebuild.
 
+### Menu Labels
+
+ASM-Lite can rename the generated expression-menu entries before attach or while attached. You can override the root menu name, each preset slot label, Save/Load/Clear Preset labels, and confirmation labels. Blank fields fall back to the default text.
+
+### Install Path
+
+By default ASM-Lite appears at the expression-menu root as **Settings Manager**. You can place it under an existing menu path, including paths discovered from VRCFury MoveMenu destinations. Choosing root clears the custom path and keeps the normal root placement.
+
+### Parameter Backups
+
+ASM-Lite normally stores every discovered non-ASM-Lite expression parameter. Parameter backup presets let you exclude selected visible parameters from generated backup/default storage, including deterministic VRCFury-created toggle names shown in the editor window.
+
 ### Icon Mode
 
-Controls the icons displayed in the expression menu for each preset slot.
+Controls the icons displayed for the ASM-Lite root menu and each preset slot.
 
 | Mode | Behavior |
 |---|---|
@@ -120,10 +132,13 @@ Controls the icons shown for **Save**, **Load**, and **Clear Preset** actions in
 
 At build time, ASM-Lite runs via `IPreprocessCallbackBehaviour` after VRCFury has merged avatar parameters into the descriptor snapshot used for discovery. It then:
 
-1. **Discovers parameters** - reads expression parameters from `avDesc.expressionParameters` and skips any `ASMLite_`-prefixed entries to avoid self-referential loops.
-2. **Generates managed assets** - rebuilds the managed FX controller, expression-parameter asset, and menu assets in `GeneratedAssets` using the discovered schema.
-3. **Builds the expression menu** - generates the nested `Settings Manager → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear.
+1. **Discovers parameters** - reads expression parameters from `avDesc.expressionParameters`, skips `ASMLite_`-prefixed entries to avoid self-referential loops, and applies any configured parameter exclusions.
+2. **Generates managed assets** - rebuilds the managed FX controller, expression-parameter asset, and menu assets in `GeneratedAssets` using the discovered schema and current customization settings.
+3. **Builds the expression menu** - generates the nested `Settings Manager → Preset N → Save / Load / Clear Preset` menu structure with confirmation sub-menus for Save and Clear, using custom labels/icons when configured.
 4. **Delivers through VRCFury FullController** - the prefab's FullController wiring references those generated assets, so the current upload consumes the freshly rebuilt payload instead of stale content.
+5. **Keeps generated-asset ownership explicit** - the default attached workflow keeps package-managed references under `Packages/com.staples.asm-lite/GeneratedAssets`. Vendorize and Detach copy the payload into avatar-owned assets, retarget descriptor/FullController references there, and roll back staged copies if retargeting fails.
+
+Package-managed generated assets are rebuilt as a deterministic clean payload. The editor/test workflow verifies folder metas, GUID-bearing assets, and VRCFury menu-prefix wiring so repeated rebuilds do not leave stale prefab overrides or partially retargeted references.
 
 Backup parameters (`ASMLite_Bak_*`) and default parameters (`ASMLite_Def_*`) are local-only and not synced, so they do not consume the 256-bit expression parameter sync budget.
 
@@ -145,11 +160,45 @@ If you are upgrading from versions that may have an empty FullController paramet
 
 The distributable package lives in `Packages/com.staples.asm-lite/`. Open the project through VCC to ensure the VRChat SDK and VRCFury dependencies resolve correctly.
 
+### Full Validation (Local)
+
+Run contributor EditMode validation through the canonical command:
+
+```bash
+Tools/ci/bin/run-editmode-local.sh
+```
+
+No-arg execution uses the repo-owned Unity project at `Tools/ci/unity-project` and derives the default CI batch plan from `Tools/ci/test-suites/suites.json`.
+
+Expected canonical artifacts from the default run:
+- `artifacts/editmode-results.xml`
+- `artifacts/editmode-core-results.xml`
+- `artifacts/editmode-integration-results.xml`
+- `artifacts/editmode.log`
+- `artifacts/asmlite-generation-wiring-summary.json`
+
+For contributor validation, `Tools/ci/bin/run-editmode-local.sh` remains the only required full test path before pushing changes.
+
+Test-suite coverage inventory is tracked in:
+- `Tools/ci/docs/asmlite-tests-audit.md` - human-readable suite ledger with isolation class, CI bucket, and source location.
+- `Tools/ci/test-suites/test-suite-ledger.json` - machine-readable ledger consumed by CI/smoke automation.
+
+Current suite inventory validates 530 Unity C# test methods, with 7 suite groups and 5 default CI groups.
+
+CI adds these release-facing guardrails around the local EditMode path:
+- **CI Asset Hygiene** rejects tracked local Test Project payloads, runtime-generated CI Unity `Assets` payloads except `.gitkeep`, generated `bin`/`obj` outputs, generated `.csproj` files, and Unity `Library`/`Temp`/`Logs`/`UserSettings` state.
+- **Strict Unity result verification** requires nonzero passing NUnit XML and fails skipped or inconclusive tests in CI Unity runs.
+- **Generated asset cleanliness checks** run after EditMode and PlayMode jobs so package-managed `GeneratedAssets` and the shipped prefab stay clean.
+- **PlayMode Save/Load Tests** run `ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests` in the CI Unity project with VRCFury and Lyuma Av3 Emulator available.
+
+Optional local-only helper:
+- `Tools/ci/bin/run-visible-smoke-local.sh` (interactive/local smoke validation entrypoint)
+
 ---
 
 ## Releases
 
-Release artifacts are published automatically when `package.json` is updated on `main` - an auto-tag workflow creates a version tag which triggers the release build. The VPM listing rebuilds automatically when release events are published/updated. A nightly prerelease build runs on the `dev` branch at 05:00 UTC daily.
+Release artifacts are published automatically from pushes to `main` when the package version in `Packages/com.staples.asm-lite/package.json` is newer than the latest GitHub release. Stable release publication waits for green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds. The broader CI workflow also runs identity, asset hygiene, compatibility, release-gate invariant, and PlayMode Save/Load lanes. The release workflow creates the semantic tag during publish, then deploys the VPM listing. A nightly prerelease build runs from `dev` at 05:00 UTC daily (and on `dev` pushes/manual dispatch), and nightly prerelease publication also waits on green compile/lint/EditMode checks for the exact commit SHA before artifact publication proceeds.
 
 ---
 

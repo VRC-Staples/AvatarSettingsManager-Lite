@@ -1,0 +1,14 @@
+{
+  "protocolVersion": "1.0.0",
+  "sessionId": "session-20260423T043708Z-8f02f9b1",
+  "commandId": "cmd_000002_run-suite",
+  "commandSeq": 2,
+  "commandType": "run-suite",
+  "createdAtUtc": "2026-04-23T04:40:00Z",
+  "runSuite": {
+    "suiteId": "lifecycle-roundtrip",
+    "requestedBy": "operator",
+    "requestedResetDefault": "FullPackageRebuild",
+    "reason": "operator-selected"
+  }
+}

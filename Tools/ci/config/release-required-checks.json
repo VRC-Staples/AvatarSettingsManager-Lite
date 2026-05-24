@@ -1,0 +1,17 @@
+{
+  "compile": [
+    "CI / C# Compile (Unity 2022.3.22f1)",
+    "C# Compile (Unity 2022.3.22f1)",
+    "C# Compile Check / C# Compile (Unity 2022.3.22f1)"
+  ],
+  "lint": [
+    "CI / Super-Linter",
+    "Super-Linter",
+    "Lint / Super-Linter"
+  ],
+  "test": [
+    "CI / EditMode Tests",
+    "EditMode Tests",
+    "Unity Test Results / EditMode Tests"
+  ]
+}

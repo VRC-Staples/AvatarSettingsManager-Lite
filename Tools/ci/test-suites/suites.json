@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "description": "Canonical ASM-Lite test suite map. The Unity batch runner derives its default CI batch run definitions from this map; validate-suites.py keeps default batch selectors and the smoke catalog in parity with these groups.",
+  "defaultCiGroups": [
+    "contract",
+    "core-headless",
+    "integration-headless",
+    "smoke-protocol-headless",
+    "smoke-overlay-host-headless"
+  ],
+  "groups": [
+    {
+      "id": "contract",
+      "description": "Pinned prefab/controller contract check that gates generated asset reference behavior.",
+      "defaultCi": true,
+      "headless": "yes",
+      "batchRun": {
+        "name": "editmode-contract",
+        "resultFile": "editmode-contract-results.xml",
+        "filters": [
+          {
+            "testNames": [
+              "ASMLite.Tests.Editor.ASMLitePrefabContractTests.Prefab_UsesGeneratedAssetReferences_ForFullController"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "core-headless",
+      "description": "Fast headless EditMode unit/contract fixtures covered by canonical class filters.",
+      "defaultCi": true,
+      "headless": "yes",
+      "batchRun": {
+        "name": "editmode-core",
+        "resultFile": "editmode-core-results.xml",
+        "filters": [
+          {
+            "groupNames": [
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteAssetPathsTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteBuilderTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentPreprocessTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteComponentTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationDraftTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteCustomizationScaffoldTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteFullControllerWiringTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteGeneratedOwnershipPolicyTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteGenerationWiringSummaryWriterTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteIconFixtureRegistryTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallationStateTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallPathWiringTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteLifecycleSeamTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBackupPresetResolverTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteAv3SaveLoadConfigurationTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowAdapterBoundaryTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowNamingGroupingTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowRiskAffordanceTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowStatusPanelTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowTerminologyTests(?:\\.|$)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "integration-headless",
+      "description": "Unity EditMode tests tagged Category(\"Integration\"); fixture-heavy but intended for headless batch CI.",
+      "defaultCi": true,
+      "headless": "review",
+      "batchRun": {
+        "name": "editmode-integration",
+        "resultFile": "editmode-integration-results.xml",
+        "categoryNames": [
+          "Integration"
+        ]
+      }
+    },
+    {
+      "id": "smoke-protocol-headless",
+      "description": "C#/Unity smoke protocol, catalog, JSON/event, atomic IO, artifact path, and executor contract tests.",
+      "defaultCi": true,
+      "headless": "yes",
+      "testFiles": [
+        "ASMLiteSmokeProtocolTests.cs",
+        "ASMLiteSmokeProtocolCompatibilityTests.cs",
+        "ASMLiteSmokeCatalogTests.cs",
+        "ASMLiteSmokeRunExecutorTests.cs",
+        "ASMLiteSmokeAtomicIoTests.cs",
+        "ASMLiteSmokeArtifactPathsTests.cs"
+      ],
+      "batchRun": {
+        "name": "editmode-smoke-protocol",
+        "resultFile": "editmode-smoke-protocol-results.xml",
+        "filters": [
+          {
+            "groupNames": [
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolCompatibilityTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeCatalogTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeRunExecutorTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeAtomicIoTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeArtifactPathsTests(?:\\.|$)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "smoke-overlay-host-headless",
+      "description": "C#/Unity editor host/application tests that exercise smoke host behavior in batch/headless Unity, independent of external visible tooling.",
+      "defaultCi": true,
+      "headless": "yes",
+      "testFiles": [
+        "ASMLiteSmokeOverlayHostTests.cs",
+        "ASMLiteSmokeSetupFixtureServiceTests.cs"
+      ],
+      "batchRun": {
+        "name": "editmode-smoke-overlay-host",
+        "resultFile": "editmode-smoke-overlay-host-results.xml",
+        "filters": [
+          {
+            "groupNames": [
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeOverlayHostTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeSetupFixtureServiceTests(?:\\.|$)"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "playmode-headless-review",
+      "description": "PlayMode/runtime suites are discoverable for review in a dedicated PlayMode assembly and excluded from default CI until runner policy avoids runSynchronously and fixture requirements are settled.",
+      "defaultCi": false,
+      "headless": "review",
+      "testFiles": [
+        "ASMLiteAv3SaveLoadRuntimeTests.cs",
+        "ASMLiteAv3SaveLoadManualTests.cs"
+      ],
+      "smokeCatalogSuiteIds": [
+        "playmode-runtime-validation",
+        "playmode-save-load-av3"
+      ]
+    },
+    {
+      "id": "visible-manual",
+      "description": "Visible editor/operator-driven smoke suites are discoverable but excluded from default headless CI.",
+      "defaultCi": false,
+      "headless": "no",
+      "testFiles": [
+        "ASMLiteVisibleEditorSmokeTests.cs"
+      ],
+      "smokeCatalogPath": "Tools/ci/smoke/suite-catalog.json",
+      "smokeCatalogSuiteIds": [
+        "asm-lite-readiness-check",
+        "setup-scene-avatar",
+        "avatar-discovery-selection-regression",
+        "add-prefab-idempotency",
+        "installed-state-recognition",
+        "generated-asset-recovery-signals",
+        "generated-reference-ownership",
+        "prebuild-slots-matrix",
+        "prebuild-path-matrix",
+        "prebuild-names-matrix",
+        "prebuild-icons-matrix",
+        "prebuild-backup-matrix",
+        "prebuild-combo-matrix",
+        "negative-diagnostics",
+        "destructive-recovery-reset",
+        "lifecycle-roundtrip"
+      ]
+    }
+  ]
+}

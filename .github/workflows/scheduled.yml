@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      checks: read
+      statuses: read
     env:
       packagePath: Packages/${{ vars.PACKAGE_NAME }}
       zipFile: ${{ vars.PACKAGE_NAME }}-nightly.zip
@@ -29,6 +31,38 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          ref: dev
+
+      - name: Assert nightly source branch is dev
+        run: |
+          set -euo pipefail
+          source_branch=$(git rev-parse --abbrev-ref HEAD)
+          echo "Resolved source branch: ${source_branch}"
+          if [ "${source_branch}" != "dev" ]; then
+            echo "Nightly workflow must publish from dev; resolved '${source_branch}'." >&2
+            exit 1
+          fi
+
+      - id: resolve_source
+        name: Resolve nightly source SHA
+        run: |
+          set -euo pipefail
+          source_sha=$(git rev-parse HEAD)
+          echo "source_sha=${source_sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate compile, lint, and test checks for nightly SHA
+        env:
+          TARGET_SHA: ${{ steps.resolve_source.outputs.source_sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 Tools/ci/validators/check-required-statuses.py \
+            --repo "${{ github.repository }}" \
+            --sha "$TARGET_SHA" \
+            --required-checks Tools/ci/config/release-required-checks.json \
+            --github-token-env GITHUB_TOKEN \
+            --max-wait-seconds 1800 \
+            --poll-interval-seconds 20
 
       - name: Create Package Zip
         working-directory: "${{ env.packagePath }}"

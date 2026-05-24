@@ -33,8 +33,101 @@ jobs:
           BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
-          chmod +x Tools/ci/verify-commit-identity.sh
-          Tools/ci/verify-commit-identity.sh "$BASE_SHA" "$HEAD_SHA"
+          chmod +x Tools/ci/validators/verify-commit-identity.sh
+          Tools/ci/validators/verify-commit-identity.sh "$BASE_SHA" "$HEAD_SHA"
+
+  ci-asset-hygiene:
+    name: CI Asset Hygiene
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify CI asset hygiene
+        run: python3 Tools/ci/validators/verify-ci-asset-hygiene.py
+
+  compatibility-guard:
+    name: Compatibility Contract Guard
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Evaluate compatibility contract (warn-only)
+        id: evaluate-compatibility
+        run: |
+          set -euo pipefail
+          python3 Tools/ci/validators/evaluate-compatibility-contract.py \
+            --mode ci \
+            --contract compatibility.contract.json \
+            --output-json /tmp/compatibility-contract-report.json \
+            > /tmp/compatibility-contract-summary.md
+
+      - name: Append compatibility summary
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -f /tmp/compatibility-contract-summary.md ]; then
+            cat /tmp/compatibility-contract-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Compatibility Contract Evaluation" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Evaluator did not produce a markdown summary." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload compatibility report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: compatibility-contract-report
+          path: /tmp/compatibility-contract-report.json
+          if-no-files-found: warn
+
+  release-gate-invariants:
+    name: Release Gate Invariants
+    runs-on: ubuntu-latest
+    needs: [identity-guard]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify release gate workflow invariants
+        run: pwsh -File Tools/ci/validators/verify-release-gate.ps1
+
+      - name: Validate required-check alias config
+        run: |
+          python3 Tools/ci/validators/check-required-statuses.py \
+            --required-checks Tools/ci/config/release-required-checks.json \
+            --validate-config-only
+
+      - name: Run required-check status helper tests
+        run: python3 Tools/ci/tests/validators/test_check_required_statuses.py
+
+      - name: Validate test suite map parity
+        run: python3 Tools/ci/test-suites/validate-suites.py
 
   lint:
     name: Super-Linter
@@ -99,8 +192,8 @@ jobs:
           PACKAGE_PATH: Packages/com.staples.asm-lite
           CI_PROJECT_PATH: Tools/ci/unity-project
         run: |
-          chmod +x Tools/ci/generate-csproj.sh
-          Tools/ci/generate-csproj.sh
+          chmod +x Tools/ci/bin/generate-csproj.sh
+          Tools/ci/bin/generate-csproj.sh
 
       - name: Compile assemblies
         run: |
@@ -131,6 +224,7 @@ jobs:
     name: EditMode Tests
     runs-on: ubuntu-latest
     needs: [identity-guard]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'dev'
     permissions:
       contents: read
       checks: write
@@ -141,8 +235,7 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: Tools/ci/unity-project/Library
-          key: Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**') }}
-          restore-keys: Library-
+          key: Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
       - name: Run EditMode Tests
         shell: bash
         env:
@@ -168,16 +261,16 @@ jobs:
           fi
 
           UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
-            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt)"
+            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt | tr -d '\r\n')"
           if [ -z "${UNITY_VERSION:-}" ]; then
             echo "::error::Failed to read Unity version from ProjectVersion.txt"
             exit 1
           fi
 
           UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
-          echo "Using Unity image ${UNITY_IMAGE}"
+          printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
 
-          # Derive serial from the .ulf file (machine-independent — only the
+          # Derive serial from the .ulf file (machine-independent - only the
           # DeveloperData base64 segment is used, not machine bindings).
           SERIAL_FILE="$(mktemp)"
           python - <<'PY' "$SERIAL_FILE"
@@ -233,6 +326,20 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
+          SUITE_MAP_PATH="${GITHUB_WORKSPACE}/Tools/ci/test-suites/suites.json"
+          if [ ! -f "${SUITE_MAP_PATH}" ]; then
+            echo "::error::Missing canonical EditMode suite map: ${SUITE_MAP_PATH}"
+            exit 1
+          fi
+
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
+
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
+
+          export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
+
           # Write the inner script to a temp file to avoid quoting issues
           # and shellcheck false-positives on the docker run string.
           RUNNER_SCRIPT="$(mktemp /tmp/unity-runner.XXXXXX.sh)"
@@ -268,7 +375,7 @@ jobs:
             -logFile "${ACTIVATE_LOG}" || true
           cat "${ACTIVATE_LOG}"
           if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
-            echo "::error::License activation failed — 'Successfully activated' not found in log."
+            echo "::error::License activation failed - 'Successfully activated' not found in log."
             exit 1
           fi
           rm -f "${ACTIVATE_LOG}"
@@ -277,35 +384,242 @@ jobs:
           # The Temp/ dir is gitignored but may be checked out from prior runs.
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
 
-
-          # Run tests against the shadow project.
           unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -projectPath Tools/ci/unity-project \
+            -logFile /github/workspace/artifacts/unity-resolve.log || true
+          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
+            /github/workspace/Tools/ci/unity-project
+          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
+            /github/workspace/Tools/ci/unity-project/Library/Bee
+
+          # Run the chained EditMode selections against the shadow project in one Unity process.
+          unity-editor \
+            -batchmode \
             -nographics \
             -logFile /github/workspace/artifacts/editmode.log \
             -projectPath Tools/ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
-            -runTests \
-            -testPlatform editmode \
-            -testResults /github/workspace/artifacts/editmode-results.xml \
+            -executeMethod ASMLite.Tests.Editor.ASMLiteBatchTestRunner.RunFromCommandLine \
             -enableCodeCoverage \
             -debugCodeOptimization \
             -coverageOptions "generateAdditionalMetrics;generateHtmlReport;generateBadgeReport;dontClear"
           RUNNER
 
+          set +e
           docker run --rm \
             --workdir /github/workspace \
             --env HOME=/root \
             --env UNITY_EMAIL \
             --env UNITY_PASSWORD \
             --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --env ASMLITE_BATCH_RESULTS_DIR \
             --volume "${GITHUB_WORKSPACE}:/github/workspace" \
             --volume "${RUNNER_SCRIPT}:/tmp/unity-runner.sh" \
             "${UNITY_IMAGE}" \
             /bin/bash /tmp/unity-runner.sh
+          UNITY_RUN_EXIT=$?
+          set -e
+
+          python3 Tools/ci/validators/verify-unity-editmode-results.py \
+            --unity-exit-code "${UNITY_RUN_EXIT}" \
+            --results artifacts/editmode-results.xml \
+            --log artifacts/editmode.log \
+            --forbid-skipped-tests \
+            --forbid-inconclusive-tests
           rm -f "${RUNNER_SCRIPT}"
+      - name: Restore generated package fixtures after Unity run
+        if: always()
+        run: |
+          for path in \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta; do
+            if [ -e "${path}" ]; then
+              sudo chown -R "$(id -u):$(id -g)" "${path}" || true
+            fi
+          done
+          git restore -- \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta
+      - name: Verify package generated assets stayed clean
+        run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
       - name: Upload NUnit results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: test-results
+          path: artifacts
+
+  playmode-save-load:
+    name: PlayMode Save/Load Tests
+    runs-on: ubuntu-latest
+    needs: [identity-guard, test]
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'dev'
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Cache Unity Library
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: Tools/ci/unity-project/Library
+          key: PlayMode-Library-${{ hashFiles('Tools/ci/unity-project/Packages/**', 'Tools/ci/unity-project/ProjectSettings/**', 'Tools/ci/bin/hydrate-vrchat-ci-package.py', '.github/workflows/ci.yml') }}
+      - name: Run PlayMode Save/Load Tests
+        shell: bash
+        env:
+          UNITY_LICENSE_SECRET: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p artifacts
+
+          if [ -z "${UNITY_LICENSE_SECRET:-}" ]; then
+            echo "::error::UNITY_LICENSE is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_EMAIL:-}" ]; then
+            echo "::error::UNITY_EMAIL is missing."
+            exit 1
+          fi
+          if [ -z "${UNITY_PASSWORD:-}" ]; then
+            echo "::error::UNITY_PASSWORD is missing."
+            exit 1
+          fi
+
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/ { print $2; exit }' \
+            Tools/ci/unity-project/ProjectSettings/ProjectVersion.txt | tr -d '\r\n')"
+          if [ -z "${UNITY_VERSION:-}" ]; then
+            echo "::error::Failed to read Unity version from ProjectVersion.txt"
+            exit 1
+          fi
+
+          UNITY_IMAGE="unityci/editor:ubuntu-${UNITY_VERSION}-linux-il2cpp-3"
+          printf 'Using Unity image %q\n' "${UNITY_IMAGE}"
+
+          UNITY_SERIAL="$(python3 Tools/ci/bin/derive-unity-serial.py | tr -d '\r\n')"
+          if [ -z "${UNITY_SERIAL:-}" ]; then
+            echo "::error::Failed to derive UNITY_SERIAL from UNITY_LICENSE"
+            exit 1
+          fi
+          echo "::add-mask::${UNITY_SERIAL}"
+
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
+
+          mkdir -p Tools/ci/unity-project/Assets/Editor
+          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
+            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
+
+          RUNNER_SCRIPT="$(mktemp /tmp/unity-playmode-runner.XXXXXX.sh)"
+          cat > "${RUNNER_SCRIPT}" <<'RUNNER'
+          set -euo pipefail
+          export HOME="${HOME:-/root}"
+          mkdir -p "$HOME/.cache/unity3d" /github/workspace/artifacts
+
+          return_license() {
+            unity-editor \
+              -batchmode \
+              -quit \
+              -returnlicense \
+              -username "$UNITY_EMAIL" \
+              -password "$UNITY_PASSWORD" \
+              -logFile /dev/stdout || true
+          }
+          trap return_license EXIT
+
+          ACTIVATE_LOG="$(mktemp)"
+          unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -serial "$UNITY_SERIAL" \
+            -username "$UNITY_EMAIL" \
+            -password "$UNITY_PASSWORD" \
+            -logFile "${ACTIVATE_LOG}" || true
+          cat "${ACTIVATE_LOG}"
+          if ! grep -q "Successfully activated" "${ACTIVATE_LOG}"; then
+            echo "::error::License activation failed - 'Successfully activated' not found in log."
+            exit 1
+          fi
+          rm -f "${ACTIVATE_LOG}"
+
+          rm -rf /github/workspace/Tools/ci/unity-project/Temp
+
+          unity-editor \
+            -batchmode \
+            -quit \
+            -nographics \
+            -projectPath Tools/ci/unity-project \
+            -logFile /github/workspace/artifacts/playmode-unity-resolve.log || true
+          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
+            /github/workspace/Tools/ci/unity-project
+          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
+            /github/workspace/Tools/ci/unity-project/Library/Bee
+
+          unity-editor \
+            -batchmode \
+            -nographics \
+            -runTests \
+            -testPlatform playmode \
+            -testFilter ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests \
+            -testResults /github/workspace/artifacts/playmode-save-load-results.xml \
+            -logFile /github/workspace/artifacts/playmode-save-load.log \
+            -projectPath Tools/ci/unity-project
+          RUNNER
+
+          set +e
+          docker run --rm \
+            --workdir /github/workspace \
+            --env HOME=/root \
+            --env CI="${CI:-false}" \
+            --env UNITY_EMAIL \
+            --env UNITY_PASSWORD \
+            --env UNITY_SERIAL="${UNITY_SERIAL}" \
+            --volume "${GITHUB_WORKSPACE}:/github/workspace" \
+            --volume "${RUNNER_SCRIPT}:/tmp/unity-playmode-runner.sh" \
+            "${UNITY_IMAGE}" \
+            /bin/bash /tmp/unity-playmode-runner.sh
+          UNITY_RUN_EXIT=$?
+          set -e
+
+          python3 Tools/ci/validators/verify-unity-editmode-results.py \
+            --unity-exit-code "${UNITY_RUN_EXIT}" \
+            --results artifacts/playmode-save-load-results.xml \
+            --log artifacts/playmode-save-load.log \
+            --forbid-skipped-tests \
+            --forbid-inconclusive-tests
+          rm -f "${RUNNER_SCRIPT}"
+      - name: Restore generated package fixtures after Unity run
+        if: always()
+        run: |
+          for path in \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta; do
+            if [ -e "${path}" ]; then
+              sudo chown -R "$(id -u):$(id -g)" "${path}" || true
+            fi
+          done
+          git restore -- \
+            Packages/com.staples.asm-lite/GeneratedAssets \
+            Packages/com.staples.asm-lite/GeneratedAssets.meta \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab \
+            Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab.meta
+      - name: Verify package generated assets stayed clean
+        run: python3 Tools/ci/validators/verify-package-generated-assets-clean.py
+      - name: Upload PlayMode NUnit results
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: playmode-save-load-results
           path: artifacts

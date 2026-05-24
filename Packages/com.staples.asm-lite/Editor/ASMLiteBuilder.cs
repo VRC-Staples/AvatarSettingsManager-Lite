@@ -6,6 +6,8 @@ using UnityEditor.Animations;
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.RegularExpressions;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -42,6 +44,13 @@ namespace ASMLite.Editor
         /// Value 0 = idle.
         /// </summary>
         internal const string CtrlParam = "ASMLite_Ctrl";
+
+        internal const string DefaultRootControlName = "Settings Manager";
+        internal const string DefaultPresetNameFormat = "Preset {slot}";
+        internal const string DefaultSaveLabel = "Save";
+        internal const string DefaultLoadLabel = "Load";
+        internal const string DefaultClearPresetLabel = "Clear Preset";
+        internal const string DefaultConfirmLabel = "Confirm";
 
         internal readonly struct CleanupReport
         {
@@ -133,7 +142,38 @@ namespace ASMLite.Editor
             internal string SourceParamName { get; }
         }
 
+        internal readonly struct ParameterExclusionReport
+        {
+            internal ParameterExclusionReport(
+                bool enabled,
+                int rawRequestedCount,
+                int requestedCount,
+                int matchedCount,
+                int ignoredSanitizationCount,
+                int ignoredStaleCount,
+                HashSet<string> canonicalExcludedNames)
+            {
+                Enabled = enabled;
+                RawRequestedCount = rawRequestedCount;
+                RequestedCount = requestedCount;
+                MatchedCount = matchedCount;
+                IgnoredSanitizationCount = ignoredSanitizationCount;
+                IgnoredStaleCount = ignoredStaleCount;
+                CanonicalExcludedNames = canonicalExcludedNames ?? new HashSet<string>(StringComparer.Ordinal);
+            }
+
+            internal bool Enabled { get; }
+            internal int RawRequestedCount { get; }
+            internal int RequestedCount { get; }
+            internal int MatchedCount { get; }
+            internal int IgnoredSanitizationCount { get; }
+            internal int IgnoredStaleCount { get; }
+            internal HashSet<string> CanonicalExcludedNames { get; }
+            internal int IgnoredCount => IgnoredSanitizationCount + IgnoredStaleCount;
+        }
+
         private static LegacyAliasContinuityReport s_latestLegacyAliasReport;
+        private static ASMLiteBuildDiagnosticResult s_latestBuildDiagnostic = ASMLiteBuildDiagnosticResult.Pass();
 
         // ─── Public API ───────────────────────────────────────────────────────
 
@@ -150,11 +190,24 @@ namespace ASMLite.Editor
         /// </summary>
         internal static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(VRCAvatarDescriptor avDesc)
         {
+            return GetFinalAvatarParams(avDesc, null, out _);
+        }
+
+        internal static List<VRCExpressionParameters.Parameter> GetFinalAvatarParams(
+            VRCAvatarDescriptor avDesc,
+            HashSet<string> excludedCanonicalNames,
+            out int matchedExclusionCount)
+        {
+            matchedExclusionCount = 0;
+
             var exprParams = avDesc?.expressionParameters;
             if (exprParams?.parameters == null)
                 return new List<VRCExpressionParameters.Parameter>();
 
             var result = new List<VRCExpressionParameters.Parameter>(exprParams.parameters.Length);
+            var matchedNames = excludedCanonicalNames != null && excludedCanonicalNames.Count > 0
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : null;
 
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Reading final avatar params from '{UnityEditor.AssetDatabase.GetAssetPath(exprParams)}' ({exprParams.parameters.Length} entries).");
@@ -164,14 +217,195 @@ namespace ASMLite.Editor
             {
                 if (p == null || string.IsNullOrEmpty(p.name))
                     continue;
-                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(p.name))
                 {
                     Debug.LogWarning($"[ASM-Lite] Skipping expression parameter '{p.name}': already prefixed with 'ASMLite_'. Remove it from the avatar's expression parameters to avoid conflicts.");
                     continue;
                 }
+                if (matchedNames != null && excludedCanonicalNames.Contains(p.name))
+                {
+                    matchedNames.Add(p.name);
+                    continue;
+                }
+
                 result.Add(p);
             }
+
+            matchedExclusionCount = matchedNames?.Count ?? 0;
             return result;
+        }
+
+        private static int MergeAssignedVrcFuryToggleParams(
+            VRCAvatarDescriptor avDesc,
+            List<VRCExpressionParameters.Parameter> discoveredParams,
+            HashSet<string> excludedCanonicalNames,
+            ref int matchedExclusionCount)
+        {
+            if (avDesc?.gameObject == null || discoveredParams == null)
+                return 0;
+
+            var existingNames = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < discoveredParams.Count; i++)
+            {
+                string existingName = discoveredParams[i]?.name;
+                if (!string.IsNullOrEmpty(existingName))
+                    existingNames.Add(existingName);
+            }
+
+            var matchedExcludedToggleNames = new HashSet<string>(StringComparer.Ordinal);
+            int addedCount = 0;
+            var assignedToggleParams = ASMLiteToggleNameBroker.DiscoverAssignedToggleExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                assignedToggleParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            var plannedToggleParams = ASMLiteToggleNameBroker.DiscoverPlannedToggleExpressionParameters(avDesc.gameObject, avDesc);
+            AddDiscoveredVrcFuryParams(
+                plannedToggleParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            var fullControllerParams = ASMLiteToggleNameBroker.DiscoverStableFullControllerExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                fullControllerParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            var plannedFullControllerParams = ASMLiteToggleNameBroker.DiscoverPlannedFullControllerExpressionParameters(avDesc.gameObject);
+            AddDiscoveredVrcFuryParams(
+                plannedFullControllerParams,
+                discoveredParams,
+                existingNames,
+                excludedCanonicalNames,
+                matchedExcludedToggleNames,
+                ref addedCount);
+
+            matchedExclusionCount += matchedExcludedToggleNames.Count;
+            return addedCount;
+        }
+
+        private static void AddDiscoveredVrcFuryParams(
+            List<VRCExpressionParameters.Parameter> sourceParams,
+            List<VRCExpressionParameters.Parameter> discoveredParams,
+            HashSet<string> existingNames,
+            HashSet<string> excludedCanonicalNames,
+            HashSet<string> matchedExcludedNames,
+            ref int addedCount)
+        {
+            if (sourceParams == null)
+                return;
+
+            for (int i = 0; i < sourceParams.Count; i++)
+            {
+                var parameter = sourceParams[i];
+                string name = parameter?.name;
+                if (string.IsNullOrWhiteSpace(name))
+                    continue;
+
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedRuntimeName(name))
+                    continue;
+
+                if (excludedCanonicalNames != null && excludedCanonicalNames.Contains(name))
+                {
+                    matchedExcludedNames.Add(name);
+                    continue;
+                }
+
+                if (!existingNames.Add(name))
+                    continue;
+
+                discoveredParams.Add(parameter);
+                addedCount++;
+            }
+        }
+
+        internal static ParameterExclusionReport ResolveParameterExclusions(ASMLiteComponent component, int matchedCount)
+        {
+            if (component == null || !component.useParameterExclusions)
+                return new ParameterExclusionReport(enabled: false, rawRequestedCount: 0, requestedCount: 0, matchedCount: 0, ignoredSanitizationCount: 0, ignoredStaleCount: 0, canonicalExcludedNames: new HashSet<string>(StringComparer.Ordinal));
+
+            var rawNames = component.excludedParameterNames;
+            int rawRequestedCount = rawNames?.Length ?? 0;
+
+            var canonicalNames = new HashSet<string>(StringComparer.Ordinal);
+            int ignoredSanitizationCount = 0;
+
+            if (rawNames != null)
+            {
+                for (int i = 0; i < rawNames.Length; i++)
+                {
+                    string candidate = rawNames[i]?.Trim();
+                    if (string.IsNullOrWhiteSpace(candidate))
+                    {
+                        ignoredSanitizationCount++;
+                        continue;
+                    }
+
+                    if (!canonicalNames.Add(candidate))
+                    {
+                        ignoredSanitizationCount++;
+                    }
+                }
+            }
+
+            int clampedMatchedCount = matchedCount;
+            if (clampedMatchedCount < 0)
+                clampedMatchedCount = 0;
+            if (clampedMatchedCount > canonicalNames.Count)
+                clampedMatchedCount = canonicalNames.Count;
+
+            int ignoredStaleCount = canonicalNames.Count - clampedMatchedCount;
+
+            return new ParameterExclusionReport(
+                enabled: true,
+                rawRequestedCount: rawRequestedCount,
+                requestedCount: canonicalNames.Count,
+                matchedCount: clampedMatchedCount,
+                ignoredSanitizationCount: ignoredSanitizationCount,
+                ignoredStaleCount: ignoredStaleCount,
+                canonicalExcludedNames: canonicalNames);
+        }
+
+        private static HashSet<string> ExpandExcludedNamesWithToggleMappings(HashSet<string> excludedCanonicalNames)
+        {
+            var expanded = excludedCanonicalNames != null
+                ? new HashSet<string>(excludedCanonicalNames, StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+
+            if (expanded.Count == 0)
+                return expanded;
+
+            var mappings = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
+            if (mappings == null || mappings.Length == 0)
+                return expanded;
+
+            for (int i = 0; i < mappings.Length; i++)
+            {
+                var mapping = mappings[i];
+                if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam)
+                    || string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
+                    continue;
+
+                bool excludeOriginal = expanded.Contains(mapping.OriginalGlobalParam);
+                bool excludeAssigned = expanded.Contains(mapping.AssignedGlobalParam);
+                if (!excludeOriginal && !excludeAssigned)
+                    continue;
+
+                expanded.Add(mapping.OriginalGlobalParam);
+                expanded.Add(mapping.AssignedGlobalParam);
+            }
+
+            return expanded;
         }
 
         /// <summary>
@@ -180,21 +414,86 @@ namespace ASMLite.Editor
         /// </summary>
         public static int Build(ASMLiteComponent component)
         {
-            // 0. Validate configuration -- catches bad state from non-window entry points
+            var diagnostic = TryBuildWithDiagnostics(component, out int discoveredParamCount);
+            s_latestBuildDiagnostic = diagnostic;
+
+            if (!diagnostic.Success)
+            {
+                Debug.LogError(diagnostic.Message);
+                return -1;
+            }
+
+            return discoveredParamCount;
+        }
+
+        internal static ASMLiteBuildDiagnosticResult GetLatestBuildDiagnosticResult()
+        {
+            return s_latestBuildDiagnostic;
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryBuildWithDiagnostics(ASMLiteComponent component, out int discoveredParamCount)
+        {
+            discoveredParamCount = -1;
+
+            // 0. Validate configuration. This catches bad state from non-window entry points.
             //    (e.g. OnPreprocess during avatar upload where the window slider is bypassed).
             string validationError = Validate(component);
             if (validationError != null)
             {
-                Debug.LogError(validationError);
-                return -1;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.ValidationFailed,
+                    contextPath: "slotCount",
+                    remediation: "Set slotCount to a value between 1 and 8 before building.",
+                    message: validationError);
             }
 
             // 1. Find avatar descriptor
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
             if (avDesc == null)
             {
-                Debug.LogError($"[ASM-Lite] Build failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.");
-                return -1;
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.ValidationFailed,
+                    contextPath: "VRCAvatarDescriptor",
+                    remediation: "Attach ASM-Lite under an avatar root that contains VRCAvatarDescriptor.",
+                    message: $"[ASM-Lite] Build failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.");
+            }
+
+            if (!TryRepairPackageGeneratedFxControllerIfCorrupt("Build"))
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: ASMLiteAssetPaths.FXController,
+                    remediation: "Repair or regenerate the packaged FX controller asset before rebuilding.",
+                    message: $"[ASM-Lite] Build failed: could not repair generated FX controller before rebuilding '{component.gameObject.name}'.");
+            }
+
+            // Keep live VRCFury FullController asset wiring intact for preprocess/upload
+            // paths where the editor window helpers are not involved. This auto-heals
+            // stale prefab instances whose prms/parameters/globalParams references were
+            // lost before VRCFury merges the generated menu.
+            var fullControllerWiringResult = TryEnsureLiveFullControllerAssetWiringWithDiagnostics(component, "Build");
+            if (!fullControllerWiringResult.Success)
+            {
+                return WrapCriticalBuildFailure(
+                    buildCode: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    message: $"[ASM-Lite] Build failed: could not ensure live VRCFury FullController asset wiring on '{component.gameObject.name}'.",
+                    contextPath: "content",
+                    remediation: "Fix FullController wiring schema drift before build.",
+                    innerDiagnostic: fullControllerWiringResult);
+            }
+
+            // Keep live VRCFury FullController install-prefix wiring aligned with
+            // current component settings for preprocess/upload paths where the
+            // editor window helpers are not involved.
+            var installPathSyncResult = TrySyncInstallPathRoutingWithDiagnostics(component);
+            if (!installPathSyncResult.Success)
+            {
+                return WrapCriticalBuildFailure(
+                    buildCode: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
+                    message: $"[ASM-Lite] Build failed: could not sync live FullController install-prefix wiring on '{component.gameObject.name}'.",
+                    contextPath: ASMLiteDriftProbe.MenuPrefixPath,
+                    remediation: "Fix install-prefix wiring schema drift before build.",
+                    innerDiagnostic: installPathSyncResult);
             }
 
             if (avDesc.expressionParameters == null)
@@ -202,9 +501,55 @@ namespace ASMLite.Editor
                 Debug.LogWarning($"[ASM-Lite] No expressionParameters asset assigned on VRCAvatarDescriptor '{avDesc.gameObject.name}'. Generating empty layers.");
             }
 
-            // 2. Read the final avatar parameter schema from the descriptor snapshot.
+            // 2. Resolve canonical exclusion names once, then read the final avatar
+            //    parameter schema from the descriptor snapshot with exclusions applied.
             //    Names are treated as opaque canonical VF output and are not rewritten.
-            var discoveredParams = GetFinalAvatarParams(avDesc);
+            var exclusionReport = ResolveParameterExclusions(component, matchedCount: 0);
+
+            // If the user excludes either side of a VRCFury global mapping
+            // (original or deterministic ASM_VF_* name), exclude both sides so
+            // backup customization behaves as one logical toggle parameter.
+            var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
+
+            var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out int matchedExclusionCount);
+            int assignedVrcFuryToggleParamCount = MergeAssignedVrcFuryToggleParams(
+                avDesc,
+                discoveredParams,
+                expandedExcludedNames,
+                ref matchedExclusionCount);
+
+            if (assignedVrcFuryToggleParamCount > 0)
+            {
+                Debug.Log($"[ASM-Lite] Included {assignedVrcFuryToggleParamCount} VRCFury parameter(s) before VRCFury bake.");
+            }
+
+            if (exclusionReport.Enabled)
+            {
+                int clampedMatchedCount = matchedExclusionCount;
+                if (clampedMatchedCount < 0)
+                    clampedMatchedCount = 0;
+                if (clampedMatchedCount > exclusionReport.RequestedCount)
+                    clampedMatchedCount = exclusionReport.RequestedCount;
+
+                exclusionReport = new ParameterExclusionReport(
+                    enabled: true,
+                    rawRequestedCount: exclusionReport.RawRequestedCount,
+                    requestedCount: exclusionReport.RequestedCount,
+                    matchedCount: clampedMatchedCount,
+                    ignoredSanitizationCount: exclusionReport.IgnoredSanitizationCount,
+                    ignoredStaleCount: exclusionReport.RequestedCount - clampedMatchedCount,
+                    canonicalExcludedNames: exclusionReport.CanonicalExcludedNames);
+            }
+
+            if (!exclusionReport.Enabled)
+            {
+                Debug.Log("[ASM-Lite] Parameter exclusions: disabled (requested=0, matched=0, ignored=0).");
+            }
+            else
+            {
+                Debug.Log(
+                    $"[ASM-Lite] Parameter exclusions: requested={exclusionReport.RequestedCount} (raw={exclusionReport.RawRequestedCount}), matched={exclusionReport.MatchedCount}, ignored={exclusionReport.IgnoredCount} (sanitized={exclusionReport.IgnoredSanitizationCount}, stale={exclusionReport.IgnoredStaleCount}).");
+            }
 
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] Discovered {discoveredParams.Count} custom parameters for '{component.gameObject.name}'.");
@@ -220,7 +565,8 @@ namespace ASMLite.Editor
                 component.slotCount,
                 discoveredParams,
                 GetExistingGeneratedBackupNames(),
-                ASMLiteToggleNameBroker.GetLatestGlobalParamMappings());
+                ASMLiteToggleNameBroker.GetLatestGlobalParamMappings(),
+                expandedExcludedNames);
             s_latestLegacyAliasReport = legacyAliasPlan.Report;
 
             Debug.Log(
@@ -240,7 +586,8 @@ namespace ASMLite.Editor
             Debug.Log($"[ASM-Lite] Build complete for '{component.gameObject.name}': {component.slotCount} slots, {discoveredParams.Count} parameters backed up.");
 #endif
 
-            return discoveredParams.Count;
+            discoveredParamCount = discoveredParams.Count;
+            return ASMLiteBuildDiagnosticResult.Pass();
         }
 
         /// <summary>
@@ -259,6 +606,344 @@ namespace ASMLite.Editor
         internal static LegacyAliasContinuityReport GetLatestLegacyAliasContinuityReport()
         {
             return s_latestLegacyAliasReport;
+        }
+
+        private static ASMLiteBuildDiagnosticResult WrapCriticalBuildFailure(
+            string buildCode,
+            string message,
+            string contextPath,
+            string remediation,
+            ASMLiteBuildDiagnosticResult innerDiagnostic)
+        {
+            if (!innerDiagnostic.Success && ASMLiteDiagnosticCodes.IsBuildCode(innerDiagnostic.Code))
+                return innerDiagnostic;
+
+            return ASMLiteBuildDiagnosticResult.Fail(
+                code: buildCode,
+                contextPath: contextPath,
+                remediation: remediation,
+                message: message,
+                innerDiagnostic: innerDiagnostic.Success ? null : innerDiagnostic);
+        }
+
+        private static Type FindTypeByFullName(string fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+                return null;
+
+            Type firstMatch = null;
+            Type nonTestMatch = null;
+
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                var asm = assemblies[i];
+                if (asm == null)
+                    continue;
+
+                var t = asm.GetType(fullName, throwOnError: false);
+                if (t == null)
+                    continue;
+
+                firstMatch ??= t;
+
+                string asmName = asm.GetName()?.Name ?? string.Empty;
+                bool isTestAssembly = asmName.IndexOf("Test", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!isTestAssembly)
+                    nonTestMatch ??= t;
+
+                if (string.Equals(asmName, "VRCFury", StringComparison.Ordinal)
+                    || asmName.StartsWith("VRCFury.", StringComparison.Ordinal))
+                {
+                    return t;
+                }
+            }
+
+            return nonTestMatch ?? firstMatch;
+        }
+
+        private static bool TryEnsureLiveFullControllerAssetWiring(ASMLiteComponent component, string contextLabel)
+        {
+            var result = TryEnsureLiveFullControllerAssetWiringWithDiagnostics(component, contextLabel);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
+
+            return result.Success;
+        }
+
+        private static ASMLiteBuildDiagnosticResult TryEnsureLiveFullControllerAssetWiringWithDiagnostics(ASMLiteComponent component, string contextLabel)
+        {
+            return ASMLiteFullControllerWiring.TryWirePackageGeneratedAssetsWithDiagnostics(component, contextLabel);
+        }
+
+        private static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)
+        {
+            return ASMLiteFullControllerWiring.TryClearLiveFullControllerMenuPrefixOverride(component);
+        }
+
+        internal static bool TryRepairPackageGeneratedFxControllerIfCorrupt(string contextLabel)
+        {
+            string controllerPath = ASMLiteAssetPaths.FXController;
+            string fullPath = Path.GetFullPath(controllerPath);
+            if (!File.Exists(fullPath))
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller file was not found at '{controllerPath}'.");
+                return false;
+            }
+
+            string controllerText;
+            try
+            {
+                controllerText = File.ReadAllText(fullPath);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to read generated FX controller at '{controllerPath}'. {ex.Message}");
+                return false;
+            }
+
+            int danglingCount = CountDanglingLocalFileIds(controllerText);
+            if (danglingCount == 0)
+                return true;
+
+            Debug.LogWarning($"[ASM-Lite] {contextLabel}: Detected {danglingCount} dangling local fileID reference(s) in generated FX controller. Clearing stale controller topology before rebuild.");
+
+            if (!TryOverwriteCorruptedGeneratedFxControllerWithCleanTemplate(controllerPath, fullPath, contextLabel))
+                return false;
+
+            int remainingDanglingCount;
+            try
+            {
+                remainingDanglingCount = CountDanglingLocalFileIds(File.ReadAllText(fullPath));
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: FX controller topology was cleared, but the repaired asset could not be re-read from disk. {ex.Message}");
+                return false;
+            }
+
+            if (remainingDanglingCount > 0)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller still contains {remainingDanglingCount} dangling local fileID reference(s) after attempted repair.");
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool TryOverwriteCorruptedGeneratedFxControllerWithCleanTemplate(string controllerPath, string fullPath, string contextLabel)
+        {
+            string tempFolderPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLite_FX_Repair_Temp");
+            string tempFolderName = Path.GetFileName(tempFolderPath);
+            AssetDatabase.CreateFolder("Assets", tempFolderName);
+
+            string tempPath = tempFolderPath + "/" + Path.GetFileName(controllerPath);
+            AnimatorController tempController = null;
+            try
+            {
+                tempController = AnimatorController.CreateAnimatorControllerAtPath(tempPath);
+                if (tempController == null)
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to create a temporary AnimatorController repair template at '{tempPath}'.");
+                    return false;
+                }
+
+                tempController.name = Path.GetFileNameWithoutExtension(controllerPath);
+                EditorUtility.SetDirty(tempController);
+                AssetDatabase.SaveAssets();
+
+                string tempFullPath = Path.GetFullPath(tempPath);
+                string cleanControllerText = File.ReadAllText(tempFullPath);
+                cleanControllerText = NormalizeAnimatorControllerMainObjectName(
+                    cleanControllerText,
+                    Path.GetFileNameWithoutExtension(controllerPath));
+                File.WriteAllText(fullPath, cleanControllerText);
+                AssetDatabase.ImportAsset(controllerPath, ImportAssetOptions.ForceUpdate);
+
+                var repairedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+                if (repairedController == null)
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller could not be reloaded after writing a clean repair template.");
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to overwrite the corrupted generated FX controller with a clean repair template. {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(tempFolderPath);
+            }
+        }
+
+        private static int CountDanglingLocalFileIds(string controllerText)
+        {
+            if (string.IsNullOrEmpty(controllerText))
+                return 0;
+
+            var definedIds = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Match match in Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", RegexOptions.Multiline))
+            {
+                if (match.Success)
+                    definedIds.Add(match.Groups[1].Value);
+            }
+
+            int danglingCount = 0;
+            foreach (Match match in Regex.Matches(controllerText, @"\{fileID: (-?\d+)\}"))
+            {
+                if (!match.Success)
+                    continue;
+
+                string fileId = match.Groups[1].Value;
+                if (fileId == "0" || fileId == "9100000")
+                    continue;
+                if (definedIds.Contains(fileId))
+                    continue;
+
+                danglingCount++;
+            }
+
+            return danglingCount;
+        }
+
+        private static string NormalizeAnimatorControllerMainObjectName(string controllerText, string expectedName)
+        {
+            if (string.IsNullOrEmpty(controllerText) || string.IsNullOrEmpty(expectedName))
+                return controllerText;
+
+            return Regex.Replace(
+                controllerText,
+                @"(--- !u!91 &9100000\s+AnimatorController:\s+[\s\S]*?  m_Name: )([^\r\n]*)",
+                match => match.Groups[1].Value + expectedName,
+                RegexOptions.Multiline);
+        }
+
+        private static void ClearGeneratedFxControllerTopology(AnimatorController ctrl)
+        {
+            if (ctrl == null)
+                return;
+
+            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
+                ctrl.RemoveLayer(i);
+
+            RemoveControllerSubAssets(ctrl);
+
+            while (ctrl.parameters.Length > 0)
+                ctrl.RemoveParameter(ctrl.parameters[0]);
+        }
+
+        private static bool TrySyncInstallPathMoveMenuRouting(ASMLiteComponent component)
+        {
+            var avDesc = component != null ? component.GetComponentInParent<VRCAvatarDescriptor>() : null;
+            if (component == null || avDesc == null)
+                return false;
+
+            string installPrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+            string rootControlName = ResolveEffectiveRootControlName(component);
+            if (string.IsNullOrWhiteSpace(rootControlName))
+                return false;
+
+            const string routingObjectName = "ASM-Lite Install Path Routing";
+            Transform routingTransform = avDesc.transform.Find(routingObjectName);
+
+            // No custom install path -> remove routing helper if present.
+            if (string.IsNullOrEmpty(installPrefix))
+            {
+                if (routingTransform != null)
+                    UnityEngine.Object.DestroyImmediate(routingTransform.gameObject);
+                return true;
+            }
+
+            GameObject routingObject;
+            if (routingTransform != null)
+            {
+                routingObject = routingTransform.gameObject;
+            }
+            else
+            {
+                routingObject = new GameObject(routingObjectName);
+                routingObject.transform.SetParent(avDesc.transform, false);
+            }
+
+            var vfType = FindTypeByFullName("VF.Model.VRCFury");
+            var moveMenuType = FindTypeByFullName("VF.Model.Feature.MoveMenuItem");
+            if (vfType == null || moveMenuType == null)
+                return false;
+
+            var vfComponent = routingObject.GetComponent(vfType) as MonoBehaviour;
+            if (vfComponent == null)
+                vfComponent = routingObject.AddComponent(vfType) as MonoBehaviour;
+            if (vfComponent == null)
+                return false;
+
+            var serializedVf = new SerializedObject(vfComponent);
+            serializedVf.Update();
+
+            var contentProperty = serializedVf.FindProperty("content");
+            if (contentProperty == null || contentProperty.propertyType != SerializedPropertyType.ManagedReference)
+                return false;
+
+            contentProperty.managedReferenceValue = Activator.CreateInstance(moveMenuType, true);
+
+            var fromPathProperty = serializedVf.FindProperty("content.fromPath");
+            var toPathProperty = serializedVf.FindProperty("content.toPath");
+            if (fromPathProperty == null || toPathProperty == null)
+                return false;
+
+            string normalizedRoot = rootControlName.Trim();
+            fromPathProperty.stringValue = normalizedRoot;
+            toPathProperty.stringValue = installPrefix + "/" + normalizedRoot;
+
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(vfComponent);
+            return true;
+        }
+
+        internal static bool TrySyncInstallPathRouting(ASMLiteComponent component)
+        {
+            var result = TrySyncInstallPathRoutingWithDiagnostics(component);
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
+
+            return result.Success;
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TrySyncInstallPathRoutingWithDiagnostics(ASMLiteComponent component)
+        {
+            if (component == null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
+                    contextPath: "component",
+                    remediation: "Pass a valid ASMLiteComponent before syncing install path wiring.");
+            }
+
+            // Prefab-instance managedReference overrides on VRCFury FullController are
+            // brittle and explicitly warned about by VRCFury. For instance usage,
+            // route install path through a dedicated MoveMenuItem helper component.
+            if (PrefabUtility.IsPartOfPrefabInstance(component.gameObject))
+            {
+                string effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+                bool requiresRouting = !string.IsNullOrEmpty(effectivePrefix);
+                bool routed = TrySyncInstallPathMoveMenuRouting(component);
+                bool cleared = TryClearLiveFullControllerMenuPrefixOverride(component);
+                if (requiresRouting ? routed : (routed || cleared))
+                    return ASMLiteBuildDiagnosticResult.Pass();
+
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
+                    contextPath: "MoveMenu routing",
+                    remediation: requiresRouting
+                        ? "Ensure prefab-instance install-path routing can update MoveMenu when a custom install prefix is enabled."
+                        : "Ensure prefab-instance install-path sync can either remove routing helpers or clear stale FullController prefix overrides when no custom install prefix is enabled.");
+            }
+
+            return ASMLiteFullControllerWiring.TrySyncLiveMenuPrefixWithDiagnostics(component);
         }
 
         // ─── Private implementation ────────────────────────────────────────────
@@ -283,16 +968,11 @@ namespace ASMLite.Editor
                 return;
             }
 
-            // Clear existing layers (iterate backwards to avoid index shifting)
-            for (int i = ctrl.layers.Length - 1; i >= 0; i--)
-                ctrl.RemoveLayer(i);
+            string expectedControllerName = Path.GetFileNameWithoutExtension(ASMLiteAssetPaths.FXController);
+            if (!string.Equals(ctrl.name, expectedControllerName, StringComparison.Ordinal))
+                ctrl.name = expectedControllerName;
 
-            // Clear existing parameters.
-            // Iterate until empty rather than foreach: RemoveParameter modifies the
-            // underlying list, and a stale controller may contain duplicate-named entries
-            // (from an older build) where a single-pass foreach leaves stragglers.
-            while (ctrl.parameters.Length > 0)
-                ctrl.RemoveParameter(ctrl.parameters[0]);
+            ClearGeneratedFxControllerTopology(ctrl);
 
             // Add one shared control parameter for all slots.
             ctrl.AddParameter(CtrlParam, AnimatorControllerParameterType.Int);
@@ -405,11 +1085,33 @@ namespace ASMLite.Editor
             // SaveAssets is called once in Build() after all three Populate methods complete.
         }
 
+        private static void RemoveControllerSubAssets(AnimatorController ctrl)
+        {
+            if (ctrl == null)
+                return;
+
+            string controllerPath = AssetDatabase.GetAssetPath(ctrl);
+            if (string.IsNullOrWhiteSpace(controllerPath))
+                return;
+
+            var subAssets = AssetDatabase.LoadAllAssetsAtPath(controllerPath);
+            for (int i = 0; i < subAssets.Length; i++)
+            {
+                var subAsset = subAssets[i];
+                if (subAsset == null || subAsset == ctrl)
+                    continue;
+                if (!AssetDatabase.IsSubAsset(subAsset))
+                    continue;
+
+                UnityEngine.Object.DestroyImmediate(subAsset, true);
+            }
+        }
+
         /// <summary>
         /// Builds one FX animator layer for the given slot with Idle, SaveSlot,
         /// LoadSlot, and ResetSlot states, each backed by a VRCAvatarParameterDriver.
-        /// ResetSlot clears the slot's backup parameters to defaults without
-        /// touching the live avatar parameters.
+        /// ResetSlot restores the slot's backup parameters to defaults and also
+        /// applies those defaults back onto the live avatar parameters.
         ///
         /// Uses a single shared control Int (ASMLite_Ctrl) with encoded values:
         /// Save=(slot-1)*3+1, Load=(slot-1)*3+2, Clear=(slot-1)*3+3.
@@ -499,17 +1201,22 @@ namespace ASMLite.Editor
                 string deterministicBackupName = $"ASMLite_Bak_S{slot}_{p.name}";
                 string defaultName = $"ASMLite_Def_{p.name}";
 
-                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName);
-                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name);
+                bool isBoolParameter = p.valueType == VRCExpressionParameters.ValueType.Bool;
+                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName, isBoolParameter);
+                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name, isBoolParameter);
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
-                // Live avatar params are NOT touched: only the saved preset is cleared.
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName);
+                // Also apply defaults back to the live avatar parameter immediately
+                // so Clear Preset visibly resets the avatar instead of requiring an
+                // extra Load action afterward.
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, p.name, isBoolParameter);
 
                 AddLegacyAliasDriverCopiesForSlot(
                     slot,
                     p.name,
                     defaultName,
+                    isBoolParameter,
                     legacyAliasBindings,
                     saveParams,
                     seenSavePairs,
@@ -579,6 +1286,7 @@ namespace ASMLite.Editor
             int slot,
             string sourceParamName,
             string defaultName,
+            bool isBoolParameter,
             List<LegacyAliasBinding> bindings,
             List<VRC_AvatarParameterDriver.Parameter> saveParams,
             HashSet<string> seenSavePairs,
@@ -600,9 +1308,10 @@ namespace ASMLite.Editor
                 if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
                     continue;
 
-                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName);
-                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName);
+                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName, isBoolParameter);
+                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName, isBoolParameter);
+                AddDriverCopy(resetParams, seenResetPairs, defaultName, sourceParamName, isBoolParameter);
             }
         }
 
@@ -610,7 +1319,8 @@ namespace ASMLite.Editor
             List<VRC_AvatarParameterDriver.Parameter> target,
             HashSet<string> seenPairs,
             string source,
-            string destination)
+            string destination,
+            bool preClearBoolDestination = false)
         {
             if (target == null || seenPairs == null)
                 return;
@@ -620,6 +1330,16 @@ namespace ASMLite.Editor
             string key = source + "\u001F" + destination;
             if (!seenPairs.Add(key))
                 return;
+
+            if (preClearBoolDestination)
+            {
+                target.Add(new VRC_AvatarParameterDriver.Parameter
+                {
+                    type = VRC_AvatarParameterDriver.ChangeType.Set,
+                    name = destination,
+                    value = 0f,
+                });
+            }
 
             target.Add(new VRC_AvatarParameterDriver.Parameter
             {
@@ -672,97 +1392,15 @@ namespace ASMLite.Editor
             int slotCount,
             List<VRCExpressionParameters.Parameter> avatarParams,
             string[] existingParamNames,
-            ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings)
+            ASMLiteToggleNameBroker.GlobalParamMapping[] brokerMappings,
+            HashSet<string> excludedCanonicalNames)
         {
-            var avatarParamNames = new List<string>(avatarParams.Count);
-            var avatarParamSet = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < avatarParams.Count; i++)
-            {
-                var param = avatarParams[i];
-                if (param == null || string.IsNullOrWhiteSpace(param.name))
-                    continue;
-
-                if (avatarParamSet.Add(param.name))
-                    avatarParamNames.Add(param.name);
-            }
-
-            var mappingByOriginal = new Dictionary<string, string>(StringComparer.Ordinal);
-            if (brokerMappings != null)
-            {
-                for (int i = 0; i < brokerMappings.Length; i++)
-                {
-                    var mapping = brokerMappings[i];
-                    if (string.IsNullOrWhiteSpace(mapping.OriginalGlobalParam))
-                        continue;
-                    if (string.IsNullOrWhiteSpace(mapping.AssignedGlobalParam))
-                        continue;
-                    if (!mappingByOriginal.ContainsKey(mapping.OriginalGlobalParam))
-                        mappingByOriginal.Add(mapping.OriginalGlobalParam, mapping.AssignedGlobalParam);
-                }
-            }
-
-            var names = new List<string>(slotCount * avatarParamNames.Count);
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int slot = 1; slot <= slotCount; slot++)
-            {
-                for (int i = 0; i < avatarParamNames.Count; i++)
-                {
-                    string name = $"ASMLite_Bak_S{slot}_{avatarParamNames[i]}";
-                    if (seen.Add(name))
-                        names.Add(name);
-                }
-            }
-
-            int mappedCount = 0;
-            int unmatchedCount = 0;
-            int malformedCount = 0;
-            var bindings = new List<LegacyAliasBinding>();
-            var seenBindings = new HashSet<string>(StringComparer.Ordinal);
-
-            if (existingParamNames != null)
-            {
-                for (int i = 0; i < existingParamNames.Length; i++)
-                {
-                    string existingName = existingParamNames[i];
-                    if (string.IsNullOrWhiteSpace(existingName))
-                        continue;
-                    if (!existingName.StartsWith("ASMLite_Bak_", StringComparison.Ordinal))
-                        continue;
-
-                    if (!TryParseBackupName(existingName, out var parsed))
-                    {
-                        malformedCount++;
-                        continue;
-                    }
-
-                    if (seen.Add(existingName))
-                        names.Add(existingName);
-
-                    if (!mappingByOriginal.TryGetValue(parsed.SourceParamName, out string assignedSourceName) || string.IsNullOrWhiteSpace(assignedSourceName))
-                    {
-                        if (!avatarParamSet.Contains(parsed.SourceParamName))
-                            unmatchedCount++;
-                        continue;
-                    }
-
-                    if (!avatarParamSet.Contains(assignedSourceName))
-                    {
-                        unmatchedCount++;
-                        continue;
-                    }
-
-                    mappedCount++;
-                    string bindingKey = parsed.Slot + "\u001F" + assignedSourceName + "\u001F" + existingName;
-                    if (seenBindings.Add(bindingKey))
-                    {
-                        bindings.Add(new LegacyAliasBinding(parsed.Slot, assignedSourceName, existingName));
-                    }
-                }
-            }
-
-            int mirroredCount = bindings.Count;
-            var report = new LegacyAliasContinuityReport(mappedCount, mirroredCount, unmatchedCount, malformedCount);
-            return new BackupNamePlan(names, bindings, report);
+            return ASMLiteMigrationContinuityService.BuildBackupNamePlan(
+                slotCount,
+                avatarParams,
+                existingParamNames,
+                brokerMappings,
+                excludedCanonicalNames);
         }
 
         /// <summary>
@@ -790,25 +1428,18 @@ namespace ASMLite.Editor
                 });
             }
 
-            return BuildBackupNamePlan(slotCount, avatarParams, existingParamNames, Array.Empty<ASMLiteToggleNameBroker.GlobalParamMapping>()).Names;
+            return BuildBackupNamePlan(slotCount, avatarParams, existingParamNames, Array.Empty<ASMLiteToggleNameBroker.GlobalParamMapping>(), null).Names;
         }
 
         private static string[] GetExistingGeneratedBackupNames()
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            if (paramsAsset?.parameters == null)
-                return Array.Empty<string>();
-
-            var existing = new string[paramsAsset.parameters.Length];
-            for (int i = 0; i < paramsAsset.parameters.Length; i++)
-                existing[i] = paramsAsset.parameters[i]?.name;
-
-            return existing;
+            return ASMLiteMigrationContinuityService.GetExistingGeneratedBackupNames();
         }
 
         /// <summary>
-        /// Writes one local shared control trigger param (ASMLite_Ctrl) plus
-        /// slot backup params into the managed VRCExpressionParameters asset.
+        /// Writes one local shared control trigger param (ASMLite_Ctrl), runtime-only
+        /// default params used by Clear Preset, plus slot backup params into the managed
+        /// VRCExpressionParameters asset.
         ///
         /// Legacy backup params from prior schemas are preserved when not colliding
         /// with the current schema to avoid dropping existing user presets.
@@ -822,7 +1453,8 @@ namespace ASMLite.Editor
                 return;
             }
 
-            int totalCount = 1 + (backupNames != null ? backupNames.Count : 0);
+            int avatarParamCount = avatarParams?.Count ?? 0;
+            int totalCount = 1 + avatarParamCount + (backupNames != null ? backupNames.Count : 0);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
 
             // Control Int used by ASM-Lite's FX layers and menu buttons.
@@ -836,6 +1468,28 @@ namespace ASMLite.Editor
                 saved         = false,
                 networkSynced = false,
             });
+
+            // Clear Preset restores slot backups from these runtime-only default keys.
+            // Keep them local-only and unsaved so they remain available to VRCFury's
+            // merged parameter set without consuming synced bits or persisting slot data.
+            if (avatarParams != null)
+            {
+                for (int i = 0; i < avatarParams.Count; i++)
+                {
+                    var source = avatarParams[i];
+                    if (source == null || string.IsNullOrWhiteSpace(source.name))
+                        continue;
+
+                    generated.Add(new VRCExpressionParameters.Parameter
+                    {
+                        name          = $"ASMLite_Def_{source.name}",
+                        valueType     = source.valueType,
+                        defaultValue  = source.defaultValue,
+                        saved         = false,
+                        networkSynced = false,
+                    });
+                }
+            }
 
             var resolvedBackupNames = backupNames ?? new List<string>();
 
@@ -938,6 +1592,12 @@ namespace ASMLite.Editor
         {
             int slotCount = component.slotCount;
 
+            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
+            string effectiveSaveLabel = ResolveEffectiveSaveLabel(component);
+            string effectiveLoadLabel = ResolveEffectiveLoadLabel(component);
+            string effectiveClearPresetLabel = ResolveEffectiveClearPresetLabel(component);
+            string effectiveConfirmLabel = ResolveEffectiveConfirmLabel(component);
+
             // ── Load icons BEFORE StartAssetEditing (LoadAssetAtPath must run outside
             //    the edit batch or the asset database may not resolve paths correctly) ──
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
@@ -949,7 +1609,7 @@ namespace ASMLite.Editor
             Texture2D bundledReset = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconReset);
 
             Texture2D iconSave, iconLoad, iconReset;
-            if (component.actionIconMode == ActionIconMode.Custom)
+            if (component.useCustomSlotIcons && component.actionIconMode == ActionIconMode.Custom)
             {
                 iconSave  = component.customSaveIcon  != null ? component.customSaveIcon  : bundledSave;
                 iconLoad  = component.customLoadIcon  != null ? component.customLoadIcon  : bundledLoad;
@@ -982,7 +1642,7 @@ namespace ASMLite.Editor
             }
 
             string generatedDir    = ASMLiteAssetPaths.GeneratedDir;
-            string presetsMenuPath = $"{generatedDir}/ASMLite_Presets_Menu.asset";
+            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
 
             // In-memory arrays for references used outside the batch block.
             var confirmMenus      = new VRCExpressionsMenu[slotCount];
@@ -1020,7 +1680,7 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Confirm",
+                            name      = effectiveConfirmLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = saveParamValue,
@@ -1036,7 +1696,7 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Confirm",
+                            name      = effectiveConfirmLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = clearParamValue,
@@ -1052,14 +1712,14 @@ namespace ASMLite.Editor
                     {
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Save",
+                            name    = effectiveSaveLabel,
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = confirmMenu,
                             icon    = iconSave,
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name      = "Load",
+                            name      = effectiveLoadLabel,
                             type      = VRCExpressionsMenu.Control.ControlType.Button,
                             parameter = new VRCExpressionsMenu.Control.Parameter { name = CtrlParam },
                             value     = loadParamValue,
@@ -1067,7 +1727,7 @@ namespace ASMLite.Editor
                         },
                         new VRCExpressionsMenu.Control
                         {
-                            name    = "Clear Preset",
+                            name    = effectiveClearPresetLabel,
                             type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                             subMenu = resetConfirmMenu,
                             icon    = iconReset,
@@ -1094,7 +1754,7 @@ namespace ASMLite.Editor
             {
                 presetsMenu.controls.Add(new VRCExpressionsMenu.Control
                 {
-                    name    = $"Preset {slot}",
+                    name    = ResolveEffectivePresetControlName(component, slot),
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = slotMenus[slot - 1], // in-memory reference, not reloaded from disk
                     icon    = slotIcons[slot - 1],
@@ -1106,14 +1766,15 @@ namespace ASMLite.Editor
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
             // Root is mutated in-place so its stable GUID (referenced by VRCFury)
             // is never broken.
+            Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
             rootMenu.controls = new List<VRCExpressionsMenu.Control>
             {
                 new VRCExpressionsMenu.Control
                 {
-                    name    = "Settings Manager",
+                    name    = effectiveRootControlName,
                     type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                     subMenu = presetsMenu,
-                    icon    = iconPresets,
+                    icon    = effectiveRootControlIcon,
                 }
             };
 
@@ -1143,63 +1804,47 @@ namespace ASMLite.Editor
 
         internal static int MigrateStaleVRCFuryComponentsWithReport(ASMLiteComponent component)
         {
-            if (component == null)
-                return 0;
-
-            var go = component.gameObject;
-            // Find VRCFury components by type name since we cannot reference the
-            // internal VF.Model.VRCFury type at compile time.
-            var allComponents = go.GetComponents<Component>();
-            var vfComponents = new List<Component>();
-            foreach (var c in allComponents)
-            {
-                if (c == null) continue; // missing script
-                string typeName = c.GetType().FullName;
-                if (typeName == "VF.Model.VRCFury")
-                    vfComponents.Add(c);
-            }
-
-            if (vfComponents.Count <= 1)
-                return 0;
-
-            int removedCount = 0;
-            for (int i = 1; i < vfComponents.Count; i++)
-            {
-                UnityEngine.Object.DestroyImmediate(vfComponents[i]);
-                removedCount++;
-            }
-
-            if (removedCount > 0)
-                EditorUtility.SetDirty(go);
-
-            return removedCount;
+            return ASMLiteMigrationContinuityService.MigrateStaleVRCFuryComponentsWithReport(component);
         }
 
         internal static RebuildMigrationReport PrepareRevertedDeliveryRebuild(ASMLiteComponent component)
         {
-            if (component == null)
-            {
-                var emptyCleanup = new CleanupReport(0, 0, 0, 0, descriptorMissing: true);
-                return new RebuildMigrationReport(0, emptyCleanup, componentMissing: true, avatarDescriptorFound: false);
-            }
+            return ASMLiteMigrationContinuityService.PrepareRevertedDeliveryRebuild(component);
+        }
 
-            int staleVfRemoved = MigrateStaleVRCFuryComponentsWithReport(component);
+        internal static bool TryDetachToDirectDelivery(ASMLiteComponent component, out string detail)
+        {
+            detail = string.Empty;
+
+            string validationError = Validate(component);
+            if (validationError != null)
+            {
+                detail = validationError;
+                return false;
+            }
 
             var avDesc = component.GetComponentInParent<VRCAvatarDescriptor>();
-            bool avatarDescriptorFound = avDesc != null;
-            var cleanup = CleanUpAvatarAssetsWithReport(avDesc);
-
-            if (staleVfRemoved > 0)
+            if (avDesc == null)
             {
-                Debug.Log($"[ASM-Lite] Migration: removed {staleVfRemoved} duplicate stale VRCFury component(s) from '{component.gameObject.name}' while preserving one delivery component.");
+                detail = $"[ASM-Lite] Detach failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.";
+                return false;
             }
 
-            if (avatarDescriptorFound)
-            {
-                Debug.Log($"[ASM-Lite] Rebuild cleanup: removed {cleanup.FxLayersRemoved} legacy FX layer(s), {cleanup.FxParamsRemoved} legacy FX parameter(s), {cleanup.ExprParamsRemoved} expression parameter(s), and {cleanup.MenuControlsRemoved} root menu control(s).");
-            }
+            var exclusionReport = ResolveParameterExclusions(component, matchedCount: 0);
+            var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
+            var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out _);
 
-            return new RebuildMigrationReport(staleVfRemoved, cleanup, componentMissing: false, avatarDescriptorFound: avatarDescriptorFound);
+            PopulateExpressionMenu(component);
+            InjectFXLayers(avDesc, discoveredParams, component.slotCount);
+            InjectExpressionParams(avDesc, component.slotCount, discoveredParams);
+            InjectExpressionMenu(avDesc, component);
+
+            EditorUtility.SetDirty(avDesc);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            detail = $"Detached to direct delivery on '{avDesc.gameObject.name}' with {discoveredParams.Count} discovered parameter(s).";
+            return true;
         }
 
         // ─── Legacy descriptor-injection helpers (retired from normal flow) ───
@@ -1256,7 +1901,7 @@ namespace ASMLite.Editor
             // Remove existing ASMLite_ layers (iterate backwards)
             for (int i = ctrl.layers.Length - 1; i >= 0; i--)
             {
-                if (ctrl.layers[i].name.StartsWith("ASMLite_", StringComparison.Ordinal))
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer(ctrl.layers[i]))
                     ctrl.RemoveLayer(i);
             }
 
@@ -1268,7 +1913,7 @@ namespace ASMLite.Editor
                 removedAny = false;
                 foreach (var p in ctrl.parameters)
                 {
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter(p))
                     {
                         ctrl.RemoveParameter(p);
                         removedAny = true;
@@ -1371,7 +2016,7 @@ namespace ASMLite.Editor
             {
                 if (p == null || string.IsNullOrEmpty(p.name))
                     continue;
-                if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter(p))
                     continue;
                 filtered.Add(p);
             }
@@ -1430,8 +2075,8 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Injects the ASM-Lite "Settings Manager" submenu entry directly into the
-        /// avatar's VRCExpressionsMenu. Removes any previously injected entry first
+        /// Injects the ASM-Lite root submenu entry directly into the avatar's
+        /// VRCExpressionsMenu. Removes any previously injected entry first
         /// (idempotent). The submenu references the generated presets menu asset.
         /// </summary>
         private static void InjectExpressionMenu(VRCAvatarDescriptor avDesc, ASMLiteComponent component)
@@ -1446,12 +2091,8 @@ namespace ASMLite.Editor
             if (rootMenu.controls == null)
                 rootMenu.controls = new List<VRCExpressionsMenu.Control>();
 
-            // Remove existing "Settings Manager" entry (idempotent)
-            rootMenu.controls.RemoveAll(c => c.name == "Settings Manager"
-                && c.type == VRCExpressionsMenu.Control.ControlType.SubMenu);
-
-            // Load the generated presets menu that PopulateExpressionMenu created
-            string presetsMenuPath = $"{ASMLiteAssetPaths.GeneratedDir}/ASMLite_Presets_Menu.asset";
+            // Load the generated presets menu that PopulateExpressionMenu created.
+            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
             var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
             if (presetsMenu == null)
             {
@@ -1459,27 +2100,35 @@ namespace ASMLite.Editor
                 return;
             }
 
+            string effectiveRootControlName = ResolveEffectiveRootControlName(component);
+
+            // Remove existing ASM-Lite root entries (idempotent), including stale names
+            // from toggle flips between custom and default root naming.
+            rootMenu.controls.RemoveAll(c =>
+                ASMLiteGeneratedOwnershipPolicy.IsInjectedRootMenuControl(c, effectiveRootControlName));
+
             // Check VRC menu control limit (8 max)
             if (rootMenu.controls.Count >= 8)
             {
-                Debug.LogError("[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add Settings Manager entry.");
+                Debug.LogError($"[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add {effectiveRootControlName} entry.");
                 return;
             }
 
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
+            Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
 
             rootMenu.controls.Add(new VRCExpressionsMenu.Control
             {
-                name    = "Settings Manager",
+                name    = effectiveRootControlName,
                 type    = VRCExpressionsMenu.Control.ControlType.SubMenu,
                 subMenu = presetsMenu,
-                icon    = iconPresets,
+                icon    = effectiveRootControlIcon,
             });
 
             EditorUtility.SetDirty(rootMenu);
 
 #if ASM_LITE_VERBOSE
-            Debug.Log("[ASM-Lite] InjectExpressionMenu: 'Settings Manager' entry added to avatar expression menu.");
+            Debug.Log($"[ASM-Lite] InjectExpressionMenu: '{effectiveRootControlName}' entry added to avatar expression menu.");
 #endif
         }
 
@@ -1495,104 +2144,111 @@ namespace ASMLite.Editor
 
         internal static CleanupReport CleanUpAvatarAssetsWithReport(VRCAvatarDescriptor avDesc)
         {
-            if (avDesc == null)
-                return new CleanupReport(0, 0, 0, 0, descriptorMissing: true);
-
-            int removedFxLayers = 0;
-            int removedFxParams = 0;
-            int removedExprParams = 0;
-            int removedMenuControls = 0;
-
-            // Clean FX controller
-            for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
-            {
-                if (avDesc.baseAnimationLayers[i].type != VRCAvatarDescriptor.AnimLayerType.FX)
-                    continue;
-
-                var ctrl = avDesc.baseAnimationLayers[i].animatorController as AnimatorController;
-                if (ctrl == null) break;
-
-                // Remove ASMLite_ layers
-                for (int j = ctrl.layers.Length - 1; j >= 0; j--)
-                {
-                    if (!ctrl.layers[j].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        continue;
-
-                    ctrl.RemoveLayer(j);
-                    removedFxLayers++;
-                }
-
-                // Remove ASMLite_ parameters (drain loop)
-                bool removed;
-                do
-                {
-                    removed = false;
-                    foreach (var p in ctrl.parameters)
-                    {
-                        if (string.IsNullOrEmpty(p.name))
-                            continue;
-                        if (!p.name.StartsWith("ASMLite_", StringComparison.Ordinal) && p.name != CtrlParam)
-                            continue;
-
-                        ctrl.RemoveParameter(p);
-                        removedFxParams++;
-                        removed = true;
-                        break;
-                    }
-                } while (removed);
-
-                EditorUtility.SetDirty(ctrl);
-                break;
-            }
-
-            // Clean expression parameters
-            var exprParams = avDesc.expressionParameters;
-            if (exprParams != null && exprParams.parameters != null)
-            {
-                var filtered = new List<VRCExpressionParameters.Parameter>(exprParams.parameters.Length);
-                foreach (var p in exprParams.parameters)
-                {
-                    if (p == null || string.IsNullOrEmpty(p.name)) continue;
-
-                    if (p.name.StartsWith("ASMLite_", StringComparison.Ordinal) || p.name == CtrlParam)
-                    {
-                        removedExprParams++;
-                        continue;
-                    }
-
-                    filtered.Add(p);
-                }
-
-                exprParams.parameters = filtered.ToArray();
-                EditorUtility.SetDirty(exprParams);
-            }
-
-            // Clean expression menu
-            var rootMenu = avDesc.expressionsMenu;
-            if (rootMenu != null && rootMenu.controls != null)
-            {
-                for (int i = rootMenu.controls.Count - 1; i >= 0; i--)
-                {
-                    var control = rootMenu.controls[i];
-                    if (control == null)
-                        continue;
-                    if (control.name != "Settings Manager")
-                        continue;
-                    if (control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    rootMenu.controls.RemoveAt(i);
-                    removedMenuControls++;
-                }
-
-                EditorUtility.SetDirty(rootMenu);
-            }
-
-            AssetDatabase.SaveAssets();
-            return new CleanupReport(removedFxLayers, removedFxParams, removedExprParams, removedMenuControls, descriptorMissing: false);
+            return ASMLiteMigrationContinuityService.CleanUpAvatarAssetsWithReport(avDesc);
         }
 
         // ─── Helpers ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resolves the root wrapper menu control name for generated/injected paths.
+        /// Uses the trimmed custom value only when explicitly enabled; otherwise falls
+        /// back to the baseline Settings Manager contract.
+        /// </summary>
+        internal static string ResolveEffectiveRootControlName(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultRootControlName;
+
+            string trimmed = component.customRootName?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultRootControlName : trimmed;
+        }
+
+        internal static string ResolveEffectivePresetNameFormat(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultPresetNameFormat;
+
+            string trimmed = component.customPresetNameFormat?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultPresetNameFormat : trimmed;
+        }
+
+        internal static string ResolveEffectivePresetControlName(ASMLiteComponent component, int slot)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase);
+
+            if (component.customPresetNames != null)
+            {
+                int index = slot - 1;
+                if (index >= 0 && index < component.customPresetNames.Length)
+                {
+                    string customName = component.customPresetNames[index]?.Trim();
+                    if (!string.IsNullOrWhiteSpace(customName))
+                        return customName;
+                }
+            }
+
+            // Legacy fallback for existing serialized format-based customization.
+            string legacyFormat = component.customPresetNameFormat?.Trim();
+            if (!string.IsNullOrWhiteSpace(legacyFormat))
+            {
+                if (legacyFormat.IndexOf("{slot}", StringComparison.OrdinalIgnoreCase) >= 0)
+                    return legacyFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase).Trim();
+
+                return $"{legacyFormat} {slot}";
+            }
+
+            return DefaultPresetNameFormat.Replace("{slot}", slot.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        internal static string ResolveEffectiveSaveLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultSaveLabel;
+
+            string trimmed = component.customSaveLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultSaveLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveLoadLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultLoadLabel;
+
+            string trimmed = component.customLoadLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultLoadLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveClearPresetLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultClearPresetLabel;
+
+            string trimmed = component.customClearPresetLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultClearPresetLabel : trimmed;
+        }
+
+        internal static string ResolveEffectiveConfirmLabel(ASMLiteComponent component)
+        {
+            if (component == null || !component.useCustomRootName)
+                return DefaultConfirmLabel;
+
+            string trimmed = component.customConfirmLabel?.Trim();
+            return string.IsNullOrWhiteSpace(trimmed) ? DefaultConfirmLabel : trimmed;
+        }
+
+        /// <summary>
+        /// Resolves root wrapper menu control icon for generated/injected paths.
+        /// Root icon customization is available whenever custom icons are enabled.
+        /// If the custom root icon is absent, falls back to the bundled presets icon.
+        /// </summary>
+        internal static Texture2D ResolveEffectiveRootControlIcon(ASMLiteComponent component, Texture2D fallbackIcon)
+        {
+            if (component == null || !component.useCustomSlotIcons)
+                return fallbackIcon;
+
+            return component.customRootIcon != null ? component.customRootIcon : fallbackIcon;
+        }
 
         /// <summary>
         /// Maps a VRCExpressionParameters ValueType to the corresponding
@@ -1642,20 +2298,27 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Resolves the icon for a given slot based on the component's iconMode.
-        ///   SameColor : all slots use the single gear icon at selectedGearIndex.
-        ///   MultiColor: each slot cycles through GearIconPaths by index.
-        ///   Custom    : uses the user-supplied texture from customIcons[slot-1],
-        ///                falling back to <paramref name="fallback"/> if null/out-of-range.
-        ///   default   : returns <paramref name="fallback"/>.
-        /// All LoadAssetAtPath calls are expected to run before StartAssetEditing.
-        /// <paramref name="cache"/> deduplicates loads when the same path is resolved
-        /// for multiple slots (e.g. SameColor mode).
+        /// Resolves icon for given slot using per-slot override-first behavior.
+        /// If customIcons[slot-1] assigned, use it.
+        /// Else fall back to selected iconMode (SameColor/MultiColor).
+        /// Else fall back to <paramref name="fallback"/>.
+        /// All LoadAssetAtPath calls expected before StartAssetEditing.
+        /// <paramref name="cache"/> deduplicates repeated gear loads.
         /// </summary>
         private static Texture2D ResolveSlotIcon(
             ASMLiteComponent component, int slot, Texture2D fallback,
             Dictionary<string, Texture2D> cache)
         {
+            int index = slot - 1;
+            if (component.useCustomSlotIcons
+                && component.customIcons != null
+                && index >= 0
+                && index < component.customIcons.Length
+                && component.customIcons[index] != null)
+            {
+                return component.customIcons[index];
+            }
+
             switch (component.iconMode)
             {
                 case IconMode.SameColor:
@@ -1665,24 +2328,20 @@ namespace ASMLite.Editor
                         cache[path] = tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                     return tex != null ? tex : fallback;
                 }
+                case IconMode.Custom:
+                {
+                    // Custom mode only uses explicit per-slot overrides; when none exist
+                    // we fail closed to the bundled presets icon instead of gear palettes.
+                    return fallback;
+                }
                 case IconMode.MultiColor:
+                default:
                 {
                     string path = ASMLiteAssetPaths.GearIconPaths[(slot - 1) % ASMLiteAssetPaths.GearIconPaths.Length];
                     if (!cache.TryGetValue(path, out var tex))
                         cache[path] = tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
                     return tex != null ? tex : fallback;
                 }
-                case IconMode.Custom:
-                {
-                    int index = slot - 1;
-                    if (component.customIcons != null
-                        && index < component.customIcons.Length
-                        && component.customIcons[index] != null)
-                        return component.customIcons[index];
-                    return fallback;
-                }
-                default:
-                    return fallback;
             }
         }
     }

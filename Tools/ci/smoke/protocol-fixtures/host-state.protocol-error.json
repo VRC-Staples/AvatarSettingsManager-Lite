@@ -1,0 +1,12 @@
+{
+  "sessionId": "session-20260423T044500Z-1c2d3e4f",
+  "protocolVersion": "2.0.0",
+  "state": "protocol-error",
+  "hostVersion": "unity-host-dev",
+  "unityVersion": "2022.3.22f1",
+  "heartbeatUtc": "2026-04-23T04:45:02Z",
+  "lastEventSeq": 2,
+  "lastCommandSeq": 1,
+  "activeRunId": "",
+  "message": "run-suite rejected while host remains in protocol-error state due to protocolVersion mismatch."
+}
