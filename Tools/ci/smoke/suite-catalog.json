@@ -7119,12 +7119,12 @@
                 {
                   "stepId": "stale-vendorized-references",
                   "label": "Stale vendorized recovery is confirmed",
-                  "description": "Apply vendorized-state-baseline and assert Return to Package Managed is available.",
+                  "description": "Detach while retaining a vendorized expression parameters reference and assert Return to Package Managed is available.",
                   "actionType": "assert-primary-action",
                   "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
                   "debugHint": "Inspect stale vendorized references and primary action contract.",
                   "args": {
-                    "fixtureMutation": "vendorized-state-baseline",
+                    "fixtureMutation": "stale-vendorized-references",
                     "expectedPrimaryAction": "ReturnToPackageManaged",
                     "preserveFailureEvidence": true,
                     "requireCleanReset": true
@@ -7181,20 +7181,20 @@
             {
               "caseId": "interrupted-detached-state",
               "label": "Interrupted detached state",
-              "description": "Stage a detached baseline and prove Add Prefab recovery resets cleanly.",
-              "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+              "description": "Stage a detached baseline with runtime markers and prove Return to Package Managed recovery resets cleanly.",
+              "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
               "debugHint": "Inspect detached baseline evidence and reset proof.",
               "steps": [
                 {
                   "stepId": "interrupted-detached-state",
                   "label": "Interrupted detached recovery is confirmed",
-                  "description": "Apply detached-state-baseline and assert Add Prefab is available.",
+                  "description": "Apply detached-state-baseline and assert Return to Package Managed is available.",
                   "actionType": "assert-primary-action",
-                  "expectedOutcome": "Add Prefab is available and clean reset proof is recorded.",
+                  "expectedOutcome": "Return to Package Managed is available and clean reset proof is recorded.",
                   "debugHint": "Inspect detached state and primary action contract.",
                   "args": {
                     "fixtureMutation": "detached-state-baseline",
-                    "expectedPrimaryAction": "AddPrefab",
+                    "expectedPrimaryAction": "ReturnToPackageManaged",
                     "preserveFailureEvidence": true,
                     "requireCleanReset": true
                   }
@@ -7395,7 +7395,7 @@
               "caseId": "save-load-av3-runtime",
               "label": "AV3 save/load runtime harness",
               "description": "Prepare the canonical avatar, enter playmode, execute the AV3 save/load harness, assert its stored result, and exit playmode.",
-              "expectedOutcome": "The harness saves slot 1 values, dirties saved and unsaved runtime parameters, loads slot 1, restores saved parameters, and preserves unsaved parameters.",
+              "expectedOutcome": "The harness saves slot 1 values, changes them, loads slot 1, and restores them. Unsaved-parameter preservation is checked by the separate explicitly-excluded PlayMode fixture.",
               "debugHint": "If the suite reaches review-required, inspect the failed assertion message for the seed, phase, parameter, expected/actual values, and AV3 runtime diagnostic.",
               "steps": [
                 {

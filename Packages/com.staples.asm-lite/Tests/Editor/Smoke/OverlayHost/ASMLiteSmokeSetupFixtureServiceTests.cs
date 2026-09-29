@@ -290,6 +290,29 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void StaleVendorizedReferencesMutation_LeavesDetachedReferenceAndRestoresOriginal()
+        {
+            var original = _ctx.AvDesc.expressionParameters;
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.StaleVendorizedReferences,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.That(_ctx.AvDesc.expressionParameters, Is.Not.SameAs(original));
+            Assert.That(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters),
+                Does.StartWith("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets/"));
+            Assert.That(ASMLite.Editor.ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, null),
+                Is.EqualTo(ASMLite.Editor.ASMLiteInstallationState.Vendorized));
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+            Assert.That(_ctx.AvDesc.expressionParameters, Is.SameAs(original));
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.False);
+        }
+
+        [Test]
         public void DetachedStateBaselineMutation_RemovesComponentAndRestoresDetachedMarker()
         {
             var args = new ASMLiteSmokeStepArgs
@@ -305,6 +328,26 @@ namespace ASMLite.Tests.Editor
 
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
             Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.False);
+        }
+
+        [Test]
+        public void DetachedStateBaselineMutation_WorksWithoutExistingComponent()
+        {
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+            int originalParameterCount = _ctx.ParamsAsset.parameters?.Length ?? 0;
+            var args = new ASMLiteSmokeStepArgs
+            {
+                fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
+            };
+
+            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.True);
+
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
+            Assert.That(_ctx.ParamsAsset.parameters.Length, Is.EqualTo(originalParameterCount));
         }
 
         [Test]

@@ -11,6 +11,7 @@ namespace ASMLite.Editor
         private const string PackagePrefix = "Packages/" + PackageName + "/";
 
         private static string s_restoreFailureMessageForTesting;
+        private static Action<string> s_restorePhaseForTesting;
 
         private readonly RootSnapshot[] _roots;
 
@@ -26,6 +27,13 @@ namespace ASMLite.Editor
                 ? "Injected package-output restore failure."
                 : message;
             return new ScopedRestoreFailure(() => s_restoreFailureMessageForTesting = previous);
+        }
+
+        internal static IDisposable PushRestorePhaseForTesting(Action<string> callback)
+        {
+            var previous = s_restorePhaseForTesting;
+            s_restorePhaseForTesting = callback;
+            return new ScopedRestoreFailure(() => s_restorePhaseForTesting = previous);
         }
 
         internal static ASMLitePackageGeneratedOutputSnapshot Capture()
@@ -51,13 +59,98 @@ namespace ASMLite.Editor
             if (!string.IsNullOrEmpty(s_restoreFailureMessageForTesting))
                 throw new InvalidOperationException(s_restoreFailureMessageForTesting);
 
-            foreach (RootSnapshot root in _roots)
+            var preRestore = _roots.Select(root => RootSnapshot.Capture(root.FullPath)).ToArray();
+            string recoveryPath = Path.GetFullPath(Path.Combine(".artifacts", "asm-lite-recovery", Guid.NewGuid().ToString("N")));
+            bool replacementStarted = false;
+            AssetDatabase.DisallowAutoRefresh();
+            try
+            {
+                string packageRoot = ResolvePackageRoot();
+                SaveRecoveryCopy(_roots, Path.Combine(recoveryPath, "captured-baseline"), packageRoot);
+                SaveRecoveryCopy(preRestore, Path.Combine(recoveryPath, "pre-restore"), packageRoot);
+                WriteDurableFile(Path.Combine(recoveryPath, "RECOVERY.txt"), System.Text.Encoding.UTF8.GetBytes(
+                    "Package output recovery\nTarget package: " + packageRoot +
+                    "\ncaptured-baseline: package outputs captured before the build.\n" +
+                    "pre-restore: package outputs immediately before this restore attempt.\n" +
+                    "Close Unity before manual recovery. Choose ONE copy, remove each listed target root, then copy its saved root and .meta files together.\n" +
+                    "Use roots.txt in that copy: absent roots must remain absent. Keep this recovery directory until verified.\n"));
+                s_restorePhaseForTesting?.Invoke("prepared");
+
+                replacementStarted = true;
+                ReplaceRoots(_roots, "replacement-deleted");
+                ImportRestoredAssets();
+            }
+            catch (Exception restoreError)
+            {
+                Exception rollbackError = null;
+                if (replacementStarted)
+                {
+                    try
+                    {
+                        ReplaceRoots(preRestore, "rollback-deleted");
+                        ImportRestoredAssets();
+                    }
+                    catch (Exception ex)
+                    {
+                        rollbackError = ex;
+                    }
+                }
+
+                string status = !replacementStarted ? "Package outputs were not replaced."
+                    : rollbackError == null ? "Pre-restore package outputs recovered."
+                    : "Rollback also failed: " + rollbackError.Message;
+                string recoveryStatus = replacementStarted
+                    ? $"Verified recovery copies retained at '{recoveryPath}'. See RECOVERY.txt; captured-baseline and pre-restore are different states."
+                    : $"Recovery preparation did not finish. Any partial material at '{recoveryPath}' must not be used as a complete recovery copy.";
+                var failure = new IOException($"Package-output restore failed: {restoreError.Message} {status} {recoveryStatus}",
+                    rollbackError == null ? restoreError : new AggregateException(restoreError, rollbackError));
+                failure.Data["RecoveryDirectory"] = recoveryPath;
+                throw failure;
+            }
+            finally
+            {
+                AssetDatabase.AllowAutoRefresh();
+            }
+
+            // Cleanup failure does not undo an already verified successful restoration.
+            try { Directory.Delete(recoveryPath, recursive: true); }
+            catch (Exception ex) { UnityEngine.Debug.LogWarning($"[ASM-Lite] Outputs restored; recovery copy retained at '{recoveryPath}': {ex.Message}"); }
+        }
+
+        private static void ReplaceRoots(RootSnapshot[] roots, string phase)
+        {
+            foreach (var root in roots)
                 root.DeleteCurrent();
-
-            foreach (RootSnapshot root in _roots)
+            s_restorePhaseForTesting?.Invoke(phase);
+            foreach (var root in roots)
                 root.RestoreCaptured();
+            foreach (var root in roots)
+                root.Verify();
+        }
 
-            ImportRestoredAssets();
+        private static void SaveRecoveryCopy(RootSnapshot[] roots, string directory, string packageRoot)
+        {
+            Directory.CreateDirectory(directory);
+            string manifest = string.Empty;
+            foreach (var root in roots)
+            {
+                string relativePath = root.FullPath.Substring(packageRoot.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var copy = root.AtPath(Path.Combine(directory, relativePath));
+                copy.RestoreCaptured(durable: true);
+                s_restorePhaseForTesting?.Invoke("recovery-copied");
+                copy.Verify();
+                manifest += relativePath + "\t" + root.Kind + "\n";
+            }
+            WriteDurableFile(Path.Combine(directory, "roots.txt"), System.Text.Encoding.UTF8.GetBytes(manifest));
+        }
+
+        private static void WriteDurableFile(string path, byte[] bytes)
+        {
+            using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush(flushToDisk: true);
+            }
         }
 
         private static void ImportRestoredAssets()
@@ -109,6 +202,8 @@ namespace ASMLite.Editor
 
         private sealed class RootSnapshot
         {
+            internal string FullPath => _fullPath;
+            internal string Kind => !_existed ? "absent" : _wasDirectory ? "directory" : "file";
             private readonly string _fullPath;
             private readonly bool _existed;
             private readonly bool _wasDirectory;
@@ -151,7 +246,19 @@ namespace ASMLite.Editor
                     File.Delete(_fullPath);
             }
 
-            internal void RestoreCaptured()
+            internal RootSnapshot AtPath(string path) => new RootSnapshot(path, _existed, _wasDirectory, _files);
+
+            internal void Verify()
+            {
+                var actual = Capture(_fullPath);
+                if (_existed != actual._existed || _wasDirectory != actual._wasDirectory
+                    || _files.Length != actual._files.Length
+                    || _files.Where((file, index) => file.RelativePath != actual._files[index].RelativePath
+                        || !file.Bytes.SequenceEqual(actual._files[index].Bytes)).Any())
+                    throw new IOException("Package-output verification failed: " + _fullPath);
+            }
+
+            internal void RestoreCaptured(bool durable = false)
             {
                 if (!_existed)
                     return;
@@ -166,7 +273,10 @@ namespace ASMLite.Editor
                     string targetDirectory = Path.GetDirectoryName(targetPath);
                     if (!string.IsNullOrEmpty(targetDirectory))
                         Directory.CreateDirectory(targetDirectory);
-                    File.WriteAllBytes(targetPath, file.Bytes);
+                    if (durable)
+                        WriteDurableFile(targetPath, file.Bytes);
+                    else
+                        File.WriteAllBytes(targetPath, file.Bytes);
                 }
             }
         }

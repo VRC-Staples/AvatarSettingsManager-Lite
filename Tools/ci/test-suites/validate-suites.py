@@ -28,10 +28,12 @@ REFERENCE_SCAN_EXTENSIONS = {
     ".yml",
 }
 REFERENCE_SCAN_IGNORED_DIRS = {
+    ".artifacts",  # Preserved maintenance/recovery copies are not active source.
     ".audits",
     ".git",
     ".planning",
     ".venv",
+    "KikiASM",
     "__pycache__",
     "artifacts",
     "build",
@@ -67,7 +69,6 @@ SMOKE_PROTOCOL_FILES = (
     "ASMLiteSmokeProtocolTests.cs",
     "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
-    "ASMLiteSmokeRunExecutorTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",
 )

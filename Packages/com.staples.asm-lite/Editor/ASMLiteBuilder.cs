@@ -590,6 +590,124 @@ namespace ASMLite.Editor
             return ASMLiteBuildDiagnosticResult.Pass();
         }
 
+        // The SDK invokes the component's preprocess callback after VRCFury merges its
+        // FullController. Reconcile only that disposable build output; never edit the
+        // avatar's authored FX controller or expression-parameters asset.
+        public static bool ReconcileAfterVrcFury(ASMLiteComponent component)
+        {
+            var avatar = component != null ? component.GetComponentInParent<VRCAvatarDescriptor>() : null;
+            if (avatar == null)
+                return false;
+
+            AnimatorController bakedFx = null;
+            foreach (var layer in avatar.baseAnimationLayers)
+                if (layer.type == VRCAvatarDescriptor.AnimLayerType.FX)
+                    bakedFx = layer.animatorController as AnimatorController;
+
+            string bakedPath = AssetDatabase.GetAssetPath(bakedFx);
+            if (bakedFx == null || !bakedPath.StartsWith("Packages/com.vrcfury.temp/Builds/", StringComparison.Ordinal))
+            {
+                Debug.LogError("[ASM-Lite] Late FX reconciliation refused: FX is not VRCFury-generated build output.");
+                return false;
+            }
+
+            var generatedFx = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            if (generatedFx == null || generatedParams?.parameters == null || avatar.expressionParameters?.parameters == null)
+                return false;
+
+            var drivers = new List<KeyValuePair<VRC_AvatarParameterDriver, VRC_AvatarParameterDriver>>();
+            foreach (var sourceLayer in generatedFx.layers)
+            {
+                AnimatorControllerLayer targetLayer = null;
+                foreach (var candidate in bakedFx.layers)
+                {
+                    if (candidate.name != sourceLayer.name
+                        && !candidate.name.EndsWith("] " + sourceLayer.name, StringComparison.Ordinal))
+                        continue;
+                    if (targetLayer != null)
+                        return false;
+                    targetLayer = candidate;
+                }
+                if (targetLayer?.stateMachine == null || sourceLayer.stateMachine == null)
+                {
+                    Debug.LogError("[ASM-Lite] Late FX reconciliation refused: generated slot layer was not merged.");
+                    return false;
+                }
+
+                foreach (var sourceChild in sourceLayer.stateMachine.states)
+                {
+                    var sourceState = sourceChild.state;
+                    if (sourceState == null || !(sourceState.name.StartsWith("SaveSlot", StringComparison.Ordinal)
+                        || sourceState.name.StartsWith("LoadSlot", StringComparison.Ordinal)
+                        || sourceState.name.StartsWith("ResetSlot", StringComparison.Ordinal)))
+                        continue;
+                    AnimatorState targetState = null;
+                    foreach (var targetChild in targetLayer.stateMachine.states)
+                        if (targetChild.state != null && targetChild.state.name == sourceState.name)
+                            targetState = targetChild.state;
+                    var sourceDriver = Array.Find(sourceState.behaviours, behaviour => behaviour is VRC_AvatarParameterDriver) as VRC_AvatarParameterDriver;
+                    var targetDriver = targetState != null ? Array.Find(targetState.behaviours, behaviour => behaviour is VRC_AvatarParameterDriver) as VRC_AvatarParameterDriver : null;
+                    if (sourceDriver == null || targetDriver == null || sourceDriver.parameters == null)
+                    {
+                        Debug.LogError("[ASM-Lite] Late FX reconciliation refused: slot driver was not merged.");
+                        return false;
+                    }
+                    drivers.Add(new KeyValuePair<VRC_AvatarParameterDriver, VRC_AvatarParameterDriver>(sourceDriver, targetDriver));
+                }
+            }
+
+            var existingFx = new Dictionary<string, AnimatorControllerParameter>(StringComparer.Ordinal);
+            foreach (var parameter in bakedFx.parameters)
+                if (!existingFx.ContainsKey(parameter.name)) existingFx.Add(parameter.name, parameter);
+            var existingExpr = new Dictionary<string, VRCExpressionParameters.Parameter>(StringComparer.Ordinal);
+            foreach (var parameter in avatar.expressionParameters.parameters)
+                if (parameter != null && !existingExpr.ContainsKey(parameter.name)) existingExpr.Add(parameter.name, parameter);
+
+            foreach (var parameter in generatedFx.parameters)
+                if (parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
+                    && existingFx.TryGetValue(parameter.name, out var existing) && existing.type != parameter.type)
+                    return false;
+            foreach (var parameter in generatedParams.parameters)
+                if (parameter != null && existingExpr.TryGetValue(parameter.name, out var existing)
+                    && existing.valueType != parameter.valueType)
+                    return false;
+
+            int fxAdded = 0;
+            foreach (var parameter in generatedFx.parameters)
+            {
+                if (existingFx.ContainsKey(parameter.name)) continue;
+                if (!parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
+                    && !existingExpr.ContainsKey(parameter.name)) continue;
+                bakedFx.AddParameter(parameter);
+                existingFx.Add(parameter.name, parameter);
+                fxAdded++;
+            }
+
+            var expressionCopy = UnityEngine.Object.Instantiate(avatar.expressionParameters);
+            var expressionList = new List<VRCExpressionParameters.Parameter>(expressionCopy.parameters);
+            int expressionAdded = 0;
+            foreach (var parameter in generatedParams.parameters)
+            {
+                if (parameter == null || existingExpr.ContainsKey(parameter.name)
+                    || !parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)) continue;
+                expressionList.Add(parameter);
+                existingExpr.Add(parameter.name, parameter);
+                expressionAdded++;
+            }
+            expressionCopy.parameters = expressionList.ToArray();
+            avatar.expressionParameters = expressionCopy;
+
+            foreach (var pair in drivers)
+            {
+                pair.Value.parameters = new List<VRC_AvatarParameterDriver.Parameter>(pair.Key.parameters);
+                EditorUtility.SetDirty(pair.Value);
+            }
+            EditorUtility.SetDirty(bakedFx);
+            Debug.Log($"[ASM-Lite] Reconciled post-VRCFury FX: parameters={fxAdded}, expressionParameters={expressionAdded}, drivers={drivers.Count}.");
+            return true;
+        }
+
         /// <summary>
         /// Validates the component configuration. Returns null if valid, or an error
         /// message string if invalid.
@@ -932,7 +1050,16 @@ namespace ASMLite.Editor
                 bool requiresRouting = !string.IsNullOrEmpty(effectivePrefix);
                 bool routed = TrySyncInstallPathMoveMenuRouting(component);
                 bool cleared = TryClearLiveFullControllerMenuPrefixOverride(component);
-                if (requiresRouting ? routed : (routed || cleared))
+                if (!cleared)
+                {
+                    return ASMLiteBuildDiagnosticResult.Fail(
+                        code: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
+                        contextPath: ASMLiteDriftProbe.MenuPrefixPath,
+                        remediation: "Ensure the live FullController menu prefix is readable and empty before using prefab-instance MoveMenu routing.",
+                        message: "[ASM-Lite] Install-path sync failed: the direct FullController menu prefix could not be confirmed empty.");
+                }
+
+                if (routed)
                     return ASMLiteBuildDiagnosticResult.Pass();
 
                 return ASMLiteBuildDiagnosticResult.Fail(
@@ -940,7 +1067,7 @@ namespace ASMLite.Editor
                     contextPath: "MoveMenu routing",
                     remediation: requiresRouting
                         ? "Ensure prefab-instance install-path routing can update MoveMenu when a custom install prefix is enabled."
-                        : "Ensure prefab-instance install-path sync can either remove routing helpers or clear stale FullController prefix overrides when no custom install prefix is enabled.");
+                        : "Ensure prefab-instance install-path sync can remove routing helpers when no custom install prefix is enabled.");
             }
 
             return ASMLiteFullControllerWiring.TrySyncLiveMenuPrefixWithDiagnostics(component);

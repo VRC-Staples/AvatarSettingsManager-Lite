@@ -323,6 +323,58 @@ namespace ASMLite.Tests.Editor
             }
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void TrySyncInstallPathRouting_PrefabInstance_UnreadablePrefixFailsDespiteSuccessfulRouting(bool keepCustomPath)
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            try
+            {
+                UnityEngine.Object.DestroyImmediate(ctx.Comp.gameObject);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, ctx.AvDesc.transform);
+                var component = instance.GetComponent<ASMLiteComponent>();
+                Assert.IsTrue(PrefabUtility.IsPartOfPrefabInstance(component));
+                component.useCustomInstallPath = true;
+                component.customInstallPath = "Tools/PrefixFailure";
+                foreach (var behavior in instance.GetComponents<MonoBehaviour>())
+                {
+                    if (behavior != null && behavior.GetType().FullName == "VF.Model.VRCFury")
+                        UnityEngine.Object.DestroyImmediate(behavior);
+                }
+                var vf = instance.AddComponent<VF.Model.VRCFury>();
+                vf.content = new VF.Model.Feature.FullController
+                {
+                    menus = new[] { new VF.Model.Feature.MenuEntry() }
+                };
+                Assert.IsTrue(ASMLiteBuilder.TrySyncInstallPathRoutingWithDiagnostics(component).Success);
+                AssertRoutingHelperPaths(ctx.AvDesc, "Settings Manager", "Tools/PrefixFailure/Settings Manager", "Setup");
+
+                vf.content = new VF.Model.Feature.BrokenFullController
+                {
+                    menus = new[] { new VF.Model.Feature.MenuEntryWithoutPrefix() }
+                };
+                component.useCustomInstallPath = keepCustomPath;
+                Assert.AreSame(vf, ASMLiteTestFixtures.FindLiveVrcFuryComponent(instance));
+                Assert.IsNull(new SerializedObject(vf).FindProperty(ASMLiteDriftProbe.MenuPrefixPath),
+                    "The live payload must expose no readable prefix.");
+
+                var result = ASMLiteBuilder.TrySyncInstallPathRoutingWithDiagnostics(component);
+
+                Assert.IsFalse(result.Success, "Successful routing must not mask an unreadable direct prefix.");
+                Assert.AreEqual(ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed, result.Code);
+                Assert.AreEqual(ASMLiteDriftProbe.MenuPrefixPath, result.ContextPath);
+                if (keepCustomPath)
+                    AssertRoutingHelperPaths(ctx.AvDesc, "Settings Manager", "Tools/PrefixFailure/Settings Manager", "After failure");
+                else
+                    Assert.IsNull(ctx.AvDesc.transform.Find("ASM-Lite Install Path Routing"));
+            }
+            finally
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(ctx.AvatarGo);
+            }
+        }
+
         [Test]
         public void SetInstallPathStateForAutomation_DisabledBranchIsDistinctFromRootSelection()
         {

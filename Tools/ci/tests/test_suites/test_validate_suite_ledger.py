@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -28,7 +29,7 @@ class SuiteLedgerValidatorTests(unittest.TestCase):
     def run_validator(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                "python3",
+                sys.executable,
                 str(VALIDATOR),
                 "--repo-root",
                 str(self.root),

@@ -46,7 +46,6 @@ SMOKE_PROTOCOL_FILES = {
     "ASMLiteSmokeProtocolTests.cs",
     "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
-    "ASMLiteSmokeRunExecutorTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",
 }

@@ -33,6 +33,7 @@ namespace ASMLite.Tests.Editor
         internal const string StaleGeneratedFolder = "stale-generated-folder";
         internal const string MissingGeneratedFolder = "missing-generated-folder";
         internal const string VendorizedStateBaseline = "vendorized-state-baseline";
+        internal const string StaleVendorizedReferences = "stale-vendorized-references";
         internal const string DetachedStateBaseline = "detached-state-baseline";
         internal const string GeneratedFolderWithoutComponent = "generated-folder-without-component";
         internal const string ControlledCorruptGeneratedAsset = "controlled-corrupt-generated-asset";
@@ -118,6 +119,8 @@ namespace ASMLite.Tests.Editor
                         return ApplyMissingGeneratedFolderMutation(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline:
                         return ApplyVendorizedStateBaseline(avatarName, args, evidenceRootPath, out detail);
+                    case ASMLiteSmokeSetupFixtureMutationIds.StaleVendorizedReferences:
+                        return ApplyStaleVendorizedReferences(avatarName, args, evidenceRootPath, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline:
                         return ApplyDetachedStateBaseline(avatarName, out detail);
                     case ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent:
@@ -594,6 +597,49 @@ namespace ASMLite.Tests.Editor
             return true;
         }
 
+        private bool ApplyStaleVendorizedReferences(
+            string avatarName,
+            ASMLiteSmokeStepArgs args,
+            string evidenceRootPath,
+            out string detail)
+        {
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
+            VRCExpressionParameters original = avatar != null ? avatar.expressionParameters : null;
+            string sourcePath = original != null ? AssetDatabase.GetAssetPath(original) : string.Empty;
+            if (string.IsNullOrWhiteSpace(sourcePath))
+            {
+                detail = $"Avatar '{avatarName}' needs a saved expression parameters asset for vendorized reference recovery.";
+                return false;
+            }
+
+            if (!ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out detail))
+                return false;
+
+            string targetPath = $"{GeneratedRoot}/{avatarName}/GeneratedAssets/ASMLite_FixtureParams.asset";
+            if (!AssetDatabase.CopyAsset(sourcePath, targetPath))
+            {
+                detail = $"Could not copy expression parameters to '{targetPath}'.";
+                return false;
+            }
+
+            VRCExpressionParameters vendorized = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(targetPath);
+            if (vendorized == null)
+            {
+                detail = $"Vendorized expression parameters missing at '{targetPath}'.";
+                return false;
+            }
+
+            if (args != null && args.preserveFailureEvidence)
+                SnapshotEvidence($"{GeneratedRoot}/{avatarName}/GeneratedAssets", evidenceRootPath);
+            avatar.expressionParameters = vendorized;
+            _cleanupLedger.Push(new CleanupEntry("restore original expression parameters reference", () => avatar.expressionParameters = original));
+            if (!ApplyRemoveComponent(avatarName, out detail))
+                return false;
+
+            detail = $"Detached avatar '{avatarName}' still references vendorized expression parameters at '{targetPath}'.";
+            return true;
+        }
+
         private bool ApplyDetachedStateBaseline(string avatarName, out string detail)
         {
             VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
@@ -606,11 +652,9 @@ namespace ASMLite.Tests.Editor
             if (!AddTemporaryAsmLiteExpressionParameter(avatar, "ASMLite_FixtureDetached", out detail))
                 return false;
 
-            if (!ApplyRemoveComponent(avatarName, out string removeDetail))
-            {
-                detail = removeDetail;
+            if (avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true) != null
+                && !ApplyRemoveComponent(avatarName, out detail))
                 return false;
-            }
 
             detail = $"Detached state baseline prepared for avatar '{avatarName}'.";
             return true;

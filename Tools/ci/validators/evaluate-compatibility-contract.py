@@ -449,9 +449,9 @@ def evaluate(contract_path: Path, mode: str) -> EvaluationReport:
         )
 
         try:
-            contract_ref = str(contract_path.relative_to(source_base_dir))
+            contract_ref = contract_path.relative_to(source_base_dir).as_posix()
         except ValueError:
-            contract_ref = str(contract_path)
+            contract_ref = contract_path.as_posix()
 
         expected_summary = render_compatibility_markdown(contract, contract_ref)
         summary_exists = summary_path.exists()

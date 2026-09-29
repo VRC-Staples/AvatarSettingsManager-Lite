@@ -32,11 +32,15 @@ namespace ASMLite.Editor
         Rollback = 4,
     }
 
+    [Flags]
     internal enum ASMLiteGeneratedAssetMirrorTestFailurePoint
     {
         None = 0,
         AfterStagedCopy = 1,
         DuringVendorizedFolderDelete = 2,
+        BeforeFinalize = 4,
+        DuringMirrorRollback = 8,
+        DuringStagedCopy = 16,
     }
 
     internal sealed class ASMLiteGeneratedAssetMirrorResult
@@ -146,6 +150,8 @@ namespace ASMLite.Editor
                 return Message;
 
             string log = Message;
+            if (!string.IsNullOrWhiteSpace(BackupPath))
+                log += $" Recovery backup: '{BackupPath}'.";
             if (!string.IsNullOrWhiteSpace(ContextPath))
                 log += $" Context: '{ContextPath}'.";
             if (!string.IsNullOrWhiteSpace(Remediation))
@@ -188,9 +194,12 @@ namespace ASMLite.Editor
             string stagingDir = CreateUniqueFolder(avatarFolder, "GeneratedAssets__stage__");
             string backupDir = string.Empty;
             int copiedAssetCount = 0;
+            bool promotionAttempted = false;
 
             try
             {
+                if (ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringStagedCopy))
+                    throw new IOException("Injected exception during staged copy.");
                 copiedAssetCount = CopyGeneratedAssetsToFolder(sourcePrefix, stagingDir);
                 if (copiedAssetCount <= 0)
                 {
@@ -262,6 +271,7 @@ namespace ASMLite.Editor
                     }
                 }
 
+                promotionAttempted = true;
                 string promoteError = AssetDatabase.MoveAsset(stagingDir, targetDir);
                 AssetDatabase.Refresh();
                 if (!string.IsNullOrEmpty(promoteError) || !VerifyGeneratedAssetFolder(targetDir))
@@ -300,7 +310,9 @@ namespace ASMLite.Editor
             }
             catch (Exception ex)
             {
-                bool rollbackSucceeded = RestoreFolderFromBackup(targetDir, backupDir);
+                // A copy failure has not replaced the old target and has no backup to restore.
+                bool rollbackAttempted = promotionAttempted || !string.IsNullOrEmpty(backupDir);
+                bool rollbackSucceeded = !rollbackAttempted || RestoreFolderFromBackup(targetDir, backupDir);
                 DeleteAssetIfExists(stagingDir);
                 return ASMLiteGeneratedAssetMirrorResult.Fail(
                     operation: ASMLiteGeneratedAssetMirrorOperation.StageVendorizedMirror,
@@ -313,7 +325,7 @@ namespace ASMLite.Editor
                     message: "[ASM-Lite] Vendorized mirror staging threw an exception.",
                     contextPath: ex.GetType().Name,
                     remediation: ex.Message,
-                    rollbackAttempted: !string.IsNullOrEmpty(backupDir),
+                    rollbackAttempted: rollbackAttempted,
                     rollbackSucceeded: rollbackSucceeded);
             }
         }
@@ -335,7 +347,22 @@ namespace ASMLite.Editor
                     remediation: "Pass the successful mirror-stage result into rollback.");
             }
 
-            bool rollbackSucceeded = RestoreFolderFromBackup(mirrorResult.TargetPath, mirrorResult.BackupPath);
+            bool rollbackSucceeded;
+            try
+            {
+                rollbackSucceeded = !ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringMirrorRollback)
+                    && RestoreFolderFromBackup(mirrorResult.TargetPath, mirrorResult.BackupPath);
+            }
+            catch (Exception ex)
+            {
+                return ASMLiteGeneratedAssetMirrorResult.Fail(
+                    ASMLiteGeneratedAssetMirrorOperation.RollbackVendorizedMirror,
+                    ASMLiteGeneratedAssetMirrorStage.Rollback,
+                    mirrorResult.SourcePath, mirrorResult.TargetPath, mirrorResult.StagingPath,
+                    mirrorResult.BackupPath, mirrorResult.AssetCount,
+                    "[ASM-Lite] Vendorized mirror rollback failed: " + ex.Message,
+                    mirrorResult.TargetPath, "Restore the retained recovery backup manually.", true, false);
+            }
             return rollbackSucceeded
                 ? ASMLiteGeneratedAssetMirrorResult.Pass(
                     operation: ASMLiteGeneratedAssetMirrorOperation.RollbackVendorizedMirror,
@@ -362,6 +389,9 @@ namespace ASMLite.Editor
 
         internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedMirror(ASMLiteGeneratedAssetMirrorResult mirrorResult)
         {
+            if (ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+                throw new InvalidOperationException("Injected failure before mirror finalization.");
+
             if (mirrorResult == null || string.IsNullOrWhiteSpace(mirrorResult.BackupPath))
             {
                 return ASMLiteGeneratedAssetMirrorResult.Pass(
@@ -804,6 +834,9 @@ namespace ASMLite.Editor
 
         private static bool RestoreFolderFromBackup(string targetDir, string backupDir)
         {
+            if (!string.IsNullOrWhiteSpace(backupDir) && !AssetDatabase.IsValidFolder(backupDir))
+                return false;
+
             if (!string.IsNullOrWhiteSpace(targetDir) && AssetDatabase.IsValidFolder(targetDir))
                 AssetDatabase.DeleteAsset(targetDir);
 
@@ -1057,7 +1090,7 @@ namespace ASMLite.Editor
 
         private static bool ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint failurePoint)
         {
-            return s_testFailurePoint == failurePoint;
+            return (s_testFailurePoint & failurePoint) != 0;
         }
 
         private sealed class ScopedFailurePoint : IDisposable

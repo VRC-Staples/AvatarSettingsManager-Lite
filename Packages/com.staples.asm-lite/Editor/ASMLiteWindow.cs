@@ -6249,12 +6249,23 @@ namespace ASMLite.Editor
                     ? ASMLitePackageGeneratedOutputSnapshot.Capture()
                     : null;
                 bool rebuildCompleted = false;
+                bool mirrorStagingAttempted = false;
                 bool rebuildAbortedBeforeBuild = false;
                 Exception rebuildException = null;
                 Exception packageOutputRestoreException = null;
                 ASMLiteBuilder.RebuildMigrationReport migrationReport = default;
                 try
                 {
+                    // Cleanup/build may mutate descriptor assets. Keep the previous mirror
+                    // untouched until staging has secured its rollback copy.
+                    if (wasUsingVendorizedGeneratedAssets)
+                    {
+                        var detachResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(
+                            rebuildAvatar, component.vendorizedGeneratedAssetsPath);
+                        if (!detachResult.Success)
+                            throw new InvalidOperationException(detachResult.ToLogString());
+                    }
+
                     // Rebuild-prep contract for the reverted VF delivery path:
                     // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
                     // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
@@ -6284,16 +6295,20 @@ namespace ASMLite.Editor
                             {
                                 rebuildCompleted = true;
                             }
-                            else if (TryStageRebuildGeneratedAssetsToAvatarLocal(
-                                component,
-                                rebuildAvatar,
-                                wasUsingVendorizedGeneratedAssets,
-                                out string syncedDir))
+                            else
                             {
-                                rebuildCompleted = true;
-                                Debug.Log(wasUsingVendorizedGeneratedAssets
-                                    ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
-                                    : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                                mirrorStagingAttempted = true;
+                                if (TryStageRebuildGeneratedAssetsToAvatarLocal(
+                                    component,
+                                    rebuildAvatar,
+                                    wasUsingVendorizedGeneratedAssets,
+                                    out string syncedDir))
+                                {
+                                    rebuildCompleted = true;
+                                    Debug.Log(wasUsingVendorizedGeneratedAssets
+                                        ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
+                                        : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                                }
                             }
                         }
                     }
@@ -6315,6 +6330,15 @@ namespace ASMLite.Editor
                             packageOutputRestoreException = ex;
                         }
                     }
+                }
+
+                if (wasUsingVendorizedGeneratedAssets && !rebuildCompleted && !mirrorStagingAttempted)
+                {
+                    var descriptorRecovery = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(
+                        rebuildAvatar, component.vendorizedGeneratedAssetsPath);
+                    if (!descriptorRecovery.Success)
+                        Debug.LogError(descriptorRecovery.ToLogString());
+                    ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, component.vendorizedGeneratedAssetsPath);
                 }
 
                 if (packageOutputRestoreException != null)
@@ -6441,7 +6465,6 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            bool descriptorRetargeted = false;
             bool shouldRollbackMirror = true;
             try
             {
@@ -6451,8 +6474,6 @@ namespace ASMLite.Editor
                     Debug.LogError(descriptorResult.ToLogString());
                     return false;
                 }
-
-                descriptorRetargeted = true;
 
                 if (!ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath))
                 {
@@ -6478,18 +6499,28 @@ namespace ASMLite.Editor
             {
                 if (shouldRollbackMirror)
                 {
-                    if (descriptorRetargeted)
-                    {
-                        var descriptorRestoreResult = wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir)
-                            ? ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir)
-                            : ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult.TargetPath);
-                        if (!descriptorRestoreResult.Success)
-                            Debug.LogError(descriptorRestoreResult.ToLogString());
-                    }
+                    // Remove references to replacement identities before deleting the replacement.
+                    // Only rebind to the old mirror after its original assets are back in place.
+                    var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult.TargetPath);
+                    if (!descriptorRestoreResult.Success)
+                        Debug.LogError(descriptorRestoreResult.ToLogString());
 
                     var rollbackResult = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(mirrorResult);
                     if (!rollbackResult.Success)
+                    {
                         Debug.LogError(rollbackResult.ToLogString());
+                    }
+                    else
+                    {
+                        string restoreDir = wasUsingVendorizedGeneratedAssets ? previousVendorizedDir : ASMLiteAssetPaths.GeneratedDir;
+                        if (wasUsingVendorizedGeneratedAssets)
+                        {
+                            var descriptorRollback = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, restoreDir);
+                            if (!descriptorRollback.Success)
+                                Debug.LogError(descriptorRollback.ToLogString());
+                        }
+                        ASMLiteWindowOperations.TryRetargetLiveFullControllerGeneratedAssets(component, restoreDir);
+                    }
                 }
             }
         }

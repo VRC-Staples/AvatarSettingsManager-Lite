@@ -73,6 +73,105 @@ namespace ASMLite.Tests.Editor
                 "Restore should put package prefab bytes back exactly.");
         }
 
+        [Test]
+        public void Restore_AfterDeletionFailure_RollsBackToPreRestoreBytesAndMetadata()
+        {
+            string asset = ToFullPath(ASMLiteAssetPaths.ExprParams);
+            byte[] preRestore = File.ReadAllBytes(asset).Concat(System.Text.Encoding.UTF8.GetBytes("\n# pre-restore\n")).ToArray();
+            byte[] metadata = File.ReadAllBytes(asset + ".meta");
+            File.WriteAllBytes(asset, preRestore);
+            bool replacementStarted = false;
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+            {
+                if (phase == "replacement-deleted")
+                {
+                    replacementStarted = !File.Exists(asset);
+                    throw new IOException("Injected replacement failure.");
+                }
+            }))
+                Assert.Throws<IOException>(() => _snapshot.Restore());
+
+            Assert.IsTrue(replacementStarted, "Failure must occur after destructive replacement starts.");
+            Assert.IsTrue(File.Exists(asset), "Caught failure must restore pre-restore output, not leave it deleted.");
+            CollectionAssert.AreEqual(preRestore, File.ReadAllBytes(asset));
+            CollectionAssert.AreEqual(metadata, File.ReadAllBytes(asset + ".meta"));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Restore_InterruptedReplacement_RetainsBothRecoveryStates(bool failRollback)
+        {
+            string[] paths = { ASMLiteAssetPaths.ExprParams, ASMLiteAssetPaths.ExprParams + ".meta",
+                ASMLiteAssetPaths.GeneratedDir + ".meta", ASMLiteAssetPaths.Prefab, ASMLiteAssetPaths.Prefab + ".meta" };
+            var baseline = paths.ToDictionary(path => path, path => File.ReadAllBytes(ToFullPath(path)));
+            File.AppendAllText(ToFullPath(ASMLiteAssetPaths.ExprParams), "\n# pre-restore state\n");
+            var preRestore = paths.ToDictionary(path => path, path => File.ReadAllBytes(ToFullPath(path)));
+            string recoveryRoot = Path.GetFullPath(".artifacts/asm-lite-recovery");
+            string[] existing = Directory.Exists(recoveryRoot) ? Directory.GetDirectories(recoveryRoot) : new string[0];
+            bool copiesExistedDuringInterruption = false;
+            IOException failure;
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+            {
+                if (phase == "replacement-deleted")
+                {
+                    string recovery = Directory.GetDirectories(recoveryRoot).Except(existing).Single();
+                    copiesExistedDuringInterruption = paths.All(path =>
+                    {
+                        string relative = path.Substring("Packages/com.staples.asm-lite/".Length);
+                        return baseline[path].SequenceEqual(File.ReadAllBytes(Path.Combine(recovery, "captured-baseline", relative)))
+                            && preRestore[path].SequenceEqual(File.ReadAllBytes(Path.Combine(recovery, "pre-restore", relative)));
+                    }) && File.Exists(Path.Combine(recovery, "RECOVERY.txt"));
+                    throw new IOException("Interrupted replacement.");
+                }
+                if (phase == "rollback-deleted" && failRollback)
+                    throw new IOException("Interrupted rollback.");
+            }))
+                failure = Assert.Throws<IOException>(() => _snapshot.Restore());
+
+            Assert.IsTrue(copiesExistedDuringInterruption, "Both complete copies must exist before replacement can lose data.");
+            string retained = (string)failure.Data["RecoveryDirectory"];
+            StringAssert.Contains(retained, failure.Message);
+            StringAssert.Contains(failRollback ? "Rollback also failed" : "Pre-restore package outputs recovered", failure.Message);
+            foreach (string path in paths)
+            {
+                string relative = path.Substring("Packages/com.staples.asm-lite/".Length);
+                CollectionAssert.AreEqual(baseline[path], File.ReadAllBytes(Path.Combine(retained, "captured-baseline", relative)));
+                CollectionAssert.AreEqual(preRestore[path], File.ReadAllBytes(Path.Combine(retained, "pre-restore", relative)));
+                if (!failRollback)
+                    CollectionAssert.AreEqual(preRestore[path], File.ReadAllBytes(ToFullPath(path)));
+            }
+        }
+
+        [Test]
+        public void Restore_UnverifiedRecoveryCopy_LeavesCurrentOutputsUntouched()
+        {
+            string asset = ToFullPath(ASMLiteAssetPaths.ExprParams);
+            File.AppendAllText(asset, "\n# current outputs\n");
+            byte[] current = File.ReadAllBytes(asset);
+            byte[] metadata = File.ReadAllBytes(asset + ".meta");
+            string recoveryRoot = Path.GetFullPath(".artifacts/asm-lite-recovery");
+            string[] existing = Directory.Exists(recoveryRoot) ? Directory.GetDirectories(recoveryRoot) : new string[0];
+            bool replacementStarted = false;
+            IOException failure;
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+            {
+                if (phase == "recovery-copied")
+                {
+                    string directory = Directory.GetDirectories(recoveryRoot).Except(existing).Single();
+                    string relative = ASMLiteAssetPaths.ExprParams.Substring("Packages/com.staples.asm-lite/".Length);
+                    File.AppendAllText(Path.Combine(directory, "captured-baseline", relative), "corrupt recovery copy");
+                }
+                if (phase == "replacement-deleted")
+                    replacementStarted = true;
+            }))
+                failure = Assert.Throws<IOException>(() => _snapshot.Restore());
+
+            StringAssert.Contains("verification failed", failure.Message);
+            Assert.IsFalse(replacementStarted);
+            CollectionAssert.AreEqual(current, File.ReadAllBytes(asset));
+            CollectionAssert.AreEqual(metadata, File.ReadAllBytes(asset + ".meta"));
+        }
+
         private static string ToFullPath(string assetPath)
         {
             var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);

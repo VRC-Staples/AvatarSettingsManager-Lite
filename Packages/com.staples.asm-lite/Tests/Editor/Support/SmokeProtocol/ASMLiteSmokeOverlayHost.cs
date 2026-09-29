@@ -1681,10 +1681,12 @@ namespace ASMLite.Tests.Editor
                 if (!TryAssertAv3SaveLoadGeneratedCoverage(savedParameters, out detail))
                     return false;
 
-                var unsavedParameters = SelectAv3SaveLoadHarnessParameters(avatar.expressionParameters, saved: false, maxCount: 3);
+                // This suite disables exclusions and backs up all eligible parameters.
+                // Unsaved-preservation belongs to the separate fixture that explicitly excludes them.
+                ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
                 var harness = new ASMLiteAv3SaveLoadHarness(
                     savedParameters.Select(ToAv3SaveLoadDescriptor).ToArray(),
-                    unsavedParameters.Select(ToAv3SaveLoadDescriptor).ToArray());
+                    Array.Empty<ASMLiteAv3ParameterDescriptor>());
 
                 _av3SaveLoadHarnessEnumerator = new ASMLiteSmokeCoroutineDriver(
                     harness.RunCoreInvariant(avatar.gameObject, 0xA5A50014u));
@@ -1692,7 +1694,7 @@ namespace ASMLite.Tests.Editor
                 _av3SaveLoadHarnessHasResult = false;
                 _av3SaveLoadHarnessSucceeded = false;
                 _av3SaveLoadHarnessAvatarName = normalizedAvatarName;
-                _av3SaveLoadHarnessDetail = $"AV3 save/load harness started for avatar '{normalizedAvatarName}' savedSubset=[{string.Join(", ", savedParameters.Select(parameter => parameter.name))}] unsavedSubset=[{string.Join(", ", unsavedParameters.Select(parameter => parameter.name))}] animatorDrivenExcluded=[{string.Join(", ", excludedAnimatorDrivenParameters)}].";
+                _av3SaveLoadHarnessDetail = $"AV3 save/load harness started for avatar '{normalizedAvatarName}' savedSubset=[{string.Join(", ", savedParameters.Select(parameter => parameter.name))}] unsavedSubset=[] (no exclusions configured) animatorDrivenExcluded=[{string.Join(", ", excludedAnimatorDrivenParameters)}].";
                 _av3SaveLoadHarnessStackTrace = string.Empty;
             }
 
@@ -1977,12 +1979,6 @@ namespace ASMLite.Tests.Editor
             foreach (var driver in (stateMachine.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                 CollectDrivenParameterNames(driver, targetNames, drivenNames);
 
-            foreach (var transition in stateMachine.anyStateTransitions ?? Array.Empty<AnimatorStateTransition>())
-                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
-            foreach (var transition in stateMachine.entryTransitions ?? Array.Empty<AnimatorTransition>())
-                CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
             foreach (var childState in stateMachine.states ?? Array.Empty<ChildAnimatorState>())
             {
                 var state = childState.state;
@@ -1991,54 +1987,10 @@ namespace ASMLite.Tests.Editor
 
                 foreach (var driver in (state.behaviours ?? Array.Empty<StateMachineBehaviour>()).OfType<VRCAvatarParameterDriver>())
                     CollectDrivenParameterNames(driver, targetNames, drivenNames);
-
-                foreach (var transition in state.transitions ?? Array.Empty<AnimatorStateTransition>())
-                    CollectTransitionConditionParameterNames(transition, targetNames, drivenNames);
-
-                CollectMotionParameterNames(state.motion, targetNames, drivenNames);
             }
 
             foreach (var childStateMachine in stateMachine.stateMachines ?? Array.Empty<ChildAnimatorStateMachine>())
                 CollectExternallyAnimatorDrivenParameterNames(childStateMachine.stateMachine, targetNames, drivenNames);
-        }
-
-        private static void CollectTransitionConditionParameterNames(
-            AnimatorTransitionBase transition,
-            ISet<string> targetNames,
-            HashSet<string> drivenNames)
-        {
-            if (transition == null || targetNames == null || drivenNames == null)
-                return;
-
-            foreach (var condition in transition.conditions ?? Array.Empty<AnimatorCondition>())
-            {
-                if (!string.IsNullOrWhiteSpace(condition.parameter) && targetNames.Contains(condition.parameter))
-                    drivenNames.Add(condition.parameter);
-            }
-        }
-
-        private static void CollectMotionParameterNames(
-            Motion motion,
-            ISet<string> targetNames,
-            HashSet<string> drivenNames)
-        {
-            if (motion == null || targetNames == null || drivenNames == null)
-                return;
-
-            if (!(motion is BlendTree blendTree))
-                return;
-
-            if (!string.IsNullOrWhiteSpace(blendTree.blendParameter) && targetNames.Contains(blendTree.blendParameter))
-                drivenNames.Add(blendTree.blendParameter);
-            if (!string.IsNullOrWhiteSpace(blendTree.blendParameterY) && targetNames.Contains(blendTree.blendParameterY))
-                drivenNames.Add(blendTree.blendParameterY);
-
-            foreach (var child in blendTree.children)
-            {
-                if (!string.IsNullOrWhiteSpace(child.directBlendParameter) && targetNames.Contains(child.directBlendParameter))
-                    drivenNames.Add(child.directBlendParameter);
-                CollectMotionParameterNames(child.motion, targetNames, drivenNames);
-            }
         }
 
         private static void CollectDrivenParameterNames(
@@ -2058,8 +2010,17 @@ namespace ASMLite.Tests.Editor
 
         private static bool IsAsmLiteGeneratedAnimatorLayerName(string layerName)
         {
-            return !string.IsNullOrWhiteSpace(layerName)
-                && layerName.StartsWith("ASMLite_", StringComparison.Ordinal);
+            if (string.IsNullOrWhiteSpace(layerName))
+                return false;
+            if (layerName.StartsWith("ASMLite_", StringComparison.Ordinal))
+                return true;
+
+            // VRCFury prefixes merged layer names with their numeric owner ID.
+            const string prefix = "[VF";
+            int end = layerName.IndexOf("] ASMLite_", StringComparison.Ordinal);
+            return end > prefix.Length
+                && layerName.StartsWith(prefix, StringComparison.Ordinal)
+                && layerName.Substring(prefix.Length, end - prefix.Length).All(char.IsDigit);
         }
 
         private static bool IsSupportedAv3SaveLoadHarnessParameter(VRCExpressionParameters.Parameter parameter)

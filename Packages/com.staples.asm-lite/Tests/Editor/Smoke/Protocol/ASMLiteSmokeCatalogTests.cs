@@ -130,6 +130,8 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeStepDefinition harnessStep = suite.cases.Single().steps.Single(step => step.stepId == "run-av3-save-load-harness");
             StringAssert.Contains("generated ASM-Lite control", harnessStep.description);
             StringAssert.Contains("save/load harness", harnessStep.expectedOutcome);
+            StringAssert.Contains("separate explicitly-excluded PlayMode fixture", suite.cases.Single().expectedOutcome);
+            StringAssert.DoesNotContain("preserves unsaved parameters", suite.cases.Single().expectedOutcome);
         }
 
         [Test]
@@ -499,7 +501,7 @@ namespace ASMLite.Tests.Editor
             AssertDestructiveResetCase(
                 destructive,
                 "stale-vendorized-references",
-                "vendorized-state-baseline",
+                "stale-vendorized-references",
                 "ReturnToPackageManaged");
             AssertDestructiveResetCase(
                 destructive,
@@ -515,7 +517,7 @@ namespace ASMLite.Tests.Editor
                 destructive,
                 "interrupted-detached-state",
                 "detached-state-baseline",
-                "AddPrefab");
+                "ReturnToPackageManaged");
         }
 
         [Test]

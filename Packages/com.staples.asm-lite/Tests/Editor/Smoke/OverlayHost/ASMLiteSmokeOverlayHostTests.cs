@@ -606,7 +606,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Av3SaveLoadHarnessSavedSelection_ExcludesAnimatorDrivenVrcfuryParametersOutsideAsmLiteLayers()
+        public void Av3SaveLoadHarnessSavedSelection_ExcludesAnimatorDrivenVrcfuryParametersOutsidePrefixedAsmLiteLayers()
         {
             var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             var controller = new AnimatorController();
@@ -622,7 +622,7 @@ namespace ASMLite.Tests.Editor
 
                 AddParameterDriverLayer(
                     controller,
-                    "ASMLite_Slot1",
+                    "[VF190] ASMLite_Slot1",
                     stableVrcFuryParameters[0].name,
                     VRC_AvatarParameterDriver.ChangeType.Set);
                 AddParameterDriverLayer(
@@ -658,7 +658,7 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Av3SaveLoadHarnessSavedSelection_ExcludesVrcfuryAnimatorConditionAndBlendParameters()
+        public void Av3SaveLoadHarnessSavedSelection_KeepsReadOnlyVrcfuryAnimatorConditionAndBlendParameters()
         {
             var expressionParameters = ScriptableObject.CreateInstance<VRCExpressionParameters>();
             var controller = new AnimatorController();
@@ -697,22 +697,15 @@ namespace ASMLite.Tests.Editor
                     .Select(parameter => parameter.name)
                     .ToArray();
 
-                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[0].name,
-                    "VRCFury-generated toggles used as external transition conditions are not stable direct-write AV3 harness targets.");
-                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[1].name,
-                    "VRCFury-generated toggles used as external blend parameters are not stable direct-write AV3 harness targets.");
-                CollectionAssert.DoesNotContain(selectedNames, stableVrcFuryParameters[2].name,
-                    "VRCFury-generated toggles used as direct blend parameters are not stable direct-write AV3 harness targets.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[0].name,
+                    "Transition conditions read a parameter without overwriting it.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[1].name,
+                    "BlendTree inputs read a parameter without overwriting it.");
+                CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[2].name,
+                    "Direct BlendTree inputs read a parameter without overwriting it.");
                 CollectionAssert.Contains(selectedNames, stableVrcFuryParameters[3].name,
                     "VRCFury-created parameters that are not referenced by external animator layers should remain harness targets.");
-                CollectionAssert.AreEquivalent(
-                    new[]
-                    {
-                        stableVrcFuryParameters[0].name,
-                        stableVrcFuryParameters[1].name,
-                        stableVrcFuryParameters[2].name,
-                    },
-                    excludedNames);
+                CollectionAssert.IsEmpty(excludedNames);
             }
             finally
             {
@@ -758,8 +751,10 @@ namespace ASMLite.Tests.Editor
                     .Select(parameter => parameter.name)
                     .ToArray();
 
-                CollectionAssert.AreEquivalent(stableParameters.Select(parameter => parameter.name).ToArray(), selectedNames);
-                CollectionAssert.AreEquivalent(drivenParameters.Select(parameter => parameter.name).ToArray(), excludedNames);
+                CollectionAssert.AreEquivalent(
+                    new[] { drivenParameters[0].name, stableParameters[1].name, drivenParameters[2].name },
+                    selectedNames);
+                CollectionAssert.AreEquivalent(new[] { drivenParameters[1].name }, excludedNames);
             }
             finally
             {
@@ -1811,6 +1806,111 @@ namespace ASMLite.Tests.Editor
                 Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.True);
                 Assert.That(events.Any(item => string.Equals(item.eventType, "step-passed", StringComparison.Ordinal)
                     && item.message.Contains("Expected diagnostic 'SETUP_SCENE_MISSING' matched")), Is.True);
+
+                var result = ASMLiteSmokeArtifactPaths.LoadResultFromJson(
+                    File.ReadAllText(context.Paths.GetResultPath(1, "expected-diagnostic-host")));
+                Assert.That(result.result, Is.EqualTo("passed"));
+                Assert.That(result.runId, Is.EqualTo("run-0012-expected-diagnostic-host"));
+                Assert.That(result.effectiveResetPolicy, Is.EqualTo("SceneReload"));
+                Assert.That(result.artifactPaths.failurePath, Is.Empty);
+                Assert.That(File.Exists(context.Paths.GetFailurePath(1, "expected-diagnostic-host")), Is.False);
+            }
+        }
+
+        [Test]
+        public void SetupSuite_FailsWhenExpectedDiagnosticStepSucceedsUnexpectedly()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilReviewRequired(context);
+
+                var failure = AssertExpectedDiagnosticHostFailure(context, commandId);
+                Assert.That(failure.failureMessage, Does.Contain("expected to fail"));
+                Assert.That(failure.failureMessage, Does.Contain("SETUP_SCENE_MISSING"));
+                Assert.That(failure.failureMessage, Does.Contain("scene could not be found"));
+            }
+        }
+
+        [Test]
+        public void SetupSuite_FailsWhenExpectedDiagnosticCodeIsWrong()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                const string diagnostic = "SETUP_SCENE_PATH_INVALID: configured scene could not be found at Assets/Missing.unity";
+                context.Runtime.FailAction("open-scene", diagnostic);
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilReviewRequired(context);
+
+                var failure = AssertExpectedDiagnosticHostFailure(context, commandId);
+                Assert.That(failure.failureMessage, Does.Contain("Expected diagnostic"));
+                Assert.That(failure.failureMessage, Does.Contain("SETUP_SCENE_MISSING"));
+                Assert.That(failure.failureMessage, Does.Contain(diagnostic));
+            }
+        }
+
+        [Test]
+        public void SetupSuite_FailsWhenExpectedDiagnosticTextIsWrong()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                const string diagnostic = "SETUP_SCENE_MISSING: unrelated failure text";
+                context.Runtime.FailAction("open-scene", diagnostic);
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilReviewRequired(context);
+
+                var failure = AssertExpectedDiagnosticHostFailure(context, commandId);
+                Assert.That(failure.failureMessage, Does.Contain("Expected diagnostic"));
+                Assert.That(failure.failureMessage, Does.Contain("scene could not be found"));
+                Assert.That(failure.failureMessage, Does.Contain(diagnostic));
+            }
+        }
+
+        [Test]
+        public void SetupSuite_RegularStepFailureStillFailsWithoutExpectedDiagnosticArgs()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                var catalog = ASMLiteSmokeCatalog.LoadFromPath(context.CatalogPath);
+                Assert.That(catalog.TryGetSuite("expected-diagnostic-host", out ASMLiteSmokeSuiteDefinition suite), Is.True);
+                suite.cases[0].steps[0].args = new ASMLiteSmokeStepArgs { scenePath = "Assets/Missing.unity" };
+                File.WriteAllText(context.CatalogPath, JsonUtility.ToJson(catalog));
+                context.Runtime.FailAction("open-scene", "ordinary failure");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilReviewRequired(context);
+
+                var failure = AssertExpectedDiagnosticHostFailure(context, commandId);
+                Assert.That(failure.failureMessage, Is.EqualTo("ordinary failure"));
+            }
+        }
+
+        [Test]
+        public void SetupSuite_FailsWhenRequiredCleanupFailsAfterExpectedDiagnosticMatches()
+        {
+            using (var context = RunnerTestContext.Create(exitOnReady: false))
+            {
+                const string commandId = "cmd_000012_run-suite";
+                var catalog = ASMLiteSmokeCatalog.LoadFromPath(context.CatalogPath);
+                Assert.That(catalog.TryGetSuite("expected-diagnostic-host", out ASMLiteSmokeSuiteDefinition suite), Is.True);
+                suite.cases[0].steps[0].args.requireCleanReset = true;
+                File.WriteAllText(context.CatalogPath, JsonUtility.ToJson(catalog));
+                context.Runtime.FailAction("open-scene", "SETUP_SCENE_MISSING: configured scene could not be found at Assets/Missing.unity");
+                context.Runtime.FailNextSetupFixtureReset("simulated cleanup ledger failure");
+
+                WriteCommand(context.Paths, BuildRunSuiteCommand(12, commandId, "expected-diagnostic-host"));
+                AdvanceUntilReviewRequired(context);
+
+                var failure = AssertExpectedDiagnosticHostFailure(context, commandId);
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.EqualTo(1));
+                Assert.That(failure.failureMessage, Does.Contain("SETUP_DESTRUCTIVE_RESET_FAILED"));
+                Assert.That(failure.failureMessage, Does.Contain("simulated cleanup ledger failure"));
             }
         }
 
@@ -2605,6 +2705,39 @@ namespace ASMLite.Tests.Editor
         {
             string raw = File.ReadAllText(hostStatePath);
             return ASMLiteSmokeProtocol.LoadHostStateFromJson(raw);
+        }
+
+        private static ASMLiteSmokeFailureDocument AssertExpectedDiagnosticHostFailure(RunnerTestContext context, string commandId)
+        {
+            var events = ASMLiteSmokeProtocol.LoadEventsFromNdjsonFileTolerant(context.Paths.EventsLogPath)
+                .Where(item => string.Equals(item.commandId, commandId, StringComparison.Ordinal))
+                .ToArray();
+            var stepFailure = events.Single(item => string.Equals(item.eventType, "step-failed", StringComparison.Ordinal));
+            Assert.That(stepFailure.suiteId, Is.EqualTo("expected-diagnostic-host"));
+            Assert.That(stepFailure.caseId, Is.EqualTo("expected-diagnostic-host-case"));
+            Assert.That(stepFailure.stepId, Is.EqualTo("open-missing-scene"));
+            Assert.That(stepFailure.effectiveResetPolicy, Is.EqualTo("SceneReload"));
+            Assert.That(events.Any(item => string.Equals(item.eventType, "suite-failed", StringComparison.Ordinal)), Is.True);
+            Assert.That(events.Any(item => string.Equals(item.eventType, "suite-passed", StringComparison.Ordinal)), Is.False);
+
+            var result = ASMLiteSmokeArtifactPaths.LoadResultFromJson(
+                File.ReadAllText(context.Paths.GetResultPath(1, "expected-diagnostic-host")));
+            Assert.That(result.result, Is.EqualTo("failed"));
+            Assert.That(result.runId, Is.EqualTo("run-0012-expected-diagnostic-host"));
+            Assert.That(result.artifactPaths.failurePath, Is.Not.Empty);
+
+            var failure = ASMLiteSmokeArtifactPaths.LoadFailureFromJson(
+                File.ReadAllText(context.Paths.GetFailurePath(1, "expected-diagnostic-host")));
+            Assert.That(failure.commandId, Is.EqualTo(commandId));
+            Assert.That(failure.runId, Is.EqualTo(result.runId));
+            Assert.That(failure.suiteId, Is.EqualTo(stepFailure.suiteId));
+            Assert.That(failure.caseId, Is.EqualTo(stepFailure.caseId));
+            Assert.That(failure.caseLabel, Is.EqualTo("Expected diagnostic host case"));
+            Assert.That(failure.stepId, Is.EqualTo(stepFailure.stepId));
+            Assert.That(failure.stepLabel, Is.EqualTo("Missing scene is reported"));
+            Assert.That(failure.effectiveResetPolicy, Is.EqualTo("SceneReload"));
+            Assert.That(failure.failureMessage, Is.EqualTo(stepFailure.message));
+            return failure;
         }
 
         private static void WriteCommand(ASMLiteSmokeSessionPaths paths, ASMLiteSmokeProtocolCommand command)

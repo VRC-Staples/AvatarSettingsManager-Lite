@@ -518,6 +518,88 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteVendorizedRebuildPackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
     {
         [Test]
+        public void Rebuild_RollbackFailure_RetainsAndIdentifiesPreviousMirror()
+        {
+            PreparePackageManagedAvatarForVendorize("RollbackFailure");
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            var errors = new List<string>();
+            Application.LogCallback record = (message, stack, type) => errors.Add(message);
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.VendorizeForAutomation();
+                string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+                string oldGuid = AssetDatabase.AssetPathToGUID(previousPath + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+                LogAssert.Expect(LogType.Error, new Regex("Vendorized mirror rollback failed"));
+                LogAssert.Expect(LogType.Exception, new Regex("Injected failure before mirror finalization"));
+                Application.logMessageReceived += record;
+                using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(
+                    ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize | ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringMirrorRollback))
+                    window.RebuildForAutomation();
+
+                string retainedAsset = AssetDatabase.GUIDToAssetPath(oldGuid);
+                StringAssert.Contains("GeneratedAssets__backup__", retainedAsset);
+                Assert.IsTrue(File.Exists(Path.GetFullPath(retainedAsset)));
+                string backupPath = Path.GetDirectoryName(retainedAsset).Replace('\\', '/');
+                Assert.IsTrue(errors.Any(message => message.Contains(backupPath)), "Failure must identify the retained recovery folder.");
+                Assert.IsFalse(errors.Any(message => message.Contains("Vendorized payload sync complete")));
+                Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+                Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            }
+            finally
+            {
+                Application.logMessageReceived -= record;
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [TestCase(true, false)]
+        [TestCase(false, false)]
+        [TestCase(true, true)]
+        [TestCase(false, true)]
+        public void Rebuild_Failure_RestoresAssetIdentityAndAllReferences(bool vendorized, bool duringStagedCopy)
+        {
+            PreparePackageManagedAvatarForVendorize("LateFailure");
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try
+            {
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                if (vendorized)
+                    window.VendorizeForAutomation();
+                string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+                string assetDir = vendorized ? previousPath : ASMLiteAssetPaths.GeneratedDir;
+                var baseline = PackageOutputBytesSnapshot.Capture();
+                var oldMenu = _ctx.AvDesc.expressionsMenu;
+                var oldParameters = _ctx.AvDesc.expressionParameters;
+                var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+                string menuGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(oldMenu));
+                byte[] menuBytes = File.ReadAllBytes(Path.GetFullPath(AssetDatabase.GetAssetPath(oldMenu)));
+                MutateGeneratedInputsBeforeVendorize("LateFailure_NewParam");
+                LogAssert.Expect(duringStagedCopy ? LogType.Error : LogType.Exception,
+                    new Regex(duringStagedCopy ? "Injected exception during staged copy" : "Injected failure before mirror finalization"));
+                using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(duringStagedCopy
+                    ? ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringStagedCopy
+                    : ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+                    window.RebuildForAutomation();
+
+                Assert.AreEqual(vendorized, _ctx.Comp.useVendorizedGeneratedAssets);
+                Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+                Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu, "Descriptor must recover original menu identity.");
+                Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+                Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+                AssertDescriptorGeneratedAssetReferencesUnderPrefix(assetDir, "Late rollback");
+                AssertLiveFullControllerReferencesUnderPrefix(assetDir, "Late rollback");
+                Assert.AreEqual(menuGuid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)));
+                CollectionAssert.AreEqual(menuBytes, File.ReadAllBytes(Path.GetFullPath(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu))));
+                baseline.AssertMatches("Late rollback");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(window);
+            }
+        }
+
+        [Test]
         public void VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
         {
             PreparePackageManagedAvatarForVendorize("VendorizedRebuild_RefreshesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs");

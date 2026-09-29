@@ -415,6 +415,15 @@ namespace ASMLite
                     LogBuildFailureDiagnosticFromBuilder();
                     return false;
                 }
+
+                // VRCFury has already consumed its FullController by this callback.
+                // Refresh its generated build output with parameters created during that merge.
+                var reconcileMethod = GetBuilderType()?.GetMethod("ReconcileAfterVrcFury", BindingFlags.Public | BindingFlags.Static);
+                if (reconcileMethod == null || !(reconcileMethod.Invoke(null, new object[] { this }) is bool reconciled) || !reconciled)
+                {
+                    Debug.LogError("[ASM-Lite] Post-VRCFury FX reconciliation failed.");
+                    return false;
+                }
             }
             catch (TargetInvocationException ex)
             {

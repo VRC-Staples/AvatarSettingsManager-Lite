@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,7 +19,6 @@ SMOKE_PROTOCOL_FILES = [
     "ASMLiteSmokeProtocolTests.cs",
     "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
-    "ASMLiteSmokeRunExecutorTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",
 ]
@@ -170,7 +170,7 @@ class ValidateSuitesTests(unittest.TestCase):
     def run_validator(self) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [
-                "python3",
+                sys.executable,
                 str(VALIDATOR),
                 "--repo-root",
                 str(self.root),
@@ -309,6 +309,27 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertIn("removed EditMode batch plan path reference", result.stderr)
         removed_path = "/".join(("Tools", "ci", "test-suites", "editmode-batch-runs.json"))
         self.assertIn(removed_path, result.stderr)
+
+    def test_ignores_local_kikiasm_project_during_reference_scan(self) -> None:
+        local_script = self.root / "KikiASM/Assets/Editor/LocalOnly.cs"
+        local_script.parent.mkdir(parents=True)
+        local_script.write_text(
+            'const string stale = "Tools/ci/test-suites/editmode-batch-runs.json";',
+            encoding="utf-8",
+        )
+        result = self.run_validator()
+        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+
+    def test_ignores_preserved_recovery_copies_during_reference_scan(self) -> None:
+        recovery_copy = self.root / ".artifacts/asm-lite-recovery/retained/LegacyReferences.cs"
+        recovery_copy.parent.mkdir(parents=True)
+        content = 'const string stale = "Tools/ci/test-suites/editmode-batch-runs.json";'
+        recovery_copy.write_text(content, encoding="utf-8")
+
+        result = self.run_validator()
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
+        self.assertEqual(recovery_copy.read_text(encoding="utf-8"), content)
 
 
 if __name__ == "__main__":

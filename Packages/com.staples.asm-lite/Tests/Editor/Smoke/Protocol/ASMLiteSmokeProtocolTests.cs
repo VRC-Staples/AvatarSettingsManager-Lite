@@ -114,7 +114,7 @@ namespace ASMLite.Tests.Editor
         private static string LoadFixtureJson(string fileName)
         {
             string fixturePath = Path.Combine(ASMLiteSmokeContractPaths.GetProtocolFixtureDirectory(), fileName);
-            return File.ReadAllText(fixturePath, Encoding.UTF8);
+            return File.ReadAllText(fixturePath, Encoding.UTF8).Replace("\r\n", "\n", StringComparison.Ordinal);
         }
 
         private static ASMLiteSmokeProtocolEvent CreateProtocolEvent(int eventSeq, string eventType, string commandId)

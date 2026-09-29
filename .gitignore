@@ -49,6 +49,9 @@ venv/
 *.log
 tmp/
 
+# Local-only KikiASM Unity test project; never add avatar assets or caches to this repo.
+/KikiASM/
+
 # ── Unity Test Project for regression tests.
 Test Project/
 

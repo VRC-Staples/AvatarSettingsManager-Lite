@@ -8,6 +8,17 @@
     "smoke-protocol-headless",
     "smoke-overlay-host-headless"
   ],
+  "deferredExternalAvatar": {
+    "status": "deferred-until-local-avatar-setup",
+    "smokeCatalogFixture": "Tools/ci/smoke/suite-catalog.json#fixture",
+    "requiredScenePath": "Assets/Click ME.unity",
+    "requiredAvatarName": "CanonicalDress",
+    "visibleRunner": "Tools/ci/bin/run-visible-smoke-local.sh",
+    "manualTestNames": [
+      "ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadManualTests.ExternalUatAvatar_RestoresSavedSubsetAndPreservesUnsavedMetadata"
+    ],
+    "manualTestPrerequisite": "Operator-selected local avatar prefab via ASMLITE_AV3_UAT_AVATAR_ASSET_PATH or -asmliteAv3UatAvatarAssetPath."
+  },
   "groups": [
     {
       "id": "contract",
@@ -82,14 +93,13 @@
     },
     {
       "id": "smoke-protocol-headless",
-      "description": "C#/Unity smoke protocol, catalog, JSON/event, atomic IO, artifact path, and executor contract tests.",
+      "description": "C#/Unity smoke protocol, catalog, JSON/event, atomic IO, and artifact path contract tests. Execution behavior belongs to the host lane.",
       "defaultCi": true,
       "headless": "yes",
       "testFiles": [
         "ASMLiteSmokeProtocolTests.cs",
         "ASMLiteSmokeProtocolCompatibilityTests.cs",
         "ASMLiteSmokeCatalogTests.cs",
-        "ASMLiteSmokeRunExecutorTests.cs",
         "ASMLiteSmokeAtomicIoTests.cs",
         "ASMLiteSmokeArtifactPathsTests.cs"
       ],
@@ -102,7 +112,6 @@
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeProtocolCompatibilityTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeCatalogTests(?:\\.|$)",
-              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeRunExecutorTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeAtomicIoTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteSmokeArtifactPathsTests(?:\\.|$)"
             ]
@@ -134,12 +143,11 @@
     },
     {
       "id": "playmode-headless-review",
-      "description": "PlayMode/runtime suites are discoverable for review in a dedicated PlayMode assembly and excluded from default CI until runner policy avoids runSynchronously and fixture requirements are settled.",
+      "description": "Synthetic-avatar AV3 runtime tests run in the separate PlayMode Save/Load CI job, not in default EditMode batches. The linked smoke-catalog PlayMode suites use the deferred external scene/avatar fixture.",
       "defaultCi": false,
       "headless": "review",
       "testFiles": [
-        "ASMLiteAv3SaveLoadRuntimeTests.cs",
-        "ASMLiteAv3SaveLoadManualTests.cs"
+        "ASMLiteAv3SaveLoadRuntimeTests.cs"
       ],
       "smokeCatalogSuiteIds": [
         "playmode-runtime-validation",
@@ -148,7 +156,7 @@
     },
     {
       "id": "visible-manual",
-      "description": "Visible editor/operator-driven smoke suites are discoverable but excluded from default headless CI.",
+      "description": "Visible editor/operator-driven smoke suites are excluded from default headless CI. Catalog execution against Click ME/CanonicalDress is deferred until local avatar setup; headless smoke protocol and host tests use synthetic fixtures.",
       "defaultCi": false,
       "headless": "no",
       "testFiles": [
