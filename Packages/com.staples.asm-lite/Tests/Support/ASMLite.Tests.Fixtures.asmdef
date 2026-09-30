@@ -1,0 +1,8 @@
+{
+    "name": "ASMLite.Tests.Fixtures",
+    "rootNamespace": "ASMLite.Tests.Editor",
+    "references": [],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "includePlatforms": [],
+    "autoReferenced": false
+}

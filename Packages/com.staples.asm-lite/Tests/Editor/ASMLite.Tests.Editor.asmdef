@@ -4,6 +4,7 @@
     "references": [
         "ASMLite",
         "ASMLite.Editor",
+        "ASMLite.Tests.Fixtures",
         "VRC.SDKBase",
         "VRC.SDKBase.Editor.BuildPipeline",
         "VRC.SDK3A",

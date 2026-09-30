@@ -2,6 +2,8 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 
@@ -14,10 +16,13 @@ namespace ASMLite.Tests.Editor
     {
         private AsmLiteTestContext _ctx;
         private ASMLiteSmokeSetupFixtureService _service;
+        private readonly System.Collections.Generic.List<GameObject> _testOwnedObjects = new System.Collections.Generic.List<GameObject>();
 
         [SetUp]
         public void SetUp()
         {
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/FixtureBaseline.unity"), Is.True);
             _ctx = ASMLiteTestFixtures.CreateTestAvatar();
             _ctx.AvatarGo.name = "FixtureAvatar";
             _service = new ASMLiteSmokeSetupFixtureService();
@@ -27,7 +32,17 @@ namespace ASMLite.Tests.Editor
         public void TearDown()
         {
             _service?.Reset(out _);
+            string recovery = _service?.RecoveryPath;
+            if (!string.IsNullOrEmpty(recovery) && Directory.Exists(recovery))
+            {
+                string archive = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(recovery)), "fixture-test-failure-evidence");
+                Directory.CreateDirectory(archive);
+                Directory.Move(recovery, Path.Combine(archive, Path.GetFileName(recovery)));
+            }
             _service = null;
+            foreach (GameObject value in _testOwnedObjects)
+                if (value != null) UnityEngine.Object.DestroyImmediate(value);
+            _testOwnedObjects.Clear();
             ASMLiteTestFixtures.TearDownTestAvatar(_ctx?.AvatarGo);
             _ctx = null;
         }
@@ -41,7 +56,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.DuplicateAvatarName,
             };
 
-            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+            bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
             Assert.That(applied, Is.True, detail);
             Assert.That(_service.CleanupLedgerCount, Is.GreaterThan(0));
@@ -64,7 +79,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SelectedInactiveAvatar,
             };
 
-            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+            bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
             Assert.That(applied, Is.True, detail);
             Assert.That(_ctx.AvatarGo.activeSelf, Is.False);
@@ -87,7 +102,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SelectedDuplicateAvatar,
             };
 
-            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+            bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
             Assert.That(applied, Is.True, detail);
             Assert.That(CountSceneAvatarsNamed("FixtureAvatar"), Is.EqualTo(2));
@@ -110,7 +125,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.UnselectedInactiveAvatar,
             };
 
-            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+            bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
             Assert.That(applied, Is.True, detail);
             Assert.That(_ctx.AvatarGo.activeSelf, Is.False);
@@ -140,7 +155,7 @@ namespace ASMLite.Tests.Editor
                 activeDuplicate = new GameObject("FixtureAvatar");
                 activeDuplicate.AddComponent<VRCAvatarDescriptor>();
 
-                bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+                bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
                 Assert.That(applied, Is.True, detail);
                 Assert.That(_ctx.AvatarGo.activeSelf, Is.False,
@@ -174,7 +189,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SameNameNonAvatar,
             };
 
-            bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+            bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
             Assert.That(applied, Is.True, detail);
             Assert.That(Selection.activeObject, Is.Null);
@@ -199,7 +214,7 @@ namespace ASMLite.Tests.Editor
 
             try
             {
-                bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", evidenceRoot, out string detail);
+                bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", evidenceRoot, out string detail);
 
                 Assert.That(applied, Is.True, detail);
                 Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.True);
@@ -235,7 +250,7 @@ namespace ASMLite.Tests.Editor
                     fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder,
                 };
 
-                bool applied = _service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
+                bool applied = ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail);
 
                 Assert.That(applied, Is.True, detail);
                 Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.False);
@@ -259,7 +274,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.Comp.useVendorizedGeneratedAssets, Is.True);
             Assert.That(_ctx.Comp.vendorizedGeneratedAssetsPath, Does.Contain(_ctx.AvatarGo.name));
 
@@ -281,7 +296,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
 
             Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
@@ -298,7 +313,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.StaleVendorizedReferences,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.That(_ctx.AvDesc.expressionParameters, Is.Not.SameAs(original));
             Assert.That(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters),
@@ -320,7 +335,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.True);
 
@@ -341,7 +356,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.That(_ctx.ParamsAsset.parameters.Any(item => item != null && item.name == "ASMLite_FixtureDetached"), Is.True);
 
@@ -382,7 +397,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.AreEqual(
                 ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
@@ -406,7 +421,7 @@ namespace ASMLite.Tests.Editor
                 fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent,
             };
 
-            Assert.That(_service.ApplyMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
+            Assert.That(ApplyAdmittedMutation(args, "Assets/Click ME.unity", "FixtureAvatar", out string detail), Is.True, detail);
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Null);
             Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite"), Is.True);
 
@@ -414,6 +429,182 @@ namespace ASMLite.Tests.Editor
 
             Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(includeInactive: true), Is.Not.Null);
             Assert.That(AssetDatabase.IsValidFolder("Assets/ASM-Lite/FixtureAvatar/GeneratedAssets"), Is.False);
+        }
+
+        [Test]
+        public void DirtyCoveredScene_IsRejectedBeforeRecoveryPublicationOrMutation()
+        {
+            AssetDatabase.SaveAssets();
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/FixtureBaseline.unity");
+            _ctx.AvatarGo.transform.localPosition = new Vector3(7, 8, 9);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent };
+            Assert.That(_service.ApplyMutation(args, string.Empty, "FixtureAvatar", out string detail), Is.False);
+            StringAssert.Contains("saved and clean", detail);
+            Assert.That(_service.RecoveryPath, Is.Empty);
+            Assert.That(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(true), Is.Not.Null);
+            Assert.That(SceneManager.GetActiveScene().isDirty, Is.True);
+        }
+
+        [Test]
+        public void CorruptRecoveryCopy_LatchesFailureAndEmptyResetCannotProveCleanup()
+        {
+            var earlierCleanService = new ASMLiteSmokeSetupFixtureService();
+            Assert.That(earlierCleanService.Reset(out _), Is.True);
+            Assert.That(earlierCleanService.HasCleanResetProof, Is.True);
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent };
+            Assert.That(ApplyAdmittedMutation(args, string.Empty, "FixtureAvatar", out string applyDetail), Is.True, applyDetail);
+            string copy = Directory.GetFiles(_service.RecoveryPath, "scene-*.unity").Single();
+            File.AppendAllText(copy, "corruption");
+            Assert.That(earlierCleanService.Reset(out _), Is.False);
+            Assert.That(earlierCleanService.HasCleanResetProof, Is.False);
+            Assert.That(_service.Reset(out _), Is.False);
+            Assert.That(_service.Reset(out _), Is.False);
+            Assert.That(_service.HasCleanResetProof, Is.False);
+            Assert.That(new ASMLiteSmokeSetupFixtureService().Reset(out _), Is.False);
+            Assert.That(ASMLiteSmokeSetupFixtureService.CheckRecoveryAdmission(out _), Is.False);
+        }
+
+        [Test]
+        public void UnrelatedDirtySceneChange_IsPreservedAndBlocksTargetSave()
+        {
+            var unrelated = new GameObject("UnrelatedActionState");
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent };
+            Assert.That(ApplyAdmittedMutation(args, string.Empty, "FixtureAvatar", out string applyDetail), Is.True, applyDetail);
+            unrelated.transform.position = new Vector3(9, 8, 7);
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            Assert.That(_service.Reset(out string detail), Is.False);
+            StringAssert.Contains("unrelated dirty scene", detail);
+            Assert.That(unrelated.transform.position, Is.EqualTo(new Vector3(9, 8, 7)));
+            Assert.That(SceneManager.GetActiveScene().isDirty, Is.True);
+            UnityEngine.Object.DestroyImmediate(unrelated);
+        }
+
+        [Test]
+        public void FirstBaselineSurvivesRepeatedMutation_AndFullSelectionIsRestored()
+        {
+            Selection.activeObject = _ctx.Comp.gameObject;
+            Selection.objects = new UnityEngine.Object[] { _ctx.Comp.gameObject, _ctx.AvatarGo };
+            Assert.That(Selection.objects.Length, Is.EqualTo(2));
+            UnityEngine.Object[] selection = Selection.objects;
+            UnityEngine.Object active = Selection.activeObject;
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SelectedInactiveAvatar };
+            Assert.That(ApplyAdmittedMutation(args, string.Empty, "FixtureAvatar", out string applyDetail), Is.True, applyDetail);
+            Assert.That(_service.ApplyMutation(args, string.Empty, "FixtureAvatar", out string repeatDetail), Is.True, repeatDetail);
+            Assert.That(_service.Reset(out string detail), Is.True, detail);
+            Assert.That(_ctx.AvatarGo.activeSelf, Is.True);
+            CollectionAssert.AreEqual(selection, Selection.objects);
+            Assert.That(Selection.activeObject, Is.SameAs(active));
+        }
+
+        [Test]
+        public void RemovedHierarchy_RestoresNonDefaultSdkManagedDataAndInboundReferences_PreservesSavedUnrelatedState()
+        {
+            Transform root = _ctx.Comp.transform;
+            root.localPosition = new Vector3(1, 2, 3);
+            root.localScale = new Vector3(2, 3, 4);
+            var child = new GameObject("Duplicate");
+            child.transform.SetParent(root, false);
+            child.SetActive(false);
+            var otherChild = new GameObject("Duplicate");
+            otherChild.transform.SetParent(root, false);
+            var unrelated = new GameObject("Unrelated");
+            _testOwnedObjects.Add(unrelated);
+            var outside = unrelated.AddComponent<ASMLiteSmokeFixtureReferenceProbe>();
+            outside.internalReference = child;
+            outside.number = 11;
+            var inside = root.gameObject.AddComponent<ASMLiteSmokeFixtureReferenceProbe>();
+            inside.number = 73;
+            inside.text = "non-default";
+            inside.internalReference = child;
+            inside.externalReference = unrelated;
+            inside.data = new ASMLiteSmokeFixtureReferenceProbe.Graph { value = 19, reference = child };
+            inside.data.next = inside.data;
+            _ctx.Comp.useVendorizedGeneratedAssets = true;
+            _ctx.Comp.vendorizedGeneratedAssetsPath = "captured-non-default";
+            // Migration tests define an editor-only stub with the same full name.
+            // Native recovery must use the installed component, not that stub.
+            System.Type vfType = System.AppDomain.CurrentDomain.GetAssemblies()
+                .Where(assembly => assembly != typeof(VF.Model.VRCFury).Assembly)
+                .Select(assembly => assembly.GetType("VF.Model.VRCFury")).FirstOrDefault(type => type != null);
+            Assert.That(vfType, Is.Not.Null, "Native VRCFury dependency is required for this integration check.");
+            Component vf = root.gameObject.AddComponent(vfType);
+            var vfState = new SerializedObject(vf);
+            vfState.FindProperty("content").managedReferenceValue = System.Activator.CreateInstance(
+                vfType.Assembly.GetType("VF.Model.Feature.FullController"), true);
+            vfState.ApplyModifiedPropertiesWithoutUndo();
+            vfState.Update();
+            vfState.FindProperty("content.toggleParam").stringValue = "CapturedToggle";
+            vfState.FindProperty("content.rootObjOverride").objectReferenceValue = child;
+            vfState.FindProperty("content.allowMissingAssets").boolValue = true;
+            vfState.ApplyModifiedPropertiesWithoutUndo();
+            Selection.activeObject = child;
+            Selection.objects = new UnityEngine.Object[] { child, root.gameObject, inside };
+            Assert.That(Selection.objects.Length, Is.EqualTo(3));
+            Assert.That(Selection.activeObject, Is.SameAs(child));
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.RemoveComponent };
+            Assert.That(ApplyAdmittedMutation(args, string.Empty, "FixtureAvatar", out string applyDetail), Is.True, applyDetail);
+            outside.number = 29;
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
+            Assert.That(_service.Reset(out string detail), Is.True, detail);
+            var restored = _ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(true);
+            var restoredProbe = restored.GetComponent<ASMLiteSmokeFixtureReferenceProbe>();
+            Assert.That(restoredProbe.number, Is.EqualTo(73));
+            Assert.That(restoredProbe.text, Is.EqualTo("non-default"));
+            Assert.That(restoredProbe.data.next, Is.SameAs(restoredProbe.data));
+            Assert.That(restoredProbe.internalReference, Is.SameAs(restoredProbe.data.reference));
+            Assert.That(outside.internalReference, Is.SameAs(restoredProbe.internalReference));
+            Assert.That(outside.number, Is.EqualTo(29));
+            Assert.That(restored.transform.localPosition, Is.EqualTo(new Vector3(1, 2, 3)));
+            Assert.That(restored.transform.localScale, Is.EqualTo(new Vector3(2, 3, 4)));
+            Assert.That(restored.vendorizedGeneratedAssetsPath, Is.EqualTo("captured-non-default"));
+            var restoredVf = new SerializedObject(restored.GetComponent(vfType));
+            Assert.That(restoredVf.FindProperty("content.toggleParam").stringValue, Is.EqualTo("CapturedToggle"));
+            Assert.That(restoredVf.FindProperty("content.rootObjOverride").objectReferenceValue, Is.SameAs(restoredProbe.internalReference));
+            Assert.That(Selection.objects.Length, Is.EqualTo(3));
+            Assert.That(Selection.activeObject, Is.SameAs(restoredProbe.internalReference));
+            UnityEngine.Object.DestroyImmediate(unrelated);
+        }
+
+        [Test]
+        public void ExplicitVerification_IsComparisonOnly_AndClearsLatchOnlyAfterSavedBaselineProof()
+        {
+            var args = new ASMLiteSmokeStepArgs { avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.SelectedInactiveAvatar };
+            Assert.That(ApplyAdmittedMutation(args, string.Empty, "FixtureAvatar", out string applyDetail), Is.True, applyDetail);
+            string recoveryPath = _service.RecoveryPath;
+            byte[] sceneBytes = File.ReadAllBytes(Path.GetFullPath(SceneManager.GetActiveScene().path));
+            UnityEngine.Object[] selection = Selection.objects;
+            UnityEngine.Object active = Selection.activeObject;
+            Assert.That(ASMLiteSmokeSetupFixtureService.VerifyRepairedFixtureBaseline(out _), Is.False);
+            Assert.That(_ctx.AvatarGo.activeSelf, Is.False);
+            CollectionAssert.AreEqual(sceneBytes, File.ReadAllBytes(Path.GetFullPath(SceneManager.GetActiveScene().path)));
+            CollectionAssert.AreEqual(selection, Selection.objects);
+            Assert.That(Selection.activeObject, Is.SameAs(active));
+            Assert.That(File.Exists(Path.Combine(recoveryPath, "verified.json")), Is.False);
+            // Operator repair is separate, explicit, and saved.
+            _ctx.AvatarGo.SetActive(true);
+            Selection.activeObject = null;
+            Selection.objects = new UnityEngine.Object[0];
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
+            // Capture starts with this test's empty selection.
+            Assert.That(ASMLiteSmokeSetupFixtureService.VerifyRepairedFixtureBaseline(out string detail), Is.True, detail);
+            Assert.That(ASMLiteSmokeSetupFixtureService.CheckRecoveryAdmission(out _), Is.True);
+            Assert.That(_service.Reset(out string resetDetail), Is.True, resetDetail);
+            Assert.That(_service.HasCleanResetProof, Is.True);
+        }
+
+        private bool ApplyAdmittedMutation(ASMLiteSmokeStepArgs args, string scene, string avatar, out string detail)
+        {
+            return ApplyAdmittedMutation(args, scene, avatar, string.Empty, out detail);
+        }
+
+        private bool ApplyAdmittedMutation(ASMLiteSmokeStepArgs args, string scene, string avatar, string evidence, out string detail)
+        {
+            // Explicit test preparation: production admission never saves a dirty baseline.
+            AssetDatabase.SaveAssets();
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/FixtureBaseline.unity"), Is.True);
+            return _service.ApplyMutation(args, scene, avatar, evidence, out detail);
         }
 
         private static void EnsureTestAssetFolder(string parent, string child)

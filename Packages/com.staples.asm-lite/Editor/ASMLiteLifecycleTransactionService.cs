@@ -19,6 +19,27 @@ namespace ASMLite.Editor
         BeforeDetachedRecoveryRoutingFinalize = 9,
     }
 
+    // Build success and transaction completion differ when staging or restoration fails.
+    internal readonly struct ASMLiteRebuildResult
+    {
+        internal ASMLiteRebuildResult(
+            bool completed,
+            int discoveredParamCount,
+            ASMLiteBuilder.RebuildMigrationReport migrationReport,
+            Exception exception = null)
+        {
+            Completed = completed;
+            DiscoveredParamCount = discoveredParamCount;
+            MigrationReport = migrationReport;
+            Exception = exception;
+        }
+
+        internal bool Completed { get; }
+        internal int DiscoveredParamCount { get; }
+        internal ASMLiteBuilder.RebuildMigrationReport MigrationReport { get; }
+        internal Exception Exception { get; }
+    }
+
     internal static class ASMLiteLifecycleTransactionService
     {
         private static ASMLiteLifecycleTransactionTestFailurePoint s_testFailurePoint;
@@ -28,6 +49,341 @@ namespace ASMLite.Editor
             var previous = s_testFailurePoint;
             s_testFailurePoint = failurePoint;
             return new ScopedFailurePoint(() => s_testFailurePoint = previous);
+        }
+
+        internal static ASMLiteRebuildResult ExecuteRebuild(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            bool stagePackageManagedGeneratedAssets = true)
+        {
+            int discoveredParamCount = -1;
+            ASMLiteBuilder.RebuildMigrationReport migrationReport = default;
+            if (component == null)
+                return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
+
+            try
+            {
+                var rebuildAvatar = ResolveRebuildAvatar(component, avatar);
+                bool wasUsingVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
+                bool shouldIsolateGeneratedOutputs = wasUsingVendorizedGeneratedAssets || stagePackageManagedGeneratedAssets;
+                if (stagePackageManagedGeneratedAssets
+                    && !wasUsingVendorizedGeneratedAssets
+                    && !TryValidatePackageManagedRebuildAvatar(rebuildAvatar, out string packageManagedValidationFailure))
+                {
+                    Debug.LogWarning("[ASM-Lite] Package-managed rebuild aborted because avatar descriptor generated-asset references could not be safely retargeted. " + packageManagedValidationFailure);
+                    return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
+                }
+
+                ASMLitePackageGeneratedOutputSnapshot packageOutputSnapshot = shouldIsolateGeneratedOutputs
+                    ? ASMLitePackageGeneratedOutputSnapshot.Capture()
+                    : null;
+                bool rebuildCompleted = false;
+                bool mirrorStagingAttempted = false;
+                bool rebuildAbortedBeforeBuild = false;
+                Exception rebuildException = null;
+                Exception packageOutputRestoreException = null;
+                try
+                {
+                    // Cleanup/build may mutate descriptor assets. Keep the previous mirror
+                    // untouched until staging has secured its rollback copy.
+                    if (wasUsingVendorizedGeneratedAssets)
+                    {
+                        var detachResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(
+                            rebuildAvatar, component.vendorizedGeneratedAssetsPath);
+                        if (!detachResult.Success)
+                            throw new InvalidOperationException(detachResult.ToLogString());
+                    }
+
+                    // Rebuild-prep contract for the reverted VF delivery path:
+                    // 1) collapse duplicate stale VF.Model.VRCFury components, preserving one;
+                    // 2) strip only direct-injection-era descriptor remnants (ASMLite_ namespace)
+                    //    so rebuild input reflects generated assets + VF wiring only.
+                    migrationReport = ASMLiteBuilder.PrepareRevertedDeliveryRebuild(component);
+
+                    if (!TryRefreshLiveInstallPathPrefix(component, "Bake"))
+                    {
+                        Debug.LogError("[ASM-Lite] Bake aborted before asset rebuild because live FullController menu prefix refresh failed.");
+                        rebuildAbortedBeforeBuild = true;
+                    }
+                    else
+                    {
+                        int count = ASMLiteBuilder.Build(component);
+                        var buildDiagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
+                        if (count < 0 || buildDiagnostic == null || !buildDiagnostic.Success)
+                        {
+                            Debug.LogError(buildDiagnostic != null
+                                ? buildDiagnostic.ToLogString()
+                                : "[ASM-Lite] Generated asset build failed without a specific diagnostic.");
+                        }
+                        else
+                        {
+                            discoveredParamCount = count;
+
+                            if (!shouldIsolateGeneratedOutputs)
+                            {
+                                rebuildCompleted = true;
+                            }
+                            else
+                            {
+                                mirrorStagingAttempted = true;
+                                if (TryStageRebuildGeneratedAssetsToAvatarLocal(
+                                    component,
+                                    rebuildAvatar,
+                                    wasUsingVendorizedGeneratedAssets,
+                                    out string syncedDir))
+                                {
+                                    rebuildCompleted = true;
+                                    Debug.Log(wasUsingVendorizedGeneratedAssets
+                                        ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
+                                        : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    rebuildException = ex;
+                }
+                finally
+                {
+                    if (packageOutputSnapshot != null)
+                    {
+                        try
+                        {
+                            packageOutputSnapshot.Restore();
+                        }
+                        catch (Exception ex)
+                        {
+                            packageOutputRestoreException = ex;
+                        }
+                    }
+                }
+
+                if (wasUsingVendorizedGeneratedAssets && !rebuildCompleted && !mirrorStagingAttempted)
+                {
+                    var descriptorRecovery = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(
+                        rebuildAvatar, component.vendorizedGeneratedAssetsPath);
+                    if (!descriptorRecovery.Success)
+                        Debug.LogError(descriptorRecovery.ToLogString());
+                    TryRetargetLiveFullControllerGeneratedAssets(component, component.vendorizedGeneratedAssetsPath);
+                }
+
+                if (packageOutputRestoreException != null)
+                {
+                    Debug.LogError($"[ASM-Lite] Failed to restore package generated outputs after rebuild. Context: '{ASMLiteAssetPaths.GeneratedDir}; {ASMLiteAssetPaths.Prefab}'. Remediation: Restore the protected package generated outputs before rebuilding again. {packageOutputRestoreException.Message}");
+                    return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
+                }
+
+                if (rebuildException != null)
+                {
+                    return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport, rebuildException);
+                }
+
+                if (rebuildAbortedBeforeBuild || !rebuildCompleted)
+                    return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
+
+                AssetDatabase.Refresh();
+                return new ASMLiteRebuildResult(true, discoveredParamCount, migrationReport);
+            }
+            catch (Exception ex)
+            {
+                return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport, ex);
+            }
+        }
+
+        private static VRCAvatarDescriptor ResolveRebuildAvatar(ASMLiteComponent component, VRCAvatarDescriptor selectedAvatar)
+        {
+            if (selectedAvatar != null)
+                return selectedAvatar;
+
+            return component != null
+                ? component.GetComponentInParent<VRCAvatarDescriptor>(includeInactive: true)
+                : null;
+        }
+
+        private static bool TryValidatePackageManagedRebuildAvatar(VRCAvatarDescriptor avatar, out string failureMessage)
+        {
+            if (avatar == null)
+            {
+                failureMessage = "No VRCAvatarDescriptor was available for avatar-local generated-asset staging.";
+                return false;
+            }
+
+            if (avatar.baseAnimationLayers == null)
+            {
+                failureMessage = "The avatar descriptor base animation layers array was null.";
+                return false;
+            }
+
+            failureMessage = string.Empty;
+            return true;
+        }
+
+        private static bool TryStageRebuildGeneratedAssetsToAvatarLocal(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            bool wasUsingVendorizedGeneratedAssets,
+            out string syncedDir)
+        {
+            syncedDir = string.Empty;
+            if (component == null)
+            {
+                Debug.LogError("[ASM-Lite] Rebuild generated-asset staging failed because the ASM-Lite component was null.");
+                return false;
+            }
+
+            if (avatar == null)
+            {
+                Debug.LogError("[ASM-Lite] Rebuild generated-asset staging failed because the avatar descriptor was null.");
+                return false;
+            }
+
+            string previousVendorizedDir = string.IsNullOrWhiteSpace(component.vendorizedGeneratedAssetsPath)
+                ? string.Empty
+                : component.vendorizedGeneratedAssetsPath.Trim();
+            bool restoredExistingVendorizedReferencesToPackage = false;
+            if (wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir))
+            {
+                var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, previousVendorizedDir);
+                if (!descriptorRestoreResult.Success)
+                {
+                    Debug.LogError(descriptorRestoreResult.ToLogString());
+                    return false;
+                }
+
+                if (!TryRetargetLiveFullControllerGeneratedAssets(
+                    component,
+                    ASMLiteAssetPaths.GeneratedDir))
+                {
+                    ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    return false;
+                }
+
+                restoredExistingVendorizedReferencesToPackage = true;
+            }
+
+            var mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
+            if (!mirrorResult.Success)
+            {
+                Debug.LogError(mirrorResult.ToLogString());
+                if (restoredExistingVendorizedReferencesToPackage)
+                {
+                    var descriptorRollbackResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
+                    if (!descriptorRollbackResult.Success)
+                        Debug.LogError(descriptorRollbackResult.ToLogString());
+
+                    TryRetargetLiveFullControllerGeneratedAssets(component, previousVendorizedDir);
+                }
+
+                return false;
+            }
+
+            bool shouldRollbackMirror = true;
+            try
+            {
+                var descriptorResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, mirrorResult.TargetPath);
+                if (!descriptorResult.Success)
+                {
+                    Debug.LogError(descriptorResult.ToLogString());
+                    return false;
+                }
+
+                if (!TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath))
+                {
+                    return false;
+                }
+
+                var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirrorResult);
+                if (!finalizeResult.Success)
+                {
+                    Debug.LogError(finalizeResult.ToLogString());
+                    return false;
+                }
+
+                shouldRollbackMirror = false;
+                component.useVendorizedGeneratedAssets = true;
+                component.vendorizedGeneratedAssetsPath = mirrorResult.TargetPath;
+                EditorUtility.SetDirty(component);
+                AssetDatabase.SaveAssets();
+                syncedDir = mirrorResult.TargetPath;
+                return true;
+            }
+            finally
+            {
+                if (shouldRollbackMirror)
+                {
+                    // Remove references to replacement identities before deleting the replacement.
+                    // Only rebind to the old mirror after its original assets are back in place.
+                    var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult.TargetPath);
+                    if (!descriptorRestoreResult.Success)
+                        Debug.LogError(descriptorRestoreResult.ToLogString());
+
+                    var rollbackResult = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(mirrorResult);
+                    if (!rollbackResult.Success)
+                    {
+                        Debug.LogError(rollbackResult.ToLogString());
+                    }
+                    else
+                    {
+                        string restoreDir = wasUsingVendorizedGeneratedAssets ? previousVendorizedDir : ASMLiteAssetPaths.GeneratedDir;
+                        if (wasUsingVendorizedGeneratedAssets)
+                        {
+                            var descriptorRollback = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, restoreDir);
+                            if (!descriptorRollback.Success)
+                                Debug.LogError(descriptorRollback.ToLogString());
+                        }
+                        TryRetargetLiveFullControllerGeneratedAssets(component, restoreDir);
+                    }
+                }
+            }
+        }
+
+        internal static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
+        {
+            if (component == null)
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh install-path routing because the ASM-Lite component was null.");
+                return false;
+            }
+
+            if (!ASMLiteFullControllerWiring.HasLiveVrcFuryComponent(component))
+            {
+                bool repaired = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(
+                    component.gameObject,
+                    component,
+                    contextLabel + " Auto-Heal");
+                if (!repaired || !ASMLiteFullControllerWiring.HasLiveVrcFuryComponent(component))
+                {
+                    Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
+                    return false;
+                }
+
+                Debug.LogWarning($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component was missing on '{component.gameObject.name}'. Live FullController wiring was repaired automatically.");
+            }
+
+            if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))
+            {
+                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh install-path routing on '{component.gameObject.name}'.");
+                return false;
+            }
+
+            var effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
+            if (string.IsNullOrEmpty(effectivePrefix))
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to root on '{component.gameObject.name}'.");
+            else
+                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to '{effectivePrefix}' on '{component.gameObject.name}'.");
+
+            return true;
+        }
+
+        internal static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
+        {
+            var result = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
+            if (!result.Success)
+                Debug.LogError(result.ToLogString());
+
+            return result.Success;
         }
 
         internal static ASMLiteLifecycleTransactionResult ExecuteAttachedVendorize(ASMLiteComponent component, VRCAvatarDescriptor avatar)

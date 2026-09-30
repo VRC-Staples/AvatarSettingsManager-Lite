@@ -40,7 +40,7 @@ namespace ASMLite.Tests.Editor
         internal const string CleanBaselineAssertion = "clean-baseline-assertion";
     }
 
-    internal sealed class ASMLiteSmokeSetupFixtureService : IDisposable
+    internal sealed partial class ASMLiteSmokeSetupFixtureService : IDisposable
     {
         private const string GeneratedRoot = "Assets/ASM-Lite";
         private readonly Stack<CleanupEntry> _cleanupLedger = new Stack<CleanupEntry>();
@@ -81,6 +81,8 @@ namespace ASMLite.Tests.Editor
 
             try
             {
+                if (mutation != ASMLiteSmokeSetupFixtureMutationIds.CleanBaselineAssertion)
+                    CaptureBeforeMutation(mutation, avatarName);
                 switch (mutation)
                 {
                     case ASMLiteSmokeSetupFixtureMutationIds.TempSceneSetupRestore:
@@ -136,6 +138,7 @@ namespace ASMLite.Tests.Editor
             }
             catch (Exception ex)
             {
+                if (_baseline != null) _recoveryFailed = true;
                 detail = string.IsNullOrWhiteSpace(ex.Message) ? "Setup fixture mutation failed." : ex.Message.Trim();
                 return false;
             }
@@ -143,40 +146,12 @@ namespace ASMLite.Tests.Editor
 
         internal bool Reset(out string detail)
         {
-            var failures = new List<string>();
-            while (_cleanupLedger.Count > 0)
-            {
-                CleanupEntry entry = _cleanupLedger.Pop();
-                try
-                {
-                    entry.Cleanup?.Invoke();
-                }
-                catch (Exception ex)
-                {
-                    failures.Add($"{entry.Label}: {ex.Message}");
-                }
-            }
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            if (failures.Count > 0)
-            {
-                HasCleanResetProof = false;
-                detail = "Setup fixture reset failed: " + string.Join("; ", failures);
-                return false;
-            }
-
-            bool clean = AssertCleanBaseline(out string baselineDetail);
-            HasCleanResetProof = clean;
-            detail = clean ? "Setup fixture reset completed with clean baseline proof." : baselineDetail;
-            return clean;
+            return RestoreAndVerify(out detail);
         }
 
         internal bool AssertCleanBaseline(out string detail)
         {
-            detail = "Setup fixture baseline is clean.";
-            return true;
+            return CompareBaseline(out detail);
         }
 
         public void Dispose()
@@ -190,18 +165,12 @@ namespace ASMLite.Tests.Editor
 
         private bool ApplyTempSceneSetup(out string detail)
         {
-            Scene previousScene = SceneManager.GetActiveScene();
-            string previousPath = previousScene.path ?? string.Empty;
-            Scene tempScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            _cleanupLedger.Push(new CleanupEntry("restore previous scene", () =>
+            Scene temp = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            _cleanupLedger.Push(new CleanupEntry("close fixture-owned temporary scene", () =>
             {
-                if (!string.IsNullOrWhiteSpace(previousPath) && File.Exists(ToAbsoluteProjectPath(previousPath)))
-                    EditorSceneManager.OpenScene(previousPath);
-                else if (tempScene.IsValid())
-                    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                if (temp.IsValid()) EditorSceneManager.CloseScene(temp, true);
             }));
-
-            detail = "Temporary scene opened and restore recorded in fixture cleanup ledger.";
+            detail = "Fixture-owned temporary scene opened; complete scene setup retained.";
             return true;
         }
 
@@ -242,6 +211,7 @@ namespace ASMLite.Tests.Editor
             UnityEngine.Object previousSelection = Selection.activeObject;
             GameObject duplicate = UnityEngine.Object.Instantiate(source.gameObject);
             duplicate.name = source.gameObject.name;
+            RecordCreatedObject(duplicate);
             _cleanupLedger.Push(new CleanupEntry("destroy duplicate avatar", () =>
             {
                 Selection.activeObject = previousSelection;
@@ -265,6 +235,7 @@ namespace ASMLite.Tests.Editor
             UnityEngine.Object previousSelection = Selection.activeObject;
             GameObject duplicate = UnityEngine.Object.Instantiate(source.gameObject);
             duplicate.name = source.gameObject.name;
+            RecordCreatedObject(duplicate);
             _cleanupLedger.Push(new CleanupEntry("destroy selected duplicate avatar", () =>
             {
                 Selection.activeObject = previousSelection;
@@ -348,6 +319,7 @@ namespace ASMLite.Tests.Editor
         {
             UnityEngine.Object previousSelection = Selection.activeObject;
             var wrongObject = new GameObject(string.IsNullOrWhiteSpace(objectName) ? "ASM-Lite Wrong Object" : objectName);
+            RecordCreatedObject(wrongObject);
             _cleanupLedger.Push(new CleanupEntry("destroy wrong selected object", () =>
             {
                 Selection.activeObject = previousSelection;
@@ -364,6 +336,7 @@ namespace ASMLite.Tests.Editor
             UnityEngine.Object previousSelection = Selection.activeObject;
             var wrongAvatar = new GameObject(string.IsNullOrWhiteSpace(objectName) ? "ASM-Lite Wrong Avatar" : objectName);
             wrongAvatar.AddComponent<VRCAvatarDescriptor>();
+            RecordCreatedObject(wrongAvatar);
             _cleanupLedger.Push(new CleanupEntry("destroy wrong selected avatar", () =>
             {
                 Selection.activeObject = previousSelection;
@@ -388,6 +361,7 @@ namespace ASMLite.Tests.Editor
         {
             UnityEngine.Object previousSelection = Selection.activeObject;
             var nonAvatar = new GameObject(string.IsNullOrWhiteSpace(objectName) ? "ASM-Lite Same Name Non Avatar" : objectName);
+            RecordCreatedObject(nonAvatar);
             _cleanupLedger.Push(new CleanupEntry("destroy same-name non-avatar", () =>
             {
                 Selection.activeObject = previousSelection;
@@ -401,127 +375,22 @@ namespace ASMLite.Tests.Editor
 
         private bool ApplyRemoveComponent(string avatarName, out string detail)
         {
-            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
-            ASMLiteComponent component = avatar == null ? null : avatar.GetComponentInChildren<ASMLiteComponent>(true);
-            if (avatar == null || component == null)
-            {
-                detail = $"ASM-Lite component under avatar '{avatarName}' was not found for remove-component mutation.";
-                return false;
-            }
-
-            string componentObjectName = component.gameObject.name;
-            Transform parent = component.transform.parent;
-            UnityEngine.Object.DestroyImmediate(component.gameObject);
-            _cleanupLedger.Push(new CleanupEntry("restore removed ASM-Lite component", () =>
-            {
-                if (avatar == null || avatar.gameObject == null || avatar.GetComponentInChildren<ASMLiteComponent>(true) != null)
-                    return;
-
-                var componentObject = new GameObject(componentObjectName);
-                componentObject.transform.SetParent(parent != null ? parent : avatar.transform);
-                componentObject.AddComponent<ASMLiteComponent>();
-            }));
-
-            detail = $"ASM-Lite component removed from avatar '{avatarName}' and restore recorded.";
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, true);
+            if (avatar == null) { detail = "SETUP_AVATAR_NOT_FOUND: " + avatarName; return false; }
+            ASMLiteComponent component = avatar.GetComponentInChildren<ASMLiteComponent>(true);
+            if (component != null) UnityEngine.Object.DestroyImmediate(component.gameObject);
+            detail = "ASM-Lite subtree removed after durable baseline publication.";
             return true;
         }
 
         private bool ApplyCleanAddBaseline(string avatarName, out string detail)
         {
-            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, includeInactive: true);
-            if (avatar == null)
-            {
-                detail = $"SETUP_AVATAR_NOT_FOUND: avatar named '{avatarName}' was not found.";
-                return false;
-            }
-
-            UnityEngine.Object previousSelection = Selection.activeObject;
-            ASMLiteComponent existing = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
-            bool hadComponent = existing != null;
-            Transform parent = existing != null && existing.transform.parent != null ? existing.transform.parent : avatar.transform;
-            int siblingIndex = existing != null ? existing.transform.GetSiblingIndex() : -1;
-            GameObject componentSnapshot = existing != null ? UnityEngine.Object.Instantiate(existing.gameObject) : null;
-            if (componentSnapshot != null)
-            {
-                componentSnapshot.hideFlags = HideFlags.HideAndDontSave;
-                componentSnapshot.SetActive(false);
-            }
-
-            string avatarJson = EditorJsonUtility.ToJson(avatar);
-            VRCExpressionParameters expressionParameters = avatar.expressionParameters;
-            string expressionParametersJson = expressionParameters != null ? EditorJsonUtility.ToJson(expressionParameters) : string.Empty;
-            VRCExpressionsMenu expressionsMenu = avatar.expressionsMenu;
-            string expressionsMenuJson = expressionsMenu != null ? EditorJsonUtility.ToJson(expressionsMenu) : string.Empty;
-            UnityEngine.Object fxController = null;
-            string fxControllerJson = string.Empty;
-            if (avatar.baseAnimationLayers != null)
-            {
-                for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-                {
-                    if (avatar.baseAnimationLayers[i].type != VRCAvatarDescriptor.AnimLayerType.FX)
-                        continue;
-
-                    fxController = avatar.baseAnimationLayers[i].animatorController;
-                    if (fxController != null)
-                        fxControllerJson = EditorJsonUtility.ToJson(fxController);
-                    break;
-                }
-            }
-
-            if (existing == null)
-            {
-                var temporaryComponentObject = new GameObject("ASMLite");
-                temporaryComponentObject.transform.SetParent(avatar.transform, false);
-                existing = temporaryComponentObject.AddComponent<ASMLiteComponent>();
-            }
-
-            UnityEngine.Object.DestroyImmediate(existing.gameObject);
-            ASMLite.Editor.ASMLiteBuilder.CleanupReport cleanupReport = ASMLite.Editor.ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-
-            _cleanupLedger.Push(new CleanupEntry("restore clean add baseline", () =>
-            {
-                Selection.activeObject = previousSelection;
-
-                if (avatar != null)
-                    EditorJsonUtility.FromJsonOverwrite(avatarJson, avatar);
-                if (expressionParameters != null)
-                    EditorJsonUtility.FromJsonOverwrite(expressionParametersJson, expressionParameters);
-                if (expressionsMenu != null)
-                    EditorJsonUtility.FromJsonOverwrite(expressionsMenuJson, expressionsMenu);
-                if (fxController != null && !string.IsNullOrEmpty(fxControllerJson))
-                    EditorJsonUtility.FromJsonOverwrite(fxControllerJson, fxController);
-
-                if (avatar != null)
-                {
-                    ASMLiteComponent restoredComponent = avatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
-                    if (hadComponent)
-                    {
-                        if (restoredComponent == null && componentSnapshot != null)
-                        {
-                            GameObject restoredObject = UnityEngine.Object.Instantiate(componentSnapshot);
-                            restoredObject.hideFlags = HideFlags.None;
-                            restoredObject.name = componentSnapshot.name;
-                            restoredObject.transform.SetParent(parent != null ? parent : avatar.transform, false);
-                            if (siblingIndex >= 0)
-                                restoredObject.transform.SetSiblingIndex(siblingIndex);
-                        }
-                    }
-                    else if (restoredComponent != null)
-                    {
-                        DestroyObject(restoredComponent.gameObject);
-                    }
-                }
-
-                if (componentSnapshot != null)
-                    DestroyObject(componentSnapshot);
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-            }));
-
-            detail = $"Clean add baseline prepared for avatar '{avatarName}'. cleanupFxLayers={cleanupReport.FxLayersRemoved}, cleanupFxParams={cleanupReport.FxParamsRemoved}, cleanupExprParams={cleanupReport.ExprParamsRemoved}, cleanupMenuControls={cleanupReport.MenuControlsRemoved}.";
+            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, true);
+            if (avatar == null) { detail = "SETUP_AVATAR_NOT_FOUND: " + avatarName; return false; }
+            ASMLiteComponent existing = avatar.GetComponentInChildren<ASMLiteComponent>(true);
+            if (existing != null) UnityEngine.Object.DestroyImmediate(existing.gameObject);
+            ASMLiteBuilder.CleanupReport report = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);
+            detail = $"Clean add baseline prepared. cleanupFxLayers={report.FxLayersRemoved}, cleanupFxParams={report.FxParamsRemoved}, cleanupExprParams={report.ExprParamsRemoved}, cleanupMenuControls={report.MenuControlsRemoved}.";
             return true;
         }
 
@@ -544,6 +413,7 @@ namespace ASMLite.Tests.Editor
             var componentObject = new GameObject("ASMLite");
             componentObject.transform.SetParent(avatar.transform);
             componentObject.AddComponent<ASMLiteComponent>();
+            RecordCreatedObject(componentObject);
             _cleanupLedger.Push(new CleanupEntry("remove temporary ASM-Lite component baseline", () => DestroyObject(componentObject)));
 
             detail = $"ASM-Lite component baseline created for avatar '{avatarName}' and cleanup recorded.";
@@ -570,22 +440,12 @@ namespace ASMLite.Tests.Editor
                 temporaryComponentObject = new GameObject("ASMLite");
                 temporaryComponentObject.transform.SetParent(avatar.transform);
                 component = temporaryComponentObject.AddComponent<ASMLiteComponent>();
+                RecordCreatedObject(temporaryComponentObject);
                 _cleanupLedger.Push(new CleanupEntry("remove temporary vendorized ASM-Lite component baseline", () => DestroyObject(temporaryComponentObject)));
             }
 
-            bool previousVendorized = component.useVendorizedGeneratedAssets;
-            string previousVendorizedPath = component.vendorizedGeneratedAssetsPath;
             component.useVendorizedGeneratedAssets = true;
             component.vendorizedGeneratedAssetsPath = $"{GeneratedRoot}/{avatar.gameObject.name}/GeneratedAssets";
-
-            _cleanupLedger.Push(new CleanupEntry("restore vendorized ASM-Lite component baseline", () =>
-            {
-                if (component == null)
-                    return;
-
-                component.useVendorizedGeneratedAssets = previousVendorized;
-                component.vendorizedGeneratedAssetsPath = previousVendorizedPath;
-            }));
 
             if (!ApplyGeneratedFolderMutation(avatarName, corruptMarker: false, args, evidenceRootPath, out string folderDetail))
             {
@@ -632,7 +492,6 @@ namespace ASMLite.Tests.Editor
             if (args != null && args.preserveFailureEvidence)
                 SnapshotEvidence($"{GeneratedRoot}/{avatarName}/GeneratedAssets", evidenceRootPath);
             avatar.expressionParameters = vendorized;
-            _cleanupLedger.Push(new CleanupEntry("restore original expression parameters reference", () => avatar.expressionParameters = original));
             if (!ApplyRemoveComponent(avatarName, out detail))
                 return false;
 
@@ -684,52 +543,10 @@ namespace ASMLite.Tests.Editor
 
         private bool ApplyMissingGeneratedFolderMutation(string avatarName, out string detail)
         {
-            string avatarFolder = GeneratedRoot + "/" + avatarName;
-            string generatedFolder = avatarFolder + "/GeneratedAssets";
-            bool hadGeneratedFolder = AssetDatabase.IsValidFolder(generatedFolder);
-            string snapshotPath = string.Empty;
-
-            if (hadGeneratedFolder)
-            {
-                snapshotPath = Path.Combine(Path.GetTempPath(), "asmlite-generated-folder-" + Guid.NewGuid().ToString("N"));
-                CopyDirectory(ToAbsoluteProjectPath(generatedFolder), snapshotPath);
-            }
-
+            string generatedFolder = GeneratedRoot + "/" + avatarName + "/GeneratedAssets";
             DeleteAssetIfExists(generatedFolder);
-            DeleteAssetIfEmpty(avatarFolder);
-            DeleteAssetIfEmpty(GeneratedRoot);
-            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-
-            _cleanupLedger.Push(new CleanupEntry("restore missing generated fixture folder", () =>
-            {
-                try
-                {
-                    if (hadGeneratedFolder)
-                    {
-                        EnsureAssetFolder(GeneratedRoot, avatarName);
-                        EnsureAssetFolder(avatarFolder, "GeneratedAssets");
-                        if (Directory.Exists(snapshotPath))
-                            CopyDirectory(snapshotPath, ToAbsoluteProjectPath(generatedFolder));
-                    }
-                    else
-                    {
-                        DeleteAssetIfExists(generatedFolder);
-                        DeleteAssetIfEmpty(avatarFolder);
-                        DeleteAssetIfEmpty(GeneratedRoot);
-                    }
-
-                    AssetDatabase.SaveAssets();
-                    AssetDatabase.Refresh();
-                }
-                finally
-                {
-                    if (!string.IsNullOrWhiteSpace(snapshotPath) && Directory.Exists(snapshotPath))
-                        Directory.Delete(snapshotPath, recursive: true);
-                }
-            }));
-
-            detail = $"Generated folder removed for avatar '{avatarName}' and cleanup recorded.";
+            detail = "Generated folder removed after verified byte/metadata capture.";
             return true;
         }
 
@@ -758,12 +575,6 @@ namespace ASMLite.Tests.Editor
             };
             expressionParameters.parameters = newParameters;
 
-            _cleanupLedger.Push(new CleanupEntry("restore detached marker expression parameters", () =>
-            {
-                if (expressionParameters != null)
-                    expressionParameters.parameters = originalParameters;
-            }));
-
             detail = $"Detached marker '{parameterName}' added.";
             return true;
         }
@@ -780,18 +591,10 @@ namespace ASMLite.Tests.Editor
             string markerPath = generatedFolder + (corruptMarker ? "/corrupt-marker.txt" : "/stale-marker.txt");
             File.WriteAllText(ToAbsoluteProjectPath(markerPath), corruptMarker ? "corrupt generated fixture marker" : "stale generated fixture marker");
             AssetDatabase.ImportAsset(markerPath);
-            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
             if (args != null && args.preserveFailureEvidence)
                 SnapshotEvidence(generatedFolder, evidenceRootPath);
-
-            _cleanupLedger.Push(new CleanupEntry("delete generated fixture folder", () =>
-            {
-                DeleteAssetIfExists(generatedFolder);
-                DeleteAssetIfEmpty(avatarFolder);
-                DeleteAssetIfEmpty(GeneratedRoot);
-            }));
 
             detail = corruptMarker
                 ? $"Controlled corrupt generated asset created for avatar '{avatarName}' and cleanup recorded."

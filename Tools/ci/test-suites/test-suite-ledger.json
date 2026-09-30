@@ -2785,6 +2785,126 @@
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
+      "method": "LifecycleRebuild_LateFailure_RestoresIdentityAndReferences_AndRetainsBuildCount",
+      "line": 670,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild Late Failure Restores Identity And References And Retains Build Count",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window (setup only)"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored by transaction or fixture teardown after injected restore failure",
+      "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_LateFailure_RestoresIdentityAndReferences_AndRetainsBuildCount",
+      "notes": "Direct lifecycle rebuild coverage; window is used only for existing fixture setup. Existing window recovery regressions retained."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
+      "method": "LifecycleRebuild_NoStaging_KeepsPackageManagedDelivery",
+      "line": 706,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild No Staging Keeps Package Managed Delivery",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window (setup only)"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored by transaction or fixture teardown after injected restore failure",
+      "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_NoStaging_KeepsPackageManagedDelivery",
+      "notes": "Direct lifecycle rebuild coverage; window is used only for existing fixture setup. Existing window recovery regressions retained."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
+      "method": "LifecycleRebuild_PackageRestoreFailure_TakesPrecedenceOverRebuildException",
+      "line": 727,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild Package Restore Failure Takes Precedence Over Rebuild Exception",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window (setup only)"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored by transaction or fixture teardown after injected restore failure",
+      "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_PackageRestoreFailure_TakesPrecedenceOverRebuildException",
+      "notes": "Direct lifecycle rebuild coverage; window is used only for existing fixture setup. Existing window recovery regressions retained."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
+      "method": "LifecycleRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "line": 650,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild Stages Avatar Local Generated Assets And Restores Package Outputs",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window (setup only)"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with package GeneratedAssets/prefab snapshot restore and avatar-local generated-assets mirror cleanup",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored by transaction or fixture teardown after injected restore failure",
+      "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
+      "notes": "Direct lifecycle rebuild coverage; window is used only for existing fixture setup. Existing window recovery regressions retained."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
       "class": "ASMLitePackageManagedRebuildPackageOutputIsolationIntegrationTests",
       "method": "PackageManagedRebuild_InvalidDescriptor_WarnsAndRestoresPackageOutputs",
       "line": 485,
@@ -4277,7 +4397,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadGeneratedCoverage_ChecksEverySelectedVrcfuryCreatedToggleBackup",
-      "line": 799,
+      "line": 817,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4306,7 +4426,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadGeneratedCoverage_FailsWhenSelectedBackupParameterMissing",
-      "line": 386,
+      "line": 404,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4335,7 +4455,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadGeneratedCoverage_PassesWhenSelectedBackupParameterExists",
-      "line": 422,
+      "line": 440,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4364,7 +4484,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessControllerResolution_UsesAvatarFxController",
-      "line": 767,
+      "line": 785,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4393,7 +4513,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSavedSelection_BackfillsAfterAnimatorDrivenCandidatesAreExcluded",
-      "line": 718,
+      "line": 736,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4422,7 +4542,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSavedSelection_ExcludesAnimatorDrivenVrcfuryParametersOutsidePrefixedAsmLiteLayers",
-      "line": 609,
+      "line": 627,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4451,7 +4571,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSavedSelection_IncludesStableVrcfuryCreatedTogglesBeyondSampleCap",
-      "line": 556,
+      "line": 574,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4480,7 +4600,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSavedSelection_KeepsReadOnlyVrcfuryAnimatorConditionAndBlendParameters",
-      "line": 661,
+      "line": 679,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4509,7 +4629,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSelection_SkipsVolatileRuntimeParameters",
-      "line": 455,
+      "line": 473,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4538,7 +4658,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Av3SaveLoadHarnessSelection_SkipsVrcfurySyncDataParameters",
-      "line": 509,
+      "line": 527,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4683,7 +4803,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_AbortRun_WritesAbortedArtifactsAndReviewRequiredState",
-      "line": 2354,
+      "line": 2372,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4712,7 +4832,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_DoesNotReprocessCommandIdsRecoveredFromEvents",
-      "line": 2109,
+      "line": 2127,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4741,7 +4861,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_ProcessesCommandFilesInSequenceOrder",
-      "line": 2069,
+      "line": 2087,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4770,7 +4890,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RejectsLaunchSessionAsStartupOnly",
-      "line": 2088,
+      "line": 2106,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4799,7 +4919,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_ReviewDecision_Exit_ShutsDownSession",
-      "line": 2572,
+      "line": 2590,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4828,7 +4948,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_ReviewDecision_InvalidDecision_IsRejectedAndKeepsReviewRequiredState",
-      "line": 2609,
+      "line": 2627,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4857,7 +4977,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_ReviewDecision_RerunSuite_ReexecutesWithoutRestart",
-      "line": 2529,
+      "line": 2547,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4886,7 +5006,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_ReviewDecision_ReturnToSuiteList_TransitionsToIdleWithoutRejecting",
-      "line": 2492,
+      "line": 2510,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4915,7 +5035,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuiteIsRejectedWhileReviewDecisionIsPending",
-      "line": 2469,
+      "line": 2487,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4944,7 +5064,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_ExecutesLifecycleRoundtripInOrderWithoutRejecting",
-      "line": 2147,
+      "line": 2165,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -4973,7 +5093,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_ExecutesRuntimeTransitionSuiteInSingleSession",
-      "line": 2245,
+      "line": 2263,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5002,7 +5122,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_FailsFastAfterFirstFailedStep",
-      "line": 2420,
+      "line": 2438,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5031,7 +5151,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_StepSleepSecondsDelaysStepExecution",
-      "line": 2298,
+      "line": 2316,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5060,7 +5180,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_StreamsEventsAcrossTicksBeforeArtifactsExist",
-      "line": 2272,
+      "line": 2290,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5089,7 +5209,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_TreatsConsoleErrorsAsStepFailures",
-      "line": 2389,
+      "line": 2407,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5118,7 +5238,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CommandPolling_RunSuite_WaitsBrieflyAfterLifecycleMutationBeforeNextStep",
-      "line": 2322,
+      "line": 2340,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5176,7 +5296,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "CrashSignal_WritesCrashedHostStateAndEvent",
-      "line": 2670,
+      "line": 2688,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5205,7 +5325,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Heartbeat_RewritesHostStateWithoutChangingReadyState",
-      "line": 2053,
+      "line": 2071,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5234,7 +5354,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "ResetService_ResolvesEffectiveResetPolicyDeterministically",
-      "line": 2647,
+      "line": 2665,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5266,7 +5386,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Runner_DoesNotRegisterAfterReady_WhenExitOnReadyIsTrue",
-      "line": 2042,
+      "line": 2060,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5295,7 +5415,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "Runner_RemainsRegisteredAfterReady_WhenExitOnReadyIsFalse",
-      "line": 1559,
+      "line": 1577,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5324,7 +5444,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupDestructiveRecoverySuite_ResetsAfterEveryDestructiveCase",
-      "line": 1729,
+      "line": 1747,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5353,7 +5473,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupDestructiveRecoverySuite_StopsWhenCleanResetFails",
-      "line": 1761,
+      "line": 1779,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5382,7 +5502,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupGeneratedAssetRecoverySignalsSuite_AppliesFixtureMutationsAndRecoveryAssertions",
-      "line": 1614,
+      "line": 1632,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5411,7 +5531,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupGeneratedReferenceOwnershipSuite_AppliesPackageManagedAssertion",
-      "line": 1651,
+      "line": 1669,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5440,7 +5560,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupPhase1PathMatrixSuite_InvokesPrebuildPathActions",
-      "line": 1704,
+      "line": 1722,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5469,7 +5589,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupPhase1SlotMatrixSuite_InvokesPrebuildSlotActions",
-      "line": 1680,
+      "line": 1698,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5498,7 +5618,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_AppliesFixtureMutationAndStepTargetOverridesBeforeAction",
-      "line": 1600,
+      "line": 1618,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5527,7 +5647,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_DelaysCaseFixtureResetUntilAfterSettleForFinalMutationStep",
-      "line": 1976,
+      "line": 1994,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5556,7 +5676,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_DoesNotResetTwiceAfterRequiredCleanResetWithinCase",
-      "line": 1947,
+      "line": 1965,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5585,7 +5705,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_FailingDeferredResetDoesNotEmitContradictoryStepPass",
-      "line": 2010,
+      "line": 2028,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5614,7 +5734,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_FailsWhenExpectedDiagnosticCodeIsWrong",
-      "line": 1837,
+      "line": 1855,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5644,7 +5764,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_FailsWhenExpectedDiagnosticStepSucceedsUnexpectedly",
-      "line": 1821,
+      "line": 1839,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5674,7 +5794,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_FailsWhenExpectedDiagnosticTextIsWrong",
-      "line": 1856,
+      "line": 1874,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5704,7 +5824,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_FailsWhenRequiredCleanupFailsAfterExpectedDiagnosticMatches",
-      "line": 1895,
+      "line": 1913,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5734,7 +5854,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_OpensSceneSelectsAvatarAndAddsPrefabOnlyWhenRunAsSuiteStep",
-      "line": 1583,
+      "line": 1601,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5763,7 +5883,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_RegularStepFailureStillFailsWithoutExpectedDiagnosticArgs",
-      "line": 1875,
+      "line": 1893,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5793,7 +5913,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_ResetsFixtureStateAfterExpectedDiagnosticCaseBeforeContinuing",
-      "line": 1918,
+      "line": 1936,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5822,7 +5942,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "SetupSuite_TreatsExpectedDiagnosticStepFailureAsPassed",
-      "line": 1790,
+      "line": 1808,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5851,7 +5971,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "ShutdownSession_WritesExitingStateAndUnregistersRunner",
-      "line": 2686,
+      "line": 2704,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5880,7 +6000,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "StallSignal_WritesStalledHostStateAndEvent",
-      "line": 2654,
+      "line": 2672,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5908,8 +6028,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
+      "method": "StartupPendingRecovery_NeverPublishesReadyOrRepairsOperatorState",
+      "line": 270,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Startup Pending Recovery Never Publishes Ready Or Repairs Operator State",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeOverlayHostTests.StartupPendingRecovery_NeverPublishesReadyOrRepairsOperatorState",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
+      "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AcceptsEditorOnlyComponentStrippedDuringRuntimeMode",
-      "line": 1279,
+      "line": 1297,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5938,7 +6084,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AssertsExpectedPrimaryActionFromStepArgs",
-      "line": 312,
+      "line": 330,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5967,7 +6113,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AssertsGeneratedReferencesRemainPackageManagedByDefault",
-      "line": 356,
+      "line": 374,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -5996,7 +6142,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AssertsPackageResourceMissingWithStableDiagnosticCode",
-      "line": 296,
+      "line": 314,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6025,7 +6171,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AssertsPackageResourcesAndCanonicalCatalogLoad",
-      "line": 270,
+      "line": 288,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6054,7 +6200,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AttachedBackupPresetSnapshotUsesStagedVisibleSelection",
-      "line": 884,
+      "line": 902,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6083,7 +6229,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AttachedCustomizationSnapshotReportsFieldSpecificDiffs",
-      "line": 1047,
+      "line": 1065,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6112,7 +6258,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_AllowsSelectedInactiveAvatarButDoesNotFindUnselectedInactiveAvatar",
-      "line": 1448,
+      "line": 1466,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6141,7 +6287,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_FindsSingleActiveAvatarByFixtureNameWhenNothingSelected",
-      "line": 1361,
+      "line": 1379,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6170,7 +6316,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_IgnoresSameNameNonAvatarObjectsDuringNameLookup",
-      "line": 1508,
+      "line": 1526,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6199,7 +6345,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_ReportsAmbiguousDuplicateNamesWithoutSelectedDisambiguator",
-      "line": 1415,
+      "line": 1433,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6228,7 +6374,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_ReportsMissingOverrideNameInDiagnostic",
-      "line": 1485,
+      "line": 1503,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6257,7 +6403,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_ReportsPrefabAssetSelectionDiagnostic",
-      "line": 1534,
+      "line": 1552,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6286,7 +6432,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_ReportsWrongSelectedObjectDiagnostic",
-      "line": 1388,
+      "line": 1406,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6315,7 +6461,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_AvatarSelection_UsesSelectedSceneAvatarBeforeNameLookup",
-      "line": 1329,
+      "line": 1347,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6344,7 +6490,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_ClosesOpensAndFocusesAutomationWindow",
-      "line": 1168,
+      "line": 1186,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6373,7 +6519,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_FindAvatarByName_PrefersMatchingSelectedAvatarOverComponentBiasedDuplicateLookup",
-      "line": 1247,
+      "line": 1265,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6402,7 +6548,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_FindsSceneAvatarWithRuntimeComponent_WhenDuplicateNameExists",
-      "line": 1218,
+      "line": 1236,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6460,7 +6606,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_PendingCustomizationSnapshotMatchesWindowAutomationState",
-      "line": 1087,
+      "line": 1105,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6489,7 +6635,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_Phase1ActionsSetSlotAndInstallPathAndAssertNoComponent",
-      "line": 985,
+      "line": 1003,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6518,7 +6664,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_RejectsMissingComponentOutsideRuntimeMode",
-      "line": 1304,
+      "line": 1322,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6547,7 +6693,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
       "class": "ASMLiteSmokeOverlayHostTests",
       "method": "UnityRuntime_ResolvesBackupPresetSelectorsFromVisibleOptions",
-      "line": 834,
+      "line": 852,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6576,7 +6722,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "CleanAddBaselineMutation_RemovesComponentAndDetachedRuntimeMarkers",
-      "line": 354,
+      "line": 369,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6604,8 +6750,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "CorruptRecoveryCopy_LatchesFailureAndEmptyResetCannotProveCleanup",
+      "line": 450,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Corrupt Recovery Copy Latches Failure And Empty Reset Cannot Prove Cleanup",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.CorruptRecoveryCopy_LatchesFailureAndEmptyResetCannotProveCleanup",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "DetachedStateBaselineMutation_RemovesComponentAndRestoresDetachedMarker",
-      "line": 316,
+      "line": 331,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6634,7 +6806,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "DetachedStateBaselineMutation_WorksWithoutExistingComponent",
-      "line": 334,
+      "line": 349,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6662,8 +6834,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "DirtyCoveredScene_IsRejectedBeforeRecoveryPublicationOrMutation",
+      "line": 435,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Dirty Covered Scene Is Rejected Before Recovery Publication Or Mutation",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.DirtyCoveredScene_IsRejectedBeforeRecoveryPublicationOrMutation",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "DuplicateAvatarNameMutation_RecordsCleanupAndRestoresSingleDescriptor",
-      "line": 36,
+      "line": 51,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6691,8 +6889,60 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "ExplicitVerification_IsComparisonOnly_AndClearsLatchOnlyAfterSavedBaselineProof",
+      "line": 571,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Explicit Verification Is Comparison Only And Clears Latch Only After Saved Baseline Proof",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.ExplicitVerification_IsComparisonOnly_AndClearsLatchOnlyAfterSavedBaselineProof",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "FirstBaselineSurvivesRepeatedMutation_AndFullSelectionIsRestored",
+      "line": 484,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "First Baseline Survives Repeated Mutation And Full Selection Is Restored",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.FirstBaselineSurvivesRepeatedMutation_AndFullSelectionIsRestored",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "GeneratedFolderWithoutComponentMutation_CreatesFolderAndRemovesComponent",
-      "line": 402,
+      "line": 417,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6721,7 +6971,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "MissingGeneratedFolderMutation_RemovesGeneratedFolderAndRestoresBaseline",
-      "line": 223,
+      "line": 238,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6749,8 +6999,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "RemovedHierarchy_RestoresNonDefaultSdkManagedDataAndInboundReferences_PreservesSavedUnrelatedState",
+      "line": 501,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Removed Hierarchy Restores Non Default Sdk Managed Data And Inbound References Preserves Saved Unrelated State",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.RemovedHierarchy_RestoresNonDefaultSdkManagedDataAndInboundReferences_PreservesSavedUnrelatedState",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "SameNameNonAvatarMutation_CreatesNonAvatarWithoutSelectingIt",
-      "line": 169,
+      "line": 184,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6779,7 +7055,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "SelectedDuplicateAvatarMutation_SelectsCanonicalAvatarAndRestoresSingleDescriptor",
-      "line": 82,
+      "line": 97,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6808,7 +7084,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "SelectedInactiveAvatarMutation_SelectsInactiveAvatarAndRestoresActiveState",
-      "line": 59,
+      "line": 74,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6837,7 +7113,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "StaleGeneratedFolderMutation_SnapshotsEvidenceBeforeCleanup",
-      "line": 190,
+      "line": 205,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6866,7 +7142,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "StaleVendorizedReferencesMutation_LeavesDetachedReferenceAndRestoresOriginal",
-      "line": 293,
+      "line": 308,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6894,8 +7170,34 @@
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
+      "method": "UnrelatedDirtySceneChange_IsPreservedAndBlocksTargetSave",
+      "line": 469,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Smoke\")",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Smoke",
+        "Headless"
+      ],
+      "lane": "smoke-overlay-host-headless",
+      "headlessViability": "yes",
+      "honesty": "fixture-recovery-contract-regression",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Unrelated Dirty Scene Change Is Preserved And Blocks Target Save",
+      "fixtureDependencies": [],
+      "assetSceneMutations": "isolated-fixture-scene-or-fake-host-startup-state",
+      "externalProcessFilesystemEnvUsage": "filesystem-smoke-session-and-fixture-recovery-artifacts",
+      "runnerFilter": "ASMLiteSmokeSetupFixtureServiceTests.UnrelatedDirtySceneChange_IsPreservedAndBlocksTargetSave",
+      "notes": ""
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
+      "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "UnselectedInactiveAvatarMutation_ClearsSelectionAndRestoresActiveState",
-      "line": 104,
+      "line": 119,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6924,7 +7226,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "UnselectedInactiveAvatarMutation_PrefersActiveMatchWhenInactiveDuplicateExists",
-      "line": 127,
+      "line": 142,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6953,7 +7255,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "VendorizedStateBaselineMutation_MarksComponentVendorizedAndRestoresPackageManagedState",
-      "line": 255,
+      "line": 270,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",
@@ -6982,7 +7284,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeSetupFixtureServiceTests.cs",
       "class": "ASMLiteSmokeSetupFixtureServiceTests",
       "method": "VendorizedStateBaselineMutation_RemovesTemporaryComponentWhenBaselineWasMissing",
-      "line": 273,
+      "line": 288,
       "attributes": [
         "TestFixture",
         "Category(\"Smoke\")",

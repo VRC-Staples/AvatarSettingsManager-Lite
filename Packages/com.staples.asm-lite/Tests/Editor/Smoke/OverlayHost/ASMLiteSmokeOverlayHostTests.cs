@@ -267,6 +267,24 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void StartupPendingRecovery_NeverPublishesReadyOrRepairsOperatorState()
+        {
+            using (var context = RunnerTestContext.CreateWithoutStart(exitOnReady: false))
+            {
+                context.Runtime.RecoveryAdmitted = false;
+                context.StartRunner();
+                var state = ReadHostState(context.Paths.HostStatePath);
+                Assert.That(state.state, Is.EqualTo(ASMLiteSmokeProtocol.HostStateCrashed));
+                StringAssert.Contains("SETUP_FIXTURE_RECOVERY_BLOCKED", state.message);
+                Assert.That(context.Runtime.ResetSetupFixtureCount, Is.Zero);
+                Assert.That(context.Runtime.CloseAutomationWindowIfOpenCount, Is.Zero);
+                Assert.That(context.Runtime.OpenedScenes, Is.Empty);
+                Assert.That(context.Runtime.SelectedAvatars, Is.Empty);
+                Assert.That(context.Runtime.RegisterUpdateCount, Is.Zero);
+            }
+        }
+
+        [Test]
         public void UnityRuntime_AssertsPackageResourcesAndCanonicalCatalogLoad()
         {
             Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
@@ -3816,6 +3834,13 @@ namespace ASMLite.Tests.Editor
             private string _nextSetupFixtureResetFailure = string.Empty;
 
             internal double CurrentTimeSeconds { get; private set; }
+
+            internal bool RecoveryAdmitted = true;
+            public bool AdmitSetupFixtureRecovery(out string detail)
+            {
+                detail = RecoveryAdmitted ? "Fixture admission passed." : "SETUP_FIXTURE_RECOVERY_BLOCKED: retained pending fixture baseline.";
+                return RecoveryAdmitted;
+            }
 
             public string GetActiveScenePath()
             {

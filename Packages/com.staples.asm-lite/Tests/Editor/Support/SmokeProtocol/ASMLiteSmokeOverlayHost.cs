@@ -118,6 +118,7 @@ namespace ASMLite.Tests.Editor
 
     internal interface IASMLiteSmokeOverlayHostRuntime
     {
+        bool AdmitSetupFixtureRecovery(out string detail);
         string GetActiveScenePath();
         void OpenScene(string scenePath);
         VRCAvatarDescriptor FindAvatarByName(string avatarName);
@@ -582,8 +583,16 @@ namespace ASMLite.Tests.Editor
             return SceneManager.GetActiveScene().path ?? string.Empty;
         }
 
+        public bool AdmitSetupFixtureRecovery(out string detail)
+        {
+            return ASMLiteSmokeSetupFixtureService.CheckRecoveryAdmission(out detail);
+        }
+
         public void OpenScene(string scenePath)
         {
+            if (!_fixtureService.AssertCleanBaseline(out string detail))
+                throw new InvalidOperationException(detail);
+            ASMLiteSmokeSetupFixtureService.RequireSafeSceneReplacement();
             EditorSceneManager.OpenScene(scenePath);
         }
 
@@ -1025,7 +1034,6 @@ namespace ASMLite.Tests.Editor
             var details = new List<string>();
 
             CloseAutomationWindowIfOpen();
-            Selection.activeObject = null;
             if (_fixtureService.Reset(out string resetDetail))
                 details.Add(resetDetail);
             else
@@ -2543,15 +2551,9 @@ namespace ASMLite.Tests.Editor
 
         public void ExitEditorWithoutSaving(int exitCode)
         {
-            try
-            {
-                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning($"ASM-Lite smoke host could not discard open scenes before exit: {exception.Message}");
-            }
-
+            if (!_fixtureService.AssertCleanBaseline(out string detail))
+                throw new InvalidOperationException(detail);
+            ASMLiteSmokeSetupFixtureService.RequireSafeSceneReplacement();
             EditorApplication.Exit(exitCode);
         }
     }
@@ -2712,6 +2714,8 @@ namespace ASMLite.Tests.Editor
 
             try
             {
+                if (!_runtime.AdmitSetupFixtureRecovery(out string admissionDetail))
+                    throw new InvalidOperationException(admissionDetail);
                 _runtime.CloseAutomationWindowIfOpen();
                 _runtime.StartConsoleErrorCapture();
 

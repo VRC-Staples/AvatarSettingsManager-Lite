@@ -1,4 +1,3 @@
-using System;
 using ASMLite;
 using UnityEditor;
 using UnityEngine;
@@ -51,40 +50,7 @@ namespace ASMLite.Editor
 
         public static bool TryRefreshLiveInstallPathPrefix(ASMLiteComponent component, string contextLabel)
         {
-            if (component == null)
-            {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Cannot refresh install-path routing because the ASM-Lite component was null.");
-                return false;
-            }
-
-            if (FindLiveVrcFuryComponent(component) == null)
-            {
-                bool repaired = TryRefreshLiveFullControllerWiring(
-                    component.gameObject,
-                    component,
-                    contextLabel + " Auto-Heal");
-                if (!repaired || FindLiveVrcFuryComponent(component) == null)
-                {
-                    Debug.LogError($"[ASM-Lite] {contextLabel}: Expected VF.Model.VRCFury component was not found on '{component.gameObject.name}'.");
-                    return false;
-                }
-
-                Debug.LogWarning($"[ASM-Lite] {contextLabel}: VF.Model.VRCFury component was missing on '{component.gameObject.name}'. Live FullController wiring was repaired automatically.");
-            }
-
-            if (!ASMLiteBuilder.TrySyncInstallPathRouting(component))
-            {
-                Debug.LogError($"[ASM-Lite] {contextLabel}: Failed to refresh install-path routing on '{component.gameObject.name}'.");
-                return false;
-            }
-
-            var effectivePrefix = ASMLiteFullControllerInstallPathHelper.ResolveEffectivePrefix(component);
-            if (string.IsNullOrEmpty(effectivePrefix))
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to root on '{component.gameObject.name}'.");
-            else
-                Debug.Log($"[ASM-Lite] {contextLabel}: refreshed install-path routing to '{effectivePrefix}' on '{component.gameObject.name}'.");
-
-            return true;
+            return ASMLiteLifecycleTransactionService.TryRefreshLiveInstallPathPrefix(component, contextLabel);
         }
 
         public static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
@@ -139,11 +105,15 @@ namespace ASMLite.Editor
 
         public static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
-            var result = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, generatedDir, "Retarget Generated Assets");
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
+            return ASMLiteLifecycleTransactionService.TryRetargetLiveFullControllerGeneratedAssets(component, generatedDir);
+        }
 
-            return result.Success;
+        public static ASMLiteRebuildResult ExecuteRebuild(
+            ASMLiteComponent component,
+            VRCAvatarDescriptor avatar,
+            bool stagePackageManagedGeneratedAssets = true)
+        {
+            return ASMLiteLifecycleTransactionService.ExecuteRebuild(component, avatar, stagePackageManagedGeneratedAssets);
         }
 
         public static bool TryReturnAttachedVendorizedToPackageManaged(ASMLiteComponent component, VRCAvatarDescriptor avatar)
@@ -182,27 +152,5 @@ namespace ASMLite.Editor
             return ASMLiteLifecycleTransactionService.ExecuteDetachedReturnToPackageManagedRecovery(avatar, pendingSnapshot);
         }
 
-        private static MonoBehaviour FindLiveVrcFuryComponent(ASMLiteComponent component)
-        {
-            if (component == null || component.gameObject == null)
-                return null;
-
-            var behaviors = component.gameObject.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                var behavior = behaviors[i];
-                if (behavior == null)
-                    continue;
-
-                var type = behavior.GetType();
-                if (type == null)
-                    continue;
-
-                if (string.Equals(type.FullName, "VF.Model.VRCFury", StringComparison.Ordinal))
-                    return behavior;
-            }
-
-            return null;
-        }
     }
 }

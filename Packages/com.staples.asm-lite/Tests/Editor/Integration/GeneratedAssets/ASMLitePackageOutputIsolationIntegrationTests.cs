@@ -641,4 +641,108 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    [TestFixture]
+    [Category("Headless")]
+    [Category("Integration")]
+    public class ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
+    {
+        [Test]
+        public void LifecycleRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
+        {
+            const string aid = "LifecycleRebuild_Isolated";
+            PreparePackageManagedAvatarForVendorize(aid);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            var result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsTrue(result.Completed, "Direct lifecycle rebuild should finish successfully.");
+            Assert.IsNull(result.Exception);
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.IsTrue(AssetDatabase.IsValidFolder(_ctx.Comp.vendorizedGeneratedAssetsPath));
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(_ctx.Comp.vendorizedGeneratedAssetsPath, aid);
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
+        public void LifecycleRebuild_LateFailure_RestoresIdentityAndReferences_AndRetainsBuildCount()
+        {
+            const string aid = "LifecycleRebuild_LateFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            Assert.IsTrue(ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+            string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            string menuPath = AssetDatabase.GetAssetPath(oldMenu);
+            string menuGuid = AssetDatabase.AssetPathToGUID(menuPath);
+            byte[] menuBytes = File.ReadAllBytes(Path.GetFullPath(menuPath));
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            ASMLiteRebuildResult result;
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+                result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Completed);
+            Assert.IsInstanceOf<InvalidOperationException>(result.Exception);
+            StringAssert.Contains("Injected failure before mirror finalization", result.Exception.Message);
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0, "A later failure must not erase the successful build count.");
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+            Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+            Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+            Assert.AreEqual(menuGuid, AssetDatabase.AssetPathToGUID(menuPath));
+            CollectionAssert.AreEqual(menuBytes, File.ReadAllBytes(Path.GetFullPath(menuPath)));
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(previousPath, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(previousPath, aid);
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
+        public void LifecycleRebuild_NoStaging_KeepsPackageManagedDelivery()
+        {
+            const string aid = "LifecycleRebuild_NoStaging";
+            PreparePackageManagedAvatarForVendorize(aid);
+            string controllerPath = Path.GetFullPath(ASMLiteAssetPaths.FXController);
+            byte[] controllerBefore = File.ReadAllBytes(controllerPath);
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            var result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc, stagePackageManagedGeneratedAssets: false);
+
+            Assert.IsTrue(result.Completed);
+            Assert.IsNull(result.Exception);
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.IsTrue(string.IsNullOrEmpty(_ctx.Comp.vendorizedGeneratedAssetsPath));
+            Assert.IsFalse(controllerBefore.SequenceEqual(File.ReadAllBytes(controllerPath)), "No-staging rebuild should update package outputs, not restore them.");
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir, aid);
+        }
+
+        [Test]
+        public void LifecycleRebuild_PackageRestoreFailure_TakesPrecedenceOverRebuildException()
+        {
+            const string aid = "LifecycleRebuild_RestoreFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            Assert.IsTrue(ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+            string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Failed to restore package generated outputs after rebuild\..*Injected package restore failure\.$"));
+
+            ASMLiteRebuildResult result;
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestoreFailureForTesting("Injected package restore failure."))
+                result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Completed);
+            Assert.IsNull(result.Exception, "Package restore failure should retain its existing log-and-return path, not trigger the build-error dialog.");
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(previousPath, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(previousPath, aid);
+        }
+    }
 }
