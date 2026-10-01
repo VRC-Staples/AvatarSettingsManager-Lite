@@ -53,55 +53,6 @@ namespace ASMLite.Editor
             return ASMLiteLifecycleTransactionService.TryRefreshLiveInstallPathPrefix(component, contextLabel);
         }
 
-        public static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
-        {
-            var result = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
-        }
-
-        public static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
-        {
-            var backupResult = ASMLiteGeneratedAssetMirrorService.BackupVendorizedFolderForDelete(vendorizedDir);
-            if (!backupResult.Success)
-            {
-                Debug.LogError(backupResult.ToLogString());
-                return false;
-            }
-
-            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedFolderDelete(backupResult);
-            if (!finalizeResult.Success)
-            {
-                Debug.LogError(finalizeResult.ToLogString());
-                return false;
-            }
-
-            return true;
-        }
-
-        public static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
-        {
-            var result = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
-            if (!result.Success)
-            {
-                Debug.LogError(result.ToLogString());
-                vendorizedDir = string.Empty;
-                return false;
-            }
-
-            var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(result);
-            if (!finalizeResult.Success)
-            {
-                Debug.LogError(finalizeResult.ToLogString());
-                vendorizedDir = string.Empty;
-                return false;
-            }
-
-            vendorizedDir = result.TargetPath;
-            return true;
-        }
 
         public static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {

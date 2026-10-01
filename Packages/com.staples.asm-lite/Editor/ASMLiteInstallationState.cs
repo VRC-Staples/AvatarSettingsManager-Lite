@@ -75,7 +75,7 @@ namespace ASMLite.Editor
             return false;
         }
 
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
+        internal static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
         {
             if (avatar == null)
                 return false;

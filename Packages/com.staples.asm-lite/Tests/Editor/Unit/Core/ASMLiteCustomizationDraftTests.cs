@@ -189,6 +189,23 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, adapter.DirtyObjects);
             Assert.AreEqual(4, _component.slotCount);
             CollectionAssert.AreEqual(new[] { "One", "Two", "Three", "Four" }, _component.customPresetNames);
+
+            var names = new[] { "One", "Two", "Three", "Four" };
+            var icons = new[] { Texture2D.whiteTexture, null };
+            unchanged.CustomPresetNames = names;
+            unchanged.CustomIcons = icons;
+            names[0] = "Changed";
+            icons[0] = null;
+            Assert.AreEqual("One", unchanged.CustomPresetNames[0], "Draft names must not alias the input array.");
+            Assert.AreSame(Texture2D.whiteTexture, unchanged.CustomIcons[0], "Draft icons must not alias the input array.");
+
+            unchanged.RefreshFromComponent(_component);
+            unchanged.CustomPresetNames = new[] { "one", "Two", "Three", "Four" };
+            Assert.IsTrue(unchanged.HasDiffAgainst(_component), "Preset name comparison must remain ordinal and case-sensitive.");
+            unchanged.CustomPresetNames = null;
+            unchanged.CustomIcons = null;
+            CollectionAssert.IsEmpty(unchanged.CustomPresetNames);
+            CollectionAssert.IsEmpty(unchanged.CustomIcons);
         }
 
         private sealed class CountingApplyAdapter : ASMLite.Editor.ASMLiteCustomizationDraft.IApplyAdapter

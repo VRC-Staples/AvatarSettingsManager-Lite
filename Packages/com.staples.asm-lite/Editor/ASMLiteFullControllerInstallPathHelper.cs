@@ -36,18 +36,6 @@ namespace ASMLite.Editor
             return string.IsNullOrEmpty(trimmed) ? string.Empty : trimmed;
         }
 
-        /// <summary>
-        /// Applies the resolved prefix to FullController menu wiring on the serialized VRCFury component.
-        /// Returns false when the expected schema is missing (fail-closed, no partial write).
-        /// </summary>
-        internal static bool TryApplyMenuPrefix(SerializedObject serializedVfComponent, ASMLiteComponent component)
-        {
-            var result = TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
-        }
 
         internal static ASMLiteBuildDiagnosticResult TryApplyMenuPrefixWithDiagnostics(SerializedObject serializedVfComponent, ASMLiteComponent component)
         {

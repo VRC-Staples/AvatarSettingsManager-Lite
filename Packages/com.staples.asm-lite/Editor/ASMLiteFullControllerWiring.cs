@@ -494,25 +494,6 @@ namespace ASMLite.Editor
                 Debug.LogWarning(wiringResult.ToLogString());
         }
 
-        internal static bool TryApplyFullControllerAssetReferences(
-            SerializedObject serializedVfComponent,
-            ASMLiteComponent component,
-            UnityEngine.Object fxController,
-            UnityEngine.Object menu,
-            UnityEngine.Object parameters)
-        {
-            var result = TryApplyFullControllerAssetReferencesWithDiagnostics(
-                serializedVfComponent,
-                component,
-                fxController,
-                menu,
-                parameters);
-
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
-        }
 
         internal static ASMLiteBuildDiagnosticResult TryApplyFullControllerAssetReferencesWithDiagnostics(
             SerializedObject serializedVfComponent,
@@ -624,7 +605,7 @@ namespace ASMLite.Editor
             return ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVfComponent, component);
         }
 
-        private static Type FindTypeByFullName(string fullName)
+        internal static Type FindTypeByFullName(string fullName)
         {
             if (string.IsNullOrEmpty(fullName))
                 return null;

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.Animations;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
@@ -122,7 +121,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (!HasAsmLiteRuntimeMarkers(avatar))
+            if (!ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(avatar))
             {
                 failureMessage = "[ASM-Lite] Detach verification failed because ASM-Lite runtime markers were not present after direct delivery.";
                 failureContext = avatar.gameObject.name;
@@ -147,7 +146,7 @@ namespace ASMLite.Editor
                 }
             }
 
-            var detachedState = ASMLiteWindow.GetAsmLiteToolState(avatar, null);
+            var detachedState = ASMLiteInstallationStateService.Resolve(avatar, null);
             if (detachedState != expectedDetachedState)
             {
                 failureMessage = $"[ASM-Lite] Detach verification failed because tool-state classification did not resolve to {expectedDetachedState} after direct delivery.";
@@ -173,7 +172,7 @@ namespace ASMLite.Editor
                 if (!VerifyComponentVendorizedState(component, expectedUseVendorized: true, expectedPath: expectedVendorizedPath, out failureMessage, out failureContext))
                     return false;
 
-                if (ASMLiteWindow.GetAsmLiteToolState(avatar, null) != ASMLiteInstallationState.Vendorized)
+                if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.Vendorized)
                 {
                     failureMessage = "[ASM-Lite] Detach rollback failed because the detached avatar state no longer resolved to Vendorized after restoring the attached vendorized baseline.";
                     failureContext = "toolState";
@@ -188,7 +187,7 @@ namespace ASMLite.Editor
             if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
                 return false;
 
-            if (ASMLiteWindow.GetAsmLiteToolState(avatar, null) != ASMLiteInstallationState.NotInstalled)
+            if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.NotInstalled)
             {
                 failureMessage = "[ASM-Lite] Detach rollback failed because detached runtime markers still remained on the avatar after restoring the attached package-managed baseline.";
                 failureContext = "toolState";
@@ -317,76 +316,9 @@ namespace ASMLite.Editor
             return false;
         }
 
-        private static bool HasAsmLiteRuntimeMarkers(VRCAvatarDescriptor avatar)
-        {
-            if (avatar == null)
-                return false;
-
-            var expr = avatar.expressionParameters;
-            if (expr?.parameters != null)
-            {
-                for (int i = 0; i < expr.parameters.Length; i++)
-                {
-                    var parameter = expr.parameters[i];
-                    if (parameter == null || string.IsNullOrWhiteSpace(parameter.name))
-                        continue;
-                    if (parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameter.name, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            for (int i = 0; i < avatar.baseAnimationLayers.Length; i++)
-            {
-                var controller = avatar.baseAnimationLayers[i].animatorController as AnimatorController;
-                if (controller == null)
-                    continue;
-
-                for (int layerIndex = 0; layerIndex < controller.layers.Length; layerIndex++)
-                {
-                    if (controller.layers[layerIndex].name.StartsWith("ASMLite_", StringComparison.Ordinal))
-                        return true;
-                }
-
-                for (int parameterIndex = 0; parameterIndex < controller.parameters.Length; parameterIndex++)
-                {
-                    string parameterName = controller.parameters[parameterIndex].name;
-                    if (string.IsNullOrWhiteSpace(parameterName))
-                        continue;
-                    if (parameterName.StartsWith("ASMLite_", StringComparison.Ordinal)
-                        || string.Equals(parameterName, ASMLiteBuilder.CtrlParam, StringComparison.Ordinal))
-                        return true;
-                }
-            }
-
-            if (avatar.expressionsMenu?.controls != null)
-            {
-                for (int i = 0; i < avatar.expressionsMenu.controls.Count; i++)
-                {
-                    var control = avatar.expressionsMenu.controls[i];
-                    if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
-                        continue;
-
-                    if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                        return true;
-
-                    string subPath = control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu)?.Replace('\\', '/') : string.Empty;
-                    if (!string.IsNullOrWhiteSpace(subPath)
-                        && (subPath.IndexOf("ASMLite_", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/ASM-Lite/", StringComparison.OrdinalIgnoreCase) >= 0
-                            || subPath.IndexOf("/com.staples.asm-lite/", StringComparison.OrdinalIgnoreCase) >= 0))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
         private static ASMLiteInstallationState ResolveToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
-            return ASMLiteWindow.GetAsmLiteToolState(avatar, component);
+            return ASMLiteInstallationStateService.Resolve(avatar, component);
         }
 
         private static bool PathStartsWith(string assetPath, string prefix)

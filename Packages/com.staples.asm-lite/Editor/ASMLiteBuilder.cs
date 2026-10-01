@@ -744,51 +744,7 @@ namespace ASMLite.Editor
                 innerDiagnostic: innerDiagnostic.Success ? null : innerDiagnostic);
         }
 
-        private static Type FindTypeByFullName(string fullName)
-        {
-            if (string.IsNullOrEmpty(fullName))
-                return null;
 
-            Type firstMatch = null;
-            Type nonTestMatch = null;
-
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for (int i = 0; i < assemblies.Length; i++)
-            {
-                var asm = assemblies[i];
-                if (asm == null)
-                    continue;
-
-                var t = asm.GetType(fullName, throwOnError: false);
-                if (t == null)
-                    continue;
-
-                firstMatch ??= t;
-
-                string asmName = asm.GetName()?.Name ?? string.Empty;
-                bool isTestAssembly = asmName.IndexOf("Test", StringComparison.OrdinalIgnoreCase) >= 0;
-
-                if (!isTestAssembly)
-                    nonTestMatch ??= t;
-
-                if (string.Equals(asmName, "VRCFury", StringComparison.Ordinal)
-                    || asmName.StartsWith("VRCFury.", StringComparison.Ordinal))
-                {
-                    return t;
-                }
-            }
-
-            return nonTestMatch ?? firstMatch;
-        }
-
-        private static bool TryEnsureLiveFullControllerAssetWiring(ASMLiteComponent component, string contextLabel)
-        {
-            var result = TryEnsureLiveFullControllerAssetWiringWithDiagnostics(component, contextLabel);
-            if (!result.Success)
-                Debug.LogError(result.ToLogString());
-
-            return result.Success;
-        }
 
         private static ASMLiteBuildDiagnosticResult TryEnsureLiveFullControllerAssetWiringWithDiagnostics(ASMLiteComponent component, string contextLabel)
         {
@@ -988,8 +944,8 @@ namespace ASMLite.Editor
                 routingObject.transform.SetParent(avDesc.transform, false);
             }
 
-            var vfType = FindTypeByFullName("VF.Model.VRCFury");
-            var moveMenuType = FindTypeByFullName("VF.Model.Feature.MoveMenuItem");
+            var vfType = ASMLiteFullControllerWiring.FindTypeByFullName("VF.Model.VRCFury");
+            var moveMenuType = ASMLiteFullControllerWiring.FindTypeByFullName("VF.Model.Feature.MoveMenuItem");
             if (vfType == null || moveMenuType == null)
                 return false;
 

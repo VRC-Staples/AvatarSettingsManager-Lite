@@ -2787,7 +2787,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
       "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
       "method": "LifecycleRebuild_LateFailure_RestoresIdentityAndReferences_AndRetainsBuildCount",
-      "line": 670,
+      "line": 692,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2817,7 +2817,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
       "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
       "method": "LifecycleRebuild_NoStaging_KeepsPackageManagedDelivery",
-      "line": 706,
+      "line": 728,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2847,7 +2847,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
       "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
       "method": "LifecycleRebuild_PackageRestoreFailure_TakesPrecedenceOverRebuildException",
-      "line": 727,
+      "line": 749,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -2902,6 +2902,36 @@
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored by transaction or fixture teardown after injected restore failure",
       "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs",
       "notes": "Direct lifecycle rebuild coverage; window is used only for existing fixture setup. Existing window recovery regressions retained."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
+      "class": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests",
+      "method": "LifecycleRebuild_ValidationFailure_RestoresPackageOutputs_WithoutBuildCountOrException",
+      "line": 670,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "package-output-isolation-integration-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild Validation Failure Restores Package Outputs Without Build Count Or Exception",
+      "fixtureDependencies": [
+        "package output snapshot fixture",
+        "test avatar descriptor",
+        "editor workflow automation window (setup only)"
+      ],
+      "assetSceneMutations": "isolated per-test avatar with seeded package GeneratedAssets remnants, byte/metadata snapshot comparison, and fixture snapshot restore",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase lifecycle rebuild; package outputs restored after build validation failure",
+      "runnerFilter": "ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests.LifecycleRebuild_ValidationFailure_RestoresPackageOutputs_WithoutBuildCountOrException",
+      "notes": "Direct staged lifecycle rebuild with invalid slotCount; requires incomplete result, count -1, no returned exception, both expected diagnostics, and package bytes/metadata restored after rebuild preparation."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLitePackageOutputIsolationIntegrationTests.cs",
@@ -11159,7 +11189,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
       "class": "ASMLiteInstallationStateTests",
       "method": "Resolve_AvatarSelectedNotInstalled_RemainsExplicit",
-      "line": 101,
+      "line": 129,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11260,6 +11290,32 @@
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteInstallationStateTests.cs",
+      "class": "ASMLiteInstallationStateTests",
+      "method": "Resolve_VendorizedReferencesWithoutRuntimeMarkers_DoesNotVerifyDirectDelivery",
+      "line": 101,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Resolve Vendorized References Without Runtime Markers Does Not Verify Direct Delivery",
+      "fixtureDependencies": [
+        "package fixture assets"
+      ],
+      "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
+      "runnerFilter": "ASMLiteInstallationStateTests.Resolve_VendorizedReferencesWithoutRuntimeMarkers_DoesNotVerifyDirectDelivery",
+      "notes": "Focused native Unity EditMode regression; selected through the existing core-headless class filter."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
       "class": "ASMLiteLifecycleSeamTests",
       "method": "DirectDeliveryRollbackSnapshot_RestoresDescriptorAssetsAfterMutation",
@@ -11284,6 +11340,34 @@
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteLifecycleSeamTests.DirectDeliveryRollbackSnapshot_RestoresDescriptorAssetsAfterMutation",
       "notes": "Selected by default CI through the core-headless class filter."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
+      "class": "ASMLiteLifecycleSeamTests",
+      "method": "DirectDeliveryVerification_NullLayers_StillRequiresRuntimeMarkers",
+      "line": 93,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(\"parameters\")",
+        "TestCase(\"menu\")",
+        "TestCase(\"none\")"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Direct Delivery Verification Null Layers Still Requires Runtime Markers",
+      "fixtureDependencies": [
+        "package fixture assets"
+      ],
+      "assetSceneMutations": "package-fixture-assets-or-in-memory-unity-objects",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
+      "runnerFilter": "ASMLiteLifecycleSeamTests.DirectDeliveryVerification_NullLayers_StillRequiresRuntimeMarkers",
+      "notes": "Focused native Unity EditMode regression; selected through the existing core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
@@ -11315,7 +11399,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteLifecycleSeamTests.cs",
       "class": "ASMLiteLifecycleSeamTests",
       "method": "GeneratedAssetBuildTransaction_ReportsBuilderDiagnosticsWithoutThrowing",
-      "line": 91,
+      "line": 133,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -12917,6 +13001,33 @@
       "externalProcessFilesystemEnvUsage": "none",
       "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.ASMLiteWindow_RefreshesReadonlyCustomizationDraftWithoutReassignment",
       "notes": "Classified during honesty audit; no quarantine or deletion recommended."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowAdapterBoundaryTests.cs",
+      "class": "ASMLiteWindowAdapterBoundaryTests",
+      "method": "LifecycleBackend_ResolvesInstallationEvidenceWithoutWindowDetour",
+      "line": 68,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(\"Editor/ASMLiteLifecycleTransactionService.cs\")",
+        "TestCase(\"Editor/ASMLiteLifecycleVerification.cs\")"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Backend Resolves Installation Evidence Without Window Detour",
+      "fixtureDependencies": [
+        "package source files"
+      ],
+      "assetSceneMutations": "none",
+      "externalProcessFilesystemEnvUsage": "Read-only package source files",
+      "runnerFilter": "ASMLiteWindowAdapterBoundaryTests.LifecycleBackend_ResolvesInstallationEvidenceWithoutWindowDetour",
+      "notes": "Static backend dependency/shared-predicate guard; no runtime transaction claim."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Window/ASMLiteWindowCustomizationTests.cs",

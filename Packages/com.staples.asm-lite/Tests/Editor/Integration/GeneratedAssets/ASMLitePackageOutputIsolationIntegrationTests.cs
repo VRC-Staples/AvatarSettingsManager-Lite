@@ -667,6 +667,28 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void LifecycleRebuild_ValidationFailure_RestoresPackageOutputs_WithoutBuildCountOrException()
+        {
+            const string aid = "LifecycleRebuild_ValidationFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(aid);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            _ctx.Comp.slotCount = 0;
+            LogAssert.Expect(LogType.Error, "[ASM-Lite] slotCount must be between 1 and 8 (got 0).");
+            LogAssert.Expect(LogType.Error,
+                $"[ASM-Lite] {ASMLiteDiagnosticCodes.Build.ValidationFailed}: [ASM-Lite] slotCount must be between 1 and 8 (got 0). Context: 'slotCount'. Remediation: Set slotCount to a value between 1 and 8 before building.");
+
+            var result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Completed);
+            Assert.AreEqual(-1, result.DiscoveredParamCount);
+            Assert.IsNull(result.Exception, "Build validation failure should keep the log-and-return path, not trigger the build-error dialog.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.IsTrue(string.IsNullOrEmpty(_ctx.Comp.vendorizedGeneratedAssetsPath));
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
         public void LifecycleRebuild_LateFailure_RestoresIdentityAndReferences_AndRetainsBuildCount()
         {
             const string aid = "LifecycleRebuild_LateFailure";

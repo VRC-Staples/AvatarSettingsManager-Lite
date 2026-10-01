@@ -93,26 +93,9 @@ namespace ASMLite.Editor
         [NonSerialized] private string[] _visibleAutomationChecklistItems = Array.Empty<string>();
         [NonSerialized] private VisibleAutomationChecklistItemState[] _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
         [NonSerialized] private double[] _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
-        [NonSerialized] private VisualElement _visibleAutomationOverlayCanvas;
-        [NonSerialized] private VisualElement _visibleAutomationWindowOverlayCanvas;
-        [NonSerialized] private Label _visibleAutomationWindowOverlayFallbackLabel;
         [NonSerialized] private bool _visibleAutomationPreferScreenAnchoredOverlay = true;
         [NonSerialized] private bool _visibleAutomationUsingHostWindowFallbackBounds;
         [NonSerialized] private Rect _visibleAutomationScreenBounds;
-        [NonSerialized] private VisualElement _visibleAutomationStatusPanel;
-        [NonSerialized] private VisualElement _visibleAutomationStatusAccent;
-        [NonSerialized] private Label _visibleAutomationTitleLabel;
-        [NonSerialized] private Label _visibleAutomationMetaLabel;
-        [NonSerialized] private Label _visibleAutomationStepLabel;
-        [NonSerialized] private VisualElement _visibleAutomationBadgeElement;
-        [NonSerialized] private Label _visibleAutomationBadgeLabel;
-        [NonSerialized] private VisualElement _visibleAutomationChecklistPanel;
-        [NonSerialized] private VisualElement _visibleAutomationChecklistAccent;
-        [NonSerialized] private Label _visibleAutomationChecklistTitleLabel;
-        [NonSerialized] private Label _visibleAutomationChecklistMetaLabel;
-        [NonSerialized] private ScrollView _visibleAutomationChecklistScrollView;
-        [NonSerialized] private VisualElement _visibleAutomationChecklistItemsContainer;
-        [NonSerialized] private readonly List<VisibleAutomationChecklistVisualRefs> _visibleAutomationChecklistItemVisuals = new List<VisibleAutomationChecklistVisualRefs>();
         [NonSerialized] private bool _visibleAutomationCompletionReviewVisible;
         [NonSerialized] private bool _visibleAutomationCompletionReviewAcknowledged;
         [NonSerialized] private string _visibleAutomationCompletionReviewTitle = string.Empty;
@@ -292,8 +275,6 @@ namespace ASMLite.Editor
         private const float VisibleAutomationReviewPopupWidth = 440f;
         private const float VisibleAutomationReviewPopupHeight = 210f;
         private const float VisibleAutomationChecklistCompactItemHeight = 40f;
-        private const string VisibleAutomationScreenOverlayFallbackText =
-            "Screen-anchored overlay unavailable; using window-hosted overlay bounds.";
         private const string RootMenuFieldLabel = "Root Menu";
         private const string SaveFieldLabel = "Save";
         private const string LoadFieldLabel = "Load";
@@ -335,7 +316,6 @@ namespace ASMLite.Editor
             EditorApplication.hierarchyChanged += HandleEditorStateChanged;
             EditorApplication.projectChanged += HandleEditorStateChanged;
             EditorApplication.update += HandleVisibleAutomationOverlayAnimationTick;
-            EnsureVisibleAutomationOverlayVisualTree();
             RegisterVisibleAutomationOverlayGeometryCallback();
             RefreshVisibleAutomationOverlayVisuals();
         }
@@ -440,205 +420,6 @@ namespace ASMLite.Editor
             public Label StepLabel;
         }
 
-        private void EnsureVisibleAutomationOverlayVisualTree()
-        {
-            if (rootVisualElement == null)
-                return;
-
-            bool needsFullRebuild = false;
-            if (_visibleAutomationOverlayCanvas == null || _visibleAutomationOverlayCanvas.parent != rootVisualElement)
-                needsFullRebuild = true;
-            else if (_visibleAutomationWindowOverlayCanvas == null || _visibleAutomationWindowOverlayCanvas.parent != rootVisualElement)
-                needsFullRebuild = true;
-
-            if (!needsFullRebuild)
-                return;
-
-            _visibleAutomationOverlayCanvas?.RemoveFromHierarchy();
-            _visibleAutomationWindowOverlayCanvas?.RemoveFromHierarchy();
-            _visibleAutomationChecklistItemVisuals.Clear();
-            _visibleAutomationChecklistScrollView = null;
-            _visibleAutomationWindowOverlayFallbackLabel = null;
-
-            _visibleAutomationWindowOverlayCanvas = new VisualElement
-            {
-                name = "asm-lite-visible-automation-window-overlay-canvas",
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationWindowOverlayCanvas.style.position = Position.Absolute;
-            _visibleAutomationWindowOverlayCanvas.style.left = 0f;
-            _visibleAutomationWindowOverlayCanvas.style.top = 0f;
-            _visibleAutomationWindowOverlayCanvas.style.right = 0f;
-            _visibleAutomationWindowOverlayCanvas.style.bottom = 0f;
-            _visibleAutomationWindowOverlayCanvas.style.display = DisplayStyle.None;
-
-            _visibleAutomationWindowOverlayFallbackLabel = new Label(VisibleAutomationScreenOverlayFallbackText)
-            {
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationWindowOverlayFallbackLabel.style.position = Position.Absolute;
-            _visibleAutomationWindowOverlayFallbackLabel.style.left = 12f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.bottom = 12f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.paddingLeft = 10f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.paddingRight = 10f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.paddingTop = 6f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.paddingBottom = 6f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.backgroundColor = new Color(0.16f, 0.10f, 0.04f, 0.92f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.color = new Color(1f, 0.92f, 0.72f, 1f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomWidth = 1f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftWidth = 1f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightWidth = 1f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopWidth = 1f;
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderBottomColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderLeftColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderRightColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.borderTopColor = new Color(0.72f, 0.48f, 0.16f, 0.95f);
-            _visibleAutomationWindowOverlayFallbackLabel.style.fontSize = 10;
-            _visibleAutomationWindowOverlayFallbackLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            _visibleAutomationWindowOverlayFallbackLabel.style.display = DisplayStyle.None;
-            _visibleAutomationWindowOverlayCanvas.Add(_visibleAutomationWindowOverlayFallbackLabel);
-            rootVisualElement.Add(_visibleAutomationWindowOverlayCanvas);
-
-            _visibleAutomationOverlayCanvas = new VisualElement
-            {
-                name = "asm-lite-visible-automation-overlay-canvas",
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationOverlayCanvas.style.position = Position.Absolute;
-            _visibleAutomationOverlayCanvas.style.left = 0f;
-            _visibleAutomationOverlayCanvas.style.top = 0f;
-            _visibleAutomationOverlayCanvas.style.right = 0f;
-            _visibleAutomationOverlayCanvas.style.bottom = 0f;
-            _visibleAutomationOverlayCanvas.style.display = DisplayStyle.None;
-
-            _visibleAutomationStatusPanel = new VisualElement
-            {
-                name = "asm-lite-visible-automation-status-panel",
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationStatusPanel.style.position = Position.Absolute;
-            _visibleAutomationStatusPanel.style.display = DisplayStyle.None;
-            _visibleAutomationStatusPanel.style.flexDirection = FlexDirection.Column;
-            _visibleAutomationStatusPanel.style.overflow = Overflow.Hidden;
-
-            _visibleAutomationStatusAccent = new VisualElement { pickingMode = PickingMode.Ignore };
-            _visibleAutomationStatusAccent.style.height = 4f;
-            _visibleAutomationStatusAccent.style.flexShrink = 0f;
-            _visibleAutomationStatusPanel.Add(_visibleAutomationStatusAccent);
-
-            var statusBody = new VisualElement { pickingMode = PickingMode.Ignore };
-            statusBody.style.flexDirection = FlexDirection.Column;
-            statusBody.style.flexGrow = 1f;
-            statusBody.style.paddingLeft = 16f;
-            statusBody.style.paddingRight = 16f;
-            statusBody.style.paddingTop = 14f;
-            statusBody.style.paddingBottom = 14f;
-            _visibleAutomationStatusPanel.Add(statusBody);
-
-            var statusHeaderRow = new VisualElement { pickingMode = PickingMode.Ignore };
-            statusHeaderRow.style.flexDirection = FlexDirection.Row;
-            statusHeaderRow.style.alignItems = Align.FlexStart;
-            statusHeaderRow.style.flexShrink = 0f;
-            statusBody.Add(statusHeaderRow);
-
-            var statusTitleColumn = new VisualElement { pickingMode = PickingMode.Ignore };
-            statusTitleColumn.style.flexDirection = FlexDirection.Column;
-            statusTitleColumn.style.flexGrow = 1f;
-            statusTitleColumn.style.marginRight = 12f;
-            statusHeaderRow.Add(statusTitleColumn);
-
-            _visibleAutomationTitleLabel = new Label { pickingMode = PickingMode.Ignore };
-            _visibleAutomationTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            _visibleAutomationTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _visibleAutomationTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            statusTitleColumn.Add(_visibleAutomationTitleLabel);
-
-            _visibleAutomationMetaLabel = new Label { pickingMode = PickingMode.Ignore };
-            _visibleAutomationMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _visibleAutomationMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            statusTitleColumn.Add(_visibleAutomationMetaLabel);
-
-            _visibleAutomationBadgeElement = new VisualElement { pickingMode = PickingMode.Ignore };
-            _visibleAutomationBadgeElement.style.minWidth = 96f;
-            _visibleAutomationBadgeElement.style.height = 22f;
-            _visibleAutomationBadgeElement.style.justifyContent = Justify.Center;
-            _visibleAutomationBadgeElement.style.alignItems = Align.Center;
-            _visibleAutomationBadgeElement.style.paddingLeft = 10f;
-            _visibleAutomationBadgeElement.style.paddingRight = 10f;
-            _visibleAutomationBadgeElement.style.flexShrink = 0f;
-            statusHeaderRow.Add(_visibleAutomationBadgeElement);
-
-            _visibleAutomationBadgeLabel = new Label { pickingMode = PickingMode.Ignore };
-            _visibleAutomationBadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            _visibleAutomationBadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _visibleAutomationBadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _visibleAutomationBadgeElement.Add(_visibleAutomationBadgeLabel);
-
-            _visibleAutomationStepLabel = new Label { pickingMode = PickingMode.Ignore };
-            _visibleAutomationStepLabel.style.whiteSpace = WhiteSpace.Normal;
-            _visibleAutomationStepLabel.style.unityTextAlign = TextAnchor.UpperLeft;
-            _visibleAutomationStepLabel.style.marginTop = 12f;
-            _visibleAutomationStepLabel.style.flexGrow = 1f;
-            statusBody.Add(_visibleAutomationStepLabel);
-
-            _visibleAutomationChecklistPanel = new VisualElement
-            {
-                name = "asm-lite-visible-automation-checklist-panel",
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationChecklistPanel.style.position = Position.Absolute;
-            _visibleAutomationChecklistPanel.style.display = DisplayStyle.None;
-            _visibleAutomationChecklistPanel.style.flexDirection = FlexDirection.Column;
-            _visibleAutomationChecklistPanel.style.overflow = Overflow.Hidden;
-
-            _visibleAutomationChecklistAccent = new VisualElement { pickingMode = PickingMode.Ignore };
-            _visibleAutomationChecklistAccent.style.height = 5f;
-            _visibleAutomationChecklistAccent.style.flexShrink = 0f;
-            _visibleAutomationChecklistPanel.Add(_visibleAutomationChecklistAccent);
-
-            var checklistBody = new VisualElement { pickingMode = PickingMode.Ignore };
-            checklistBody.style.flexDirection = FlexDirection.Column;
-            checklistBody.style.flexGrow = 1f;
-            checklistBody.style.paddingLeft = 16f;
-            checklistBody.style.paddingRight = 16f;
-            checklistBody.style.paddingTop = 16f;
-            checklistBody.style.paddingBottom = 16f;
-            _visibleAutomationChecklistPanel.Add(checklistBody);
-
-            _visibleAutomationChecklistTitleLabel = new Label("Visible Smoke Checklist") { pickingMode = PickingMode.Ignore };
-            _visibleAutomationChecklistTitleLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            _visibleAutomationChecklistTitleLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _visibleAutomationChecklistTitleLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            checklistBody.Add(_visibleAutomationChecklistTitleLabel);
-
-            _visibleAutomationChecklistMetaLabel = new Label { pickingMode = PickingMode.Ignore };
-            _visibleAutomationChecklistMetaLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            _visibleAutomationChecklistMetaLabel.style.unityTextAlign = TextAnchor.MiddleLeft;
-            _visibleAutomationChecklistMetaLabel.style.marginTop = 2f;
-            checklistBody.Add(_visibleAutomationChecklistMetaLabel);
-
-            _visibleAutomationChecklistScrollView = new ScrollView(ScrollViewMode.Vertical)
-            {
-                pickingMode = PickingMode.Ignore,
-            };
-            _visibleAutomationChecklistScrollView.style.flexGrow = 1f;
-            _visibleAutomationChecklistScrollView.style.marginTop = 12f;
-            _visibleAutomationChecklistScrollView.style.paddingRight = 2f;
-            _visibleAutomationChecklistScrollView.verticalScrollerVisibility = ScrollerVisibility.AlwaysVisible;
-            _visibleAutomationChecklistScrollView.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            checklistBody.Add(_visibleAutomationChecklistScrollView);
-
-            _visibleAutomationChecklistItemsContainer = new VisualElement { pickingMode = PickingMode.Ignore };
-            _visibleAutomationChecklistItemsContainer.style.flexDirection = FlexDirection.Column;
-            _visibleAutomationChecklistItemsContainer.style.flexGrow = 1f;
-            _visibleAutomationChecklistScrollView.Add(_visibleAutomationChecklistItemsContainer);
-
-            _visibleAutomationOverlayCanvas.Add(_visibleAutomationStatusPanel);
-            _visibleAutomationOverlayCanvas.Add(_visibleAutomationChecklistPanel);
-            rootVisualElement.Add(_visibleAutomationOverlayCanvas);
-            _visibleAutomationWindowOverlayCanvas.BringToFront();
-            _visibleAutomationOverlayCanvas.BringToFront();
-        }
 
         private void RegisterVisibleAutomationOverlayGeometryCallback()
         {
@@ -867,264 +648,6 @@ namespace ASMLite.Editor
             }
         }
 
-        private void UpdateVisibleAutomationStatusPanelGeometry(Rect? explicitStatusRect, Rect? checklistRect, float overlayMargin)
-        {
-            if (explicitStatusRect.HasValue)
-            {
-                Rect rect = explicitStatusRect.Value;
-                SetVisualElementRect(_visibleAutomationStatusPanel, rect.x, rect.y, rect.width, rect.height);
-                return;
-            }
-
-            bool presentationMode = _visibleAutomationOverlayPresentationMode;
-            float overlayHeight = presentationMode ? 132f : 102f;
-            float availableLeftWidth = checklistRect.HasValue
-                ? Mathf.Max(220f, checklistRect.Value.x - overlayMargin * 2f)
-                : Mathf.Max(220f, position.width - overlayMargin * 2f);
-            float preferredWidth = presentationMode
-                ? Mathf.Max(420f, availableLeftWidth * 0.68f)
-                : 360f;
-            float width = Mathf.Min(preferredWidth, availableLeftWidth);
-            float x = overlayMargin + Mathf.Max(0f, (availableLeftWidth - width) * 0.5f);
-            float y = overlayMargin;
-
-            SetVisualElementRect(_visibleAutomationStatusPanel, x, y, width, overlayHeight);
-        }
-
-        private void UpdateVisibleAutomationStatusPanelContent()
-        {
-            GetVisibleAutomationOverlayPalette(
-                _visibleAutomationOverlayState,
-                out Color accentColor,
-                out Color backgroundColor,
-                out Color borderColor,
-                out Color badgeColor,
-                out Color badgeTextColor);
-
-            bool presentationMode = _visibleAutomationOverlayPresentationMode;
-            _visibleAutomationStatusPanel.style.backgroundColor = backgroundColor;
-            SetVisualElementBorder(_visibleAutomationStatusPanel, borderColor);
-            _visibleAutomationStatusAccent.style.backgroundColor = accentColor;
-
-            string title = string.IsNullOrWhiteSpace(_visibleAutomationOverlayTitle)
-                ? "ASM-Lite visible smoke test"
-                : _visibleAutomationOverlayTitle;
-            _visibleAutomationTitleLabel.text = title;
-            _visibleAutomationTitleLabel.style.fontSize = presentationMode ? 15 : 12;
-            _visibleAutomationTitleLabel.style.color = Color.white;
-
-            string metaText = BuildVisibleAutomationOverlayMetaText();
-            _visibleAutomationMetaLabel.text = metaText;
-            _visibleAutomationMetaLabel.style.display = string.IsNullOrEmpty(metaText) ? DisplayStyle.None : DisplayStyle.Flex;
-            _visibleAutomationMetaLabel.style.fontSize = presentationMode ? 11 : 10;
-            _visibleAutomationMetaLabel.style.color = new Color(0.74f, 0.82f, 0.91f, 0.96f);
-
-            _visibleAutomationStepLabel.text = _visibleAutomationOverlayStep;
-            _visibleAutomationStepLabel.style.fontSize = presentationMode ? 16 : 12;
-            _visibleAutomationStepLabel.style.color = new Color(0.95f, 0.97f, 0.99f, 1f);
-
-            _visibleAutomationBadgeElement.style.backgroundColor = badgeColor;
-            _visibleAutomationBadgeLabel.text = GetVisibleAutomationOverlayStatusLabel(_visibleAutomationOverlayState);
-            _visibleAutomationBadgeLabel.style.fontSize = presentationMode ? 11 : 10;
-            _visibleAutomationBadgeLabel.style.color = badgeTextColor;
-        }
-
-        private void UpdateVisibleAutomationChecklistPanelGeometry(Rect overlayRect)
-        {
-            SetVisualElementRect(_visibleAutomationChecklistPanel, overlayRect.x, overlayRect.y, overlayRect.width, overlayRect.height);
-        }
-
-        private void UpdateVisibleAutomationChecklistPanelContent()
-        {
-            bool presentationMode = _visibleAutomationOverlayPresentationMode;
-            int totalItems = _visibleAutomationChecklistItems.Length;
-            int completedItems = CountChecklistItemsWithState(VisibleAutomationChecklistItemState.Completed);
-
-            _visibleAutomationChecklistPanel.style.backgroundColor = new Color(0.05f, 0.07f, 0.09f, 0.96f);
-            SetVisualElementBorder(_visibleAutomationChecklistPanel, new Color(0.14f, 0.39f, 0.43f, 0.96f));
-            _visibleAutomationChecklistAccent.style.backgroundColor = new Color(0.18f, 0.65f, 0.70f, 1f);
-
-            _visibleAutomationChecklistTitleLabel.text = "Visible Smoke Checklist";
-            _visibleAutomationChecklistTitleLabel.style.fontSize = presentationMode ? 14 : 12;
-            _visibleAutomationChecklistTitleLabel.style.color = Color.white;
-
-            _visibleAutomationChecklistMetaLabel.text = $"Completed {completedItems}/{totalItems} • Right-side execution checklist";
-            _visibleAutomationChecklistMetaLabel.style.fontSize = presentationMode ? 11 : 10;
-            _visibleAutomationChecklistMetaLabel.style.color = new Color(0.76f, 0.84f, 0.92f, 0.95f);
-
-            if (_visibleAutomationChecklistScrollView != null)
-                _visibleAutomationChecklistScrollView.style.marginTop = presentationMode ? 14f : 12f;
-
-            EnsureVisibleAutomationChecklistVisualCount(totalItems);
-            double now = EditorApplication.timeSinceStartup;
-            for (int i = 0; i < totalItems; i++)
-                UpdateVisibleAutomationChecklistItemVisual(_visibleAutomationChecklistItemVisuals[i], i, now, totalItems);
-        }
-
-        private void EnsureVisibleAutomationChecklistVisualCount(int totalItems)
-        {
-            if (_visibleAutomationChecklistItemsContainer == null)
-                return;
-
-            while (_visibleAutomationChecklistItemVisuals.Count > totalItems)
-            {
-                int lastIndex = _visibleAutomationChecklistItemVisuals.Count - 1;
-                _visibleAutomationChecklistItemVisuals[lastIndex].Root.RemoveFromHierarchy();
-                _visibleAutomationChecklistItemVisuals.RemoveAt(lastIndex);
-            }
-
-            while (_visibleAutomationChecklistItemVisuals.Count < totalItems)
-            {
-                int itemIndex = _visibleAutomationChecklistItemVisuals.Count;
-                var refs = CreateVisibleAutomationChecklistVisual();
-                _visibleAutomationChecklistItemsContainer.Add(refs.Root);
-                _visibleAutomationChecklistItemVisuals.Add(refs);
-            }
-        }
-
-        private VisibleAutomationChecklistVisualRefs CreateVisibleAutomationChecklistVisual()
-        {
-            var refs = new VisibleAutomationChecklistVisualRefs();
-
-            refs.Root = new VisualElement { pickingMode = PickingMode.Ignore };
-            refs.Root.style.flexDirection = FlexDirection.Row;
-            refs.Root.style.alignItems = Align.Stretch;
-            refs.Root.style.flexGrow = 1f;
-            refs.Root.style.minHeight = VisibleAutomationChecklistCompactItemHeight;
-            refs.Root.style.marginBottom = 6f;
-            refs.Root.style.overflow = Overflow.Hidden;
-
-            refs.Accent = new VisualElement { pickingMode = PickingMode.Ignore };
-            refs.Accent.style.width = 4f;
-            refs.Accent.style.flexShrink = 0f;
-            refs.Root.Add(refs.Accent);
-
-            var content = new VisualElement { pickingMode = PickingMode.Ignore };
-            content.style.flexDirection = FlexDirection.Column;
-            content.style.flexGrow = 1f;
-            content.style.paddingLeft = 10f;
-            content.style.paddingRight = 10f;
-            content.style.paddingTop = 8f;
-            content.style.paddingBottom = 6f;
-            refs.Root.Add(content);
-
-            var topRow = new VisualElement { pickingMode = PickingMode.Ignore };
-            topRow.style.flexDirection = FlexDirection.Row;
-            topRow.style.alignItems = Align.FlexStart;
-            topRow.style.flexGrow = 1f;
-            content.Add(topRow);
-
-            refs.Glyph = new Label { pickingMode = PickingMode.Ignore };
-            refs.Glyph.style.width = 24f;
-            refs.Glyph.style.minWidth = 24f;
-            refs.Glyph.style.marginRight = 6f;
-            refs.Glyph.style.unityFontStyleAndWeight = FontStyle.Bold;
-            refs.Glyph.style.unityTextAlign = TextAnchor.UpperCenter;
-            refs.Glyph.style.whiteSpace = WhiteSpace.NoWrap;
-            topRow.Add(refs.Glyph);
-
-            refs.Text = new Label { pickingMode = PickingMode.Ignore };
-            refs.Text.style.flexGrow = 1f;
-            refs.Text.style.whiteSpace = WhiteSpace.Normal;
-            refs.Text.style.unityTextAlign = TextAnchor.UpperLeft;
-            refs.Text.style.marginRight = 8f;
-            topRow.Add(refs.Text);
-
-            refs.Badge = new VisualElement { pickingMode = PickingMode.Ignore };
-            refs.Badge.style.minWidth = 60f;
-            refs.Badge.style.height = 20f;
-            refs.Badge.style.justifyContent = Justify.Center;
-            refs.Badge.style.alignItems = Align.Center;
-            refs.Badge.style.paddingLeft = 8f;
-            refs.Badge.style.paddingRight = 8f;
-            refs.Badge.style.flexShrink = 0f;
-            topRow.Add(refs.Badge);
-
-            refs.BadgeLabel = new Label { pickingMode = PickingMode.Ignore };
-            refs.BadgeLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
-            refs.BadgeLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
-            refs.BadgeLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            refs.Badge.Add(refs.BadgeLabel);
-
-            refs.StepLabel = new Label { pickingMode = PickingMode.Ignore };
-            refs.StepLabel.style.marginTop = 4f;
-            refs.StepLabel.style.whiteSpace = WhiteSpace.NoWrap;
-            refs.StepLabel.style.unityTextAlign = TextAnchor.LowerLeft;
-            content.Add(refs.StepLabel);
-
-            return refs;
-        }
-
-        private void UpdateVisibleAutomationChecklistItemVisual(VisibleAutomationChecklistVisualRefs refs, int itemIndex, double now, int totalItems)
-        {
-            string itemLabel = _visibleAutomationChecklistItems[itemIndex];
-            var itemState = _visibleAutomationChecklistStates[itemIndex];
-            double changedAt = itemIndex < _visibleAutomationChecklistStateChangedAt.Length
-                ? _visibleAutomationChecklistStateChangedAt[itemIndex]
-                : now;
-            double stateAgeSeconds = Mathf.Max(0f, (float)(now - changedAt));
-
-            GetVisibleAutomationChecklistItemPalette(
-                itemState,
-                stateAgeSeconds,
-                now,
-                _visibleAutomationOverlayPresentationMode,
-                out Color backgroundColor,
-                out Color borderColor,
-                out Color accentColor,
-                out Color textColor,
-                out Color badgeColor,
-                out Color badgeTextColor,
-                out Color glyphColor);
-
-            refs.Root.style.backgroundColor = backgroundColor;
-            SetVisualElementBorder(refs.Root, borderColor);
-            refs.Root.style.minHeight = _visibleAutomationOverlayPresentationMode ? 48f : VisibleAutomationChecklistCompactItemHeight;
-            refs.Root.style.marginBottom = itemIndex < totalItems - 1 ? 6f : 0f;
-            refs.Accent.style.backgroundColor = accentColor;
-            refs.Glyph.text = GetVisibleAutomationChecklistItemGlyph(itemState);
-            refs.Glyph.style.fontSize = _visibleAutomationOverlayPresentationMode ? 18 : 16;
-            refs.Glyph.style.color = glyphColor;
-
-            refs.Text.text = itemLabel;
-            refs.Text.style.fontSize = _visibleAutomationOverlayPresentationMode ? 13 : 12;
-            refs.Text.style.color = textColor;
-
-            refs.Badge.style.backgroundColor = badgeColor;
-            refs.BadgeLabel.text = GetVisibleAutomationChecklistItemStatusLabel(itemState);
-            refs.BadgeLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
-            refs.BadgeLabel.style.color = badgeTextColor;
-
-            refs.StepLabel.text = $"Step {itemIndex + 1}";
-            refs.StepLabel.style.fontSize = _visibleAutomationOverlayPresentationMode ? 10 : 9;
-            refs.StepLabel.style.color = new Color(0.72f, 0.78f, 0.86f, 0.92f);
-        }
-
-        private static void SetVisualElementRect(VisualElement element, float x, float y, float width, float height)
-        {
-            if (element == null)
-                return;
-
-            element.style.left = x;
-            element.style.top = y;
-            element.style.width = width;
-            element.style.height = height;
-        }
-
-        private static void SetVisualElementBorder(VisualElement element, Color color, float width = 1f)
-        {
-            if (element == null)
-                return;
-
-            element.style.borderLeftWidth = width;
-            element.style.borderRightWidth = width;
-            element.style.borderTopWidth = width;
-            element.style.borderBottomWidth = width;
-            element.style.borderLeftColor = color;
-            element.style.borderRightColor = color;
-            element.style.borderTopColor = color;
-            element.style.borderBottomColor = color;
-        }
 
         private bool TrySyncVisibleAutomationOverlayPopupWindows(bool hasStatusOverlay, bool hasChecklistOverlay)
         {
@@ -1229,13 +752,6 @@ namespace ASMLite.Editor
             _visibleAutomationCompletionReviewOverlayWindow = null;
         }
 
-        private Rect GetVisibleAutomationChecklistOverlayRect(float overlayMargin)
-        {
-            float x = Mathf.Clamp(position.width * 0.75f, overlayMargin + 220f, Mathf.Max(overlayMargin + 220f, position.width - 280f));
-            float width = Mathf.Max(220f, position.width - x - overlayMargin);
-            float height = Mathf.Max(220f, position.height - overlayMargin * 2f);
-            return new Rect(x, overlayMargin, width, height);
-        }
 
         private bool TryGetVisibleAutomationScreenOverlayRects(out Rect? statusRect, out Rect? checklistRect)
         {
@@ -1836,7 +1352,6 @@ namespace ASMLite.Editor
                 _visibleAutomationChecklistItems = Array.Empty<string>();
                 _visibleAutomationChecklistStates = Array.Empty<VisibleAutomationChecklistItemState>();
                 _visibleAutomationChecklistStateChangedAt = Array.Empty<double>();
-                EnsureVisibleAutomationChecklistVisualCount(0);
                 return;
             }
 
@@ -1868,8 +1383,6 @@ namespace ASMLite.Editor
             double now = EditorApplication.timeSinceStartup;
             for (int i = 0; i < sanitized.Length; i++)
                 _visibleAutomationChecklistStateChangedAt[i] = now;
-
-            EnsureVisibleAutomationChecklistVisualCount(sanitized.Length);
         }
 
         private void UpdateVisibleAutomationChecklistProgress(int stepIndex, VisibleAutomationOverlayState overlayState)
@@ -5854,20 +5367,6 @@ namespace ASMLite.Editor
             return ASMLiteWindowOperations.TryRefreshLiveInstallPathPrefix(component, contextLabel);
         }
 
-        private static bool TryRestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
-        {
-            return ASMLiteWindowOperations.TryRestoreAvatarGeneratedAssetsToPackageManaged(avatar, vendorizedDir);
-        }
-
-        private static bool TryDeleteVendorizedGeneratedAssetsFolder(string vendorizedDir)
-        {
-            return ASMLiteWindowOperations.TryDeleteVendorizedGeneratedAssetsFolder(vendorizedDir);
-        }
-
-        private static bool TryVendorizeGeneratedAssetsToAvatarFolder(VRCAvatarDescriptor avatar, out string vendorizedDir)
-        {
-            return ASMLiteWindowOperations.TryVendorizeGeneratedAssetsToAvatarFolder(avatar, out vendorizedDir);
-        }
 
         private static bool TryRetargetLiveFullControllerGeneratedAssets(ASMLiteComponent component, string generatedDir)
         {
@@ -6434,7 +5933,6 @@ namespace ASMLite.Editor
             _visibleAutomationCompletionReviewTitle = string.Empty;
             _visibleAutomationCompletionReviewMessage = string.Empty;
             _visibleAutomationUsingHostWindowFallbackBounds = false;
-            EnsureVisibleAutomationChecklistVisualCount(0);
             CloseVisibleAutomationOverlayPopupWindows();
             RefreshVisibleAutomationOverlayVisuals();
             Repaint();

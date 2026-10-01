@@ -107,17 +107,14 @@ namespace ASMLite.Editor
                     }
                     else
                     {
-                        int count = ASMLiteBuilder.Build(component);
-                        var buildDiagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
-                        if (count < 0 || buildDiagnostic == null || !buildDiagnostic.Success)
+                        var buildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component);
+                        if (!buildResult.Success)
                         {
-                            Debug.LogError(buildDiagnostic != null
-                                ? buildDiagnostic.ToLogString()
-                                : "[ASM-Lite] Generated asset build failed without a specific diagnostic.");
+                            Debug.LogError(buildResult.Diagnostic.ToLogString());
                         }
                         else
                         {
-                            discoveredParamCount = count;
+                            discoveredParamCount = buildResult.DiscoveredParamCount;
 
                             if (!shouldIsolateGeneratedOutputs)
                             {
@@ -1017,7 +1014,7 @@ namespace ASMLite.Editor
             VRCAvatarDescriptor avatar,
             ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot pendingSnapshot)
         {
-            var beforeState = ASMLiteWindow.GetAsmLiteToolState(avatar, null);
+            var beforeState = ASMLiteInstallationStateService.Resolve(avatar, null);
             if (avatar == null)
             {
                 return ASMLiteLifecycleTransactionResult.Fail(
@@ -1088,8 +1085,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: false,
                         rollbackSucceeded: false,
                         contextPath: ASMLiteAssetPaths.Prefab,
@@ -1100,7 +1097,7 @@ namespace ASMLite.Editor
                         cleanupSucceeded: true,
                         reattachAttempted: false,
                         reattachSucceeded: false,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 reattachAttempted = true;
@@ -1115,8 +1112,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -1127,7 +1124,7 @@ namespace ASMLite.Editor
                         cleanupSucceeded: true,
                         reattachAttempted: true,
                         reattachSucceeded: false,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 bool resolvedDetachedInstallPath = ASMLiteMigrationContinuityService.TryResolveInstallPathPrefixFromMoveMenu(
@@ -1177,8 +1174,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -1191,7 +1188,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 EditorUtility.SetDirty(component);
@@ -1207,8 +1204,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: refreshResult.ContextPath,
@@ -1222,7 +1219,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 if (!TryRefreshLiveInstallPathRouting(component, "Detached Return Recovery Routing", out string routingFailure))
@@ -1233,8 +1230,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: avatar.gameObject.name,
@@ -1247,7 +1244,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 var recoveryBuildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component);
@@ -1260,8 +1257,8 @@ namespace ASMLite.Editor
                         operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                         failedStage: ASMLiteLifecycleTransactionStage.Execute,
                         beforeState: beforeState,
-                        afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: string.IsNullOrWhiteSpace(recoveryBuildResult.ContextPath) ? ASMLiteAssetPaths.GeneratedDir : recoveryBuildResult.ContextPath,
@@ -1275,7 +1272,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 if (!adoption.Adopted && packageManagedSnapshot.UseCustomInstallPath)
@@ -1289,8 +1286,8 @@ namespace ASMLite.Editor
                             operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                             failedStage: ASMLiteLifecycleTransactionStage.Verify,
                             beforeState: beforeState,
-                            afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                            rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                            afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                            rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                             rollbackAttempted: true,
                             rollbackSucceeded: true,
                             contextPath: avatar.gameObject.name,
@@ -1303,7 +1300,7 @@ namespace ASMLite.Editor
                             reattachSucceeded: false,
                             installPathAdoptionAttempted: installPathAdoptionAttempted,
                             installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                            recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                            recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                     }
                 }
 
@@ -1319,7 +1316,7 @@ namespace ASMLite.Editor
                         failedStage: ASMLiteLifecycleTransactionStage.Verify,
                         beforeState: beforeState,
                         afterState: ASMLiteInstallationState.PackageManaged,
-                        rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                        rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                         rollbackAttempted: true,
                         rollbackSucceeded: true,
                         contextPath: ShouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.DuringDetachedRecoveryVerify)
@@ -1338,7 +1335,7 @@ namespace ASMLite.Editor
                         reattachSucceeded: false,
                         installPathAdoptionAttempted: installPathAdoptionAttempted,
                         installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                        recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                        recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
                 }
 
                 if (pendingLegacyMoveMenuHelpers > 0)
@@ -1378,8 +1375,8 @@ namespace ASMLite.Editor
                     operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
                     failedStage: ASMLiteLifecycleTransactionStage.Execute,
                     beforeState: beforeState,
-                    afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
-                    rollbackState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                    afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
+                    rollbackState: ASMLiteInstallationStateService.Resolve(avatar, null),
                     rollbackAttempted: reattachAttempted,
                     rollbackSucceeded: true,
                     contextPath: ex.GetType().Name,
@@ -1392,7 +1389,7 @@ namespace ASMLite.Editor
                     reattachSucceeded: false,
                     installPathAdoptionAttempted: installPathAdoptionAttempted,
                     installPathAdoptionSucceeded: installPathAdoptionSucceeded,
-                    recoveredState: ASMLiteWindow.GetAsmLiteToolState(avatar, null));
+                    recoveredState: ASMLiteInstallationStateService.Resolve(avatar, null));
             }
         }
 
@@ -1584,7 +1581,7 @@ namespace ASMLite.Editor
                 operation: ASMLiteLifecycleOperation.DetachToDirectDelivery,
                 failedStage: failedStage,
                 beforeState: beforeState,
-                afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
                 rollbackState: rollbackState,
                 rollbackAttempted: rollbackAttempted,
                 rollbackSucceeded: rollbackSucceeded,
@@ -1652,7 +1649,7 @@ namespace ASMLite.Editor
                 operation: ASMLiteLifecycleOperation.VendorizeAndDetach,
                 failedStage: failedStage,
                 beforeState: beforeState,
-                afterState: ASMLiteWindow.GetAsmLiteToolState(avatar, null),
+                afterState: ASMLiteInstallationStateService.Resolve(avatar, null),
                 rollbackState: rollbackState,
                 rollbackAttempted: rollbackAttempted,
                 rollbackSucceeded: rollbackSucceeded,
@@ -1758,7 +1755,7 @@ namespace ASMLite.Editor
 
         private static ASMLiteInstallationState ResolveToolState(VRCAvatarDescriptor avatar, ASMLiteComponent component)
         {
-            return ASMLiteWindow.GetAsmLiteToolState(avatar, component);
+            return ASMLiteInstallationStateService.Resolve(avatar, component);
         }
 
         private static ASMLiteLifecycleTransactionStage MapMirrorStage(ASMLiteGeneratedAssetMirrorStage mirrorStage)

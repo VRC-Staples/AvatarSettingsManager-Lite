@@ -87,6 +87,48 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
         }
 
+        [TestCase("parameters")]
+        [TestCase("menu")]
+        [TestCase("none")]
+        public void DirectDeliveryVerification_NullLayers_StillRequiresRuntimeMarkers(string markerSource)
+        {
+            _ctx.AvDesc.baseAnimationLayers = null;
+            if (markerSource == "parameters")
+            {
+                ASMLiteTestFixtures.AddExpressionParam(_ctx, ASMLiteBuilder.CtrlParam,
+                    VRCExpressionParameters.ValueType.Int);
+            }
+            else if (markerSource == "menu")
+            {
+                _ctx.MenuAsset.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = ASMLiteBuilder.DefaultRootControlName,
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                });
+            }
+
+            bool expectedMarkers = markerSource != "none";
+            Assert.AreEqual(expectedMarkers, ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(_ctx.AvDesc));
+            Assert.AreEqual(expectedMarkers ? ASMLiteInstallationState.Detached : ASMLiteInstallationState.NotInstalled,
+                ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null));
+
+            bool verified = ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                _ctx.AvDesc, ASMLiteInstallationState.Detached, string.Empty,
+                out string failureMessage, out string failureContext);
+
+            Assert.AreEqual(expectedMarkers, verified);
+            if (expectedMarkers)
+            {
+                Assert.IsEmpty(failureMessage);
+                Assert.IsEmpty(failureContext);
+            }
+            else
+            {
+                StringAssert.Contains("runtime markers", failureMessage);
+                Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
+            }
+        }
+
         [Test]
         public void GeneratedAssetBuildTransaction_ReportsBuilderDiagnosticsWithoutThrowing()
         {

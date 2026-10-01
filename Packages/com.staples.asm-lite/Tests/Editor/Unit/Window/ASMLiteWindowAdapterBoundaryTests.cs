@@ -63,6 +63,23 @@ namespace ASMLite.Tests.Editor
                 "Attached component customization should refresh the owned draft through the draft seam.");
         }
 
+        [TestCase("Editor/ASMLiteLifecycleTransactionService.cs")]
+        [TestCase("Editor/ASMLiteLifecycleVerification.cs")]
+        public void LifecycleBackend_ResolvesInstallationEvidenceWithoutWindowDetour(string sourcePath)
+        {
+            string source = ReadPackageSource(sourcePath);
+
+            Assert.That(source, Does.Not.Contain("ASMLiteWindow.GetAsmLiteToolState"),
+                "Backend installation classification must not route through the editor window.");
+            Assert.That(source, Does.Contain("ASMLiteInstallationStateService.Resolve"));
+            if (sourcePath == "Editor/ASMLiteLifecycleVerification.cs")
+            {
+                Assert.That(source, Does.Contain("ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers"));
+                Assert.That(source, Does.Not.Contain("private static bool HasAsmLiteRuntimeMarkers"),
+                    "Direct-delivery verification must reuse the installation-state owner's marker predicate.");
+            }
+        }
+
         private static string ReadPackageSource(string packageRelativePath)
         {
             string packagePath = Path.GetFullPath(Path.Combine(

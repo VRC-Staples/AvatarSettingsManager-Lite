@@ -393,25 +393,9 @@ namespace ASMLite.Editor
             return resized;
         }
 
-        private static Texture2D[] CloneTextures(Texture2D[] source)
-        {
-            if (source == null || source.Length == 0)
-                return Array.Empty<Texture2D>();
+        private static Texture2D[] CloneTextures(Texture2D[] source) => source?.ToArray() ?? Array.Empty<Texture2D>();
 
-            var clone = new Texture2D[source.Length];
-            Array.Copy(source, clone, source.Length);
-            return clone;
-        }
-
-        private static string[] CloneStrings(string[] source)
-        {
-            if (source == null || source.Length == 0)
-                return Array.Empty<string>();
-
-            var clone = new string[source.Length];
-            Array.Copy(source, clone, source.Length);
-            return clone;
-        }
+        private static string[] CloneStrings(string[] source) => source?.ToArray() ?? Array.Empty<string>();
 
         private static string NormalizeOptionalString(string value)
         {
@@ -498,20 +482,7 @@ namespace ASMLite.Editor
             return true;
         }
 
-        private static bool StringArraysEqual(string[] left, string[] right)
-        {
-            left = left ?? Array.Empty<string>();
-            right = right ?? Array.Empty<string>();
-            if (left.Length != right.Length)
-                return false;
-
-            for (int index = 0; index < left.Length; index++)
-            {
-                if (!string.Equals(left[index], right[index], StringComparison.Ordinal))
-                    return false;
-            }
-
-            return true;
-        }
+        private static bool StringArraysEqual(string[] left, string[] right) =>
+            (left ?? Array.Empty<string>()).SequenceEqual(right ?? Array.Empty<string>(), StringComparer.Ordinal);
     }
 }

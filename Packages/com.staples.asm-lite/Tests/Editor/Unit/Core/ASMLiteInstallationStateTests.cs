@@ -98,6 +98,34 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void Resolve_VendorizedReferencesWithoutRuntimeMarkers_DoesNotVerifyDirectDelivery()
+        {
+            Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+            _ctx.AvDesc.baseAnimationLayers = null;
+
+            EnsureAssetFolder("Assets", "ASM-Lite");
+            EnsureAssetFolder("Assets/ASM-Lite", "StateTests");
+            var vendorizedParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
+            vendorizedParams.parameters = new VRCExpressionParameters.Parameter[0];
+            AssetDatabase.CreateAsset(vendorizedParams, "Assets/ASM-Lite/StateTests/TestParams.asset");
+            _ctx.AvDesc.expressionParameters = vendorizedParams;
+
+            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Vendorized,
+                ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null));
+            Assert.IsFalse(ASMLite.Editor.ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(_ctx.AvDesc));
+
+            bool verified = ASMLite.Editor.ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                _ctx.AvDesc, ASMLite.Editor.ASMLiteInstallationState.Vendorized,
+                "Assets/ASM-Lite/StateTests", out string failureMessage, out string failureContext);
+
+            Assert.IsFalse(verified,
+                "Vendorized classification alone must not prove that direct delivery installed runtime markers.");
+            StringAssert.Contains("runtime markers", failureMessage);
+            Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
+        }
+
+        [Test]
         public void Resolve_AvatarSelectedNotInstalled_RemainsExplicit()
         {
             Object.DestroyImmediate(_ctx.Comp.gameObject);
