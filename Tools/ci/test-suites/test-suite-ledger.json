@@ -4076,10 +4076,282 @@
       "notes": "Intentional default-CI exclusion: runner self-tests would exercise the batch runner that invokes them."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "Guard_DestroyedCapturedAvatar_DoesNotBecomeUnguarded",
+      "line": 166,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Guard Destroyed Captured Avatar Does Not Become Unguarded",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.Guard_DestroyedCapturedAvatar_DoesNotBecomeUnguarded",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "Guard_NestedCapture_KeepsOuterEligibilityAndDoesNotGuardUnrelatedAvatar",
+      "line": 111,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Guard Nested Capture Keeps Outer Eligibility And Does Not Guard Unrelated Avatar",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.Guard_NestedCapture_KeepsOuterEligibilityAndDoesNotGuardUnrelatedAvatar",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "Guard_UnreadableProcessedSchema_RejectsWithActionableDiagnostic",
+      "line": 157,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Guard Unreadable Processed Schema Rejects With Actionable Diagnostic",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.Guard_UnreadableProcessedSchema_RejectsWithActionableDiagnostic",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "LateCallbackPolicy_RequiresReviewedPackageVersionAndType",
+      "line": 60,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "TestCase(\"com.vrcfury.vrcfury\", \"1.1334.0\", \"VF.Hooks.PreProcessingFailureCheckHook+FailureCheckEnd\", true)",
+        "TestCase(\"com.vrcfury.vrcfury\", \"1.1430.0\", \"VF.Hooks.PreProcessingFailureCheckHook+FailureCheckEnd\", true)",
+        "TestCase(\"com.vrcfury.vrcfury\", \"1.1431.0\", \"VF.Hooks.PreProcessingFailureCheckHook+FailureCheckEnd\", false)",
+        "TestCase(\"com.vrcfury.vrcfury\", \"1.1430.0\", \"VF.Hooks.VrcsdkFixes.PlayModeContactFixHook+PlayerBuilt\", false)",
+        "TestCase(\"nadena.dev.ndmf\", \"1.14.8\", \"nadena.dev.ndmf.VRChat.ForceReinitVRCConstraintsHook\", true)",
+        "TestCase(\"nadena.dev.ndmf\", \"1.14.8\", \"nadena.dev.ndmf.VRChat.ForceReinitPhysBonesHook\", true)",
+        "TestCase(\"nadena.dev.ndmf\", \"1.14.9\", \"nadena.dev.ndmf.VRChat.ForceReinitPhysBonesHook\", false)",
+        "TestCase(\"nadena.dev.modular-avatar\", \"1.18.7\", \"nadena.dev.modular_avatar.core.editor.ReplacementRemoveIEditorOnly\", true)",
+        "TestCase(\"nadena.dev.modular-avatar\", \"1.18.8\", \"nadena.dev.modular_avatar.core.editor.ReplacementRemoveIEditorOnly\", false)",
+        "TestCase(\"unreviewed.package\", \"1.1430.0\", \"VF.Hooks.PreProcessingFailureCheckHook+FailureCheckEnd\", false)",
+        "TestCase(\"com.vrcfury.vrcfury\", \"1.1430.0\", \"UnknownLateProcessor\", false)",
+        "TestCase(null, null, \"VF.Hooks.PreProcessingFailureCheckHook+FailureCheckEnd\", false)"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "reviewed-callback-policy-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Late Callback Policy Requires Reviewed Package Version And Type",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "shared fixture creates test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase for shared fixture; policy assertion is an exact-version/type string check",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.LateCallbackPolicy_RequiresReviewedPackageVersionAndType",
+      "notes": "Policy allowlist coverage only; does not prove the reviewed callbacks remain non-schema writers. Graphics fixture remains excluded from default headless integration."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "SdkPreprocess_AttachedOrVendorizedAvatar_RejectsLateOverflow",
+      "line": 75,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "TestCase(false)",
+        "TestCase(true)"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Sdk Preprocess Attached Or Vendorized Avatar Rejects Late Overflow",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.SdkPreprocess_AttachedOrVendorizedAvatar_RejectsLateOverflow",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "SdkPreprocess_BakedOnlyAvatar_RejectsParametersAddedAfterCompression",
+      "line": 66,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Sdk Preprocess Baked Only Avatar Rejects Parameters Added After Compression",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.SdkPreprocess_BakedOnlyAvatar_RejectsParametersAddedAfterCompression",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "SdkPreprocess_GuardedAvatarWithinBudget_AcceptsReviewedLateCallbacks",
+      "line": 40,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Sdk Preprocess Guarded Avatar Within Budget Accepts Reviewed Late Callbacks",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native compatibility project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.SdkPreprocess_GuardedAvatarWithinBudget_AcceptsReviewedLateCallbacks",
+      "notes": "Graphics-enabled SDK preprocessing checks acceptance as well as overflow rejection. Verified on CI and installed KikiASM dependency versions; no upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteParameterBudgetPipelineTests.cs",
+      "class": "ASMLiteParameterBudgetPipelineTests",
+      "method": "SdkPreprocess_UnrelatedOrAmbiguousAvatar_IsNotHardBlocked",
+      "line": 99,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "TestCase(false)",
+        "TestCase(true)"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "processed-sdk-count-coverage",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Sdk Preprocess Unrelated Or Ambiguous Avatar Is Not Hard Blocked",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteParameterBudgetPipelineTests.SdkPreprocess_UnrelatedOrAmbiguousAvatar_IsNotHardBlocked",
+      "notes": "Graphics-enabled SDK preprocessing; excluded from default headless integration. No upload acceptance claim."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
+      "class": "ASMLiteVRCFuryPipelineTests",
+      "method": "BudgetProjection_PlannedToggleAndPendingSettings_MatchGeneratedContribution",
+      "line": 88,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Category(\"Integration\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless",
+        "Integration"
+      ],
+      "lane": "integration-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Budget Projection Planned Toggle And Pending Settings Match Generated Contribution",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteVRCFuryPipelineTests.BudgetProjection_PlannedToggleAndPendingSettings_MatchGeneratedContribution",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces",
-      "line": 306,
+      "line": 325,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4108,7 +4380,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_AssignedVrcFuryToggleGlobal_IsBackedUpBeforeVrcFuryBake",
-      "line": 535,
+      "line": 554,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4137,7 +4409,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy",
-      "line": 806,
+      "line": 825,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4166,7 +4438,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_BrokerDeterministicNames_AreConsumedAsOpaqueSourceParams",
-      "line": 492,
+      "line": 511,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4195,7 +4467,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_DeterministicRebuild_PreservesMappedLegacyBackupAliasesForLoadContinuity",
-      "line": 858,
+      "line": 877,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4224,7 +4496,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_DuplicateDescriptorParams_DoNotDuplicateGeneratedKeysOrBreakBuild",
-      "line": 444,
+      "line": 463,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4253,7 +4525,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_FullControllerGlobalParam_IsBackedUpBeforeVrcFuryBake",
-      "line": 677,
+      "line": 696,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4282,7 +4554,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_FullControllerPrmsParam_IsPlannedAndPreprocessPromotedBeforeVrcFuryBake",
-      "line": 734,
+      "line": 753,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4311,7 +4583,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_StaleFirstUploadSchemaLag_FirstRebuildUsesCurrentDescriptorParamSet",
-      "line": 353,
+      "line": 372,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4340,7 +4612,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_SurfaceVrcFuryToggle_PlannedGlobal_IsGeneratedAndPreprocessEnrolled",
-      "line": 580,
+      "line": 599,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4369,7 +4641,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_SurfaceVrcFuryToggle_PreprocessUsesBuildPlannedNameWhenAvatarRootRenamed",
-      "line": 640,
+      "line": 659,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4398,7 +4670,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPipelineTests.cs",
       "class": "ASMLiteVRCFuryPipelineTests",
       "method": "Regression_VFPickupDrift_OpaqueVFNamesRemainUnrenamedInGeneratedAssets",
-      "line": 402,
+      "line": 421,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4422,6 +4694,168 @@
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase generated assets with package GeneratedAssets restore, temp VRCFury descriptor cleanup, and read-only prefab fixture assertions",
       "runnerFilter": "ASMLiteVRCFuryPipelineTests.Regression_VFPickupDrift_OpaqueVFNamesRemainUnrenamedInGeneratedAssets",
       "notes": "Fixture isolation audited; class now qualifies as headless yes with per-test cleanup/restoration documented in the audit."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "ClearingLegacyPrefix_PreservesOtherReferencesWithoutPrefabFeatureOverrides",
+      "line": 160,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Clearing Legacy Prefix Preserves Other References Without Prefab Feature Overrides",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.ClearingLegacyPrefix_PreservesOtherReferencesWithoutPrefabFeatureOverrides",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "ExistingFeatureOverrides_MigrationPreservesSettingsAndOtherComponents",
+      "line": 90,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Existing Feature Overrides Migration Preserves Settings And Other Components",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.ExistingFeatureOverrides_MigrationPreservesSettingsAndOtherComponents",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "InstanceOwnedMigration_UndoAndRedoPreserveSingleFeatureComponent",
+      "line": 176,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Instance Owned Migration Undo And Redo Preserve Single Feature Component",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.InstanceOwnedMigration_UndoAndRedoPreserveSingleFeatureComponent",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "MissingRetargetAssets_LeavesInheritedComponentUntouched",
+      "line": 129,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Missing Retarget Assets Leaves Inherited Component Untouched",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.MissingRetargetAssets_LeavesInheritedComponentUntouched",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "RetargetLinkedPrefab_PreservesLocalWiringThroughFixerAndPrefabReload",
+      "line": 58,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Retarget Linked Prefab Preserves Local Wiring Through Fixer And Prefab Reload",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; test-owned prefab save/reload; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.RetargetLinkedPrefab_PreservesLocalWiringThroughFixerAndPrefabReload",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/VRCFury/ASMLiteVRCFuryPrefabOverrideTests.cs",
+      "class": "ASMLiteVRCFuryPrefabOverrideTests",
+      "method": "UnreadablePrefix_FailedEditPreservesInheritedFeatureData",
+      "line": 143,
+      "attributes": [
+        "TestFixture",
+        "Category(\"GraphicsRequired\")",
+        "Test"
+      ],
+      "categories": [
+        "GraphicsRequired"
+      ],
+      "lane": "visible-manual",
+      "headlessViability": "no",
+      "honesty": "installed-vrcfury-prefab-wiring-regression",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "Unreadable Prefix Failed Edit Preserves Inherited Feature Data",
+      "fixtureDependencies": [
+        "ASM-Lite package prefab",
+        "installed VRCFury prefab fixer"
+      ],
+      "assetSceneMutations": "test-owned instance and temporary generated assets; original package prefab byte-check",
+      "externalProcessFilesystemEnvUsage": "Unity asset imports and test-owned filesystem paths; no network or external process",
+      "runnerFilter": "ASMLiteVRCFuryPrefabOverrideTests.UnreadablePrefix_FailedEditPreservesInheritedFeatureData",
+      "notes": "Isolated graphics-enabled EditMode verification, not headless certification, upload acceptance or VRChat client behavior."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Smoke/OverlayHost/ASMLiteSmokeOverlayHostTests.cs",
@@ -11693,6 +12127,414 @@
       "notes": "Selected by default CI through the core-headless class filter."
     },
     {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "DetachedRecovery_OverBudget_RejectsBeforeCleanupOrReattachment",
+      "line": 89,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Detached Recovery Over Budget Rejects Before Cleanup Or Reattachment",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.DetachedRecovery_OverBudget_RejectsBeforeCleanupOrReattachment",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "DirectBuild_OverBudgetOriginalsWithAllBackupsExcluded_RejectsBeforeWriting",
+      "line": 37,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Direct Build Over Budget Originals With All Backups Excluded Rejects Before Writing",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.DirectBuild_OverBudgetOriginalsWithAllBackupsExcluded_RejectsBeforeWriting",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "LifecycleRebuild_OverBudget_RejectsBeforePreparation",
+      "line": 270,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Lifecycle Rebuild Over Budget Rejects Before Preparation",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.LifecycleRebuild_OverBudget_RejectsBeforePreparation",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "PendingPreview_WithoutComponent_IsReadOnlyAndUsesProposedSettings",
+      "line": 225,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Pending Preview Without Component Is Read Only And Uses Proposed Settings",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.PendingPreview_WithoutComponent_IsReadOnlyAndUsesProposedSettings",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "ProcessedCount_MixedTypesAndSyncFlags_CountEntriesNotBits",
+      "line": 194,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(8191, true)",
+        "TestCase(8192, true)",
+        "TestCase(8193, false)"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Processed Count Mixed Types And Sync Flags Count Entries Not Bits",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.ProcessedCount_MixedTypesAndSyncFlags_CountEntriesNotBits",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Projection_RepeatedBuildAndRetainedOlderSlots_MatchGeneratedSchema",
+      "line": 207,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Projection Repeated Build And Retained Older Slots Match Generated Schema",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Projection_RepeatedBuildAndRetainedOlderSlots_MatchGeneratedSchema",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Projection_RetainsUnmatchedLegacyBackupButRejectsTypeConflicts",
+      "line": 315,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Projection Retains Unmatched Legacy Backup But Rejects Type Conflicts",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Projection_RetainsUnmatchedLegacyBackupButRejectsTypeConflicts",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "UncertainPreview_AboveLimit_DoesNotDisableGeneration",
+      "line": 244,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(false)",
+        "TestCase(true)"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Uncertain Preview Above Limit Does Not Disable Generation",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.UncertainPreview_AboveLimit_DoesNotDisableGeneration",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "UnreadableSource_DisablesGenerationInsteadOfReportingGreenZero",
+      "line": 259,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Unreadable Source Disables Generation Instead Of Reporting Green Zero",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.UnreadableSource_DisablesGenerationInsteadOfReportingGreenZero",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "VendorizedProjection_ExclusionsMatchRegeneratedMirror",
+      "line": 292,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Vendorized Projection Exclusions Match Regenerated Mirror",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.VendorizedProjection_ExclusionsMatchRegeneratedMirror",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Window_AddAutomation_RejectsBeforePrefabCreation",
+      "line": 353,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Window Add Automation Rejects Before Prefab Creation",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Window_AddAutomation_RejectsBeforePrefabCreation",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Window_DisplayBudget_InspectorUndoAndAvatarSwitchRefresh",
+      "line": 164,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "UnityTest"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "display-cache-invalidation-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Window Display Budget Inspector Undo And Avatar Switch Refresh",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, native property-change notifications and Undo on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Window_DisplayBudget_InspectorUndoAndAvatarSwitchRefresh",
+      "notes": "Verifies display-cache invalidation, not interactive window profiling or upload safety."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Window_DisplayBudget_ReusesEstimateButKeepsValidationFresh",
+      "line": 126,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "display-cache-reuse-and-fresh-validation-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Window Display Budget Reuses Estimate But Keeps Validation Fresh",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor window state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Window_DisplayBudget_ReusesEstimateButKeepsValidationFresh",
+      "notes": "Verifies cached display reuse with fresh safety checks and changed inputs; not live KikiASM profiling."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Window_OverBudget_DisablesRebuildButLeavesRemoveAvailable",
+      "line": 60,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Window Over Budget Disables Rebuild But Leaves Remove Available",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Window_OverBudget_DisablesRebuildButLeavesRemoveAvailable",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterBudgetTests.cs",
+      "class": "ASMLiteParameterBudgetTests",
+      "method": "Window_ReducingBackups_ReenablesRebuildWithoutRemovingOriginals",
+      "line": 334,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "Test"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "parameter-schema-and-preflight-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Window Reducing Backups Reenables Rebuild Without Removing Originals",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase and editor action/Undo state on test-owned fixtures",
+      "runnerFilter": "ASMLiteParameterBudgetTests.Window_ReducingBackups_ReenablesRebuildWithoutRemovingOriginals",
+      "notes": "Focused verification is recorded separately in ignored local implementation notes."
+    },
+    {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteParameterDiscoveryTests.cs",
       "class": "ASMLiteParameterDiscoveryTests",
       "method": "GetFinalAvatarParams_ExclusionsDisabled_IgnoresSerializedNames",
@@ -15132,6 +15974,64 @@
       "externalProcessFilesystemEnvUsage": "Unity PlayMode runtime state plus generated test assets under Assets/ASMLiteTests_Temp",
       "runnerFilter": "ASMLiteAv3SaveLoadRuntimeTests.Av3SaveLoadSlot2Untouched_ResetsVrcFurySurfaceToggleAndFullControllerParam",
       "notes": "Dedicated PlayMode AV3 save/load regression for VRCFury-backed params; excluded from default headless CI until runner policy and fixture requirements are settled."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteFirstBuildPlayModeTests.cs",
+      "class": "ASMLiteFirstBuildPlayModeTests",
+      "method": "FirstPlayModeBuild_ParameterBudget_RejectsLateAdditions",
+      "line": 154,
+      "attributes": [
+        "TestFixture",
+        "Category(\"PlayMode\")",
+        "TestCase(false)",
+        "TestCase(true)"
+      ],
+      "categories": [
+        "PlayMode"
+      ],
+      "lane": "playmode-headless-review",
+      "headlessViability": "no",
+      "honesty": "first-upload-proxy",
+      "recommendation": "explicit-local-graphics",
+      "publicBehaviorClaim": "First Play Mode Build Parameter Budget Rejects Late Additions",
+      "fixtureDependencies": [
+        "synthetic avatar descriptor",
+        "generated-asset snapshot",
+        "pinned SDK callback pipeline",
+        "VRCFury"
+      ],
+      "assetSceneMutations": "test-owned avatar/assets; generated package outputs captured and restored",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, SDK callbacks, and isolated native CI project",
+      "runnerFilter": "ASMLiteFirstBuildPlayModeTests.FirstPlayModeBuild_ParameterBudget_RejectsLateAdditions",
+      "notes": "Graphics-enabled first-pass SDK proxy, not actual upload acceptance."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/PlayMode/Runtime/ASMLiteFirstBuildPlayModeTests.cs",
+      "class": "ASMLiteFirstBuildPlayModeTests",
+      "method": "FirstPlayModeBuild_PreservesCustomIcons_AndRunsSaveLoadClearWithoutASecondBuild",
+      "line": 48,
+      "attributes": [
+        "TestFixture",
+        "Category(\"PlayMode\")",
+        "UnityTest"
+      ],
+      "categories": [
+        "PlayMode"
+      ],
+      "lane": "playmode-headless-review",
+      "headlessViability": "no-requires-graphics-device",
+      "honesty": "first-sdk-preprocess-playmode-proxy-not-upload",
+      "recommendation": "separate-local-graphics-playmode-lane",
+      "publicBehaviorClaim": "The first SDK-preprocessed synthetic avatar retains custom icon content and the late parameter backup schema, then executes slot 1 Save/Load/Clear without a second build.",
+      "fixtureDependencies": [
+        "synthetic PlayMode avatar and six persistent custom icon textures",
+        "real SDK preprocessing callbacks and VRCFury FullController merge",
+        "AV3 emulator runtime and graphics-enabled Unity editor"
+      ],
+      "assetSceneMutations": "isolated test source/clone, generated package asset snapshot/restore, fixture teardown",
+      "externalProcessFilesystemEnvUsage": "Unity AssetDatabase, VRCFury temporary build assets, post-preprocess editor callbacks, and AV3 PlayMode runtime; no upload or VRChat client",
+      "runnerFilter": "ASMLiteFirstBuildPlayModeTests.FirstPlayModeBuild_PreservesCustomIcons_AndRunsSaveLoadClearWithoutASecondBuild",
+      "notes": "One authoring rebuild followed by a late schema change and exactly one SDK preprocessing call. Checks merged descriptor icons by pixel content, allowing VRCFury compression. Actual upload/in-game checks are manual UAT; see Tools/ci/docs/first-build-playmode.md. Excluded from existing -nographics CI filter."
     }
   ]
 }

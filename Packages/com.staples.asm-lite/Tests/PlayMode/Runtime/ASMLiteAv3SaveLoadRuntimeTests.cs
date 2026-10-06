@@ -139,6 +139,56 @@ namespace ASMLite.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BoolCopy_OverwritesOppositeDestination_InBothDirections()
+        {
+            var resolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();
+            if (!resolution.IsAvailable)
+                Assert.Inconclusive(resolution.Diagnostic);
+
+            const string synced = "ASMTest_BoolSyncedSaved";
+            const string local = "ASMTest_BoolLocalUnsaved";
+            string[] sources = { synced, local };
+            string[] backups = { "ASMLite_Bak_S1_" + synced, "ASMLite_Bak_S1_" + local };
+            BuildAndWireExactAvatarFixture(1,
+                new VRCExpressionParameters.Parameter
+                {
+                    name = synced, valueType = VRCExpressionParameters.ValueType.Bool,
+                    saved = true, networkSynced = true,
+                },
+                new VRCExpressionParameters.Parameter
+                {
+                    name = local, valueType = VRCExpressionParameters.ValueType.Bool,
+                    saved = false, networkSynced = false,
+                });
+            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
+            ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
+            yield return EnterPlayModeIfNeeded();
+
+            var avatar = GameObject.Find(TestAvatarName);
+            Assert.IsNotNull(avatar);
+            object runtime = null;
+            yield return WaitForRuntimeWithBoolParameters(avatar, sources.Concat(backups).ToArray(), resolved => runtime = resolved);
+
+            foreach (bool sourceValue in new[] { true, false })
+            {
+                for (int i = 0; i < sources.Length; i++)
+                {
+                    WriteBool(runtime, sources[i], sourceValue, "seed-save-source");
+                    WriteBool(runtime, backups[i], !sourceValue, "seed-save-destination");
+                }
+                TriggerControl(runtime, 1, "save");
+                yield return WaitForControlIdleAndBoolValues(runtime, "save-settle", backups,
+                    new[] { sourceValue, sourceValue });
+
+                for (int i = 0; i < sources.Length; i++)
+                    WriteBool(runtime, sources[i], !sourceValue, "seed-load-destination");
+                TriggerControl(runtime, 2, "load");
+                yield return WaitForControlIdleAndBoolValues(runtime, "load-settle", sources,
+                    new[] { sourceValue, sourceValue });
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Av3SaveLoadSlot1_RestoresSavedAndPreservesUnsavedParameters_ForSeed([ValueSource(nameof(SaveLoadSeedCases))] ASMLiteAv3SaveLoadSeedCase seedCase)
         {
             var runtimeResolution = ASMLiteAv3RuntimeBridge.ResolveRuntimeType();

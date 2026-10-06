@@ -282,34 +282,31 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void ResetDriver_HasCorrectCopyEntries()
+        public void ResetDriver_SetsConfiguredTypedDefaultsOncePerDestination()
         {
             _ctx.Comp.slotCount = 1;
-            AddParam(_ctx, "MyBool", VRCExpressionParameters.ValueType.Bool);
-            ASMLiteBuilder.Build(_ctx.Comp);
+            AddParam(_ctx, "FalseBool", VRCExpressionParameters.ValueType.Bool, 0f);
+            AddParam(_ctx, "TrueBool", VRCExpressionParameters.ValueType.Bool, -2f);
+            AddParam(_ctx, "MyInt", VRCExpressionParameters.ValueType.Int, 7.75f);
+            AddParam(_ctx, "MyFloat", VRCExpressionParameters.ValueType.Float, 0.375f);
+            Assert.AreEqual(4, ASMLiteBuilder.Build(_ctx.Comp));
 
-            var genCtrl    = LoadGeneratedController("ResetDriver_HasCorrectCopyEntries");
-            var sm         = GetLayerSM(genCtrl, "ASMLite_Slot1");
-            var resetState = FindState(sm, "ResetSlot1");
-            var driver     = resetState.behaviours.OfType<VRC_AvatarParameterDriver>().SingleOrDefault();
-
-            Assert.IsNotNull(driver, "ResetSlot1 must have a VRCAvatarParameterDriver.");
-
-            var copyEntries = driver.parameters
-                .Where(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy)
-                .ToList();
-
-            Assert.AreEqual(2, copyEntries.Count,
-                "Reset driver should have 2 Copy entries for 1 avatar param: one for the saved backup and one for the live avatar param.");
-
+            var genCtrl = LoadGeneratedController(nameof(ResetDriver_SetsConfiguredTypedDefaultsOncePerDestination));
+            var driver = LoadSlotDriver(genCtrl, 1, "ResetSlot1");
+            Assert.IsTrue(driver.localOnly);
+            Assert.AreEqual(9, driver.parameters.Count, "Four settings need two destinations each, then control reset.");
+            Assert.IsTrue(driver.parameters.All(entry => entry.type == VRC_AvatarParameterDriver.ChangeType.Set));
             CollectionAssert.AreEquivalent(
                 new[]
                 {
-                    (source: "ASMLite_Def_MyBool", destination: "ASMLite_Bak_S1_MyBool"),
-                    (source: "ASMLite_Def_MyBool", destination: "MyBool"),
+                    ("FalseBool", 0f), ("ASMLite_Bak_S1_FalseBool", 0f),
+                    ("TrueBool", 1f), ("ASMLite_Bak_S1_TrueBool", 1f),
+                    ("MyInt", 7f), ("ASMLite_Bak_S1_MyInt", 7f),
+                    ("MyFloat", 0.375f), ("ASMLite_Bak_S1_MyFloat", 0.375f),
+                    ("ASMLite_Ctrl", 0f),
                 },
-                copyEntries.Select(entry => (entry.source, entry.name)).ToArray(),
-                "Reset driver should copy defaults into both the slot backup and the live avatar parameter.");
+                driver.parameters.Select(entry => (entry.name, entry.value)).ToArray());
+            Assert.AreEqual("ASMLite_Ctrl", driver.parameters.Last().name);
         }
 
         [Test, Category("Integration")]
@@ -373,10 +370,70 @@ namespace ASMLite.Tests.Editor
                 "Generated FX controller must contain 'ASMLite_Ctrl'.");
             Assert.IsTrue(paramNames.Contains("X"),
                 "Generated FX controller must contain the avatar param 'X'.");
-            Assert.IsTrue(paramNames.Contains("ASMLite_Bak_S1_X"),
-                "Generated FX controller must contain 'ASMLite_Bak_S1_X'.");
+            Assert.IsFalse(paramNames.Contains("ASMLite_Bak_S1_X"),
+                "Backup-only storage must not be duplicated in the FX parameter table.");
             Assert.IsTrue(paramNames.Contains("ASMLite_Def_X"),
                 "Generated FX controller must contain 'ASMLite_Def_X'.");
+        }
+
+        [TestCase(1, false)]
+        [TestCase(3, false)]
+        [TestCase(8, false)]
+        [TestCase(3, true)]
+        [TestCase(8, true)]
+        public void BackupStorage_RemainsExpressionOnly_WithAllSlotDrivers(int slotCount, bool directDelivery)
+        {
+            _ctx.Comp.slotCount = slotCount;
+            AddParam(_ctx, "KeepInt", VRCExpressionParameters.ValueType.Int, 7f);
+            AddParam(_ctx, "KeepFloat", VRCExpressionParameters.ValueType.Float, 0.25f);
+            AddParam(_ctx, "KeepBool", VRCExpressionParameters.ValueType.Bool, 1f);
+
+            var sources = _ctx.ParamsAsset.parameters.ToArray();
+            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.AreEqual(sources.Length, ASMLiteBuilder.Build(_ctx.Comp));
+            AnimatorController ctrl = LoadGeneratedController(nameof(BackupStorage_RemainsExpressionOnly_WithAllSlotDrivers));
+            VRCExpressionParameters expression = generatedExpr;
+            if (directDelivery)
+            {
+                // Exercise removal of old injected declarations, not only fresh generation.
+                _ctx.Ctrl.AddParameter("ASMLite_Bak_S3_KeepFloat", AnimatorControllerParameterType.Float);
+                Assert.IsTrue(ASMLiteBuilder.TryDetachToDirectDelivery(_ctx.Comp, out string detail), detail);
+                ctrl = _ctx.Ctrl;
+                expression = _ctx.ParamsAsset;
+            }
+            Assert.IsFalse(ctrl.parameters.Any(p => p.name.StartsWith("ASMLite_Bak_")),
+                "No active or stale slot backup may grow the FX parameter table.");
+            Assert.IsTrue(ctrl.parameters.Any(p => p.name == "ASMLite_Ctrl"));
+            foreach (var source in sources)
+            {
+                Assert.IsTrue(ctrl.parameters.Any(p => p.name == source.name), "Live sources must retain global FX bindings.");
+                Assert.IsTrue(ctrl.parameters.Any(p => p.name == "ASMLite_Def_" + source.name));
+            }
+
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                var save = LoadSlotDriver(ctrl, slot, "SaveSlot" + slot);
+                var load = LoadSlotDriver(ctrl, slot, "LoadSlot" + slot);
+                var reset = LoadSlotDriver(ctrl, slot, "ResetSlot" + slot);
+                Assert.IsTrue(save.localOnly && load.localOnly && reset.localOnly);
+                foreach (var source in sources)
+                {
+                    string backup = $"ASMLite_Bak_S{slot}_{source.name}";
+                    var stored = expression.parameters.Single(p => p.name == backup);
+                    Assert.AreEqual(source.valueType, stored.valueType);
+                    Assert.IsTrue(stored.saved);
+                    Assert.IsFalse(stored.networkSynced);
+                    Assert.IsTrue(HasCopy(save, source.name, backup));
+                    Assert.IsTrue(HasCopy(load, backup, source.name));
+                    Assert.AreEqual(source.defaultValue, reset.parameters.Single(p => p.name == backup).value);
+                    Assert.AreEqual(source.defaultValue, reset.parameters.Single(p => p.name == source.name).value);
+                }
+                foreach (var driver in new[] { save, load, reset })
+                {
+                    Assert.AreEqual("ASMLite_Ctrl", driver.parameters.Last().name);
+                    Assert.AreEqual(0f, driver.parameters.Last().value);
+                }
+            }
         }
 
         [Test, Category("Integration")]
@@ -569,8 +626,8 @@ namespace ASMLite.Tests.Editor
 
             Assert.IsTrue(allNames.Contains("KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded live param should remain declared in FX params.");
             Assert.IsTrue(allNames.Contains("ASMLite_Def_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded default param should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S1_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded slot backup should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Bak_S2_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded slot backup should remain declared in FX params.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Bak_S1_KeepA"), "Backup storage must remain expression-only.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Bak_S2_KeepA"), "Backup storage must remain expression-only.");
 
             Assert.IsFalse(allNames.Contains("DropB"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded live param must not be declared in FX params.");
             Assert.IsFalse(allNames.Contains("DropC"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: excluded live param must not be declared in FX params.");
@@ -593,15 +650,15 @@ namespace ASMLite.Tests.Editor
                     $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Save driver for slot {slot} must keep non-excluded copy wiring.");
                 Assert.IsTrue(HasCopy(loadDriver, $"ASMLite_Bak_S{slot}_KeepA", "KeepA"),
                     $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Load driver for slot {slot} must keep non-excluded copy wiring.");
-                Assert.IsTrue(HasCopy(resetDriver, "ASMLite_Def_KeepA", $"ASMLite_Bak_S{slot}_KeepA"),
+                Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set && p.name == $"ASMLite_Bak_S{slot}_KeepA" && p.value == 0f),
                     $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Reset driver for slot {slot} must keep non-excluded clear wiring.");
 
                 Assert.IsFalse(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source == "DropB" || p.source == "DropC" || p.name.Contains("DropB") || p.name.Contains("DropC"))),
                     $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Save driver for slot {slot} must not contain excluded-source copy entries.");
                 Assert.IsFalse(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name == "DropB" || p.name == "DropC")),
                     $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Load driver for slot {slot} must not contain excluded-source copy entries.");
-                Assert.IsFalse(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && (p.source.Contains("DropB") || p.source.Contains("DropC") || p.name.Contains("DropB") || p.name.Contains("DropC"))),
-                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Reset driver for slot {slot} must not contain excluded-source copy entries.");
+                Assert.IsFalse(resetDriver.parameters.Any(p => p.name.Contains("DropB") || p.name.Contains("DropC")),
+                    $"ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: Reset driver for slot {slot} must not write excluded destinations.");
             }
         }
     }

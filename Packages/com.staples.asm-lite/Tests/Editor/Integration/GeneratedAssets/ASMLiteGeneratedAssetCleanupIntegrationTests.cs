@@ -946,6 +946,36 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
+        public void VendorizedMirror_RetargetsGeneratedMenuTreeToMirror()
+        {
+            _ctx.Comp.slotCount = 1;
+            BuildOrFail(_ctx, nameof(VendorizedMirror_RetargetsGeneratedMenuTreeToMirror));
+            ASMLiteGeneratedAssetMirrorResult mirror = null;
+            try
+            {
+                mirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc);
+                Assert.IsTrue(mirror != null && mirror.Success, mirror?.Message);
+
+                var root = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(mirror.TargetPath + "/ASMLite_Menu.asset");
+                Assert.IsNotNull(root);
+                var presets = root.controls.Single().subMenu;
+                Assert.IsNotNull(presets);
+                Assert.AreEqual(mirror.TargetPath + "/ASMLite_Presets_Menu.asset", AssetDatabase.GetAssetPath(presets));
+                var slot = presets.controls.Single().subMenu;
+                Assert.IsNotNull(slot);
+                Assert.AreEqual(mirror.TargetPath + "/ASMLite_Slot1_Menu.asset", AssetDatabase.GetAssetPath(slot));
+                Assert.AreEqual(mirror.TargetPath + "/ASMLite_Slot1_ConfirmMenu.asset",
+                    AssetDatabase.GetAssetPath(slot.controls.First().subMenu));
+                Assert.AreEqual(mirror.TargetPath + "/ASMLite_Slot1_ResetConfirmMenu.asset",
+                    AssetDatabase.GetAssetPath(slot.controls.Last().subMenu));
+            }
+            finally
+            {
+                DeleteVendorizedAvatarFolderIfPresent(mirror?.TargetPath);
+            }
+        }
+
+        [Test, Category("Integration")]
         public void VendorizedMirror_UsesDistinctFoldersForDistinctAvatarsWithSameName()
         {
             var otherAvatarGo = new GameObject("CollisionAvatar");

@@ -217,6 +217,24 @@ namespace ASMLite.Editor
                         remediation: "Rebuild ASM-Lite generated assets before vendorizing.");
                 }
 
+                // CopyAsset gives each mirrored menu a new GUID, but its submenu
+                // references still point at the package menus until retargeted.
+                var stagedRootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(
+                    stagingDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+                if (stagedRootMenu == null)
+                    throw new InvalidOperationException("Staged ASM-Lite root menu did not load.");
+                var stagedMenus = new HashSet<VRCExpressionsMenu>();
+                RetargetMenuGeneratedSubmenus(stagedRootMenu, sourcePrefix, stagingDir, stagedMenus);
+                foreach (var menu in stagedMenus)
+                {
+                    if (!ASMLiteGeneratedOwnershipPolicy.PathStartsWith(AssetDatabase.GetAssetPath(menu), stagingDir)
+                        || menu.controls.Any(control => control != null
+                            && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
+                            && control.subMenu == null))
+                        throw new InvalidOperationException("Staged ASM-Lite menu tree contains a missing or external submenu.");
+                    AssetDatabase.SaveAssetIfDirty(menu);
+                }
+
                 if (!VerifyGeneratedAssetFolder(stagingDir))
                 {
                     DeleteAssetIfExists(stagingDir);

@@ -62,6 +62,7 @@
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteInstallPathWiringTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteLifecycleSeamTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBackupPresetResolverTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBudgetTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
@@ -143,11 +144,12 @@
     },
     {
       "id": "playmode-headless-review",
-      "description": "Synthetic-avatar AV3 runtime tests run in the separate PlayMode Save/Load CI job, not in default EditMode batches. The linked smoke-catalog PlayMode suites use the deferred external scene/avatar fixture.",
+      "description": "Synthetic-avatar AV3 runtime tests run in the separate PlayMode Save/Load CI job, not in default EditMode batches. ASMLiteFirstBuildPlayModeTests is a separate local graphics-enabled SDK/VRCFury preprocessing regression, excluded from the headless CI filter; see Tools/ci/docs/first-build-playmode.md. The linked smoke-catalog PlayMode suites use the deferred external scene/avatar fixture.",
       "defaultCi": false,
       "headless": "review",
       "testFiles": [
-        "ASMLiteAv3SaveLoadRuntimeTests.cs"
+        "ASMLiteAv3SaveLoadRuntimeTests.cs",
+        "ASMLiteFirstBuildPlayModeTests.cs"
       ],
       "smokeCatalogSuiteIds": [
         "playmode-runtime-validation",
@@ -156,11 +158,12 @@
     },
     {
       "id": "visible-manual",
-      "description": "Visible editor/operator-driven smoke suites are excluded from default headless CI. Catalog execution against Click ME/CanonicalDress is deferred until local avatar setup; headless smoke protocol and host tests use synthetic fixtures.",
+      "description": "Visible editor/operator-driven smoke suites and graphics-required SDK pipeline fixtures are excluded from default headless CI. ASMLiteParameterBudgetPipelineTests runs locally in graphics-enabled EditMode. Catalog execution against Click ME/CanonicalDress is deferred until local avatar setup; headless smoke protocol and host tests use synthetic fixtures.",
       "defaultCi": false,
       "headless": "no",
       "testFiles": [
-        "ASMLiteVisibleEditorSmokeTests.cs"
+        "ASMLiteVisibleEditorSmokeTests.cs",
+        "ASMLiteParameterBudgetPipelineTests.cs"
       ],
       "smokeCatalogPath": "Tools/ci/smoke/suite-catalog.json",
       "smokeCatalogSuiteIds": [

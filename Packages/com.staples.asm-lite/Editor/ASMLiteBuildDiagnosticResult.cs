@@ -10,7 +10,8 @@ namespace ASMLite.Editor
             string message,
             string contextPath,
             string remediation,
-            ASMLiteBuildDiagnosticResult innerDiagnostic = null)
+            ASMLiteBuildDiagnosticResult innerDiagnostic = null,
+            ASMLiteParameterBudget? parameterBudget = null)
         {
             Success = success;
             Code = code ?? string.Empty;
@@ -18,6 +19,7 @@ namespace ASMLite.Editor
             ContextPath = contextPath ?? string.Empty;
             Remediation = remediation ?? string.Empty;
             InnerDiagnostic = innerDiagnostic;
+            ParameterBudget = parameterBudget;
         }
 
         internal bool Success { get; }
@@ -26,6 +28,7 @@ namespace ASMLite.Editor
         internal string ContextPath { get; }
         internal string Remediation { get; }
         internal ASMLiteBuildDiagnosticResult InnerDiagnostic { get; }
+        internal ASMLiteParameterBudget? ParameterBudget { get; }
 
         internal static ASMLiteBuildDiagnosticResult Pass()
         {
@@ -43,7 +46,8 @@ namespace ASMLite.Editor
             string contextPath,
             string remediation,
             string message = null,
-            ASMLiteBuildDiagnosticResult innerDiagnostic = null)
+            ASMLiteBuildDiagnosticResult innerDiagnostic = null,
+            ASMLiteParameterBudget? parameterBudget = null)
         {
             return new ASMLiteBuildDiagnosticResult(
                 success: false,
@@ -51,7 +55,8 @@ namespace ASMLite.Editor
                 message: string.IsNullOrWhiteSpace(message) ? ASMLiteDiagnosticCodes.GetMessage(code) : message,
                 contextPath: contextPath,
                 remediation: remediation,
-                innerDiagnostic: innerDiagnostic);
+                innerDiagnostic: innerDiagnostic,
+                parameterBudget: parameterBudget);
         }
 
         internal string ToLogString()

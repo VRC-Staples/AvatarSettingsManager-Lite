@@ -64,6 +64,13 @@ namespace ASMLite.Editor
             try
             {
                 var rebuildAvatar = ResolveRebuildAvatar(component, avatar);
+                var budget = ASMLiteBuilder.CalculateParameterBudget(rebuildAvatar,
+                    ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)).ToDiagnostic();
+                if (!budget.Success)
+                {
+                    Debug.LogError(budget.ToLogString());
+                    return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
+                }
                 bool wasUsingVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
                 bool shouldIsolateGeneratedOutputs = wasUsingVendorizedGeneratedAssets || stagePackageManagedGeneratedAssets;
                 if (stagePackageManagedGeneratedAssets
@@ -1059,6 +1066,18 @@ namespace ASMLite.Editor
                     contextPath: "toolState",
                     remediation: "Run detached return only when the avatar is classified as Detached or Vendorized with no attached component.",
                     message: $"[ASM-Lite] Detached return-to-package-managed recovery expected Detached or Vendorized state but found {beforeState}.");
+            }
+
+            var budget = ASMLiteBuilder.CalculateParameterBudget(avatar, pendingSnapshot).ToDiagnostic();
+            if (!budget.Success)
+            {
+                return ASMLiteLifecycleTransactionResult.Fail(
+                    operation: ASMLiteLifecycleOperation.DetachedReturnToPackageManagedRecovery,
+                    failedStage: ASMLiteLifecycleTransactionStage.Preflight,
+                    beforeState: beforeState, afterState: beforeState, rollbackState: beforeState,
+                    rollbackAttempted: false, rollbackSucceeded: false,
+                    contextPath: budget.ContextPath, remediation: budget.Remediation,
+                    message: budget.ToLogString());
             }
 
             var cleanup = ASMLiteBuilder.CleanUpAvatarAssetsWithReport(avatar);

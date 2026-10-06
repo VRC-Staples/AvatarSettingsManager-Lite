@@ -110,7 +110,8 @@ namespace ASMLite.Editor
         public static ASMLiteWindow.AsmLiteActionHierarchy Build(
             ASMLiteInstallationState toolState,
             bool hasComponent,
-            bool advancedDisclosureExpanded)
+            bool advancedDisclosureExpanded,
+            ASMLiteParameterBudget? budget = null)
         {
             var descriptors = new List<AsmLiteWindowActionDescriptor>();
 
@@ -119,7 +120,7 @@ namespace ASMLite.Editor
                 descriptors.Add(CreateDescriptor(
                     ASMLiteWindow.AsmLiteWindowAction.Rebuild,
                     AsmLiteWindowActionGroup.Primary,
-                    advancedDisclosureExpanded));
+                    advancedDisclosureExpanded, budget));
                 descriptors.Add(CreateDescriptor(
                     ASMLiteWindow.AsmLiteWindowAction.RemovePrefab,
                     AsmLiteWindowActionGroup.Advanced,
@@ -149,21 +150,22 @@ namespace ASMLite.Editor
                 descriptors.Add(CreateDescriptor(
                     ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged,
                     AsmLiteWindowActionGroup.Primary,
-                    advancedDisclosureExpanded));
+                    advancedDisclosureExpanded, budget));
                 return new ASMLiteWindow.AsmLiteActionHierarchy(descriptors.ToArray(), advancedDisclosureExpanded);
             }
 
             descriptors.Add(CreateDescriptor(
                 ASMLiteWindow.AsmLiteWindowAction.AddPrefab,
                 AsmLiteWindowActionGroup.Primary,
-                advancedDisclosureExpanded));
+                advancedDisclosureExpanded, budget));
             return new ASMLiteWindow.AsmLiteActionHierarchy(descriptors.ToArray(), advancedDisclosureExpanded);
         }
 
         public static AsmLiteWindowActionDescriptor CreateDescriptor(
             ASMLiteWindow.AsmLiteWindowAction action,
             AsmLiteWindowActionGroup group,
-            bool advancedDisclosureExpanded)
+            bool advancedDisclosureExpanded,
+            ASMLiteParameterBudget? budget = null)
         {
             var definition = GetDefinition(action);
             bool isVisible = group == AsmLiteWindowActionGroup.Primary || advancedDisclosureExpanded;
@@ -176,7 +178,8 @@ namespace ASMLite.Editor
                 definition.IsMaintenance,
                 definition.IsDestructive,
                 isVisible,
-                isEnabled: true,
+                isEnabled: budget?.BlocksGeneration != true || (action != ASMLiteWindow.AsmLiteWindowAction.AddPrefab
+                    && action != ASMLiteWindow.AsmLiteWindowAction.Rebuild && action != ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged),
                 definition.Execution,
                 definition.SupportsVisibleAutomation,
                 definition.Confirmation);

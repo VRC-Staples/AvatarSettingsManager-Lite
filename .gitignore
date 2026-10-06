@@ -104,3 +104,6 @@ Tools/ci/unity-project/Packages/com.vrchat.avatars/**/*
 !Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll
 !Tools/ci/unity-project/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll.meta
 
+
+# rebMap session recordings
+.rebmap/

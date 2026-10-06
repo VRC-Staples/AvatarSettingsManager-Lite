@@ -535,7 +535,7 @@ namespace ASMLite.Tests.PlayMode
             return merged;
         }
 
-        private static void WireFxController(VRCAvatarDescriptor descriptor, AnimatorController controller)
+        internal static void WireFxController(VRCAvatarDescriptor descriptor, AnimatorController controller)
         {
             var layers = descriptor.baseAnimationLayers;
             if (layers == null || layers.Length < 5)
@@ -706,6 +706,9 @@ namespace ASMLite.Tests.PlayMode
         private void DestroyTestAvatar()
         {
             RestoreVrcFuryPlayModeProcessing();
+            // Do not leave scanned descriptors behind for a later VRCFury-triggered AV3 restart.
+            var emulator = GameObject.Find(ASMLiteAv3RuntimeBridge.EmulatorObjectName);
+            if (emulator != null) UnityEngine.Object.DestroyImmediate(emulator);
             var avatar = _ctx?.AvatarGo != null ? _ctx.AvatarGo : GameObject.Find(TestAvatarName);
             ASMLiteTestFixtures.TearDownTestAvatar(avatar);
             AssetDatabase.DeleteAsset(MergedParamsPath);

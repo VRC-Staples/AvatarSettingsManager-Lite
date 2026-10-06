@@ -17,6 +17,8 @@ namespace ASMLite.Editor
             internal const string ValidationFailed = "BUILD-301";
             internal const string FullControllerWiringFailed = "BUILD-302";
             internal const string InstallPrefixSyncFailed = "BUILD-303";
+            internal const string ParameterLimitExceeded = "BUILD-304";
+            internal const string ParameterBudgetUnverifiable = "BUILD-305";
         }
 
         private static readonly Dictionary<string, string> s_messages = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -27,6 +29,8 @@ namespace ASMLite.Editor
             { Build.ValidationFailed, "ASM-Lite build validation failed." },
             { Build.FullControllerWiringFailed, "ASM-Lite build failed while applying critical FullController wiring." },
             { Build.InstallPrefixSyncFailed, "ASM-Lite build failed while syncing critical install-prefix wiring." },
+            { Build.ParameterLimitExceeded, "Avatar expression-parameter count exceeds the limit." },
+            { Build.ParameterBudgetUnverifiable, "Avatar expression-parameter budget could not be verified." },
         };
 
         internal static string GetMessage(string code)
@@ -50,7 +54,9 @@ namespace ASMLite.Editor
         {
             return string.Equals(code, Build.ValidationFailed, StringComparison.Ordinal)
                 || string.Equals(code, Build.FullControllerWiringFailed, StringComparison.Ordinal)
-                || string.Equals(code, Build.InstallPrefixSyncFailed, StringComparison.Ordinal);
+                || string.Equals(code, Build.InstallPrefixSyncFailed, StringComparison.Ordinal)
+                || string.Equals(code, Build.ParameterLimitExceeded, StringComparison.Ordinal)
+                || string.Equals(code, Build.ParameterBudgetUnverifiable, StringComparison.Ordinal);
         }
     }
 }

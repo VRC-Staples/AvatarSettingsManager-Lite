@@ -387,11 +387,13 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
                 "Load driver must keep mapped legacy backup load-compatible with deterministic source.");
 
-            string deterministicDefault = $"ASMLite_Def_{deterministicSource}";
-            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == deterministicBackup),
-                "Reset driver must keep deterministic backup clear path.");
-            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == legacyBackup),
-                "Reset driver must mirror clear path into mapped legacy backup alias.");
+            Assert.AreEqual(4, resetDriver.parameters.Count, "Clear writes each of the three destinations once, then resets control.");
+            Assert.IsTrue(resetDriver.parameters.All(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set));
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicBackup).value,
+                "Clear must reset the deterministic backup to the configured default.");
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == legacyBackup).value,
+                "Clear must reset the legacy backup to the configured default, not its previous saved default.");
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicSource).value);
 
             var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
             Assert.GreaterOrEqual(report.MappedCount, 1, "Mapped continuity report counter must include legacy alias mapping.");

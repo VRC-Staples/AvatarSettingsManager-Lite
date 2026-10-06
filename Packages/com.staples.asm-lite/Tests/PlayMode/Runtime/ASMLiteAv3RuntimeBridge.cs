@@ -17,7 +17,7 @@ namespace ASMLite.Tests.PlayMode
 
         private const BindingFlags InstanceBindingFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const BindingFlags StaticBindingFlags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-        private const string EmulatorObjectName = "ASMLite_AV3_SaveLoad_Runtime_Emulator";
+        internal const string EmulatorObjectName = "ASMLite_AV3_SaveLoad_Runtime_Emulator";
         private static bool _runtimeAssemblyResolverInstalled;
 
         internal static RuntimeTypeResolution ResolveRuntimeType(

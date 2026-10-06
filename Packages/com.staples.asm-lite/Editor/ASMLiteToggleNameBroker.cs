@@ -630,10 +630,10 @@ namespace ASMLite.Editor
             return result;
         }
 
-        internal static List<VRCExpressionParameters.Parameter> DiscoverAssignedToggleExpressionParameters(GameObject avatarRoot, string toggleTypeFullName = DefaultToggleTypeFullName)
+        internal static List<VRCExpressionParameters.Parameter> DiscoverAssignedToggleExpressionParameters(GameObject avatarRoot, string toggleTypeFullName = DefaultToggleTypeFullName, bool requireAsmLiteScope = true)
         {
             var result = new List<VRCExpressionParameters.Parameter>();
-            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+            if (avatarRoot == null || (requireAsmLiteScope && !HasAsmLiteScope(avatarRoot)))
                 return result;
 
             var toggleType = FindTypeByFullName(toggleTypeFullName);
@@ -657,13 +657,14 @@ namespace ASMLite.Editor
         internal static List<VRCExpressionParameters.Parameter> DiscoverPlannedToggleExpressionParameters(
             GameObject avatarRoot,
             VRCAvatarDescriptor descriptor = null,
-            string toggleTypeFullName = DefaultToggleTypeFullName)
+            string toggleTypeFullName = DefaultToggleTypeFullName,
+            bool requireAsmLiteScope = true)
         {
             var result = new List<VRCExpressionParameters.Parameter>();
-            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+            if (avatarRoot == null || (requireAsmLiteScope && !HasAsmLiteScope(avatarRoot)))
                 return result;
 
-            var candidates = DiscoverEligibleToggleCandidates(avatarRoot, toggleTypeFullName);
+            var candidates = DiscoverEligibleToggleCandidates(avatarRoot, toggleTypeFullName, requireAsmLiteScope);
             if (candidates.Count == 0)
                 return result;
 
@@ -689,27 +690,27 @@ namespace ASMLite.Editor
                 if (!seen.Add(plannedName))
                     continue;
 
-                var so = new SerializedObject(candidate.Component);
+                using var so = new SerializedObject(candidate.Component);
                 result.Add(BuildAssignedExpressionParameter(so, candidate.TogglePropertyPath, plannedName));
             }
 
             return result;
         }
 
-        internal static List<VRCExpressionParameters.Parameter> DiscoverStableFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName)
+        internal static List<VRCExpressionParameters.Parameter> DiscoverStableFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName, bool requireAsmLiteScope = true)
         {
-            return DiscoverFullControllerExpressionParameters(avatarRoot, true, fullControllerTypeFullName);
+            return DiscoverFullControllerExpressionParameters(avatarRoot, true, fullControllerTypeFullName, requireAsmLiteScope);
         }
 
-        internal static List<VRCExpressionParameters.Parameter> DiscoverPlannedFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName)
+        internal static List<VRCExpressionParameters.Parameter> DiscoverPlannedFullControllerExpressionParameters(GameObject avatarRoot, string fullControllerTypeFullName = DefaultFullControllerTypeFullName, bool requireAsmLiteScope = true)
         {
-            return DiscoverFullControllerExpressionParameters(avatarRoot, false, fullControllerTypeFullName);
+            return DiscoverFullControllerExpressionParameters(avatarRoot, false, fullControllerTypeFullName, requireAsmLiteScope);
         }
 
-        private static List<VRCExpressionParameters.Parameter> DiscoverFullControllerExpressionParameters(GameObject avatarRoot, bool requireGlobalPattern, string fullControllerTypeFullName)
+        private static List<VRCExpressionParameters.Parameter> DiscoverFullControllerExpressionParameters(GameObject avatarRoot, bool requireGlobalPattern, string fullControllerTypeFullName, bool requireAsmLiteScope)
         {
             var result = new List<VRCExpressionParameters.Parameter>();
-            if (avatarRoot == null || !HasAsmLiteScope(avatarRoot))
+            if (avatarRoot == null || (requireAsmLiteScope && !HasAsmLiteScope(avatarRoot)))
                 return result;
 
             var fullControllerType = FindTypeByFullName(fullControllerTypeFullName);
@@ -964,7 +965,7 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            var so = new SerializedObject(candidate.Component);
+            using var so = new SerializedObject(candidate.Component);
             if (!TryResolveToggleProperties(so, candidate.TogglePropertyPath, out var useGlobalProp, out var globalParamProp))
                 return false;
 
@@ -976,7 +977,7 @@ namespace ASMLite.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(candidate.Component);
 
-            var readBack = new SerializedObject(candidate.Component);
+            using var readBack = new SerializedObject(candidate.Component);
             if (!TryResolveToggleProperties(readBack, candidate.TogglePropertyPath, out var useGlobalVerify, out var globalParamVerify))
             {
                 Debug.LogWarning($"[ASM-Lite] Toggle broker could not verify enrollment on '{candidate.ObjectPath}'. Mutation was not persisted.");
@@ -1008,7 +1009,7 @@ namespace ASMLite.Editor
             if (component == null)
                 return false;
 
-            var so = new SerializedObject(component);
+            using var so = new SerializedObject(component);
             if (!TryResolveToggleProperties(so, record.TogglePropertyPath, out var useGlobalProp, out var globalParamProp))
                 return false;
 
@@ -1182,8 +1183,8 @@ namespace ASMLite.Editor
             if (component == null || toggleType == null || result == null || seen == null)
                 return;
 
-            var so = new SerializedObject(component);
-            var iterator = so.GetIterator();
+            using var so = new SerializedObject(component);
+            using var iterator = so.GetIterator();
             if (!iterator.NextVisible(true))
                 return;
 
@@ -1220,8 +1221,8 @@ namespace ASMLite.Editor
             if (component == null || fullControllerType == null || result == null || seen == null)
                 return;
 
-            var so = new SerializedObject(component);
-            var iterator = so.GetIterator();
+            using var so = new SerializedObject(component);
+            using var iterator = so.GetIterator();
             if (!iterator.NextVisible(true))
                 return;
 
@@ -1253,8 +1254,8 @@ namespace ASMLite.Editor
             if (component == null || fullControllerType == null || restoreEntries == null)
                 return;
 
-            var so = new SerializedObject(component);
-            var iterator = so.GetIterator();
+            using var so = new SerializedObject(component);
+            using var iterator = so.GetIterator();
             if (!iterator.NextVisible(true))
                 return;
 
@@ -1565,7 +1566,7 @@ namespace ASMLite.Editor
             if (component == null)
                 return false;
 
-            var so = new SerializedObject(component);
+            using var so = new SerializedObject(component);
             var globalParamsProperty = so.FindProperty(entry.fullControllerPropertyPath + ".globalParams");
             if (globalParamsProperty == null || !globalParamsProperty.isArray)
                 return false;
@@ -1581,8 +1582,8 @@ namespace ASMLite.Editor
             if (component == null || toggleType == null || result == null || seen == null)
                 return;
 
-            var so = new SerializedObject(component);
-            var iterator = so.GetIterator();
+            using var so = new SerializedObject(component);
+            using var iterator = so.GetIterator();
             if (!iterator.NextVisible(true))
                 return;
 
@@ -1648,8 +1649,8 @@ namespace ASMLite.Editor
 
         private static void CollectCandidatesForComponent(Component component, Transform avatarRoot, Type toggleType, List<ToggleCandidate> result)
         {
-            var so = new SerializedObject(component);
-            var iterator = so.GetIterator();
+            using var so = new SerializedObject(component);
+            using var iterator = so.GetIterator();
             if (!iterator.NextVisible(true))
                 return;
 

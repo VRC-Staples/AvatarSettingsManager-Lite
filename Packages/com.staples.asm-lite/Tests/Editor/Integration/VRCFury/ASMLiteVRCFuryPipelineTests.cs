@@ -84,6 +84,25 @@ namespace ASMLite.Tests.Editor
                 ASMLiteAssetPaths.Prefab,
             };
 
+        [Test]
+        public void BudgetProjection_PlannedToggleAndPendingSettings_MatchGeneratedContribution()
+        {
+            var owner = new GameObject("BudgetToggle");
+            owner.transform.SetParent(_ctx.AvatarGo.transform, false);
+            AddVrcFuryToggle(owner, useGlobalParam: false, globalParam: "", menuPath: "Clothes", name: "Coat");
+            _ctx.Comp.slotCount = 2;
+            var settings = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp);
+            var budget = ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc, settings);
+            Assert.AreEqual(1, budget.OriginalCount);
+            Assert.IsFalse(budget.Complete, "Planned VRCFury input is an estimate, not simulated final output.");
+            Assert.AreEqual(1, ASMLiteBuilder.Build(_ctx.Comp));
+            Assert.AreEqual(LoadGeneratedParams("budget parity").parameters.Length, budget.Contribution);
+            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+            var pending = ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc, settings);
+            Assert.AreEqual(budget.Total, pending.Total, "Discovery must work before a new component is installed.");
+            Assert.IsNull(_ctx.AvatarGo.GetComponentInChildren<ASMLiteComponent>(true));
+        }
+
         private static object AddVrcFuryToggle(
             GameObject owner,
             bool useGlobalParam,
@@ -572,7 +591,7 @@ namespace ASMLite.Tests.Editor
                 "save must copy VRCFury toggle source into the slot backup.");
             Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == backup && p.name == source),
                 "load must copy the slot backup back into the VRCFury toggle source.");
-            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == defaultKey && p.name == source),
+            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set && p.name == source && p.value == 0f),
                 "clear preset must restore the VRCFury toggle source default.");
         }
 
@@ -803,11 +822,10 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test, Category("Integration")]
-        public void Regression_BoolCopyDrivers_PreClearDestinationBeforeCopy()
+        public void Regression_BoolCopyDrivers_UseDirectCopyWithNoDestinationPreClear()
         {
             const string source = "Menu/BoolToggle";
             const string backup = "ASMLite_Bak_S1_Menu/BoolToggle";
-            const string defaultKey = "ASMLite_Def_Menu/BoolToggle";
 
             _ctx.Comp.slotCount = 1;
             ASMLiteTestFixtures.SetExpressionParams(_ctx,
@@ -829,13 +847,15 @@ namespace ASMLite.Tests.Editor
             var loadDriver = LoadSlotDriver("bool copy driver", generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
             var resetDriver = LoadSlotDriver("bool copy driver", generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
 
-            AssertHasPreClearBeforeCopy("bool copy save", saveDriver, source, backup);
-            AssertHasPreClearBeforeCopy("bool copy load", loadDriver, backup, source);
-            AssertHasPreClearBeforeCopy("bool copy reset backup", resetDriver, defaultKey, backup);
-            AssertHasPreClearBeforeCopy("bool copy reset source", resetDriver, defaultKey, source);
+            AssertDirectCopy("bool copy save", saveDriver, source, backup);
+            AssertDirectCopy("bool copy load", loadDriver, backup, source);
+            Assert.AreEqual(3, resetDriver.parameters.Count);
+            Assert.IsTrue(resetDriver.parameters.All(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set));
+            Assert.AreEqual(1f, resetDriver.parameters.Single(p => p.name == backup).value);
+            Assert.AreEqual(1f, resetDriver.parameters.Single(p => p.name == source).value);
         }
 
-        private static void AssertHasPreClearBeforeCopy(string aid, VRC_AvatarParameterDriver driver, string source, string destination)
+        private static void AssertDirectCopy(string aid, VRC_AvatarParameterDriver driver, string source, string destination)
         {
             int copyIndex = driver.parameters.FindIndex(parameter =>
                 parameter.type == VRC_AvatarParameterDriver.ChangeType.Copy
@@ -844,14 +864,10 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(copyIndex, 0,
                 $"{aid}: expected Copy {source} -> {destination}.");
 
-            int preClearIndex = driver.parameters.FindIndex(parameter =>
+            Assert.IsFalse(driver.parameters.Any(parameter =>
                 parameter.type == VRC_AvatarParameterDriver.ChangeType.Set
-                && parameter.name == destination
-                && parameter.value == 0f);
-            Assert.GreaterOrEqual(preClearIndex, 0,
-                $"{aid}: expected Set false before Copy into bool destination '{destination}'.");
-            Assert.Less(preClearIndex, copyIndex,
-                $"{aid}: Set false must run before Copy into bool destination '{destination}'.");
+                && parameter.name == destination),
+                $"{aid}: Copy must write the Boolean destination directly without a redundant Set.");
         }
 
         [Test, Category("Integration")]
@@ -925,6 +941,8 @@ namespace ASMLite.Tests.Editor
                 "regression guard: deterministic backup key must be generated from deterministic source.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == legacyBackup),
                 "regression guard: mapped legacy backup alias must remain preserved for preset continuity.");
+            Assert.IsFalse(generatedCtrl.parameters.Any(p => p.name == deterministicBackup || p.name == legacyBackup),
+                "Deterministic and legacy backup storage must not be duplicated in FX.");
 
             Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == deterministicBackup),
                 "regression guard: save path must keep deterministic backup copy.");
@@ -936,11 +954,13 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
                 "regression guard: load path must remain compatible with legacy mapped backup alias.");
 
-            string deterministicDefault = $"ASMLite_Def_{deterministicSource}";
-            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == deterministicBackup),
-                "regression guard: clear path must keep deterministic backup reset wiring.");
-            Assert.IsTrue(resetDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicDefault && p.name == legacyBackup),
-                "regression guard: clear path must mirror mapped legacy alias reset wiring.");
+            Assert.AreEqual(4, resetDriver.parameters.Count, "One live destination, two backups and the control reset; no duplicate writes.");
+            Assert.IsTrue(resetDriver.parameters.All(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set));
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicBackup).value,
+                "Clear must reset the deterministic backup.");
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == legacyBackup).value,
+                "Clear must reset the legacy backup to the current configured default, not its old saved value.");
+            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicSource).value);
 
             var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
             Assert.GreaterOrEqual(report.MappedCount, 1,

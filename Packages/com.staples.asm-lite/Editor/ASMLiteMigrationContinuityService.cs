@@ -777,6 +777,9 @@ namespace ASMLite.Editor
             return remaps;
         }
 
+        internal static bool IsBackupNameForSlot(string backupName, int slot)
+            => TryParseBackupName(backupName, out var parsed) && parsed.Slot == slot;
+
         private static bool TryParseBackupName(string backupName, out ParsedBackupName parsed)
         {
             parsed = default;

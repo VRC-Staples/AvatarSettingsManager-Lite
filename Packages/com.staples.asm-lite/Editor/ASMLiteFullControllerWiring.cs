@@ -130,21 +130,8 @@ namespace ASMLite.Editor
                     message: "[ASM-Lite] Generated ASM-Lite assets are missing; FullController wiring cannot be applied.");
             }
 
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            var appliedResult = TryApplyFullControllerAssetReferencesWithDiagnostics(
-                serializedVf,
-                component,
-                fxController,
-                menu,
-                parameters);
-            if (!appliedResult.Success)
-                return appliedResult;
-
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-            return ASMLiteBuildDiagnosticResult.Pass();
+            return TryEditLiveFullControllerWithDiagnostics(vfComponent, serializedVf =>
+                TryApplyFullControllerAssetReferencesWithDiagnostics(serializedVf, component, fxController, menu, parameters));
         }
 
         internal static bool TryClearLiveFullControllerMenuPrefixOverride(ASMLiteComponent component)
@@ -153,9 +140,14 @@ namespace ASMLite.Editor
             if (vfComponent == null)
                 return false;
 
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
+            return TryEditLiveFullControllerWithDiagnostics(vfComponent, serializedVf =>
+                TryClearMenuPrefixOverride(serializedVf, (MonoBehaviour)serializedVf.targetObject)
+                    ? ASMLiteBuildDiagnosticResult.Pass()
+                    : CreateCriticalPathDiagnostic(ASMLiteDriftProbe.MenuPrefixPath)).Success;
+        }
 
+        private static bool TryClearMenuPrefixOverride(SerializedObject serializedVf, MonoBehaviour vfComponent)
+        {
             var prefixProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuPrefixPath);
             if (prefixProperty == null)
                 return false;
@@ -294,16 +286,8 @@ namespace ASMLite.Editor
                     remediation: "Ensure a live VRCFury component exists before syncing install-prefix wiring.");
             }
 
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-
-            var prefixResult = ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component);
-            if (!prefixResult.Success)
-                return prefixResult;
-
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
-            return ASMLiteBuildDiagnosticResult.Pass();
+            return TryEditLiveFullControllerWithDiagnostics(vfComponent, serializedVf =>
+                ASMLiteFullControllerInstallPathHelper.TryApplyMenuPrefixWithDiagnostics(serializedVf, component));
         }
 
         internal static ASMLiteBuildDiagnosticResult TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(
@@ -332,20 +316,6 @@ namespace ASMLite.Editor
                     message: $"[ASM-Lite] {contextLabel}: Generated-assets directory was blank while retargeting live FullController references.");
             }
 
-            var refreshResult = TryRefreshLiveFullControllerWiringWithDiagnostics(component.gameObject, component, contextLabel);
-            if (!refreshResult.Success)
-                return refreshResult;
-
-            var vfComponent = FindLiveVrcFuryComponent(component.gameObject);
-            if (vfComponent == null)
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: "VF.Model.VRCFury component",
-                    remediation: "Ensure the live VRCFury component exists before retargeting generated assets.",
-                    message: $"[ASM-Lite] {contextLabel}: Live VF.Model.VRCFury component was missing while retargeting generated assets.");
-            }
-
             var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.FXController));
             var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.Menu));
             var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.ExprParams));
@@ -358,14 +328,24 @@ namespace ASMLite.Editor
                     message: $"[ASM-Lite] {contextLabel}: Required generated assets were missing under '{normalizedDir}' while retargeting live FullController references.");
             }
 
-            var serializedVf = new SerializedObject(vfComponent);
-            serializedVf.Update();
-            var applyResult = TryApplyFullControllerAssetReferencesWithDiagnostics(serializedVf, component, fxController, menu, parameters);
+            var vfComponent = FindLiveVrcFuryComponent(component.gameObject);
+            if (vfComponent == null)
+            {
+                var refreshResult = TryRefreshLiveFullControllerWiringWithDiagnostics(component.gameObject, component, contextLabel);
+                if (!refreshResult.Success)
+                    return refreshResult;
+                vfComponent = FindLiveVrcFuryComponent(component.gameObject);
+            }
+            // Localize and retarget in one edit so native Undo/Redo preserves the
+            // final avatar-local references, not an intermediate package wiring.
+            if (vfComponent == null)
+                return CreateCriticalPathDiagnostic("VF.Model.VRCFury component");
+
+            var applyResult = TryEditLiveFullControllerWithDiagnostics(vfComponent, serializedVf =>
+                TryApplyFullControllerAssetReferencesWithDiagnostics(serializedVf, component, fxController, menu, parameters));
             if (!applyResult.Success)
                 return applyResult;
 
-            serializedVf.ApplyModifiedPropertiesWithoutUndo();
-            EditorUtility.SetDirty(vfComponent);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return ASMLiteBuildDiagnosticResult.Pass();
@@ -464,27 +444,18 @@ namespace ASMLite.Editor
                 Debug.LogWarning("[ASM-Lite] Generated ASM-Lite assets were missing while wiring FullController. Rebuild ASM-Lite assets, then recreate the prefab.");
             }
 
-            var so = new SerializedObject(vfComponent);
-            so.Update();
-
-            var content = so.FindProperty("content");
-            if (content == null)
+            var wiringResult = TryEditLiveFullControllerWithDiagnostics(vfComponent, so =>
             {
-                Debug.LogError("[ASM-Lite] VRCFury component did not expose expected 'content' field. FullController wiring was not applied.");
-                return;
-            }
+                var content = so.FindProperty("content");
+                if (content == null)
+                    return CreateCriticalPathDiagnostic("content");
 
-            if (content.managedReferenceValue == null || content.managedReferenceValue.GetType() != fullControllerType)
-                content.managedReferenceValue = Activator.CreateInstance(fullControllerType, true);
+                if (content.managedReferenceValue == null || content.managedReferenceValue.GetType() != fullControllerType)
+                    content.managedReferenceValue = Activator.CreateInstance(fullControllerType, true);
 
-            var wiringResult = TryApplyFullControllerAssetReferencesWithDiagnostics(so, component, fxController, menu, parameters);
+                return TryApplyFullControllerAssetReferencesWithDiagnostics(so, component, fxController, menu, parameters);
+            });
             bool ok = wiringResult.Success;
-
-            if (ok)
-            {
-                so.ApplyModifiedPropertiesWithoutUndo();
-                EditorUtility.SetDirty(vfComponent);
-            }
 
 #if ASM_LITE_VERBOSE
             if (ok)
@@ -502,6 +473,16 @@ namespace ASMLite.Editor
             UnityEngine.Object menu,
             UnityEngine.Object parameters)
         {
+            if (serializedVfComponent != null
+                && PrefabUtility.IsPartOfPrefabInstance(serializedVfComponent.targetObject)
+                && PrefabUtility.GetCorrespondingObjectFromSource(serializedVfComponent.targetObject) != null)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury prefab instance",
+                    remediation: "Use ASM-Lite's live wiring path to create instance-owned feature data; do not write VRCFury prefab feature overrides.");
+            }
+
             var probeResult = ASMLiteDriftProbe.ValidateCriticalFullControllerWritePaths(serializedVfComponent);
             if (!probeResult.Success)
                 return probeResult.ToDiagnosticResult();
@@ -640,6 +621,60 @@ namespace ASMLite.Editor
             }
 
             return nonTestMatch ?? firstMatch;
+        }
+
+        private static ASMLiteBuildDiagnosticResult TryEditLiveFullControllerWithDiagnostics(
+            MonoBehaviour vfComponent,
+            Func<SerializedObject, ASMLiteBuildDiagnosticResult> edit)
+        {
+            // VRCFury reverts inherited feature overrides before cloning an avatar.
+            // Replace only this component with an instance-owned serialized copy;
+            // keep the ASM-Lite/ancestor prefab connections and source assets intact.
+            bool inherited = PrefabUtility.IsPartOfPrefabInstance(vfComponent)
+                && PrefabUtility.GetCorrespondingObjectFromSource(vfComponent) != null;
+            int undoGroup = -1;
+            try
+            {
+                var writable = vfComponent;
+                if (inherited)
+                {
+                    Undo.IncrementCurrentGroup();
+                    undoGroup = Undo.GetCurrentGroup();
+                    Undo.SetCurrentGroupName("Localize ASM-Lite VRCFury Wiring");
+                    writable = Undo.AddComponent(vfComponent.gameObject, vfComponent.GetType()) as MonoBehaviour;
+                    EditorUtility.CopySerialized(vfComponent, writable);
+                }
+
+                var serializedVf = new SerializedObject(writable);
+                serializedVf.Update();
+                var result = edit(serializedVf);
+                if (!result.Success)
+                {
+                    if (undoGroup >= 0)
+                        Undo.RevertAllDownToGroup(undoGroup);
+                    return result;
+                }
+
+                serializedVf.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(writable);
+                if (inherited)
+                {
+                    Undo.DestroyObjectImmediate(vfComponent);
+                    Undo.CollapseUndoOperations(undoGroup);
+                    Undo.IncrementCurrentGroup();
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                if (undoGroup >= 0)
+                    Undo.RevertAllDownToGroup(undoGroup);
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    contextPath: "VF.Model.VRCFury instance-owned wiring",
+                    remediation: "Keep the original prefab feature data intact and retry after fixing the wiring error.",
+                    message: $"[ASM-Lite] Could not prepare instance-owned FullController wiring: {ex.Message}");
+            }
         }
 
         private static MonoBehaviour FindLiveVrcFuryComponent(GameObject root)

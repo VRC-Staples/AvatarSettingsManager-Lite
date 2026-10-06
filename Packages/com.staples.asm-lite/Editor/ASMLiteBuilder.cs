@@ -7,6 +7,7 @@ using UnityEngine;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using ASMLite;
 using VRC.SDK3.Avatars.Components;
@@ -34,7 +35,7 @@ namespace ASMLite.Editor
     /// opaque canonical identifiers (no renaming), while filtering empty entries and
     /// ASMLite_-prefixed names to avoid self-referential backup loops.
     /// </summary>
-    public static class ASMLiteBuilder
+    public static partial class ASMLiteBuilder
     {
         // ─── Constants ────────────────────────────────────────────────────────
 
@@ -239,7 +240,8 @@ namespace ASMLite.Editor
             VRCAvatarDescriptor avDesc,
             List<VRCExpressionParameters.Parameter> discoveredParams,
             HashSet<string> excludedCanonicalNames,
-            ref int matchedExclusionCount)
+            ref int matchedExclusionCount,
+            bool requireAsmLiteScope = true)
         {
             if (avDesc?.gameObject == null || discoveredParams == null)
                 return 0;
@@ -254,7 +256,7 @@ namespace ASMLite.Editor
 
             var matchedExcludedToggleNames = new HashSet<string>(StringComparer.Ordinal);
             int addedCount = 0;
-            var assignedToggleParams = ASMLiteToggleNameBroker.DiscoverAssignedToggleExpressionParameters(avDesc.gameObject);
+            var assignedToggleParams = ASMLiteToggleNameBroker.DiscoverAssignedToggleExpressionParameters(avDesc.gameObject, requireAsmLiteScope: requireAsmLiteScope);
             AddDiscoveredVrcFuryParams(
                 assignedToggleParams,
                 discoveredParams,
@@ -263,7 +265,7 @@ namespace ASMLite.Editor
                 matchedExcludedToggleNames,
                 ref addedCount);
 
-            var plannedToggleParams = ASMLiteToggleNameBroker.DiscoverPlannedToggleExpressionParameters(avDesc.gameObject, avDesc);
+            var plannedToggleParams = ASMLiteToggleNameBroker.DiscoverPlannedToggleExpressionParameters(avDesc.gameObject, avDesc, requireAsmLiteScope: requireAsmLiteScope);
             AddDiscoveredVrcFuryParams(
                 plannedToggleParams,
                 discoveredParams,
@@ -272,7 +274,7 @@ namespace ASMLite.Editor
                 matchedExcludedToggleNames,
                 ref addedCount);
 
-            var fullControllerParams = ASMLiteToggleNameBroker.DiscoverStableFullControllerExpressionParameters(avDesc.gameObject);
+            var fullControllerParams = ASMLiteToggleNameBroker.DiscoverStableFullControllerExpressionParameters(avDesc.gameObject, requireAsmLiteScope: requireAsmLiteScope);
             AddDiscoveredVrcFuryParams(
                 fullControllerParams,
                 discoveredParams,
@@ -281,7 +283,7 @@ namespace ASMLite.Editor
                 matchedExcludedToggleNames,
                 ref addedCount);
 
-            var plannedFullControllerParams = ASMLiteToggleNameBroker.DiscoverPlannedFullControllerExpressionParameters(avDesc.gameObject);
+            var plannedFullControllerParams = ASMLiteToggleNameBroker.DiscoverPlannedFullControllerExpressionParameters(avDesc.gameObject, requireAsmLiteScope: requireAsmLiteScope);
             AddDiscoveredVrcFuryParams(
                 plannedFullControllerParams,
                 discoveredParams,
@@ -457,6 +459,10 @@ namespace ASMLite.Editor
                     remediation: "Attach ASM-Lite under an avatar root that contains VRCAvatarDescriptor.",
                     message: $"[ASM-Lite] Build failed: no VRCAvatarDescriptor found in parent hierarchy of '{component.gameObject.name}'.");
             }
+
+            var budgetDiagnostic = CalculateParameterBudget(avDesc,
+                ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)).ToDiagnostic();
+            if (!budgetDiagnostic.Success) return budgetDiagnostic;
 
             if (!TryRepairPackageGeneratedFxControllerIfCorrupt("Build"))
             {
@@ -673,6 +679,29 @@ namespace ASMLite.Editor
                     && existing.valueType != parameter.valueType)
                     return false;
 
+            var expressionList = new List<VRCExpressionParameters.Parameter>(avatar.expressionParameters.parameters);
+            int expressionAdded = 0;
+            foreach (var parameter in generatedParams.parameters)
+            {
+                if (parameter == null || existingExpr.ContainsKey(parameter.name)
+                    || !parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)) continue;
+                expressionList.Add(parameter);
+                existingExpr.Add(parameter.name, parameter);
+                expressionAdded++;
+            }
+            var proposedParameters = expressionList.ToArray();
+            var budget = MeasureParameterBudget(proposedParameters).ToDiagnostic();
+            // Retain stale output entries. Do not reject a reducible intermediate array:
+            // VRCFury deduplicates again during compression before the final callback.
+            if (!budget.Success
+                && proposedParameters.Select(p => p?.name).Distinct(StringComparer.Ordinal).Count() == proposedParameters.Length
+                && CalculateParameterBudget(avatar,
+                    ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)).Complete)
+            {
+                Debug.LogError(budget.ToLogString());
+                return false;
+            }
+
             int fxAdded = 0;
             foreach (var parameter in generatedFx.parameters)
             {
@@ -685,17 +714,7 @@ namespace ASMLite.Editor
             }
 
             var expressionCopy = UnityEngine.Object.Instantiate(avatar.expressionParameters);
-            var expressionList = new List<VRCExpressionParameters.Parameter>(expressionCopy.parameters);
-            int expressionAdded = 0;
-            foreach (var parameter in generatedParams.parameters)
-            {
-                if (parameter == null || existingExpr.ContainsKey(parameter.name)
-                    || !parameter.name.StartsWith("ASMLite_", StringComparison.Ordinal)) continue;
-                expressionList.Add(parameter);
-                existingExpr.Add(parameter.name, parameter);
-                expressionAdded++;
-            }
-            expressionCopy.parameters = expressionList.ToArray();
+            expressionCopy.parameters = proposedParameters;
             avatar.expressionParameters = expressionCopy;
 
             foreach (var pair in drivers)
@@ -1036,7 +1055,8 @@ namespace ASMLite.Editor
         /// AnimatorController, then marks the asset dirty for the consolidated
         /// SaveAssets call in Build().
         ///
-        /// Generates control parameters and backup/default parameters in the managed FX controller.
+        /// Generates control, live-source, and default parameters in the managed FX controller.
+        /// Backup storage remains in the expression parameter asset, not the FX parameter table.
         /// Uses one shared local control Int (ASMLite_Ctrl) for all slot actions.
         /// </summary>
         private static void PopulateFXController(
@@ -1065,16 +1085,9 @@ namespace ASMLite.Editor
             for (int i = 0; i < avatarParams.Count; i++)
                 mappedTypes[i] = MapValueType(avatarParams[i].valueType);
 
-            // Declare the discovered avatar parameters directly in the FX controller.
-            // This is required for two reasons:
-            //   1. VRCAvatarParameterDriver Copy sources must be declared as parameters
-            //      in the FX controller that contains the driving state, otherwise the
-            //      runtime treats the source as missing and the Copy is a silent no-op.
-            //   2. VRCFury's FullController merge uses globalParams=["*"] to connect
-            //      FX controller parameters to the avatar's global parameter space.
-            //      Parameters referenced only in driver entries (not declared) are not
-            //      promoted by this binding, so the Save Copy would read from an
-            //      unconnected local rather than the live avatar parameter value.
+            // Declare live sources for VRCFury's FullController globalParams=["*"] binding.
+            // Backup-only storage is already declared in the expression schema; duplicating
+            // it in FX makes the controller parameter table grow with every active slot.
             // Track names added to guard against duplicate avatar param names.
             var addedParams = new HashSet<string>();
             for (int i = 0; i < avatarParams.Count; i++)
@@ -1084,46 +1097,6 @@ namespace ASMLite.Editor
                     ctrl.AddParameter(p.name, mappedTypes[i]);
                 else
                     Debug.LogWarning($"[ASM-Lite] Duplicate discovered parameter skipped: '{p.name}'");
-            }
-
-            // Add per-slot backup parameters: ASMLite_Bak_S{slot}_{paramName}
-            for (int slot = 1; slot <= slotCount; slot++)
-            {
-                for (int i = 0; i < avatarParams.Count; i++)
-                {
-                    string bakName = $"ASMLite_Bak_S{slot}_{avatarParams[i].name}";
-                    if (addedParams.Add(bakName))
-                        ctrl.AddParameter(bakName, mappedTypes[i]);
-                    else
-                        Debug.LogWarning($"[ASM-Lite] Duplicate FX parameter skipped: '{bakName}'");
-                }
-            }
-
-            if (legacyAliasBindings != null && legacyAliasBindings.Count > 0)
-            {
-                var typeBySource = new Dictionary<string, AnimatorControllerParameterType>(StringComparer.Ordinal);
-                for (int i = 0; i < avatarParams.Count; i++)
-                {
-                    var param = avatarParams[i];
-                    if (param == null || string.IsNullOrWhiteSpace(param.name))
-                        continue;
-
-                    if (!typeBySource.ContainsKey(param.name))
-                        typeBySource.Add(param.name, mappedTypes[i]);
-                }
-
-                for (int i = 0; i < legacyAliasBindings.Count; i++)
-                {
-                    var binding = legacyAliasBindings[i];
-                    if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
-                        continue;
-
-                    if (!typeBySource.TryGetValue(binding.SourceParamName, out var mappedType))
-                        continue;
-
-                    if (addedParams.Add(binding.LegacyBackupName))
-                        ctrl.AddParameter(binding.LegacyBackupName, mappedType);
-                }
             }
 
             // Add default parameters (one set, not per-slot): ASMLite_Def_{paramName}
@@ -1265,7 +1238,7 @@ namespace ASMLite.Editor
             var seenDriverParams = new HashSet<string>(StringComparer.Ordinal);
             var seenSavePairs = new HashSet<string>(StringComparer.Ordinal);
             var seenLoadPairs = new HashSet<string>(StringComparer.Ordinal);
-            var seenResetPairs = new HashSet<string>(StringComparer.Ordinal);
+            var seenResetDestinations = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < avatarParams.Count; i++)
             {
@@ -1282,31 +1255,32 @@ namespace ASMLite.Editor
                 }
 
                 string deterministicBackupName = $"ASMLite_Bak_S{slot}_{p.name}";
-                string defaultName = $"ASMLite_Def_{p.name}";
 
                 bool isBoolParameter = p.valueType == VRCExpressionParameters.ValueType.Bool;
-                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName, isBoolParameter);
-                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name, isBoolParameter);
+                // Match the typed defaults seeded on the controller, not runtime default parameters.
+                float configuredDefault = isBoolParameter ? (p.defaultValue != 0f ? 1f : 0f)
+                    : p.valueType == VRCExpressionParameters.ValueType.Int ? (int)p.defaultValue : p.defaultValue;
+                AddDriverCopy(saveParams, seenSavePairs, p.name, deterministicBackupName);
+                AddDriverCopy(loadParams, seenLoadPairs, deterministicBackupName, p.name);
                 // Clear the slot's backup param to default so a subsequent
                 // Load on this slot returns defaults instead of stale saved values.
                 // Also apply defaults back to the live avatar parameter immediately
                 // so Clear Preset visibly resets the avatar instead of requiring an
                 // extra Load action afterward.
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, deterministicBackupName, isBoolParameter);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, p.name, isBoolParameter);
+                AddDriverReset(resetParams, seenResetDestinations, deterministicBackupName, configuredDefault);
+                AddDriverReset(resetParams, seenResetDestinations, p.name, configuredDefault);
 
                 AddLegacyAliasDriverCopiesForSlot(
                     slot,
                     p.name,
-                    defaultName,
-                    isBoolParameter,
+                    configuredDefault,
                     legacyAliasBindings,
                     saveParams,
                     seenSavePairs,
                     loadParams,
                     seenLoadPairs,
                     resetParams,
-                    seenResetPairs);
+                    seenResetDestinations);
             }
 
             // Zone B: trailing Set entries reset shared control Int back to idle (0)
@@ -1368,15 +1342,14 @@ namespace ASMLite.Editor
         private static void AddLegacyAliasDriverCopiesForSlot(
             int slot,
             string sourceParamName,
-            string defaultName,
-            bool isBoolParameter,
+            float configuredDefault,
             List<LegacyAliasBinding> bindings,
             List<VRC_AvatarParameterDriver.Parameter> saveParams,
             HashSet<string> seenSavePairs,
             List<VRC_AvatarParameterDriver.Parameter> loadParams,
             HashSet<string> seenLoadPairs,
             List<VRC_AvatarParameterDriver.Parameter> resetParams,
-            HashSet<string> seenResetPairs)
+            HashSet<string> seenResetDestinations)
         {
             if (bindings == null || bindings.Count == 0)
                 return;
@@ -1391,19 +1364,35 @@ namespace ASMLite.Editor
                 if (string.IsNullOrWhiteSpace(binding.LegacyBackupName))
                     continue;
 
-                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName, isBoolParameter);
-                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName, isBoolParameter);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, binding.LegacyBackupName, isBoolParameter);
-                AddDriverCopy(resetParams, seenResetPairs, defaultName, sourceParamName, isBoolParameter);
+                AddDriverCopy(saveParams, seenSavePairs, sourceParamName, binding.LegacyBackupName);
+                AddDriverCopy(loadParams, seenLoadPairs, binding.LegacyBackupName, sourceParamName);
+                AddDriverReset(resetParams, seenResetDestinations, binding.LegacyBackupName, configuredDefault);
+                AddDriverReset(resetParams, seenResetDestinations, sourceParamName, configuredDefault);
             }
+        }
+
+        private static void AddDriverReset(
+            List<VRC_AvatarParameterDriver.Parameter> target,
+            HashSet<string> seenDestinations,
+            string destination,
+            float configuredDefault)
+        {
+            if (string.IsNullOrWhiteSpace(destination) || !seenDestinations.Add(destination))
+                return;
+
+            target.Add(new VRC_AvatarParameterDriver.Parameter
+            {
+                type = VRC_AvatarParameterDriver.ChangeType.Set,
+                name = destination,
+                value = configuredDefault,
+            });
         }
 
         private static void AddDriverCopy(
             List<VRC_AvatarParameterDriver.Parameter> target,
             HashSet<string> seenPairs,
             string source,
-            string destination,
-            bool preClearBoolDestination = false)
+            string destination)
         {
             if (target == null || seenPairs == null)
                 return;
@@ -1413,16 +1402,6 @@ namespace ASMLite.Editor
             string key = source + "\u001F" + destination;
             if (!seenPairs.Add(key))
                 return;
-
-            if (preClearBoolDestination)
-            {
-                target.Add(new VRC_AvatarParameterDriver.Parameter
-                {
-                    type = VRC_AvatarParameterDriver.ChangeType.Set,
-                    name = destination,
-                    value = 0f,
-                });
-            }
 
             target.Add(new VRC_AvatarParameterDriver.Parameter
             {
@@ -1536,6 +1515,16 @@ namespace ASMLite.Editor
                 return;
             }
 
+            paramsAsset.parameters = CreateExpressionSchema(avatarParams, backupNames, paramsAsset.parameters);
+            EditorUtility.SetDirty(paramsAsset);
+            // SaveAssets is called once in Build() after all three Populate methods complete.
+        }
+
+        private static VRCExpressionParameters.Parameter[] CreateExpressionSchema(
+            List<VRCExpressionParameters.Parameter> avatarParams,
+            List<string> backupNames,
+            VRCExpressionParameters.Parameter[] existingParameters)
+        {
             int avatarParamCount = avatarParams?.Count ?? 0;
             int totalCount = 1 + avatarParamCount + (backupNames != null ? backupNames.Count : 0);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
@@ -1584,9 +1573,9 @@ namespace ASMLite.Editor
             // Pre-build a lookup for existing asset params so legacy preservation
             // is O(1) per entry rather than O(n*m) with FirstOrDefault inside the loop.
             var existingByName = new Dictionary<string, VRCExpressionParameters.Parameter>(StringComparer.Ordinal);
-            if (paramsAsset.parameters != null)
+            if (existingParameters != null)
             {
-                foreach (var p in paramsAsset.parameters)
+                foreach (var p in existingParameters)
                 {
                     if (p != null && !string.IsNullOrEmpty(p.name) && !existingByName.ContainsKey(p.name))
                         existingByName[p.name] = p;
@@ -1644,10 +1633,7 @@ namespace ASMLite.Editor
                     Debug.LogWarning($"[ASM-Lite] Duplicate parameter name dropped from generated output: '{p.name}'");
             }
 
-            paramsAsset.parameters = writeIdx == merged.Length ? merged : merged[..writeIdx];
-
-            EditorUtility.SetDirty(paramsAsset);
-            // SaveAssets is called once in Build() after all three Populate methods complete.
+            return writeIdx == merged.Length ? merged : merged[..writeIdx];
         }
 
         /// <summary>
@@ -2031,16 +2017,8 @@ namespace ASMLite.Editor
                     ctrl.AddParameter(avatarParams[i].name, mappedTypes[i]);
             }
 
-            // Add per-slot backup and default parameters
-            for (int slot = 1; slot <= slotCount; slot++)
-            {
-                for (int i = 0; i < avatarParams.Count; i++)
-                {
-                    string bakName = $"ASMLite_Bak_S{slot}_{avatarParams[i].name}";
-                    if (addedParams.Add(bakName))
-                        ctrl.AddParameter(bakName, mappedTypes[i]);
-                }
-            }
+            // Backups are expression-only storage in direct delivery too.
+            // Add default parameters without per-slot FX declarations.
             for (int i = 0; i < avatarParams.Count; i++)
             {
                 string defName = $"ASMLite_Def_{avatarParams[i].name}";

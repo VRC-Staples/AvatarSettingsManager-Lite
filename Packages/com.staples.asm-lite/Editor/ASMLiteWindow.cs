@@ -68,6 +68,15 @@ namespace ASMLite.Editor
         // Cached component reference: rebuilt when avatar or scene changes.
         private ASMLiteComponent _cachedComponent;
         private ASMLiteInstallationState? _cachedToolState;
+        private ASMLiteParameterBudget? _cachedDisplayBudget;
+        private VRCAvatarDescriptor _displayBudgetAvatar;
+        private ASMLiteComponent _displayBudgetComponent;
+        private VRCExpressionParameters _displayBudgetParameters;
+        private VRCExpressionParameters.Parameter[] _displayBudgetSchema;
+        private int _displayBudgetSlotCount;
+        private bool _displayBudgetUseExclusions;
+        private string[] _displayBudgetExclusions = Array.Empty<string>();
+        private bool _displayBudgetIsUpdating;
 
         // Parameter count returned by the last successful build (post-VRCFury clone).
         // -1 means no build has run yet this session.
@@ -315,6 +324,7 @@ namespace ASMLite.Editor
             Undo.undoRedoPerformed += HandleEditorStateChanged;
             EditorApplication.hierarchyChanged += HandleEditorStateChanged;
             EditorApplication.projectChanged += HandleEditorStateChanged;
+            ObjectChangeEvents.changesPublished += HandleParameterBudgetObjectChanges;
             EditorApplication.update += HandleVisibleAutomationOverlayAnimationTick;
             RegisterVisibleAutomationOverlayGeometryCallback();
             RefreshVisibleAutomationOverlayVisuals();
@@ -325,6 +335,7 @@ namespace ASMLite.Editor
             Undo.undoRedoPerformed -= HandleEditorStateChanged;
             EditorApplication.hierarchyChanged -= HandleEditorStateChanged;
             EditorApplication.projectChanged -= HandleEditorStateChanged;
+            ObjectChangeEvents.changesPublished -= HandleParameterBudgetObjectChanges;
             EditorApplication.update -= HandleVisibleAutomationOverlayAnimationTick;
             UnregisterVisibleAutomationOverlayGeometryCallback();
             CloseVisibleAutomationOverlayPopupWindows();
@@ -334,6 +345,40 @@ namespace ASMLite.Editor
         {
             InvalidateCachedEditorState();
             Repaint();
+        }
+
+        private void HandleParameterBudgetObjectChanges(ref ObjectChangeEventStream changes)
+        {
+            for (int i = 0; i < changes.length; i++)
+            {
+                if (changes.GetEventType(i) == ObjectChangeKind.ChangeGameObjectOrComponentProperties)
+                {
+                    changes.GetChangeGameObjectOrComponentPropertiesEvent(i, out var change);
+                    HandleParameterBudgetInputChanged(EditorUtility.InstanceIDToObject(change.instanceId));
+                }
+                else if (changes.GetEventType(i) == ObjectChangeKind.ChangeAssetObjectProperties)
+                {
+                    changes.GetChangeAssetObjectPropertiesEvent(i, out var change);
+                    HandleParameterBudgetInputChanged(EditorUtility.InstanceIDToObject(change.instanceId));
+                }
+            }
+        }
+
+        internal void HandleParameterBudgetInputChanged(UnityEngine.Object changed)
+        {
+            if (!_selectedAvatar || changed == null)
+                return;
+
+            var transform = changed is Component component ? component.transform
+                : changed is GameObject gameObject ? gameObject.transform : null;
+            if ((transform != null && transform.IsChildOf(_selectedAvatar.transform))
+                || changed is VRCExpressionParameters || changed is VRCExpressionsMenu
+                || changed is AnimatorController
+                || (changed is GameObject && EditorUtility.IsPersistent(changed)))
+            {
+                _cachedDisplayBudget = null;
+                Repaint();
+            }
         }
 
         // ── GUI ───────────────────────────────────────────────────────────────
@@ -1536,7 +1581,7 @@ namespace ASMLite.Editor
 
             var component = GetOrRefreshComponent();
             var toolState = GetOrRefreshToolState(component);
-            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions, GetParameterBudget(component));
             if (!hierarchy.TryGetDescriptor(queuedAction, out var descriptor))
             {
                 Debug.LogWarning($"[ASM-Lite] Visible automation skipped unavailable action '{queuedAction}' for current tool state '{toolState}'.");
@@ -4620,6 +4665,27 @@ namespace ASMLite.Editor
                 toggleBrokerReport.CandidateCollisionAdjustments));
 
             EditorGUILayout.HelpBox(BuildCombinedStatusMessage(snapshot), ToMessageType(GetCombinedStatusSeverity(snapshot)));
+            var budget = GetDisplayParameterBudget(component);
+            bool bakedOnly = !hasComponent && (toolState == ASMLiteInstallationState.Detached || toolState == ASMLiteInstallationState.Vendorized);
+            if (bakedOnly)
+            {
+                var installed = ASMLiteBuilder.MeasureParameterBudget(_selectedAvatar.expressionParameters?.parameters);
+                EditorGUILayout.LabelField(installed.Readable ? $"Currently baked: {installed.CountText}" : installed.Message,
+                    EditorStyles.wordWrappedMiniLabel);
+                EditorGUILayout.LabelField("Pending settings apply when you Return to Package Managed; they do not change the baked avatar yet.",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+            if (budget.Readable)
+            {
+                string caption = bakedOnly ? "After Return to Package Managed" : "With these settings";
+                EditorGUI.ProgressBar(EditorGUILayout.GetControlRect(false, 20),
+                    Mathf.Clamp01((float)budget.Total / ASMLiteParameterBudget.Limit),
+                    $"{caption}: {budget.CountText}");
+                EditorGUILayout.LabelField($"Existing avatar {budget.OriginalCount:N0} + ASM-Lite additions {budget.Contribution:N0} = {budget.Total:N0} parameters",
+                    EditorStyles.wordWrappedMiniLabel);
+            }
+            EditorGUILayout.HelpBox(budget.Message, budget.BlocksGeneration ? MessageType.Error
+                : !budget.Complete || budget.Remaining == 0 ? MessageType.Warning : MessageType.Info);
         }
 
         private static string ResolveStatusCopy(ASMLiteInstallationState toolState, bool hasComponent)
@@ -4963,7 +5029,7 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
             var toolState = GetOrRefreshToolState(component);
-            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            var hierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions, GetDisplayParameterBudget(component));
 
             EditorGUILayout.BeginVertical("box");
             for (int i = 0; i < hierarchy.PrimaryDescriptors.Length; i++)
@@ -5213,12 +5279,69 @@ namespace ASMLite.Editor
         {
             var component = GetOrRefreshComponent();
             var toolState = GetOrRefreshToolState(component);
-            return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            return BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions, GetParameterBudget(component));
         }
 
-        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(ASMLiteInstallationState toolState, bool hasComponent, bool advancedDisclosureExpanded)
+        internal static AsmLiteActionHierarchy BuildActionHierarchyContract(ASMLiteInstallationState toolState, bool hasComponent, bool advancedDisclosureExpanded,
+            ASMLiteParameterBudget? budget = null)
         {
-            return AsmLiteWindowActionModel.Build(toolState, hasComponent, advancedDisclosureExpanded);
+            return AsmLiteWindowActionModel.Build(toolState, hasComponent, advancedDisclosureExpanded, budget);
+        }
+
+        internal ASMLiteParameterBudget GetDisplayParameterBudget(ASMLiteComponent component = null)
+        {
+            component = component != null ? component : GetOrRefreshComponent();
+            int slots = component != null ? component.slotCount : _pendingSlotCount;
+            bool useExclusions = component != null ? component.useParameterExclusions : _pendingUseParameterExclusions;
+            string[] exclusions = (useExclusions
+                ? component != null ? component.excludedParameterNames : _pendingExcludedParameterNames
+                : null) ?? Array.Empty<string>();
+            var parameters = _selectedAvatar != null ? _selectedAvatar.expressionParameters : null;
+            var schema = parameters != null ? parameters.parameters : null;
+            bool updating = EditorApplication.isUpdating;
+
+            if (_cachedDisplayBudget.HasValue && _displayBudgetAvatar == _selectedAvatar
+                && _displayBudgetComponent == component && _displayBudgetParameters == parameters
+                && ReferenceEquals(_displayBudgetSchema, schema) && _displayBudgetSlotCount == slots
+                && _displayBudgetUseExclusions == useExclusions && _displayBudgetIsUpdating == updating
+                && _displayBudgetExclusions.SequenceEqual(exclusions, StringComparer.Ordinal))
+                return _cachedDisplayBudget.Value;
+
+            // Only drawing uses this cache. Generation and automation checks stay fresh.
+            var budget = GetParameterBudget(component);
+            _cachedDisplayBudget = budget.Readable ? budget : (ASMLiteParameterBudget?)null;
+            _displayBudgetAvatar = _selectedAvatar;
+            _displayBudgetComponent = component;
+            _displayBudgetParameters = parameters;
+            _displayBudgetSchema = schema;
+            _displayBudgetSlotCount = slots;
+            _displayBudgetUseExclusions = useExclusions;
+            _displayBudgetExclusions = CloneStrings(exclusions);
+            _displayBudgetIsUpdating = updating;
+            return budget;
+        }
+
+        internal ASMLiteParameterBudget GetParameterBudget(ASMLiteComponent component = null)
+        {
+            component = component != null ? component : GetOrRefreshComponent();
+            try
+            {
+                return ASMLiteBuilder.CalculateParameterBudget(_selectedAvatar, component != null
+                    ? ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component) : CapturePendingCustomizationSnapshot());
+            }
+            catch (Exception exception)
+            {
+                return new ASMLiteParameterBudget(0, 0, false, $"Calculating… Parameter inputs are unreadable ({exception.GetType().Name}). Retry after import.");
+            }
+        }
+
+        private bool CheckGenerationBudget(ASMLiteComponent component, bool showDialogs)
+        {
+            var diagnostic = GetParameterBudget(component).ToDiagnostic();
+            if (diagnostic.Success) return true;
+            Debug.LogError(diagnostic.ToLogString());
+            if (showDialogs) EditorUtility.DisplayDialog("ASM-Lite: Parameter Budget", diagnostic.Message, "OK");
+            return false;
         }
 
         internal static bool IsMaintenanceAction(AsmLiteWindowAction action)
@@ -5241,6 +5364,7 @@ namespace ASMLite.Editor
             _cachedComponent = null;
             _lastRefreshFrame = -1;
             _cachedToolState = null;
+            _cachedDisplayBudget = null;
             _cachedParamList = null;
             _cachedParamTree = null;
             _cachedInstallPathTree = null;
@@ -5600,6 +5724,7 @@ namespace ASMLite.Editor
         {
             if (_selectedAvatar == null)
                 return;
+            if (!CheckGenerationBudget(null, showDialogs)) return;
 
             var existing = _selectedAvatar.GetComponentInChildren<ASMLiteComponent>(includeInactive: true);
             if (existing != null)
@@ -5678,6 +5803,7 @@ namespace ASMLite.Editor
         {
             if (component == null)
                 return;
+            if (!CheckGenerationBudget(component, showDialogs)) return;
 
             // Check for stale prms entry from pre-1.0.5 prefab instances. If present,
             // destroy the old instance and re-add a fresh prefab so the double-path
@@ -7080,7 +7206,7 @@ namespace ASMLite.Editor
             ASMLiteMigrationContinuityService.ComponentCustomizationSnapshot customization)
         {
             var toolState = GetOrRefreshToolState(component);
-            var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions);
+            var actionHierarchy = BuildActionHierarchyContract(toolState, component != null, _showAdvancedActions, GetParameterBudget(component));
             return ASMLiteCustomizationDraft.CreateAutomationSnapshot(
                 _selectedAvatar,
                 component,
