@@ -1,10 +1,12 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
@@ -848,36 +850,79 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test]
-        public void EditorStateInvalidation_ClearsCachedParameterBackupDiscovery()
+        [UnityTest]
+        public IEnumerator EditorStateChanges_RefreshVisibleParameterAndInstallPathDiscovery()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
             try
             {
-                const BindingFlags Flags = BindingFlags.Instance | BindingFlags.NonPublic;
-                Type windowType = typeof(ASMLite.Editor.ASMLiteWindow);
-                FieldInfo cachedParamList = windowType.GetField("_cachedParamList", Flags);
-                FieldInfo cachedParamTree = windowType.GetField("_cachedParamTree", Flags);
-                FieldInfo cachedInstallTree = windowType.GetField("_cachedInstallPathTree", Flags);
-                MethodInfo invalidate = windowType.GetMethod("InvalidateCachedEditorState", Flags);
+                var source = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "DiscoverySource");
+                var toggle = source.AddComponent<VF.Model.VRCFury>();
+                toggle.content = new VF.Model.Feature.Toggle
+                {
+                    useGlobalParam = true, globalParam = "Old/Hierarchy", name = "Discovery",
+                };
+                var move = source.AddComponent<VF.Model.VRCFury>();
+                move.content = new VF.Model.Feature.MoveMenuItem
+                {
+                    fromPath = "Source", toPath = "Old/HierarchyMenu",
+                };
+                var rootMenu = CreateTempMenuAsset("DiscoveryRoot");
+                var submenu = CreateTempMenuAsset("DiscoverySubmenu");
+                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = "OldProjectMenu", type = VRCExpressionsMenu.Control.ControlType.SubMenu, subMenu = submenu,
+                });
+                _ctx.AvDesc.expressionsMenu = rootMenu;
+                ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                    CreateParameterBackupPresetParameter("Old/Project", VRCExpressionParameters.ValueType.Bool));
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
 
-                Assert.IsNotNull(cachedParamList, "setup failure: expected parameter-list cache field.");
-                Assert.IsNotNull(cachedParamTree, "setup failure: expected parameter-tree cache field.");
-                Assert.IsNotNull(cachedInstallTree, "setup failure: expected install-path tree cache field.");
-                Assert.IsNotNull(invalidate, "setup failure: expected editor-state invalidation method.");
+                CollectionAssert.Contains(window.GetVisibleParameterBackupOptionsForAutomation(), "Old/Hierarchy");
+                CollectionAssert.Contains(window.GetVisibleParameterBackupOptionsForAutomation(), "Old/Project");
+                CollectionAssert.Contains(window.GetVisibleInstallPathOptionsForAutomation(), "Old/HierarchyMenu");
+                CollectionAssert.Contains(window.GetVisibleInstallPathOptionsForAutomation(), "OldProjectMenu");
 
-                cachedParamList.SetValue(window, new[] { "Stale/BeforeBuild" });
-                cachedParamTree.SetValue(window, Activator.CreateInstance(cachedParamTree.FieldType, nonPublic: true));
-                cachedInstallTree.SetValue(window, Activator.CreateInstance(cachedInstallTree.FieldType, nonPublic: true));
+                Object.DestroyImmediate(source);
+                source = ASMLiteTestFixtures.CreateChild(_ctx.AvatarGo, "ReplacementDiscoverySource");
+                source.AddComponent<VF.Model.VRCFury>().content = new VF.Model.Feature.Toggle
+                {
+                    useGlobalParam = true, globalParam = "New/Hierarchy", name = "Discovery",
+                };
+                source.AddComponent<VF.Model.VRCFury>().content = new VF.Model.Feature.MoveMenuItem
+                {
+                    fromPath = "Source", toPath = "New/HierarchyMenu",
+                };
+                double hierarchyDeadline = EditorApplication.timeSinceStartup + 10;
+                while (!window.GetVisibleParameterBackupOptionsForAutomation().Contains("New/Hierarchy")
+                    && EditorApplication.timeSinceStartup < hierarchyDeadline)
+                    yield return null;
 
-                invalidate.Invoke(window, new object[] { false });
+                CollectionAssert.Contains(window.GetVisibleParameterBackupOptionsForAutomation(), "New/Hierarchy");
+                CollectionAssert.DoesNotContain(window.GetVisibleParameterBackupOptionsForAutomation(), "Old/Hierarchy");
+                CollectionAssert.Contains(window.GetVisibleInstallPathOptionsForAutomation(), "New/HierarchyMenu");
+                CollectionAssert.DoesNotContain(window.GetVisibleInstallPathOptionsForAutomation(), "Old/HierarchyMenu");
 
-                Assert.IsNull(cachedParamList.GetValue(window),
-                    "Editor-state invalidation must drop stale parameter-backup discoveries so first-load Customize state refreshes after Add/Rebuild/Bake changes the avatar graph.");
-                Assert.IsNull(cachedParamTree.GetValue(window),
-                    "Editor-state invalidation must drop the stale parameter tree paired with the parameter-backup list.");
-                Assert.IsNull(cachedInstallTree.GetValue(window),
-                    "Editor-state invalidation must drop stale install-path discovery after hierarchy/project changes.");
+                rootMenu = CreateTempMenuAsset("ReplacementDiscoveryRoot");
+                rootMenu.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = "NewProjectMenu", type = VRCExpressionsMenu.Control.ControlType.SubMenu, subMenu = submenu,
+                });
+                _ctx.AvDesc.expressionsMenu = rootMenu;
+                ASMLiteTestFixtures.SetExpressionParams(_ctx,
+                    CreateParameterBackupPresetParameter("New/Project", VRCExpressionParameters.ValueType.Bool));
+                EditorUtility.SetDirty(rootMenu);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(rootMenu), ImportAssetOptions.ForceUpdate);
+                double projectDeadline = EditorApplication.timeSinceStartup + 10;
+                while (!window.GetVisibleParameterBackupOptionsForAutomation().Contains("New/Project")
+                    && EditorApplication.timeSinceStartup < projectDeadline)
+                    yield return null;
+
+                CollectionAssert.Contains(window.GetVisibleParameterBackupOptionsForAutomation(), "New/Project");
+                CollectionAssert.DoesNotContain(window.GetVisibleParameterBackupOptionsForAutomation(), "Old/Project");
+                CollectionAssert.Contains(window.GetVisibleInstallPathOptionsForAutomation(), "NewProjectMenu");
+                CollectionAssert.DoesNotContain(window.GetVisibleInstallPathOptionsForAutomation(), "OldProjectMenu");
             }
             finally
             {

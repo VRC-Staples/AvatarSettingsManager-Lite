@@ -1,10 +1,13 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -26,6 +29,7 @@ namespace ASMLite.Tests.PlayMode
         private AsmLiteTestContext _ctx;
         private GameObject _builtAvatar;
         private GameObject _emulator;
+        private int _slotCount = 2;
         private ASMLiteGeneratedAssetTestIsolation.GeneratedAssetsSnapshot _generatedBaseline;
 
         [TearDown]
@@ -42,6 +46,7 @@ namespace ASMLite.Tests.PlayMode
             {
                 _generatedBaseline?.Restore();
                 _ctx = null;
+                _slotCount = 2;
                 _generatedBaseline = null;
             }
         }
@@ -59,7 +64,7 @@ namespace ASMLite.Tests.PlayMode
             _ctx.AvatarGo.AddComponent<Animator>();
             _ctx.AvDesc.customExpressions = true;
             ASMLiteAv3SaveLoadRuntimeTestBase.WireFxController(_ctx.AvDesc, _ctx.Ctrl);
-            _ctx.Comp.slotCount = 2;
+            _ctx.Comp.slotCount = _slotCount;
             _ctx.Comp.useParameterExclusions = true;
             _ctx.Comp.excludedParameterNames = new[] { ExcludedFloat };
             ASMLiteTestFixtures.AddExpressionParam(_ctx, SavedBool, VRCExpressionParameters.ValueType.Bool);
@@ -76,7 +81,7 @@ namespace ASMLite.Tests.PlayMode
             _ctx.Comp.useCustomSlotIcons = true;
             _ctx.Comp.iconMode = IconMode.Custom;
             _ctx.Comp.customRootIcon = icons[0];
-            _ctx.Comp.customIcons = new[] { icons[1], icons[2] };
+            _ctx.Comp.customIcons = Enumerable.Range(0, _slotCount).Select(slot => icons[1 + slot % 2]).ToArray();
             _ctx.Comp.actionIconMode = ActionIconMode.Custom;
             _ctx.Comp.customSaveIcon = icons[3];
             _ctx.Comp.customLoadIcon = icons[4];
@@ -116,7 +121,7 @@ namespace ASMLite.Tests.PlayMode
                 "The first built FX controller must not duplicate expression backup storage.");
             Assert.IsTrue(builtDescriptor.expressionParameters.parameters.Any(parameter => parameter.name == "ASMLite_Bak_S1_" + LateInt),
                 "The first built expression schema is missing the late parameter's backup.");
-            AssertBuiltMenu(builtDescriptor.expressionsMenu, icons);
+            AssertBuiltMenu(builtDescriptor.expressionsMenu, icons, _slotCount);
             TestContext.WriteLine("First SDK preprocess passed: late-parameter backup schema, custom root/slot/action icons, and menu buttons verified. Starting AV3 Save/Load/Clear checks without another build.");
 
             // VRCFury queues an AV3 restart on delayCall. Let it finish before creating
@@ -148,6 +153,155 @@ namespace ASMLite.Tests.PlayMode
             var unsaved = new[] { ASMLiteAv3SaveLoadHarness.Descriptor(ExcludedFloat, VRCExpressionParameters.ValueType.Float) };
             yield return new ASMLiteAv3SaveLoadHarness(saved, unsaved).RunCoreInvariant(_builtAvatar, 0xA5A50001u);
             yield return AssertClearResetsSavedAndPreservesExcluded();
+        }
+
+        [UnityTest]
+        public IEnumerator FirstPlayModeBuild_AllEightSlots_SaveLoadOverwriteClearRemainIndependent()
+        {
+            _slotCount = 8;
+            yield return FirstPlayModeBuild_PreservesCustomIcons_AndRunsSaveLoadClearWithoutASecondBuild();
+            Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryFindRuntime(_builtAvatar, out var runtime, out var diagnostic), diagnostic);
+            var expectedSlots = Enumerable.Range(1, _slotCount).ToDictionary(slot => slot, slot => SourceDefaults());
+            var excluded = (ExcludedFloat, ASMLiteAv3ParameterValue.Float(-0.8125f));
+            WriteValues(runtime, new[] { excluded });
+            // The reused regression deliberately leaves slot 2 saved. Establish the matrix baseline.
+            yield return RunControlAndWaitForValues(runtime, 6,
+                SourceDefaults().Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+
+            WriteValues(runtime, SlotValues(10));
+            yield return RunControlAndWaitForValues(runtime, (_slotCount - 1) * 3 + 2,
+                SourceDefaults().Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            for (int slot = 1; slot <= _slotCount; slot++)
+            {
+                var values = SlotValues(slot);
+                WriteValues(runtime, values);
+                expectedSlots[slot] = values;
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 1,
+                    values.Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            }
+            for (int slot = _slotCount; slot >= 1; slot--)
+            {
+                WriteValues(runtime, SlotValues(10));
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 2,
+                    expectedSlots[slot].Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            }
+
+            expectedSlots[1] = SlotValues(10);
+            WriteValues(runtime, expectedSlots[1]);
+            yield return RunControlAndWaitForValues(runtime, 1,
+                expectedSlots[1].Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            WriteValues(runtime, SlotValues(9));
+            yield return RunControlAndWaitForValues(runtime, 2,
+                expectedSlots[1].Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+
+            for (int slot = 1; slot <= _slotCount; slot++)
+            {
+                expectedSlots[slot] = SourceDefaults();
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 3,
+                    SourceDefaults().Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+                WriteValues(runtime, SlotValues(10));
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 2,
+                    SourceDefaults().Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            }
+            expectedSlots[_slotCount] = SlotValues(9);
+            WriteValues(runtime, expectedSlots[_slotCount]);
+            yield return RunControlAndWaitForValues(runtime, (_slotCount - 1) * 3 + 1,
+                expectedSlots[_slotCount].Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            WriteValues(runtime, SlotValues(10));
+            yield return RunControlAndWaitForValues(runtime, (_slotCount - 1) * 3 + 2,
+                expectedSlots[_slotCount].Concat(AllBackups(expectedSlots)).Append(excluded).ToArray());
+            TestContext.WriteLine("All eight slots passed Save, reverse-order Load, overwrite, Clear, cleared-slot Load, and Save after Clear; every command checked all backups and the excluded parameter.");
+        }
+
+        [UnityTest]
+        public IEnumerator FirstPlayModeBuild_SavedSlotsSurviveAv3AnimatorReset()
+        {
+            _slotCount = 8;
+            yield return FirstPlayModeBuild_PreservesCustomIcons_AndRunsSaveLoadClearWithoutASecondBuild();
+            Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryFindRuntime(_builtAvatar, out var runtime, out var diagnostic), diagnostic);
+            var expectedSlots = new Dictionary<int, (string, ASMLiteAv3ParameterValue)[]>();
+            var schema = _builtAvatar.GetComponent<VRCAvatarDescriptor>().expressionParameters.parameters;
+            for (int slot = 1; slot <= _slotCount; slot++)
+            {
+                var values = SlotValues(slot);
+                foreach (var backup in BackupValues(slot, values))
+                {
+                    var parameter = schema.Single(item => item.name == backup.Item1);
+                    Assert.IsTrue(parameter.saved, parameter.name + " must persist as a saved expression parameter.");
+                    Assert.IsFalse(parameter.networkSynced, parameter.name + " must remain local storage.");
+                }
+                WriteValues(runtime, values);
+                expectedSlots[slot] = values;
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 1, AllBackups(expectedSlots));
+            }
+            Assert.IsFalse(schema.Single(parameter => parameter.name == ExcludedFloat).saved);
+            Assert.IsFalse(schema.Single(parameter => parameter.name == "ASMLite_Ctrl").saved);
+            WriteValues(runtime, new[] { (ExcludedFloat, ASMLiteAv3ParameterValue.Float(-0.8125f)) });
+            Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryWriteControl(runtime, 253, out diagnostic), diagnostic);
+            yield return null;
+
+            // Use the installed emulator's real reset. Never copy backup values into the replacement graph.
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+            var graphField = runtime.GetType().GetField("playableGraph", flags);
+            var resetField = runtime.GetType().GetField("ResetAvatar", flags);
+            var keepSavedField = runtime.GetType().GetField("KeepSavedParametersOnReset", flags);
+            Assert.IsNotNull(graphField);
+            Assert.IsNotNull(resetField);
+            Assert.IsNotNull(keepSavedField);
+            var previousGraph = (PlayableGraph)graphField.GetValue(runtime);
+            Assert.IsTrue(previousGraph.IsValid());
+            keepSavedField.SetValue(runtime, true);
+            resetField.SetValue(runtime, true);
+            float deadline = Time.realtimeSinceStartup + 15f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+                var currentGraph = (PlayableGraph)graphField.GetValue(runtime);
+                if (!previousGraph.IsValid() && currentGraph.IsValid() && !(bool)resetField.GetValue(runtime)) break;
+            }
+            Assert.IsFalse(previousGraph.IsValid(), "The old native animator graph must be destroyed, not merely paused.");
+            Assert.IsTrue(((PlayableGraph)graphField.GetValue(runtime)).IsValid(), "The replacement native graph must run.");
+            Assert.IsFalse((bool)resetField.GetValue(runtime), "The emulator reset must complete.");
+            Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryReadControl(runtime, out int control, out diagnostic), diagnostic);
+            Assert.AreEqual(0, control, "Unsaved control must reset instead of replaying an action.");
+            var excludedDefault = (ExcludedFloat, ASMLiteAv3ParameterValue.Float(0f));
+            foreach (var value in AllBackups(expectedSlots).Append(excludedDefault))
+            {
+                Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryReadParameter(runtime, value.Item1, value.Item2.Type, out var actual, out diagnostic), diagnostic);
+                Assert.That(actual.FloatValue, Is.EqualTo(value.Item2.FloatValue).Within(0.0001f), "Incorrect reset value for " + value.Item1);
+            }
+            for (int slot = _slotCount; slot >= 1; slot--)
+                yield return RunControlAndWaitForValues(runtime, (slot - 1) * 3 + 2,
+                    expectedSlots[slot].Concat(AllBackups(expectedSlots)).Append(excludedDefault).ToArray());
+            TestContext.WriteLine("All eight saved slots survived AV3 animator-graph destruction/recreation and remained loadable; unsaved control/excluded values reset. This does not test a scene reload, editor restart, or VRChat client.");
+        }
+
+        private static (string, ASMLiteAv3ParameterValue)[] SourceDefaults() => new[]
+        {
+            (SavedBool, ASMLiteAv3ParameterValue.Bool(false)),
+            (DefaultTrueBool, ASMLiteAv3ParameterValue.Bool(true)),
+            (LateInt, ASMLiteAv3ParameterValue.Int(7)),
+            (SavedFloat, ASMLiteAv3ParameterValue.Float(0.375f)),
+        };
+
+        private static (string, ASMLiteAv3ParameterValue)[] SlotValues(int slot) => new[]
+        {
+            (SavedBool, ASMLiteAv3ParameterValue.Bool(slot % 2 != 0)),
+            (DefaultTrueBool, ASMLiteAv3ParameterValue.Bool(slot % 2 == 0)),
+            (LateInt, ASMLiteAv3ParameterValue.Int(slot * 17)),
+            (SavedFloat, ASMLiteAv3ParameterValue.Float(-0.875f + slot * 0.1875f)),
+        };
+
+        private static (string, ASMLiteAv3ParameterValue)[] BackupValues(int slot, (string, ASMLiteAv3ParameterValue)[] values) =>
+            values.Select(value => ($"ASMLite_Bak_S{slot}_{value.Item1}", value.Item2)).ToArray();
+
+        private static (string, ASMLiteAv3ParameterValue)[] AllBackups(Dictionary<int, (string, ASMLiteAv3ParameterValue)[]> slots) =>
+            slots.SelectMany(slot => BackupValues(slot.Key, slot.Value)).ToArray();
+
+        private static void WriteValues(object runtime, (string, ASMLiteAv3ParameterValue)[] values)
+        {
+            foreach (var value in values)
+                Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryWriteParameter(runtime, value.Item1, value.Item2, out var diagnostic), diagnostic);
         }
 
         private static Texture2D CreateIcon(int index)
@@ -206,14 +360,14 @@ namespace ASMLite.Tests.PlayMode
             }
         }
 
-        private static void AssertBuiltMenu(VRCExpressionsMenu menu, Texture2D[] icons)
+        private static void AssertBuiltMenu(VRCExpressionsMenu menu, Texture2D[] icons, int slotCount)
         {
             var root = RequireControl(menu, "Settings Manager");
             AssertIcon(icons[0], root.icon);
-            for (int slot = 1; slot <= 2; slot++)
+            for (int slot = 1; slot <= slotCount; slot++)
             {
                 var preset = RequireControl(root.subMenu, "Preset " + slot);
-                AssertIcon(icons[slot], preset.icon);
+                AssertIcon(icons[1 + (slot - 1) % 2], preset.icon);
                 var save = RequireControl(preset.subMenu, "Save");
                 var load = RequireControl(preset.subMenu, "Load");
                 var clear = RequireControl(preset.subMenu, "Clear Preset");
@@ -279,9 +433,7 @@ namespace ASMLite.Tests.PlayMode
             yield return RunControlAndWaitForValues(runtime, 1, slot1Saved);
             yield return RunControlAndWaitForValues(runtime, 4, slot2Saved);
 
-            // Runtime default parameters may change; Clear still uses configured build-time defaults.
-            foreach (var (name, value) in saved)
-                Assert.IsTrue(ASMLiteAv3RuntimeBridge.TryWriteParameter(runtime, "ASMLite_Def_" + name, value, out diagnostic), diagnostic);
+            // Clear uses configured build-time literals, not runtime default parameters.
             var excluded = new[] { (ExcludedFloat, excludedBefore) };
             var slot1Defaults = defaults.Select(p => ("ASMLite_Bak_S1_" + p.Item1, p.Item2)).ToArray();
             yield return RunControlAndWaitForValues(runtime, 3, defaults.Concat(slot1Defaults).Concat(slot2Saved).Concat(excluded).ToArray());

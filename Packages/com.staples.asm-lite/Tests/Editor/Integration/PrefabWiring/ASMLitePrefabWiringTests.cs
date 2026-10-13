@@ -145,26 +145,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void PrefabWiring_SecondRefresh_IsNoOp_WithSingleVrcFuryComponent()
-        {
-            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            try
-            {
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "First Refresh"),
-                    "First live FullController refresh should succeed for a healthy ASM-Lite object.");
-                AssertSingleCriticalWiringState(ctx.Comp, "first refresh");
-
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Second Refresh"),
-                    "Second live FullController refresh should succeed as a no-op on unchanged input.");
-                AssertSingleCriticalWiringState(ctx.Comp, "second refresh");
-            }
-            finally
-            {
-                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
-        [Test]
         public void PrefabWiring_RepeatedRefresh_KeepsGeneratedFxMenuAndParameterRefsStable()
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
@@ -172,6 +152,8 @@ namespace ASMLite.Tests.Editor
             {
                 Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Repeated Refresh First Pass"),
                     "First live FullController refresh should succeed for repeated-refresh characterization.");
+
+                AssertSingleCriticalWiringState(ctx.Comp, "repeated refresh first pass");
 
                 var firstSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(ctx.Comp, 0);
                 var firstVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);

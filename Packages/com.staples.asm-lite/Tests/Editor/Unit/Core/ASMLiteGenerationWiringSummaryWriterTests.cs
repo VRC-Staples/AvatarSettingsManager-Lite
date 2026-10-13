@@ -80,13 +80,12 @@ namespace ASMLite.Tests.Editor
                 Assert.IsTrue(File.Exists(outputPath),
                     "Writer should emit artifacts/asmlite-generation-wiring-summary.json equivalent output.");
 
-                string json = File.ReadAllText(outputPath);
-                Assert.IsTrue(json.Contains("\"failureCount\": 1"),
-                    "Summary payload should include the exact failureCount.");
-                Assert.IsTrue(json.Contains("\"suiteName\": \"SuiteC\""),
-                    "Summary payload should include serialized suite names.");
-                Assert.IsTrue(json.Contains("\"testName\": \"CaseC\""),
-                    "Summary payload should include serialized test names.");
+                var summary = UnityEngine.JsonUtility.FromJson<ASMLiteGenerationWiringSummaryDocument>(
+                    File.ReadAllText(outputPath));
+                Assert.AreEqual(1, summary.failureCount);
+                Assert.AreEqual(1, summary.failures.Length);
+                Assert.AreEqual("SuiteC", summary.failures[0].suiteName);
+                Assert.AreEqual("CaseC", summary.failures[0].testName);
             }
             finally
             {
@@ -94,5 +93,6 @@ namespace ASMLite.Tests.Editor
                     Directory.Delete(tempDir, recursive: true);
             }
         }
+
     }
 }

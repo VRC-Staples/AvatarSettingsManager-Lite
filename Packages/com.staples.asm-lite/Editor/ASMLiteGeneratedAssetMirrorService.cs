@@ -171,9 +171,19 @@ namespace ASMLite.Editor
             return new ScopedFailurePoint(() => s_testFailurePoint = previous);
         }
 
-        internal static ASMLiteGeneratedAssetMirrorResult StageVendorizedMirror(VRCAvatarDescriptor avatar)
+        internal static string ResolveAvatarWorkingDirectory(VRCAvatarDescriptor avatar)
         {
-            string sourcePrefix = NormalizeAssetPath(ASMLiteAssetPaths.GeneratedDir);
+            return ASMLiteGeneratedOwnershipPolicy.VendorizedGeneratedAssetsRoot + "/"
+                + BuildVendorizeAvatarFolderKey(avatar) + "/WorkingAssets";
+        }
+
+        internal static ASMLiteGeneratedAssetMirrorResult StageVendorizedMirror(
+            VRCAvatarDescriptor avatar,
+            string sourceDir = null,
+            Action<string> populate = null,
+            bool workingAssets = false)
+        {
+            string sourcePrefix = NormalizeAssetPath(sourceDir ?? ASMLiteAssetPaths.GeneratedDir);
             if (avatar == null)
             {
                 return ASMLiteGeneratedAssetMirrorResult.Fail(
@@ -190,7 +200,14 @@ namespace ASMLite.Editor
             }
 
             string avatarFolder = EnsureVendorizeAvatarFolder(avatar);
-            string targetDir = NormalizeAssetPath(avatarFolder + "/GeneratedAssets");
+            string targetDir = NormalizeAssetPath(avatarFolder + (workingAssets ? "/WorkingAssets" : "/GeneratedAssets"));
+            if (AssetDatabase.IsValidFolder(targetDir)
+                && !(workingAssets ? IsOwnedWorkingFolder(avatar, targetDir) : ValidateVendorizedFolderForDelete(avatar, targetDir).Success))
+                return ASMLiteGeneratedAssetMirrorResult.Fail(
+                    ASMLiteGeneratedAssetMirrorOperation.StageVendorizedMirror, ASMLiteGeneratedAssetMirrorStage.Preflight,
+                    sourcePrefix, targetDir, string.Empty, string.Empty, 0,
+                    "[ASM-Lite] Refusing to replace a generated folder without matching avatar and payload ownership.",
+                    targetDir, "Preserve unrelated assets and restore the avatar's own generated payload before rebuilding.");
             string stagingDir = CreateUniqueFolder(avatarFolder, "GeneratedAssets__stage__");
             string backupDir = string.Empty;
             int copiedAssetCount = 0;
@@ -224,16 +241,25 @@ namespace ASMLite.Editor
                 if (stagedRootMenu == null)
                     throw new InvalidOperationException("Staged ASM-Lite root menu did not load.");
                 var stagedMenus = new HashSet<VRCExpressionsMenu>();
-                RetargetMenuGeneratedSubmenus(stagedRootMenu, sourcePrefix, stagingDir, stagedMenus);
+                // Unused slot menus are copied too; keep their references inside the mirror.
+                foreach (string guid in AssetDatabase.FindAssets("t:VRCExpressionsMenu", new[] { stagingDir }))
+                {
+                    string menuPath = AssetDatabase.GUIDToAssetPath(guid);
+                    if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(menuPath))
+                        RetargetMenuGeneratedSubmenus(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(menuPath), sourcePrefix, stagingDir, stagedMenus);
+                }
                 foreach (var menu in stagedMenus)
                 {
                     if (!ASMLiteGeneratedOwnershipPolicy.PathStartsWith(AssetDatabase.GetAssetPath(menu), stagingDir)
-                        || menu.controls.Any(control => control != null
+                        || (populate == null && menu.controls.Any(control => control != null
                             && control.type == VRCExpressionsMenu.Control.ControlType.SubMenu
-                            && control.subMenu == null))
+                            && control.subMenu == null)))
                         throw new InvalidOperationException("Staged ASM-Lite menu tree contains a missing or external submenu.");
                     AssetDatabase.SaveAssetIfDirty(menu);
                 }
+
+                populate?.Invoke(stagingDir);
+                AssetDatabase.SaveAssets();
 
                 if (!VerifyGeneratedAssetFolder(stagingDir))
                 {
@@ -407,7 +433,8 @@ namespace ASMLite.Editor
 
         internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedMirror(ASMLiteGeneratedAssetMirrorResult mirrorResult)
         {
-            if (ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+            if (ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize)
+                && mirrorResult?.TargetPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal) == true)
                 throw new InvalidOperationException("Injected failure before mirror finalization.");
 
             if (mirrorResult == null || string.IsNullOrWhiteSpace(mirrorResult.BackupPath))
@@ -453,12 +480,16 @@ namespace ASMLite.Editor
 
         internal static ASMLiteGeneratedAssetMirrorResult RetargetAvatarGeneratedAssetsToVendorized(VRCAvatarDescriptor avatar, string vendorizedDir)
         {
-            return RetargetAvatarGeneratedAssets(
+            var packageRetarget = RetargetAvatarGeneratedAssets(
                 avatar,
                 NormalizeAssetPath(ASMLiteAssetPaths.GeneratedDir),
                 NormalizeAssetPath(vendorizedDir),
                 ASMLiteGeneratedAssetMirrorOperation.RetargetAvatarToVendorized,
                 "[ASM-Lite] Failed to retarget avatar generated-asset references to the vendorized mirror folder.");
+            if (!packageRetarget.Success || avatar == null) return packageRetarget;
+            return RetargetAvatarGeneratedAssets(avatar, ResolveAvatarWorkingDirectory(avatar), NormalizeAssetPath(vendorizedDir),
+                ASMLiteGeneratedAssetMirrorOperation.RetargetAvatarToVendorized,
+                "[ASM-Lite] Failed to retarget the avatar-owned working references to the selected generated graph.");
         }
 
         internal static ASMLiteGeneratedAssetMirrorResult RestoreAvatarGeneratedAssetsToPackageManaged(VRCAvatarDescriptor avatar, string vendorizedDir)
@@ -481,9 +512,90 @@ namespace ASMLite.Editor
                 "[ASM-Lite] Failed to restore avatar generated-asset references back to vendorized assets during rollback.");
         }
 
-        internal static ASMLiteGeneratedAssetMirrorResult BackupVendorizedFolderForDelete(string vendorizedDir)
+        internal static ASMLiteGeneratedAssetMirrorResult ValidateVendorizedFolderForDelete(
+            VRCAvatarDescriptor avatar, string vendorizedDir, string payloadDir = null)
         {
             string normalizedDir = NormalizeAssetPath(vendorizedDir);
+            string expectedDir = ASMLiteGeneratedOwnershipPolicy.VendorizedGeneratedAssetsRoot + "/"
+                + BuildVendorizeAvatarFolderKey(avatar) + "/GeneratedAssets";
+            string payloadPath = payloadDir ?? normalizedDir;
+            bool owned = avatar != null
+                && ASMLiteGeneratedOwnershipPolicy.ClassifyAssetPath(normalizedDir) == ASMLiteGeneratedReferenceKind.Vendorized
+                && string.Equals(normalizedDir, expectedDir, StringComparison.Ordinal)
+                && (payloadDir == null || (Path.GetDirectoryName(payloadPath) == Path.GetDirectoryName(normalizedDir)
+                    && System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(payloadPath), @"^GeneratedAssets__delete__[0-9a-f]{8}$")))
+                && (!AssetDatabase.IsValidFolder(payloadPath) || IsOwnedVendorizedPayload(payloadPath));
+            return owned
+                ? ASMLiteGeneratedAssetMirrorResult.Pass(
+                    ASMLiteGeneratedAssetMirrorOperation.BackupVendorizedFolderForDelete,
+                    normalizedDir, normalizedDir, string.Empty, string.Empty, 0,
+                    "[ASM-Lite] Vendorized folder ownership verified.")
+                : ASMLiteGeneratedAssetMirrorResult.Fail(
+                    ASMLiteGeneratedAssetMirrorOperation.BackupVendorizedFolderForDelete,
+                    ASMLiteGeneratedAssetMirrorStage.Preflight,
+                    normalizedDir, normalizedDir, string.Empty, string.Empty, 0,
+                    "[ASM-Lite] Refusing to delete a folder without matching avatar and generated-payload ownership.",
+                    normalizedDir, "Restore the avatar's own generated-assets path. Preserve unrelated assets outside its generated payload.");
+        }
+
+        internal static bool IsOwnedWorkingFolder(VRCAvatarDescriptor avatar, string folder)
+        {
+            return avatar != null && string.Equals(NormalizeAssetPath(folder), ResolveAvatarWorkingDirectory(avatar), StringComparison.Ordinal)
+                && AssetDatabase.IsValidFolder(folder) && IsOwnedVendorizedPayload(folder);
+        }
+
+        private static bool IsOwnedVendorizedPayload(string folder)
+        {
+            if (!VerifyGeneratedAssetFolder(folder))
+                return false;
+            var parameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(folder + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+            var controller = AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(folder + "/" + Path.GetFileName(ASMLiteAssetPaths.FXController));
+            if (parameters?.parameters == null || !parameters.parameters.All(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter)
+                || !parameters.parameters.Any(p => p.name == ASMLiteBuilder.CtrlParam && p.valueType == VRCExpressionParameters.ValueType.Int && !p.networkSynced)
+                || controller == null || !controller.layers.Any(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer)
+                || !controller.layers.All(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer)
+                || !controller.parameters.Any(p => p.name == ASMLiteBuilder.CtrlParam && p.type == AnimatorControllerParameterType.Int))
+                return false;
+
+            string fullPath = ResolveProjectPhysicalAssetPath(folder);
+            string avatarFolder = Path.GetDirectoryName(fullPath);
+            string vendorRoot = Path.GetDirectoryName(avatarFolder);
+            if ((File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0
+                || (File.GetAttributes(avatarFolder) & FileAttributes.ReparsePoint) != 0
+                || (File.GetAttributes(vendorRoot) & FileAttributes.ReparsePoint) != 0
+                || Directory.GetDirectories(fullPath).Length != 0)
+                return false;
+            foreach (string file in Directory.GetFiles(fullPath))
+            {
+                string name = Path.GetFileName(file);
+                if (name.EndsWith(".meta", StringComparison.Ordinal))
+                    name = name.Substring(0, name.Length - ".meta".Length);
+                bool ownedName = name == Path.GetFileName(ASMLiteAssetPaths.FXController)
+                    || name == Path.GetFileName(ASMLiteAssetPaths.ExprParams)
+                    || name == Path.GetFileName(ASMLiteAssetPaths.Menu)
+                    || name == ASMLiteGeneratedOwnershipPolicy.PresetsMenuFileName
+                    || System.Text.RegularExpressions.Regex.IsMatch(name, @"^ASMLite_Slot[1-8]_(Menu|ConfirmMenu|ResetConfirmMenu)\.asset$");
+                if (!ownedName || (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                    return false;
+                if (ASMLiteGeneratedOwnershipPolicy.IsGeneratedMenuAssetPath(name))
+                {
+                    var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(folder + "/" + name);
+                    if (menu?.controls == null || !menu.controls.All(control => control != null
+                        && ((control.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null
+                            && ASMLiteGeneratedOwnershipPolicy.PathStartsWith(AssetDatabase.GetAssetPath(control.subMenu), folder))
+                            || (control.type == VRCExpressionsMenu.Control.ControlType.Button && control.parameter?.name == ASMLiteBuilder.CtrlParam))))
+                        return false;
+                }
+            }
+            return true;
+        }
+
+        internal static ASMLiteGeneratedAssetMirrorResult BackupVendorizedFolderForDelete(VRCAvatarDescriptor avatar, string vendorizedDir)
+        {
+            string normalizedDir = NormalizeAssetPath(vendorizedDir);
+            var ownership = ValidateVendorizedFolderForDelete(avatar, normalizedDir);
+            if (!ownership.Success)
+                return ownership;
             if (string.IsNullOrWhiteSpace(normalizedDir) || !AssetDatabase.IsValidFolder(normalizedDir))
             {
                 return ASMLiteGeneratedAssetMirrorResult.Pass(
@@ -591,9 +703,16 @@ namespace ASMLite.Editor
                     rollbackSucceeded: false);
         }
 
-        internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedFolderDelete(ASMLiteGeneratedAssetMirrorResult deleteBackupResult)
+        internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedFolderDelete(VRCAvatarDescriptor avatar, ASMLiteGeneratedAssetMirrorResult deleteBackupResult)
         {
-            if (deleteBackupResult == null || string.IsNullOrWhiteSpace(deleteBackupResult.BackupPath))
+            if (deleteBackupResult == null || !deleteBackupResult.Success
+                || deleteBackupResult.Operation != ASMLiteGeneratedAssetMirrorOperation.BackupVendorizedFolderForDelete)
+                return ValidateVendorizedFolderForDelete(avatar, string.Empty);
+            var ownership = ValidateVendorizedFolderForDelete(avatar, deleteBackupResult.TargetPath,
+                string.IsNullOrWhiteSpace(deleteBackupResult.BackupPath) ? null : deleteBackupResult.BackupPath);
+            if (!ownership.Success)
+                return ownership;
+            if (string.IsNullOrWhiteSpace(deleteBackupResult.BackupPath))
             {
                 return ASMLiteGeneratedAssetMirrorResult.Pass(
                     operation: ASMLiteGeneratedAssetMirrorOperation.FinalizeVendorizedFolderDelete,
@@ -634,7 +753,7 @@ namespace ASMLite.Editor
                 message: $"[ASM-Lite] Deleted rollback backup folder '{deleteBackupResult.BackupPath}' after attached return completed.");
         }
 
-        private static ASMLiteGeneratedAssetMirrorResult RetargetAvatarGeneratedAssets(
+        internal static ASMLiteGeneratedAssetMirrorResult RetargetAvatarGeneratedAssets(
             VRCAvatarDescriptor avatar,
             string sourcePrefix,
             string destinationPrefix,
@@ -670,6 +789,10 @@ namespace ASMLite.Editor
                     contextPath: "destinationPrefix",
                     remediation: "Pass a valid generated-assets destination path before retargeting avatar references.");
             }
+
+            if (string.Equals(NormalizeAssetPath(sourcePrefix), NormalizeAssetPath(destinationPrefix), StringComparison.Ordinal))
+                return ASMLiteGeneratedAssetMirrorResult.Pass(operation, sourcePrefix, destinationPrefix,
+                    string.Empty, string.Empty, 0, "[ASM-Lite] Generated graph references already select the destination.");
 
             if (avatar.expressionParameters != null)
             {

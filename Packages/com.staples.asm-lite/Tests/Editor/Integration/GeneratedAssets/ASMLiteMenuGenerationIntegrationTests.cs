@@ -75,7 +75,8 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"{aid}: Build() failed with result {buildResult} for slotCount={slotCount}.");
 
-            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var rootMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(rootMenu, $"{aid}: generated root menu is null after Build().");
             Assert.IsNotNull(rootMenu.controls, $"{aid}: generated root menu controls list is null after Build().");
             return rootMenu;
@@ -350,7 +351,8 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(secondResult, 0,
                 $"GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: second Build() failed with result {secondResult}.");
 
-            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var rootMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(rootMenu, "GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: generated root menu is null after repeated Build().");
             Assert.IsNotNull(rootMenu.controls, "GeneratedExpressionMenu_IsIdempotentAfterRepeatedBuild: generated root menu controls list is null after repeated Build().");
 
@@ -392,7 +394,8 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: Build() failed with result {buildResult} in stale-root normalization scenario.");
 
-            var refreshedRoot = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var refreshedRoot = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(refreshedRoot, "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: generated root menu is null after Build().");
             Assert.IsNotNull(refreshedRoot.controls, "Regression_SaturatedGeneratedRoot_DropsStaleControlsAndRestoresSingleWrapper: generated root menu controls list is null after Build().");
             Assert.AreEqual(1, refreshedRoot.controls.Count,

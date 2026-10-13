@@ -7,36 +7,17 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteSceneAcquisitionRegressionTests
     {
-        [Test]
-        public void SceneAcquisitionRegression_RejectsMissingScenePath()
+        [TestCase("Assets/Missing.unity", "SETUP_SCENE_MISSING", "scene could not be found", TestName = "SceneAcquisition_RejectsMissingScene")]
+        [TestCase("Packages/com.staples.asm-lite/package.json", "SETUP_SCENE_PATH_INVALID", "not a Unity scene", TestName = "SceneAcquisition_RejectsNonSceneFile")]
+        public void SceneAcquisitionRegression_RejectsInvalidPath(string path, string code, string message)
         {
             Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                    "open-scene",
-                    new ASMLiteSmokeStepArgs(),
-                    "Assets/Missing.unity",
-                    "CanonicalDress",
-                    out string detail,
-                    out string stackTrace),
-                Is.False);
-            StringAssert.Contains("SETUP_SCENE_MISSING", detail);
-            StringAssert.Contains("scene could not be found", detail);
+                    "open-scene", new ASMLiteSmokeStepArgs(), path, "CanonicalDress",
+                    out string detail, out string stackTrace), Is.False);
+            StringAssert.Contains(code, detail);
+            StringAssert.Contains(message, detail);
             Assert.That(stackTrace, Is.Empty);
         }
 
-        [Test]
-        public void SceneAcquisitionRegression_RejectsNonScenePath()
-        {
-            Assert.That(ASMLiteSmokeOverlayHostUnityRuntime.Instance.ExecuteCatalogStep(
-                    "open-scene",
-                    new ASMLiteSmokeStepArgs(),
-                    "Packages/com.staples.asm-lite/package.json",
-                    "CanonicalDress",
-                    out string detail,
-                    out string stackTrace),
-                Is.False);
-            StringAssert.Contains("SETUP_SCENE_PATH_INVALID", detail);
-            StringAssert.Contains("not a Unity scene", detail);
-            Assert.That(stackTrace, Is.Empty);
-        }
     }
 }

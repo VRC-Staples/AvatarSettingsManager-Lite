@@ -49,26 +49,24 @@ namespace ASMLite.Editor
             if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
                 return false;
 
-            if (string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal))
-                return true;
-
             string submenuPath = NormalizeAssetPath(control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu) : string.Empty);
-            if (IsGeneratedPresetsMenuPath(submenuPath))
-                return true;
-
-            return IsGeneratedPresetsMenuFileName(submenuPath);
+            return IsGeneratedPresetsMenuPath(submenuPath);
         }
 
-        internal static bool IsInjectedRootMenuControl(
-            VRCExpressionsMenu.Control control,
-            string effectiveRootControlName)
+        internal static bool IsGeneratedRootMenuControl(VRCExpressionsMenu.Control control, VRCAvatarDescriptor avatar)
         {
-            if (control == null || control.type != VRCExpressionsMenu.Control.ControlType.SubMenu)
+            if (IsGeneratedRootMenuControl(control))
+                return true;
+            if (control?.type != VRCExpressionsMenu.Control.ControlType.SubMenu || control.subMenu == null)
                 return false;
 
-            return string.Equals(control.name, ASMLiteBuilder.DefaultRootControlName, StringComparison.Ordinal)
-                || string.Equals(control.name, effectiveRootControlName, StringComparison.Ordinal)
-                || IsGeneratedPresetsMenuPath(control.subMenu ? AssetDatabase.GetAssetPath(control.subMenu) : string.Empty);
+            string path = NormalizeAssetPath(AssetDatabase.GetAssetPath(control.subMenu));
+            if (!IsGeneratedPresetsMenuFileName(path) || !PathStartsWith(path, VendorizedGeneratedAssetsRoot))
+                return false;
+
+            string folder = NormalizeAssetPath(Path.GetDirectoryName(path));
+            return ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(avatar, folder)
+                || ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(avatar, folder).Success;
         }
 
         internal static bool HasRuntimeMarkers(VRCAvatarDescriptor avatar)
@@ -130,10 +128,11 @@ namespace ASMLite.Editor
 
         internal static bool HasVendorizedReferences(VRCAvatarDescriptor avatar)
         {
-            return HasDescriptorGeneratedReferencesUnderPrefix(avatar, VendorizedGeneratedAssetsRoot);
+            return HasDescriptorGeneratedReferencesUnderPrefix(avatar, VendorizedGeneratedAssetsRoot,
+                assetPath => assetPath.IndexOf("/WorkingAssets/", StringComparison.Ordinal) < 0);
         }
 
-        internal static bool HasDescriptorGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string prefix)
+        internal static bool HasDescriptorGeneratedReferencesUnderPrefix(VRCAvatarDescriptor avatar, string prefix, Func<string, bool> includePath = null)
         {
             if (avatar == null)
                 return false;
@@ -144,12 +143,13 @@ namespace ASMLite.Editor
 
             string expressionParametersPath = NormalizeAssetPath(
                 avatar.expressionParameters ? AssetDatabase.GetAssetPath(avatar.expressionParameters) : string.Empty);
-            if (PathStartsWith(expressionParametersPath, normalizedPrefix))
+            if (PathStartsWith(expressionParametersPath, normalizedPrefix) && (includePath == null || includePath(expressionParametersPath)))
                 return true;
 
             string menuPath = NormalizeAssetPath(
                 avatar.expressionsMenu ? AssetDatabase.GetAssetPath(avatar.expressionsMenu) : string.Empty);
-            if (PathStartsWith(menuPath, normalizedPrefix) || MenuReferencesPrefix(avatar.expressionsMenu, normalizedPrefix))
+            if ((PathStartsWith(menuPath, normalizedPrefix) && (includePath == null || includePath(menuPath)))
+                || MenuReferencesPrefix(avatar.expressionsMenu, normalizedPrefix, new HashSet<VRCExpressionsMenu>(), includePath))
                 return true;
 
             if (avatar.baseAnimationLayers != null)
@@ -159,7 +159,7 @@ namespace ASMLite.Editor
                     string controllerPath = NormalizeAssetPath(avatar.baseAnimationLayers[i].animatorController
                         ? AssetDatabase.GetAssetPath(avatar.baseAnimationLayers[i].animatorController)
                         : string.Empty);
-                    if (PathStartsWith(controllerPath, normalizedPrefix))
+                    if (PathStartsWith(controllerPath, normalizedPrefix) && (includePath == null || includePath(controllerPath)))
                         return true;
                 }
             }
@@ -175,7 +175,8 @@ namespace ASMLite.Editor
         internal static bool MenuReferencesPrefix(
             VRCExpressionsMenu menu,
             string prefix,
-            HashSet<VRCExpressionsMenu> visited)
+            HashSet<VRCExpressionsMenu> visited,
+            Func<string, bool> includePath = null)
         {
             if (menu == null || visited == null || !visited.Add(menu) || menu.controls == null)
                 return false;
@@ -191,8 +192,8 @@ namespace ASMLite.Editor
                     continue;
 
                 string subMenuPath = NormalizeAssetPath(AssetDatabase.GetAssetPath(control.subMenu));
-                if (PathStartsWith(subMenuPath, normalizedPrefix)
-                    || MenuReferencesPrefix(control.subMenu, normalizedPrefix, visited))
+                if ((PathStartsWith(subMenuPath, normalizedPrefix) && (includePath == null || includePath(subMenuPath)))
+                    || MenuReferencesPrefix(control.subMenu, normalizedPrefix, visited, includePath))
                 {
                     return true;
                 }
@@ -208,6 +209,9 @@ namespace ASMLite.Editor
                 return ASMLiteGeneratedReferenceKind.None;
 
             if (PathStartsWith(normalizedPath, ASMLiteAssetPaths.GeneratedDir))
+                return ASMLiteGeneratedReferenceKind.PackageManaged;
+
+            if (PathStartsWith(normalizedPath, VendorizedGeneratedAssetsRoot) && normalizedPath.IndexOf("/WorkingAssets/", StringComparison.Ordinal) >= 0)
                 return ASMLiteGeneratedReferenceKind.PackageManaged;
 
             if (PathStartsWith(normalizedPath, VendorizedGeneratedAssetsRoot))

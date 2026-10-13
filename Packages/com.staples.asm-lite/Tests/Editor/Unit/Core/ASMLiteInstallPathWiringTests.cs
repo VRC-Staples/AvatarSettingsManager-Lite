@@ -76,31 +76,13 @@ namespace ASMLite.Tests.Editor
     {
         private const string SuiteName = nameof(ASMLiteInstallPathWiringTests);
 
-        [Test]
-        public void PrefabWiring_UsesTrimmedCustomInstallPrefix_WhenEnabled()
+        [TestCase(true, "  Avatars/ASM  ", "Avatars/ASM", TestName = "InstallPrefix_EnabledTextIsTrimmed")]
+        [TestCase(false, "Avatar/ShouldNotApply", "", TestName = "InstallPrefix_DisabledTextIsIgnored")]
+        [TestCase(true, "   ", "", TestName = "InstallPrefix_EnabledBlankIsEmpty")]
+        public void PrefabWiring_ResolvesInstallPrefix(bool enabled, string configuredPath, string expected)
         {
-            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "  Avatars/ASM  ");
-
-            Assert.AreEqual("Avatars/ASM", resolvedPrefix,
-                "enabled custom install path must trim and serialize the FullController menu prefix.");
-        }
-
-        [Test]
-        public void PrefabWiring_FallsBackToEmptyPrefix_WhenDisabled()
-        {
-            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: false, customInstallPath: "Avatar/ShouldNotApply");
-
-            Assert.AreEqual(string.Empty, resolvedPrefix,
-                "disabled custom install path must fail closed to empty FullController prefix even when text exists.");
-        }
-
-        [Test]
-        public void PrefabWiring_FallsBackToEmptyPrefix_WhenEnabledPathIsBlank()
-        {
-            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(useCustomInstallPath: true, customInstallPath: "   ");
-
-            Assert.AreEqual(string.Empty, resolvedPrefix,
-                "blank enabled custom install path must fail closed to empty FullController prefix.");
+            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(enabled, configuredPath);
+            Assert.AreEqual(expected, resolvedPrefix);
         }
 
         [Test]

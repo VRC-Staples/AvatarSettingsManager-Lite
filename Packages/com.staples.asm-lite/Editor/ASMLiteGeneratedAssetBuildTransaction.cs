@@ -40,9 +40,10 @@ namespace ASMLite.Editor
 
     internal static class ASMLiteGeneratedAssetBuildTransaction
     {
-        internal static ASMLiteGeneratedAssetBuildTransactionResult Execute(ASMLiteComponent component)
+        internal static ASMLiteGeneratedAssetBuildTransactionResult Execute(ASMLiteComponent component,
+            System.Action<ASMLiteGeneratedAssetMirrorResult, ASMLiteFullControllerReferenceSnapshot> retainGeneratedGraph = null)
         {
-            int discoveredParamCount = ASMLiteBuilder.Build(component);
+            int discoveredParamCount = ASMLiteBuilder.BuildForLifecycle(component, retainGeneratedGraph);
             var diagnostic = ASMLiteBuilder.GetLatestBuildDiagnosticResult();
             if (discoveredParamCount < 0 || diagnostic == null || !diagnostic.Success)
             {

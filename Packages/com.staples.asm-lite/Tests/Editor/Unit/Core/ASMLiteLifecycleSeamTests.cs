@@ -72,9 +72,10 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void DirectDeliveryVerification_ReportsMissingRuntimeMarkers()
+        public void DirectDeliveryVerification_ReportsMissingRequiredContent()
         {
             bool verified = ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                _ctx.Comp,
                 _ctx.AvDesc,
                 ASMLiteInstallationState.Detached,
                 vendorizedDir: string.Empty,
@@ -83,14 +84,14 @@ namespace ASMLite.Tests.Editor
 
             Assert.IsFalse(verified,
                 "A detached direct-delivery avatar without generated runtime markers should not verify.");
-            StringAssert.Contains("runtime markers", failureMessage);
+            StringAssert.Contains("required direct-delivery content", failureMessage);
             Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
         }
 
         [TestCase("parameters")]
         [TestCase("menu")]
         [TestCase("none")]
-        public void DirectDeliveryVerification_NullLayers_StillRequiresRuntimeMarkers(string markerSource)
+        public void DirectDeliveryVerification_NullLayers_RejectsPartialDelivery(string markerSource)
         {
             _ctx.AvDesc.baseAnimationLayers = null;
             if (markerSource == "parameters")
@@ -107,26 +108,18 @@ namespace ASMLite.Tests.Editor
                 });
             }
 
-            bool expectedMarkers = markerSource != "none";
+            bool expectedMarkers = markerSource == "parameters";
             Assert.AreEqual(expectedMarkers, ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(_ctx.AvDesc));
             Assert.AreEqual(expectedMarkers ? ASMLiteInstallationState.Detached : ASMLiteInstallationState.NotInstalled,
                 ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null));
 
             bool verified = ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
-                _ctx.AvDesc, ASMLiteInstallationState.Detached, string.Empty,
+                _ctx.Comp, _ctx.AvDesc, ASMLiteInstallationState.Detached, string.Empty,
                 out string failureMessage, out string failureContext);
 
-            Assert.AreEqual(expectedMarkers, verified);
-            if (expectedMarkers)
-            {
-                Assert.IsEmpty(failureMessage);
-                Assert.IsEmpty(failureContext);
-            }
-            else
-            {
-                StringAssert.Contains("runtime markers", failureMessage);
-                Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
-            }
+            Assert.IsFalse(verified, "A parameter or menu marker cannot replace the missing FX delivery.");
+            StringAssert.Contains("required direct-delivery content", failureMessage);
+            Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
         }
 
         [Test]

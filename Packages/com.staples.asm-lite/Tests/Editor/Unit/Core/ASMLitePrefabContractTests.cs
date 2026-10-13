@@ -1,6 +1,7 @@
-using System.IO;
+using System;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEngine;
 using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
@@ -12,40 +13,33 @@ namespace ASMLite.Tests.Editor
         [Test]
         public void Prefab_UsesGeneratedAssetReferences_ForFullController()
         {
-            var prefabPath = ASMLiteAssetPaths.Prefab;
-            var fullPath = Path.GetFullPath(prefabPath);
-            Assert.IsTrue(File.Exists(fullPath), $"Prefab file not found at '{fullPath}'.");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+            Assert.IsNotNull(prefab, "The shipped prefab must resolve without refreshing its wiring.");
+            bool found = false;
+            foreach (var vf in ASMLiteTestFixtures.FindLiveVrcFuryComponents(prefab))
+            {
+                var serialized = new SerializedObject(vf);
+                var iterator = serialized.GetIterator();
+                while (iterator.Next(true))
+                {
+                    if (iterator.propertyType != SerializedPropertyType.ManagedReference
+                        || !iterator.managedReferenceFullTypename.EndsWith(" VF.Model.Feature.FullController", StringComparison.Ordinal))
+                        continue;
 
-            var yaml = File.ReadAllText(fullPath);
-
-            var fxGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.FXController);
-            var menuGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.Menu);
-            var paramsGuid = AssetDatabase.AssetPathToGUID(ASMLiteAssetPaths.ExprParams);
-
-            bool hasRealVfPayload = yaml.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: VRCFury}");
-            bool hasTestStubPayload = yaml.Contains("type: {class: FullController, ns: VF.Model.Feature, asm: ASMLite.Tests.Editor}");
-            Assert.IsTrue(hasRealVfPayload || hasTestStubPayload,
-                "Prefab must include a FullController payload using either real VRCFury assembly metadata or CI test-stub assembly metadata.");
-            StringAssert.Contains("globalParams:", yaml,
-                "Prefab FullController must declare globalParams.");
-            Assert.IsTrue(
-                yaml.Contains("- \"*\"") || yaml.Contains("- '*'"),
-                "Prefab FullController must bind wildcard global params to avoid VF-local name isolation.");
-            StringAssert.Contains("allNonsyncedAreGlobal: 1", yaml,
-                "Prefab FullController must keep non-synced generated params global so Clear Preset default keys avoid VF-local renaming.");
-            StringAssert.Contains("ignoreSaved: 0", yaml,
-                "Prefab FullController must preserve saved flags from generated params so backup keys stay persisted while Clear defaults remain unsaved.");
-            StringAssert.Contains("prms:", yaml,
-                "Prefab FullController must declare prms wiring.");
-            StringAssert.Contains("- parameters:", yaml,
-                "Prefab FullController prms must include at least one parameters entry.");
-
-            StringAssert.Contains($"objRef: {{fileID: 9100000, guid: {fxGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated FX controller asset.");
-            StringAssert.Contains($"objRef: {{fileID: 11400000, guid: {menuGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated expressions menu asset.");
-            StringAssert.Contains($"objRef: {{fileID: 11400000, guid: {paramsGuid}, type: 2}}", yaml,
-                "Prefab must reference the generated expression parameters asset.");
+                    found = true;
+                    string path = iterator.propertyPath;
+                    CollectionAssert.Contains(ASMLiteTestFixtures.ReadSerializedStringArray(vf, path + ".globalParams"), "*");
+                    Assert.IsTrue(serialized.FindProperty(path + ".allNonsyncedAreGlobal").boolValue);
+                    Assert.IsFalse(serialized.FindProperty(path + ".ignoreSaved").boolValue);
+                    Assert.AreSame(AssetDatabase.LoadAssetAtPath<UnityEditor.Animations.AnimatorController>(ASMLiteAssetPaths.FXController),
+                        ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path + ".controllers.Array.data[0].controller.objRef").Reference);
+                    Assert.AreSame(AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu>(ASMLiteAssetPaths.Menu),
+                        ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path + ".menus.Array.data[0].menu.objRef").Reference);
+                    Assert.AreSame(AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams),
+                        ASMLiteTestFixtures.ReadSerializedObjectReference(vf, path + ".prms.Array.data[0].parameters.objRef").Reference);
+                }
+            }
+            Assert.IsTrue(found, "The shipped prefab must contain a resolvable FullController payload.");
         }
     }
 }

@@ -35,7 +35,9 @@ namespace ASMLite.Editor
 
         public static void CreatePrefab()
         {
-            ASMLitePrefabCreator.CreatePrefab();
+            // Ordinary avatar installation consumes the shipped template read-only.
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab) == null)
+                Debug.LogError("[ASM-Lite] Prefab template is missing. Restore the package before adding ASM-Lite.");
         }
 
         public static bool HasStalePrmsEntry(GameObject instance)

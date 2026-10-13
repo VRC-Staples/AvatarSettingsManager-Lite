@@ -147,12 +147,13 @@ namespace ASMLite.Editor
             bool pairedBackup = false;
             foreach (var parameter in parameters)
             {
-                const string prefix = "ASMLite_Bak_S";
-                if (parameter == null || parameter.name == null || !parameter.name.StartsWith(prefix, StringComparison.Ordinal)) continue;
-                int separator = parameter.name.IndexOf('_', prefix.Length);
-                if (separator < 0 || !int.TryParse(parameter.name.Substring(prefix.Length, separator - prefix.Length), out int slot) || slot < 1) continue;
-                if (byName.TryGetValue("ASMLite_Def_" + parameter.name.Substring(separator + 1), out var defaults)
-                    && defaults.valueType == parameter.valueType && !defaults.networkSynced && !parameter.networkSynced)
+                if (parameter == null || parameter.networkSynced || !ASMLiteBuilder.TryParseBackupName(parameter.name, out var backup)) continue;
+                // Old payloads pair defaults with backups. Literal-Clear payloads pair
+                // saved local backups with their live source, without default storage.
+                if ((byName.TryGetValue("ASMLite_Def_" + backup.SourceParamName, out var defaults)
+                    && defaults.valueType == parameter.valueType && !defaults.networkSynced)
+                    || (parameter.saved && byName.TryGetValue(backup.SourceParamName, out var source)
+                        && source.valueType == parameter.valueType && !ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter(source)))
                     pairedBackup = true;
             }
             bool ownedAssets = ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(descriptor, ASMLiteAssetPaths.GeneratedDir)

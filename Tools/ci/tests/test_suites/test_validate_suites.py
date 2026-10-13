@@ -191,6 +191,67 @@ class ValidateSuitesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         self.assertIn("suite map ok", result.stdout)
 
+    def write_headless_test(self, attributes: str = '[Category("Headless")]') -> None:
+        source = self.root / "Packages/com.staples.asm-lite/Tests/Editor/CoreTests.cs"
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text(
+            'namespace ASMLite.Tests.Editor\n{\n'
+            + attributes + '\npublic class ASMLiteSharedResetBuildTests\n{\n'
+            + '[Test]\npublic void CoveredMethod() {}\n}\n}\n',
+            encoding="utf-8",
+        )
+
+    def test_fails_when_headless_method_matches_no_default_selector(self) -> None:
+        self.write_headless_test()
+        document = suites_document()
+        document["groups"][1]["batchRun"]["filters"] = [{"groupNames": ["^OtherClass$"]}]  # type: ignore[index]
+        self.write_json(self.suites_path, document)
+
+        result = self.run_validator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("default CI method matches no selector", result.stderr)
+        self.assertIn("ASMLite.Tests.Editor.ASMLiteSharedResetBuildTests.CoveredMethod", result.stderr)
+
+    def test_accepts_headless_method_selected_by_class_method_or_category(self) -> None:
+        self.write_headless_test()
+        for selector in (
+            {"groupNames": ["^ASMLite\\.Tests\\.Editor\\.ASMLiteSharedResetBuildTests(?:\\.|$)"]},
+            {"testNames": ["ASMLite.Tests.Editor.ASMLiteSharedResetBuildTests.CoveredMethod"]},
+            {"categoryNames": ["Headless"]},
+        ):
+            with self.subTest(selector=selector):
+                document = suites_document()
+                document["groups"][1]["batchRun"]["filters"] = [selector]  # type: ignore[index]
+                self.write_json(self.suites_path, document)
+                result = self.run_validator()
+                self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+    def test_requires_all_fields_in_one_filter_to_match(self) -> None:
+        self.write_headless_test()
+        document = suites_document()
+        document["groups"][1]["batchRun"]["filters"] = [  # type: ignore[index]
+            {"groupNames": ["ASMLiteSharedResetBuildTests"], "categoryNames": ["WrongCategory"]},
+        ]
+        self.write_json(self.suites_path, document)
+        result = self.run_validator()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("default CI method matches no selector", result.stderr)
+
+    def test_preserves_deliberate_manual_graphics_and_explicit_exclusions(self) -> None:
+        for attributes in (
+            '[Category("Headless")]\n[Category("Manual")]',
+            '[Category("Integration")]\n[Category("GraphicsRequired")]',
+            '[Category("Headless")]\n[Explicit]',
+        ):
+            with self.subTest(attributes=attributes):
+                self.write_headless_test(attributes)
+                document = suites_document()
+                document["groups"][1]["batchRun"]["filters"] = [{"groupNames": ["OtherClass"]}]  # type: ignore[index]
+                self.write_json(self.suites_path, document)
+                result = self.run_validator()
+                self.assertEqual(result.returncode, 0, msg=result.stderr)
+
     def test_fails_when_smoke_catalog_contains_coded_prefix(self) -> None:
         catalog = {
             "catalogVersion": 1,

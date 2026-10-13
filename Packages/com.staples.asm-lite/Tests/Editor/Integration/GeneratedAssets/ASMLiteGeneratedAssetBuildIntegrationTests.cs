@@ -180,26 +180,30 @@ namespace ASMLite.Tests.Editor
             return buildResult;
         }
 
-        private static AnimatorController LoadGeneratedFxController()
+        private AnimatorController LoadGeneratedFxController()
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var ctrl = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
             Assert.IsNotNull(ctrl,
                 $"Generated FX controller missing at '{ASMLiteAssetPaths.FXController}'.");
             return ctrl;
         }
 
-        private static VRCExpressionParameters LoadGeneratedExprParams()
+        private VRCExpressionParameters LoadGeneratedExprParams()
         {
-            var expr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var expr = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsNotNull(expr,
                 $"Generated expression params missing at '{ASMLiteAssetPaths.ExprParams}'.");
             Assert.IsNotNull(expr.parameters, "Generated expression params list must not be null.");
             return expr;
         }
 
-        private static VRCExpressionsMenu LoadGeneratedRootMenu()
+        private VRCExpressionsMenu LoadGeneratedRootMenu()
         {
-            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var menu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(menu,
                 $"Generated menu missing at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(menu.controls, "Generated root menu controls must not be null.");
@@ -209,6 +213,10 @@ namespace ASMLite.Tests.Editor
         private static int CountASMLiteLayers(AnimatorController ctrl)
             => ctrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
 
+        private string GeneratedPath(string templatePath)
+            => Path.GetDirectoryName(AssetDatabase.GetAssetPath(LoadGeneratedFxController()))
+                .Replace(Path.DirectorySeparatorChar, '/') + "/" + Path.GetFileName(templatePath);
+
         private static int CountASMLiteFxParams(AnimatorController ctrl)
             => ctrl.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxParameter);
 
@@ -216,10 +224,10 @@ namespace ASMLite.Tests.Editor
             => exprParams.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
 
         private static int ExpectedGeneratedExprAsmParamCount(int slotCount, int discoveredParamCount)
-            => 1 + discoveredParamCount + (slotCount * discoveredParamCount);
+            => 1 + (slotCount * discoveredParamCount);
 
-        private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
-            => rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+        private int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
+            => rootMenu.controls.Count(control => ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control, _ctx.AvDesc));
 
         private static int CountDiscoveredNonASMLiteParams(VRCExpressionParameters exprParams)
         {
@@ -242,7 +250,7 @@ namespace ASMLite.Tests.Editor
                 .Count(g => g.Count() > 1);
 
         private static string[] ReadGeneratedBackupNames(ASMLiteGeneratedOutputSnapshot snapshot)
-            => (snapshot?.FxParameterNames ?? new string[0])
+            => (snapshot?.ExpressionParameterNames ?? new string[0])
                 .Where(name => !string.IsNullOrEmpty(name) && name.StartsWith("ASMLite_Bak_"))
                 .ToArray();
 
@@ -302,7 +310,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(1, asmLayerCount,
                 $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: expected 1 ASMLite_ layer for slotCount=1, got {asmLayerCount}.");
 
-            int expectedFxAsmParams = 1 + (1 * discoveredExpected) + discoveredExpected;
+            int expectedFxAsmParams = 1;
             int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
                 $"Build_SlotCountOne_PopulatesExpectedGeneratedArtifacts: generated FX ASMLite param count mismatch for slotCount=1. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
@@ -341,7 +349,7 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(8, asmLayerCount,
                 $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: expected 8 ASMLite_ layers for slotCount=8, got {asmLayerCount}.");
 
-            int expectedFxAsmParams = 1 + (8 * discoveredExpected) + discoveredExpected;
+            int expectedFxAsmParams = 1;
             int asmFxParamCount = CountASMLiteFxParams(generatedCtrl);
             Assert.AreEqual(expectedFxAsmParams, asmFxParamCount,
                 $"Build_SlotCountEight_PopulatesExpectedGeneratedArtifacts: generated FX ASMLite param count mismatch for slotCount=8. expected={expectedFxAsmParams}, got {asmFxParamCount}.");
@@ -442,11 +450,11 @@ namespace ASMLite.Tests.Editor
             var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, secondResult);
 
             AssertUnchangedInputSnapshotMatches(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), firstSnapshot, secondSnapshot);
-            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ControllerReferencePath", GeneratedPath(ASMLiteAssetPaths.FXController), secondSnapshot.ControllerReferencePath,
                 "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController FX reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "MenuReferencePath", GeneratedPath(ASMLiteAssetPaths.Menu), secondSnapshot.MenuReferencePath,
                 "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController menu reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
+            AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "ParameterReferenceAssetPath", GeneratedPath(ASMLiteAssetPaths.ExprParams), secondSnapshot.ParameterReferenceAssetPath,
                 "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: repeated Build() must keep the live FullController parameter reference pointed at the canonical generated asset path.", ASMLiteAssetPaths.ExprParams);
             AssertDeterminismEqual(nameof(RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces), "FxControllerMainObjectName", "ASMLite_FX", secondSnapshot.FxControllerMainObjectName,
                 "RepeatedBuild_IsIdempotentAcrossGeneratedAssetSurfaces: generated FX controller main object name must stay normalized to the filename without the .controller extension to avoid Unity import warnings.", ASMLiteAssetPaths.FXController);
@@ -463,11 +471,11 @@ namespace ASMLite.Tests.Editor
             var secondSnapshot = ASMLiteGeneratedOutputSnapshot.Capture(_ctx.Comp, BuildOrFail(_ctx, "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs"));
 
             AssertUnchangedInputSnapshotMatches(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), firstSnapshot, secondSnapshot);
-            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ControllerReferencePath", ASMLiteAssetPaths.FXController, firstSnapshot.ControllerReferencePath,
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ControllerReferencePath", GeneratedPath(ASMLiteAssetPaths.FXController), firstSnapshot.ControllerReferencePath,
                 "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep FullController controller.objRef wired to the canonical generated FX controller path.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "MenuReferencePath", ASMLiteAssetPaths.Menu, firstSnapshot.MenuReferencePath,
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "MenuReferencePath", GeneratedPath(ASMLiteAssetPaths.Menu), firstSnapshot.MenuReferencePath,
                 "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep FullController menu.objRef wired to the canonical generated menu path.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, firstSnapshot.ParameterReferenceAssetPath,
+            AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceAssetPath", GeneratedPath(ASMLiteAssetPaths.ExprParams), firstSnapshot.ParameterReferenceAssetPath,
                 "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep the resolved FullController parameter reference wired to the canonical generated expression-parameters path.", ASMLiteAssetPaths.ExprParams);
             AssertDeterminismEqual(nameof(Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs), "ParameterReferenceResolvedPath", firstSnapshot.ParameterReferenceResolvedPath, secondSnapshot.ParameterReferenceResolvedPath,
                 "Build_UnchangedInput_KeepsStableGeneratedNamesAndFullControllerRefs: unchanged-input builds must keep the fallback-group-selected parameter reference path stable.");
@@ -514,11 +522,11 @@ namespace ASMLite.Tests.Editor
                 "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not change which fallback-group parameter path is populated.");
             AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "FxControllerMainObjectName", firstSnapshot.FxControllerMainObjectName, secondSnapshot.FxControllerMainObjectName,
                 "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: changed input should not change the canonical generated FX controller main-object name.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", ASMLiteAssetPaths.FXController, secondSnapshot.ControllerReferencePath,
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ControllerReferencePath", GeneratedPath(ASMLiteAssetPaths.FXController), secondSnapshot.ControllerReferencePath,
                 "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated FX asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.FXController);
-            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", ASMLiteAssetPaths.Menu, secondSnapshot.MenuReferencePath,
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "MenuReferencePath", GeneratedPath(ASMLiteAssetPaths.Menu), secondSnapshot.MenuReferencePath,
                 "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated menu asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.Menu);
-            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", ASMLiteAssetPaths.ExprParams, secondSnapshot.ParameterReferenceAssetPath,
+            AssertDeterminismEqual(nameof(Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly), "ParameterReferenceAssetPath", GeneratedPath(ASMLiteAssetPaths.ExprParams), secondSnapshot.ParameterReferenceAssetPath,
                 "Build_ChangedInput_ProducesExpectedSnapshotDeltaOnly: canonical generated parameter asset path should remain stable after legitimate schema changes.", ASMLiteAssetPaths.ExprParams);
         }
 
@@ -540,7 +548,7 @@ namespace ASMLite.Tests.Editor
             var generatedCtrl = LoadGeneratedFxController();
             var generatedExpr = LoadGeneratedExprParams();
 
-            int expectedFxAsmParams = 1 + (_ctx.Comp.slotCount * buildResult) + buildResult;
+            int expectedFxAsmParams = 1;
             int expectedExprAsmParams = ExpectedGeneratedExprAsmParamCount(_ctx.Comp.slotCount, buildResult);
 
             Assert.AreEqual(expectedFxAsmParams, CountASMLiteFxParams(generatedCtrl),
@@ -585,13 +593,13 @@ namespace ASMLite.Tests.Editor
             var firstExcludedCtrl = LoadGeneratedFxController();
             int firstExcludedLayers = CountASMLiteLayers(firstExcludedCtrl);
             int firstExcludedFxParamCount = CountASMLiteFxParams(firstExcludedCtrl);
-            string exprFirstExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string exprFirstExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(AssetDatabase.GetAssetPath(LoadGeneratedExprParams()));
 
             int secondExcludedResult = BuildOrFail(_ctx, "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups");
             Assert.AreEqual(firstExcludedResult, secondExcludedResult,
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: repeated exclusion-enabled builds should keep Build() return deterministic.");
 
-            string exprSecondExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(ASMLiteAssetPaths.ExprParams);
+            string exprSecondExcluded = ASMLiteGeneratedOutputSnapshot.ReadPackageAssetText(AssetDatabase.GetAssetPath(LoadGeneratedExprParams()));
             Assert.AreEqual(exprFirstExcluded, exprSecondExcluded,
                 "RepeatedBuild_AfterEnablingExclusions_IsDeterministicAndRemovesLegacyExcludedBackups: expression output should be text-idempotent across repeated exclusion-enabled builds.");
 

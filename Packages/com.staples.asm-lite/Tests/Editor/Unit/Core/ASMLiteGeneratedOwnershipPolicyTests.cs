@@ -53,12 +53,12 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void RootMenuControlPolicy_MatchesGeneratedNameAndPresetsMenuFilenameOnlyForSubmenus()
+        public void RootMenuControlPolicy_RequiresGeneratedSubmenuReference()
         {
             var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath);
             Assert.IsNotNull(generatedMenu, "Expected package-generated menu fixture to be importable.");
 
-            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(new VRCExpressionsMenu.Control
+            Assert.IsFalse(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(new VRCExpressionsMenu.Control
             {
                 name = ASMLiteBuilder.DefaultRootControlName,
                 type = VRCExpressionsMenu.Control.ControlType.SubMenu,
@@ -76,24 +76,30 @@ namespace ASMLite.Tests.Editor
             }));
         }
 
-        [Test]
-        public void InjectedRootMenuPolicy_PreservesPresetsFilenameOutsideGeneratedPathWhenNameDoesNotMatch()
+        [TestCase(ASMLiteBuilder.DefaultRootControlName)]
+        [TestCase("Inventory")]
+        [TestCase("Renamed Wrapper")]
+        public void RootMenuControlPolicy_PreservesUserLabelsAndPresetsFilename(string label)
         {
-            Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuFileName(
-                "Assets/User/Menus/ASMLite_Presets_Menu.asset"),
-                "Cleanup keeps the historical broad filename predicate for stale generated root menu entries.");
-
+            string path = ASMLiteTestFixtures.TempDir + "/ASMLite_Presets_Menu.asset";
+            ASMLiteTestFixtures.EnsureFixtureTempDir();
             var userMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-
-            var renamedWrapper = new VRCExpressionsMenu.Control
+            Assert.IsNull(AssetDatabase.LoadMainAssetAtPath(path), "Do not replace a pre-existing fixture asset.");
+            AssetDatabase.CreateAsset(userMenu, path);
+            try
             {
-                name = "Renamed Wrapper",
-                type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                subMenu = userMenu,
-            };
-
-            Assert.IsFalse(ASMLiteGeneratedOwnershipPolicy.IsInjectedRootMenuControl(renamedWrapper, "Other ASM-Lite Root"),
-                "Build-time injection should preserve the previous exact generated-path/name behavior for non-package menus.");
+                Assert.IsFalse(ASMLiteGeneratedOwnershipPolicy.IsGeneratedPresetsMenuPath(path));
+                Assert.IsFalse(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(new VRCExpressionsMenu.Control
+                {
+                    name = label,
+                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                    subMenu = userMenu,
+                }));
+            }
+            finally
+            {
+                Assert.IsTrue(AssetDatabase.DeleteAsset(path));
+            }
         }
 
         [Test]

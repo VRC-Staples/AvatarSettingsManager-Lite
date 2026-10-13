@@ -8,16 +8,25 @@ namespace ASMLite.Editor
 {
     internal readonly struct ASMLiteFullControllerReferenceSnapshot
     {
-        internal ASMLiteFullControllerReferenceSnapshot(string controllerAssetPath, string menuAssetPath, string parametersAssetPath)
+        internal ASMLiteFullControllerReferenceSnapshot(string controllerAssetPath, string menuAssetPath, string parametersAssetPath,
+            int parametersArraySize = 1)
         {
             ControllerAssetPath = controllerAssetPath ?? string.Empty;
             MenuAssetPath = menuAssetPath ?? string.Empty;
             ParametersAssetPath = parametersAssetPath ?? string.Empty;
+            ControllerAssetGuid = AssetDatabase.AssetPathToGUID(ControllerAssetPath);
+            MenuAssetGuid = AssetDatabase.AssetPathToGUID(MenuAssetPath);
+            ParametersAssetGuid = AssetDatabase.AssetPathToGUID(ParametersAssetPath);
+            ParametersArraySize = parametersArraySize;
         }
 
         internal string ControllerAssetPath { get; }
         internal string MenuAssetPath { get; }
         internal string ParametersAssetPath { get; }
+        internal string ControllerAssetGuid { get; }
+        internal string MenuAssetGuid { get; }
+        internal string ParametersAssetGuid { get; }
+        internal int ParametersArraySize { get; }
     }
 
     /// <summary>
@@ -46,14 +55,6 @@ namespace ASMLite.Editor
                     message: $"[ASM-Lite] {contextLabel}: Cannot refresh live FullController wiring because the root object was null.");
             }
 
-            if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " Generated FX Repair"))
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: ASMLiteAssetPaths.FXController,
-                    remediation: "Repair the generated FX controller before refreshing FullController wiring.",
-                    message: $"[ASM-Lite] {contextLabel}: Generated FX controller repair failed before live FullController refresh.");
-            }
 
             ConfigurePrefabRoot(root, component);
 
@@ -90,13 +91,6 @@ namespace ASMLite.Editor
                     remediation: "Pass a valid ASMLiteComponent before wiring FullController references.");
             }
 
-            if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt(contextLabel + " FullController Wiring"))
-            {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: ASMLiteAssetPaths.FXController,
-                    remediation: "Repair the generated FX controller before applying FullController wiring.");
-            }
 
             var vfComponent = FindLiveVrcFuryComponent(component.gameObject);
             if (vfComponent == null)
@@ -118,9 +112,9 @@ namespace ASMLite.Editor
                 }
             }
 
-            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
-            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
-            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.FXController));
+            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.Menu));
+            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.ExprParams));
             if (fxController == null || menu == null || parameters == null)
             {
                 return ASMLiteBuildDiagnosticResult.Fail(
@@ -336,6 +330,38 @@ namespace ASMLite.Editor
                     return refreshResult;
                 vfComponent = FindLiveVrcFuryComponent(component.gameObject);
             }
+            try
+            {
+                string controllerPath = normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.FXController);
+                string fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "..", controllerPath));
+                if (ASMLiteBuilder.CountDanglingLocalFileIds(System.IO.File.ReadAllText(fullPath)) > 0)
+                {
+                    var avatar = component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>();
+                    if (!ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(avatar, normalizedDir))
+                        return ASMLiteBuildDiagnosticResult.Fail(
+                            ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, controllerPath,
+                            "Rebuild the avatar's own working graph before retargeting. Preserve package templates and unrelated assets.",
+                            $"[ASM-Lite] {contextLabel}: Refusing to repair a corrupted controller outside the avatar-owned working graph.");
+
+                    // Use the existing staged build, not an empty in-place repair that loses payload ownership.
+                    var repairResult = ASMLiteBuilder.TryBuildWithDiagnostics(component, out _);
+                    if (!repairResult.Success)
+                        return repairResult;
+                    fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(controllerPath);
+                    menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.Menu));
+                    parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(normalizedDir + "/" + System.IO.Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+                    vfComponent = FindLiveVrcFuryComponent(component.gameObject);
+                    if (fxController == null || menu == null || parameters == null)
+                        return CreateCriticalPathDiagnostic(controllerPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                return ASMLiteBuildDiagnosticResult.Fail(
+                    ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, normalizedDir,
+                    "Restore the avatar-owned generated graph before retrying retarget.",
+                    $"[ASM-Lite] {contextLabel}: Generated controller validation or staged repair failed. {ex.Message}");
+            }
             // Localize and retarget in one edit so native Undo/Redo preserves the
             // final avatar-local references, not an intermediate package wiring.
             if (vfComponent == null)
@@ -389,7 +415,8 @@ namespace ASMLite.Editor
                 ASMLiteDriftProbe.ParametersObjectRefPath,
                 ASMLiteDriftProbe.ParameterObjectRefPath,
                 ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
-            if (controllerProperty == null || menuProperty == null || parametersProperty == null)
+            int parametersArraySize = serializedVf.FindProperty(ASMLiteDriftProbe.ParametersArrayPath).arraySize;
+            if (controllerProperty == null || menuProperty == null || (parametersProperty == null && parametersArraySize != 0))
             {
                 return ASMLiteBuildDiagnosticResult.Fail(
                     code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
@@ -401,8 +428,59 @@ namespace ASMLite.Editor
             snapshot = new ASMLiteFullControllerReferenceSnapshot(
                 AssetDatabase.GetAssetPath(controllerProperty.objectReferenceValue) ?? string.Empty,
                 AssetDatabase.GetAssetPath(menuProperty.objectReferenceValue) ?? string.Empty,
-                AssetDatabase.GetAssetPath(parametersProperty.objectReferenceValue) ?? string.Empty);
+                AssetDatabase.GetAssetPath(parametersProperty != null ? parametersProperty.objectReferenceValue
+                    : serializedVf.FindProperty(ASMLiteDriftProbe.ParametersMirrorPath).objectReferenceValue) ?? string.Empty,
+                parametersArraySize);
             return ASMLiteBuildDiagnosticResult.Pass();
+        }
+
+        internal static ASMLiteBuildDiagnosticResult TryRestoreLiveFullControllerReferenceSnapshot(
+            ASMLiteComponent component,
+            ASMLiteFullControllerReferenceSnapshot snapshot,
+            string contextLabel)
+        {
+            var vfComponent = component != null ? FindLiveVrcFuryComponent(component.gameObject) : null;
+            if (vfComponent == null)
+                return CreateCriticalPathDiagnostic("VF.Model.VRCFury component");
+
+            string[] paths = { snapshot.ControllerAssetPath, snapshot.MenuAssetPath, snapshot.ParametersAssetPath };
+            string[] guids = { snapshot.ControllerAssetGuid, snapshot.MenuAssetGuid, snapshot.ParametersAssetGuid };
+            var references = new UnityEngine.Object[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+            {
+                if (string.IsNullOrEmpty(paths[i]))
+                    continue;
+                references[i] = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(guids[i]));
+                if (references[i] == null)
+                    return ASMLiteBuildDiagnosticResult.Fail(
+                        ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed, paths[i],
+                        "Restore the captured asset identity before retrying reference rollback.",
+                        $"[ASM-Lite] {contextLabel}: A captured FullController asset could not be restored.");
+            }
+
+            var result = TryEditLiveFullControllerWithDiagnostics(vfComponent, serializedVf =>
+            {
+                var probe = ASMLiteDriftProbe.ValidateCriticalFullControllerWritePaths(serializedVf);
+                if (!probe.Success)
+                    return probe.ToDiagnosticResult();
+                if (!EnsureArraySizeStrict(serializedVf, ASMLiteDriftProbe.ParametersArrayPath, snapshot.ParametersArraySize)
+                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.ControllerObjectRefPath, references[0])
+                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.MenuObjectRefPath, references[1])
+                    || (snapshot.ParametersArraySize != 0 && !SetAnyObjectReferenceStrict(serializedVf,
+                        new[] { ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                            ASMLiteDriftProbe.ParameterLegacyObjectRefPath }, references[2]))
+                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.ControllerMirrorPath, references[0])
+                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.MenuMirrorPath, references[1])
+                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.ParametersMirrorPath, references[2]))
+                    return CreateCriticalPathDiagnostic(ASMLiteDriftProbe.ParameterFallbackGroupKey);
+                return ASMLiteBuildDiagnosticResult.Pass();
+            });
+            if (result.Success)
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+            }
+            return result;
         }
 
         internal static void ConfigurePrefabRoot(GameObject root, ASMLiteComponent component)
@@ -429,15 +507,9 @@ namespace ASMLite.Editor
                 return;
             }
 
-            if (!ASMLiteBuilder.TryRepairPackageGeneratedFxControllerIfCorrupt("Configure FullController Wiring"))
-            {
-                Debug.LogWarning("[ASM-Lite] Generated FX controller could not be repaired while configuring FullController wiring. Prefab wiring was skipped.");
-                return;
-            }
-
-            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.FXController);
-            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.Menu);
-            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            var fxController = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.FXController));
+            var menu = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.Menu));
+            var parameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.ExprParams));
 
             if (fxController == null || menu == null || parameters == null)
             {

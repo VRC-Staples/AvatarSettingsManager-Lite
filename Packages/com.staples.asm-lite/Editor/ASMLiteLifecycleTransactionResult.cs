@@ -172,7 +172,7 @@ namespace ASMLite.Editor
                 message: message,
                 contextPath: contextPath,
                 remediation: remediation,
-                diagnostic: diagnostic ?? ASMLiteBuildDiagnosticResult.Fail(
+                diagnostic: diagnostic != null && !diagnostic.Success ? diagnostic : ASMLiteBuildDiagnosticResult.Fail(
                     code: string.Empty,
                     contextPath: contextPath,
                     remediation: remediation,

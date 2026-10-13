@@ -60,7 +60,8 @@ namespace ASMLite.Editor
                 return new ASMLiteParameterBudget(0, 0, false, "Select an avatar and a preset count between 1 and 8.");
             if (EditorApplication.isUpdating || (avatar.expressionParameters != null && avatar.expressionParameters.parameters == null))
                 return new ASMLiteParameterBudget(0, 0, false, "Calculating… Expression parameters are temporarily unreadable. Wait for import or assign a readable asset.");
-            var payload = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var componentForPayload = avatar.GetComponentInChildren<ASMLiteComponent>(true);
+            var payload = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ResolveGeneratedPath(componentForPayload, ASMLiteAssetPaths.ExprParams));
             if (payload?.parameters == null)
                 return new ASMLiteParameterBudget(0, 0, false, "Generated expression-parameter asset is unreadable. Restore the package asset before generation.");
 

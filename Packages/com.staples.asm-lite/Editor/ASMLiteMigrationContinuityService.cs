@@ -462,9 +462,18 @@ namespace ASMLite.Editor
             return new ASMLiteBuilder.BackupNamePlan(names, bindings, report);
         }
 
-        internal static string[] GetExistingGeneratedBackupNames()
+        private static bool IsGeneratedSourceAsset(VRCAvatarDescriptor avatar, UnityEngine.Object asset)
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            string path = AssetDatabase.GetAssetPath(asset);
+            string folder = ASMLiteGeneratedOwnershipPolicy.NormalizeAssetPath(System.IO.Path.GetDirectoryName(path));
+            return ASMLiteGeneratedOwnershipPolicy.PathStartsWith(path, ASMLiteAssetPaths.GeneratedDir)
+                || ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(avatar, folder)
+                || ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(avatar, folder).Success;
+        }
+
+        internal static string[] GetExistingGeneratedBackupNames(string parametersPath = ASMLiteAssetPaths.ExprParams)
+        {
+            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(parametersPath);
             if (paramsAsset?.parameters == null)
                 return Array.Empty<string>();
 
@@ -543,6 +552,8 @@ namespace ASMLite.Editor
                 var ctrl = avDesc.baseAnimationLayers[i].animatorController as AnimatorController;
                 if (ctrl == null)
                     break;
+                if (IsGeneratedSourceAsset(avatar: avDesc, asset: ctrl))
+                    break;
 
                 for (int j = ctrl.layers.Length - 1; j >= 0; j--)
                 {
@@ -576,7 +587,8 @@ namespace ASMLite.Editor
             }
 
             var exprParams = avDesc.expressionParameters;
-            if (exprParams != null && exprParams.parameters != null)
+            if (exprParams != null && exprParams.parameters != null
+                && !IsGeneratedSourceAsset(avDesc, exprParams))
             {
                 var filtered = new List<VRCExpressionParameters.Parameter>(exprParams.parameters.Length);
                 foreach (var parameter in exprParams.parameters)
@@ -598,12 +610,13 @@ namespace ASMLite.Editor
             }
 
             var rootMenu = avDesc.expressionsMenu;
-            if (rootMenu != null && rootMenu.controls != null)
+            if (rootMenu != null && rootMenu.controls != null
+                && !IsGeneratedSourceAsset(avDesc, rootMenu))
             {
                 for (int i = rootMenu.controls.Count - 1; i >= 0; i--)
                 {
                     var control = rootMenu.controls[i];
-                    if (!ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control))
+                    if (!ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control, avDesc))
                         continue;
 
                     rootMenu.controls.RemoveAt(i);

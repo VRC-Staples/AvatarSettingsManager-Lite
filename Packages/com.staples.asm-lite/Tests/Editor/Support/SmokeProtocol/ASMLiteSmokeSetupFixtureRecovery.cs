@@ -198,8 +198,10 @@ namespace ASMLite.Tests.Editor
                     foreach (var layer in avatar.baseAnimationLayers ?? Array.Empty<VRCAvatarDescriptor.CustomAnimLayer>())
                         if (layer.type == VRCAvatarDescriptor.AnimLayerType.FX) CaptureAsset(next, layer.animatorController);
                     // The existing cleanup API saves assets globally. Refuse rather than save operator edits.
+                    // Imported shader dirty flags describe compiler state, not saveable shader source.
                     foreach (Object asset in Resources.FindObjectsOfTypeAll<Object>())
                         if (asset != null && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset)
+                            && !(asset is Shader && !AssetDatabase.IsNativeAsset(asset))
                             && AssetDatabase.GetAssetPath(asset).StartsWith("Assets/", StringComparison.Ordinal)
                             && !next.files.Any(file => file.path == AssetDatabase.GetAssetPath(asset)))
                             throw new InvalidOperationException("Cleanup would save an unrelated dirty asset: " + AssetDatabase.GetAssetPath(asset));
@@ -223,6 +225,7 @@ namespace ASMLite.Tests.Editor
             if (generated || mutation == ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline)
                 foreach (Object asset in Resources.FindObjectsOfTypeAll<Object>())
                     if (asset != null && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset)
+                        && !(asset is Shader && !AssetDatabase.IsNativeAsset(asset))
                         && AssetDatabase.GetAssetPath(asset).StartsWith("Assets/", StringComparison.Ordinal)
                         && !next.files.Any(file => file.path == AssetDatabase.GetAssetPath(asset)))
                         throw new InvalidOperationException("Fixture mutation would save an unrelated dirty asset.");

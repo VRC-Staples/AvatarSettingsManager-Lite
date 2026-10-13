@@ -115,10 +115,14 @@ namespace ASMLite.Tests.Editor
 
         private static void SeedLegacyAsmLiteMenu(AsmLiteTestContext ctx)
         {
+            var presets = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(
+                ASMLiteAssetPaths.GeneratedDir + "/ASMLite_Presets_Menu.asset");
+            Assert.IsNotNull(presets, "Legacy cleanup setup requires the package-owned presets menu.");
             ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
             {
                 name = "Settings Manager",
                 type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                subMenu = presets,
             });
             EditorUtility.SetDirty(ctx.AvDesc.expressionsMenu);
             AssetDatabase.SaveAssets();
@@ -144,10 +148,10 @@ namespace ASMLite.Tests.Editor
             return items.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter);
         }
 
-        private static int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
+        private int CountSettingsManagerControls(VRCExpressionsMenu rootMenu)
         {
             if (rootMenu?.controls == null) return 0;
-            return rootMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl);
+            return rootMenu.controls.Count(control => ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control, _ctx.AvDesc));
         }
 
         private static int FindFxLayerIndex(VRCAvatarDescriptor avDesc)
@@ -214,17 +218,15 @@ namespace ASMLite.Tests.Editor
 
         private string CreateVendorizedMirrorForTest(string avatarName, string aid)
         {
-            string root = EnsureAssetFolder("Assets", "ASM-Lite");
-            string avatarFolder = CreateUniqueOwnedAvatarFolder(root, avatarName, aid);
-            string generatedFolder = EnsureAssetFolder(avatarFolder, "GeneratedAssets");
-
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.FXController, generatedFolder);
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.ExprParams, generatedFolder);
-            CopyPackageAssetToMirror(ASMLiteAssetPaths.Menu, generatedFolder);
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            return generatedFolder;
+            var generatedMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
+            string sourceDirectory = Path.GetDirectoryName(AssetDatabase.GetAssetPath(generatedMenu)).Replace('\\', '/');
+            var mirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, sourceDirectory);
+            Assert.IsTrue(mirror.Success, aid + ": " + mirror.Message);
+            _ownedVendorizedAvatarFolders.Add(Path.GetDirectoryName(mirror.TargetPath).Replace('\\', '/'));
+            var finalized = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirror);
+            Assert.IsTrue(finalized.Success, aid + ": " + finalized.Message);
+            return mirror.TargetPath;
         }
 
         private string CreateUniqueOwnedAvatarFolder(string root, string avatarName, string aid)
@@ -723,8 +725,9 @@ namespace ASMLite.Tests.Editor
             EditorUtility.SetDirty(_ctx.Comp);
             AssetDatabase.SaveAssets();
 
-            Assert.AreEqual(1, CountMenuAssetsUnderPrefix(_ctx.AvDesc.expressionsMenu, vendorizedDir, new System.Collections.Generic.HashSet<VRCExpressionsMenu>()),
-                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup failure, expected mirrored menu root reference before return-to-managed cleanup.");
+            Assert.AreEqual(2 + 3 * _ctx.Comp.slotCount,
+                CountMenuAssetsUnderPrefix(_ctx.AvDesc.expressionsMenu, vendorizedDir, new System.Collections.Generic.HashSet<VRCExpressionsMenu>()),
+                "ReturnAttachedVendorizedToPackageManaged_DeletesVendorizedMirrorFolder: setup must mirror the complete configured menu graph before return-to-managed cleanup.");
 
             bool restored = ASMLiteWindow.TryReturnAttachedVendorizedToPackageManaged(_ctx.Comp, _ctx.AvDesc);
 
@@ -953,7 +956,10 @@ namespace ASMLite.Tests.Editor
             ASMLiteGeneratedAssetMirrorResult mirror = null;
             try
             {
-                mirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc);
+                var generatedMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                    ASMLiteDriftProbe.MenuObjectRefPath);
+                string generatedDirectory = Path.GetDirectoryName(AssetDatabase.GetAssetPath(generatedMenu))?.Replace('\\', '/');
+                mirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, generatedDirectory);
                 Assert.IsTrue(mirror != null && mirror.Success, mirror?.Message);
 
                 var root = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(mirror.TargetPath + "/ASMLite_Menu.asset");

@@ -131,7 +131,7 @@ namespace ASMLite.Editor
             internal LegacyAliasContinuityReport Report { get; }
         }
 
-        private readonly struct ParsedBackupName
+        internal readonly struct ParsedBackupName
         {
             internal ParsedBackupName(int slot, string sourceParamName)
             {
@@ -416,7 +416,13 @@ namespace ASMLite.Editor
         /// </summary>
         public static int Build(ASMLiteComponent component)
         {
-            var diagnostic = TryBuildWithDiagnostics(component, out int discoveredParamCount);
+            return BuildForLifecycle(component, null);
+        }
+
+        internal static int BuildForLifecycle(ASMLiteComponent component,
+            Action<ASMLiteGeneratedAssetMirrorResult, ASMLiteFullControllerReferenceSnapshot> retainGeneratedGraph)
+        {
+            var diagnostic = TryBuildWithDiagnostics(component, out int discoveredParamCount, retainGeneratedGraph);
             s_latestBuildDiagnostic = diagnostic;
 
             if (!diagnostic.Success)
@@ -433,7 +439,8 @@ namespace ASMLite.Editor
             return s_latestBuildDiagnostic;
         }
 
-        internal static ASMLiteBuildDiagnosticResult TryBuildWithDiagnostics(ASMLiteComponent component, out int discoveredParamCount)
+        internal static ASMLiteBuildDiagnosticResult TryBuildWithDiagnostics(ASMLiteComponent component, out int discoveredParamCount,
+            Action<ASMLiteGeneratedAssetMirrorResult, ASMLiteFullControllerReferenceSnapshot> retainGeneratedGraph = null)
         {
             discoveredParamCount = -1;
 
@@ -464,13 +471,19 @@ namespace ASMLite.Editor
                 ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(component)).ToDiagnostic();
             if (!budgetDiagnostic.Success) return budgetDiagnostic;
 
-            if (!TryRepairPackageGeneratedFxControllerIfCorrupt("Build"))
+            var capture = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(component,
+                "Build rollback baseline", out var previousReferences);
+            if (!capture.Success && ASMLiteFullControllerWiring.HasLiveVrcFuryComponent(component))
+                return capture;
+
+            ASMLiteBuildDiagnosticResult RestoreReferencesOnFailure(ASMLiteBuildDiagnosticResult failure)
             {
-                return ASMLiteBuildDiagnosticResult.Fail(
-                    code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
-                    contextPath: ASMLiteAssetPaths.FXController,
-                    remediation: "Repair or regenerate the packaged FX controller asset before rebuilding.",
-                    message: $"[ASM-Lite] Build failed: could not repair generated FX controller before rebuilding '{component.gameObject.name}'.");
+                if (!capture.Success)
+                    return failure;
+                var restored = ASMLiteFullControllerWiring.TryRestoreLiveFullControllerReferenceSnapshot(
+                    component, previousReferences, "Build rollback wiring");
+                return restored.Success ? failure : ASMLiteBuildDiagnosticResult.Fail(restored.Code,
+                    restored.ContextPath, restored.Remediation, restored.Message, failure);
             }
 
             // Keep live VRCFury FullController asset wiring intact for preprocess/upload
@@ -480,12 +493,19 @@ namespace ASMLite.Editor
             var fullControllerWiringResult = TryEnsureLiveFullControllerAssetWiringWithDiagnostics(component, "Build");
             if (!fullControllerWiringResult.Success)
             {
-                return WrapCriticalBuildFailure(
+                return RestoreReferencesOnFailure(WrapCriticalBuildFailure(
                     buildCode: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
                     message: $"[ASM-Lite] Build failed: could not ensure live VRCFury FullController asset wiring on '{component.gameObject.name}'.",
                     contextPath: "content",
                     remediation: "Fix FullController wiring schema drift before build.",
-                    innerDiagnostic: fullControllerWiringResult);
+                    innerDiagnostic: fullControllerWiringResult));
+            }
+
+            if (!capture.Success)
+            {
+                capture = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(component,
+                    "Build rollback baseline", out previousReferences);
+                if (!capture.Success) return capture;
             }
 
             // Keep live VRCFury FullController install-prefix wiring aligned with
@@ -494,12 +514,12 @@ namespace ASMLite.Editor
             var installPathSyncResult = TrySyncInstallPathRoutingWithDiagnostics(component);
             if (!installPathSyncResult.Success)
             {
-                return WrapCriticalBuildFailure(
+                return RestoreReferencesOnFailure(WrapCriticalBuildFailure(
                     buildCode: ASMLiteDiagnosticCodes.Build.InstallPrefixSyncFailed,
                     message: $"[ASM-Lite] Build failed: could not sync live FullController install-prefix wiring on '{component.gameObject.name}'.",
                     contextPath: ASMLiteDriftProbe.MenuPrefixPath,
                     remediation: "Fix install-prefix wiring schema drift before build.",
-                    innerDiagnostic: installPathSyncResult);
+                    innerDiagnostic: installPathSyncResult));
             }
 
             if (avDesc.expressionParameters == null)
@@ -570,7 +590,7 @@ namespace ASMLite.Editor
             var legacyAliasPlan = BuildBackupNamePlan(
                 component.slotCount,
                 discoveredParams,
-                GetExistingGeneratedBackupNames(),
+                ASMLiteMigrationContinuityService.GetExistingGeneratedBackupNames(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.ExprParams)),
                 ASMLiteToggleNameBroker.GetLatestGlobalParamMappings(),
                 expandedExcludedNames);
             s_latestLegacyAliasReport = legacyAliasPlan.Report;
@@ -578,14 +598,83 @@ namespace ASMLite.Editor
             Debug.Log(
                 $"[ASM-Lite] Legacy backup continuity: mapped={legacyAliasPlan.Report.MappedCount}, mirrored={legacyAliasPlan.Report.MirroredCount}, unmatched={legacyAliasPlan.Report.UnmatchedCount}, malformed={legacyAliasPlan.Report.MalformedCount}.");
 
-            // 5-7. Generate stub assets (delivery source for VRCFury FullController).
-            PopulateFXController(discoveredParams, component.slotCount, legacyAliasPlan.LegacyAliasBindings);
-            PopulateExpressionParams(discoveredParams, legacyAliasPlan.Names);
-            PopulateExpressionMenu(component);
+            // Populate only an avatar-owned staged graph. Retain its previous identities
+            // until descriptor and live FullController references select the new graph.
+            using var descriptorSnapshot = ASMLiteDirectDeliveryRollbackSnapshot.Capture(avDesc);
+            string sourceDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(component);
+            var staged = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avDesc, sourceDir, stagedDir =>
+            {
+                string fxPath = ASMLiteAssetPaths.InGeneratedDirectory(stagedDir, ASMLiteAssetPaths.FXController);
+                if (!TryRepairGeneratedFxControllerIfCorrupt(fxPath, "Build staged FX"))
+                    throw new InvalidOperationException("Could not repair the avatar-owned staged FX controller.");
+                PopulateFXController(AssetDatabase.LoadAssetAtPath<AnimatorController>(fxPath), discoveredParams, component.slotCount, legacyAliasPlan.LegacyAliasBindings);
+                PopulateExpressionParams(AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.InGeneratedDirectory(stagedDir, ASMLiteAssetPaths.ExprParams)), discoveredParams, legacyAliasPlan.Names);
+                PopulateExpressionMenu(component, stagedDir);
+            }, workingAssets: true);
+            if (!staged.Success)
+                return RestoreReferencesOnFailure(ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    staged.ContextPath, staged.Remediation, staged.Message));
 
-            // 8. Flush generated assets to disk for downstream VF consumption.
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
+            bool completed = false;
+            ASMLiteBuildDiagnosticResult generationResult = ASMLiteBuildDiagnosticResult.Pass();
+            try
+            {
+                // The old graph now lives in BackupPath; references moved with its GUIDs.
+                string previousDir = string.IsNullOrEmpty(staged.BackupPath) ? sourceDir : staged.BackupPath;
+                var descriptorRetarget = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssets(avDesc,
+                    previousDir, staged.TargetPath, ASMLiteGeneratedAssetMirrorOperation.RetargetAvatarToVendorized,
+                    "[ASM-Lite] Could not select the avatar-owned generated graph.");
+                // Legacy/mixed routing can still reference package templates after a working graph exists.
+                if (descriptorRetarget.Success && previousDir != ASMLiteAssetPaths.GeneratedDir)
+                    descriptorRetarget = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssets(avDesc,
+                        ASMLiteAssetPaths.GeneratedDir, staged.TargetPath, ASMLiteGeneratedAssetMirrorOperation.RetargetAvatarToVendorized,
+                        "[ASM-Lite] Could not select the avatar-owned generated graph.");
+                if (!descriptorRetarget.Success)
+                    generationResult = ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                        descriptorRetarget.ContextPath, descriptorRetarget.Remediation, descriptorRetarget.Message);
+                else
+                    generationResult = ASMLiteFullControllerWiring.TryRetargetLiveFullControllerGeneratedAssetsWithDiagnostics(component, staged.TargetPath, "Build avatar-owned wiring");
+                if (generationResult.Success)
+                {
+                    if (retainGeneratedGraph != null)
+                    {
+                        retainGeneratedGraph(staged, previousReferences);
+                        completed = true;
+                    }
+                    else
+                    {
+                        var finalized = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(staged);
+                        completed = finalized.Success;
+                        if (!completed)
+                            generationResult = ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                                finalized.ContextPath, finalized.Remediation, finalized.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                generationResult = ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                    staged.TargetPath, "Restore the retained avatar-owned graph before retrying.", ex.Message);
+            }
+            finally
+            {
+                if (!completed)
+                {
+                    var rollback = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(staged);
+                    if (!rollback.Success)
+                        generationResult = ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                            staged.BackupPath, rollback.Remediation, rollback.Message, generationResult);
+                    else if (!descriptorSnapshot.TryRestore(avDesc, out string context, out string remediation))
+                        generationResult = ASMLiteBuildDiagnosticResult.Fail(ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
+                            context, remediation, "[ASM-Lite] Generated graph reference rollback failed.", generationResult);
+                    var liveRestore = ASMLiteFullControllerWiring.TryRestoreLiveFullControllerReferenceSnapshot(component,
+                        previousReferences, "Build rollback wiring");
+                    if (!liveRestore.Success)
+                        generationResult = ASMLiteBuildDiagnosticResult.Fail(liveRestore.Code, liveRestore.ContextPath,
+                            liveRestore.Remediation, liveRestore.Message, generationResult);
+                }
+            }
+            if (!generationResult.Success) return generationResult;
 
             // 9. Log completion
 #if ASM_LITE_VERBOSE
@@ -617,8 +706,8 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            var generatedFx = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var generatedFx = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.FXController));
+            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ResolveGeneratedPath(component, ASMLiteAssetPaths.ExprParams));
             if (generatedFx == null || generatedParams?.parameters == null || avatar.expressionParameters?.parameters == null)
                 return false;
 
@@ -777,8 +866,12 @@ namespace ASMLite.Editor
 
         internal static bool TryRepairPackageGeneratedFxControllerIfCorrupt(string contextLabel)
         {
-            string controllerPath = ASMLiteAssetPaths.FXController;
-            string fullPath = Path.GetFullPath(controllerPath);
+            return TryRepairGeneratedFxControllerIfCorrupt(ASMLiteAssetPaths.FXController, contextLabel);
+        }
+
+        private static bool TryRepairGeneratedFxControllerIfCorrupt(string controllerPath, string contextLabel)
+        {
+            string fullPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Application.dataPath), controllerPath));
             if (!File.Exists(fullPath))
             {
                 Debug.LogError($"[ASM-Lite] {contextLabel}: Generated FX controller file was not found at '{controllerPath}'.");
@@ -874,10 +967,12 @@ namespace ASMLite.Editor
             }
         }
 
-        private static int CountDanglingLocalFileIds(string controllerText)
+        internal static int CountDanglingLocalFileIds(string controllerText)
         {
             if (string.IsNullOrEmpty(controllerText))
                 return 0;
+
+            controllerText = controllerText.Replace(((char)13).ToString(), string.Empty);
 
             var definedIds = new HashSet<string>(StringComparer.Ordinal);
             foreach (Match match in Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", RegexOptions.Multiline))
@@ -1060,15 +1155,14 @@ namespace ASMLite.Editor
         /// Uses one shared local control Int (ASMLite_Ctrl) for all slot actions.
         /// </summary>
         private static void PopulateFXController(
+            AnimatorController ctrl,
             List<VRCExpressionParameters.Parameter> avatarParams,
             int slotCount,
             List<LegacyAliasBinding> legacyAliasBindings)
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
             if (ctrl == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load AnimatorController at '{ASMLiteAssetPaths.FXController}'.");
-                return;
+                throw new InvalidOperationException("[ASM-Lite] Avatar-owned FX controller is missing.");
             }
 
             string expectedControllerName = Path.GetFileNameWithoutExtension(ASMLiteAssetPaths.FXController);
@@ -1099,39 +1193,6 @@ namespace ASMLite.Editor
                     Debug.LogWarning($"[ASM-Lite] Duplicate discovered parameter skipped: '{p.name}'");
             }
 
-            // Add default parameters (one set, not per-slot): ASMLite_Def_{paramName}
-            for (int i = 0; i < avatarParams.Count; i++)
-            {
-                var p = avatarParams[i];
-                string defName = $"ASMLite_Def_{p.name}";
-                if (!addedParams.Add(defName))
-                {
-                    Debug.LogWarning($"[ASM-Lite] Duplicate FX parameter skipped: '{defName}'");
-                    continue;
-                }
-
-                var acp = new AnimatorControllerParameter
-                {
-                    name = $"ASMLite_Def_{p.name}",
-                    type = mappedTypes[i]
-                };
-
-                // Seed default value from the avatar's expression parameter
-                switch (p.valueType)
-                {
-                    case VRCExpressionParameters.ValueType.Int:
-                        acp.defaultInt = (int)p.defaultValue;
-                        break;
-                    case VRCExpressionParameters.ValueType.Float:
-                        acp.defaultFloat = p.defaultValue;
-                        break;
-                    case VRCExpressionParameters.ValueType.Bool:
-                        acp.defaultBool = p.defaultValue != 0f;
-                        break;
-                }
-
-                ctrl.AddParameter(acp);
-            }
 
             // Generate one layer per slot.
             for (int slot = 1; slot <= slotCount; slot++)
@@ -1422,7 +1483,7 @@ namespace ASMLite.Editor
         /// Only legacy backup params are preserved. Legacy control params are not kept.
         /// If a generated backup name exists, generated wins and legacy is ignored.
         /// </summary>
-        private static bool TryParseBackupName(string backupName, out ParsedBackupName parsed)
+        internal static bool TryParseBackupName(string backupName, out ParsedBackupName parsed)
         {
             parsed = default;
 
@@ -1499,20 +1560,18 @@ namespace ASMLite.Editor
         }
 
         /// <summary>
-        /// Writes one local shared control trigger param (ASMLite_Ctrl), runtime-only
-        /// default params used by Clear Preset, plus slot backup params into the managed
+        /// Writes one local shared control trigger param (ASMLite_Ctrl)
+        /// plus slot backup params into the managed
         /// VRCExpressionParameters asset.
         ///
         /// Legacy backup params from prior schemas are preserved when not colliding
         /// with the current schema to avoid dropping existing user presets.
         /// </summary>
-        private static void PopulateExpressionParams(List<VRCExpressionParameters.Parameter> avatarParams, List<string> backupNames)
+        private static void PopulateExpressionParams(VRCExpressionParameters paramsAsset, List<VRCExpressionParameters.Parameter> avatarParams, List<string> backupNames)
         {
-            var paramsAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             if (paramsAsset == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionParameters at '{ASMLiteAssetPaths.ExprParams}'.");
-                return;
+                throw new InvalidOperationException("[ASM-Lite] Avatar-owned expression parameters are missing.");
             }
 
             paramsAsset.parameters = CreateExpressionSchema(avatarParams, backupNames, paramsAsset.parameters);
@@ -1525,8 +1584,7 @@ namespace ASMLite.Editor
             List<string> backupNames,
             VRCExpressionParameters.Parameter[] existingParameters)
         {
-            int avatarParamCount = avatarParams?.Count ?? 0;
-            int totalCount = 1 + avatarParamCount + (backupNames != null ? backupNames.Count : 0);
+            int totalCount = 1 + (backupNames != null ? backupNames.Count : 0);
             var generated = new List<VRCExpressionParameters.Parameter>(totalCount);
 
             // Control Int used by ASM-Lite's FX layers and menu buttons.
@@ -1541,27 +1599,6 @@ namespace ASMLite.Editor
                 networkSynced = false,
             });
 
-            // Clear Preset restores slot backups from these runtime-only default keys.
-            // Keep them local-only and unsaved so they remain available to VRCFury's
-            // merged parameter set without consuming synced bits or persisting slot data.
-            if (avatarParams != null)
-            {
-                for (int i = 0; i < avatarParams.Count; i++)
-                {
-                    var source = avatarParams[i];
-                    if (source == null || string.IsNullOrWhiteSpace(source.name))
-                        continue;
-
-                    generated.Add(new VRCExpressionParameters.Parameter
-                    {
-                        name          = $"ASMLite_Def_{source.name}",
-                        valueType     = source.valueType,
-                        defaultValue  = source.defaultValue,
-                        saved         = false,
-                        networkSynced = false,
-                    });
-                }
-            }
 
             var resolvedBackupNames = backupNames ?? new List<string>();
 
@@ -1657,7 +1694,7 @@ namespace ASMLite.Editor
         /// triggering an import cycle per CreateAsset call. In-memory ScriptableObject
         /// references are used throughout: no LoadAssetAtPath reload after CreateAsset.
         /// </summary>
-        private static void PopulateExpressionMenu(ASMLiteComponent component)
+        private static void PopulateExpressionMenu(ASMLiteComponent component, string generatedDir)
         {
             int slotCount = component.slotCount;
 
@@ -1703,28 +1740,33 @@ namespace ASMLite.Editor
                 slotIcons[slot - 1] = ResolveSlotIcon(component, slot, iconPresets, iconLoadCache);
 
             // ── Load root menu in-place BEFORE the batch (preserves stable GUID) ──
-            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.InGeneratedDirectory(generatedDir, ASMLiteAssetPaths.Menu));
             if (rootMenu == null)
             {
-                Debug.LogError($"[ASM-Lite] Cannot load VRCExpressionsMenu at '{ASMLiteAssetPaths.Menu}'.");
-                return;
+                throw new InvalidOperationException("[ASM-Lite] Avatar-owned root menu is missing.");
             }
 
-            string generatedDir    = ASMLiteAssetPaths.GeneratedDir;
-            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
+            string presetsMenuPath = generatedDir + "/" + ASMLiteGeneratedOwnershipPolicy.PresetsMenuFileName;
 
             // In-memory arrays for references used outside the batch block.
             var confirmMenus      = new VRCExpressionsMenu[slotCount];
             var resetConfirmMenus = new VRCExpressionsMenu[slotCount];
             var slotMenus         = new VRCExpressionsMenu[slotCount];
+            // Detach can populate the live graph. Preserve the identities retained by rollback and inbound references.
+            var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath)
+                ?? ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            for (int slot = 1; slot <= slotCount; slot++)
+            {
+                confirmMenus[slot - 1] = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>($"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset");
+                resetConfirmMenus[slot - 1] = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>($"{generatedDir}/ASMLite_Slot{slot}_ResetConfirmMenu.asset");
+                slotMenus[slot - 1] = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>($"{generatedDir}/ASMLite_Slot{slot}_Menu.asset");
+            }
 
-            // ── Batch all delete/create operations to avoid per-asset import cycles ──
+            // ── Batch creation of any missing menus to avoid per-asset import cycles ──
             try
             {
                 AssetDatabase.StartAssetEditing();
 
-                // Delete any existing presets wrapper (safe no-op if path doesn't exist)
-                AssetDatabase.DeleteAsset(presetsMenuPath);
 
                 for (int slot = 1; slot <= slotCount; slot++)
                 {
@@ -1732,11 +1774,6 @@ namespace ASMLite.Editor
                     string confirmPath      = $"{generatedDir}/ASMLite_Slot{slot}_ConfirmMenu.asset";
                     string resetConfirmPath = $"{generatedDir}/ASMLite_Slot{slot}_ResetConfirmMenu.asset";
 
-                    // Unconditional deletes: AssetDatabase.DeleteAsset is a safe no-op
-                    // on paths that don't exist, so no existence check is needed.
-                    AssetDatabase.DeleteAsset(slotPath);
-                    AssetDatabase.DeleteAsset(confirmPath);
-                    AssetDatabase.DeleteAsset(resetConfirmPath);
 
                     // Resolve control parameter values for this slot using shared Int encoding.
                     float saveParamValue  = (float)((slot - 1) * 3 + 1);
@@ -1744,7 +1781,7 @@ namespace ASMLite.Editor
                     float clearParamValue = (float)((slot - 1) * 3 + 3);
 
                     // ── Save confirm sub-menu ─────────────────────────────────────
-                    var confirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    var confirmMenu = confirmMenus[slot - 1] ?? ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     confirmMenu.controls = new List<VRCExpressionsMenu.Control>
                     {
                         new VRCExpressionsMenu.Control
@@ -1756,11 +1793,11 @@ namespace ASMLite.Editor
                             icon      = iconSave,
                         }
                     };
-                    AssetDatabase.CreateAsset(confirmMenu, confirmPath);
+                    PersistGeneratedMenu(confirmMenu, confirmPath);
                     confirmMenus[slot - 1] = confirmMenu;
 
                     // ── Reset confirm sub-menu ────────────────────────────────────
-                    var resetConfirmMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    var resetConfirmMenu = resetConfirmMenus[slot - 1] ?? ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     resetConfirmMenu.controls = new List<VRCExpressionsMenu.Control>
                     {
                         new VRCExpressionsMenu.Control
@@ -1772,11 +1809,11 @@ namespace ASMLite.Editor
                             icon      = iconReset,
                         }
                     };
-                    AssetDatabase.CreateAsset(resetConfirmMenu, resetConfirmPath);
+                    PersistGeneratedMenu(resetConfirmMenu, resetConfirmPath);
                     resetConfirmMenus[slot - 1] = resetConfirmMenu;
 
                     // ── Slot sub-menu (Save / Load / Clear Preset) ───────────────────────
-                    var slotMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    var slotMenu = slotMenus[slot - 1] ?? ScriptableObject.CreateInstance<VRCExpressionsMenu>();
                     slotMenu.controls = new List<VRCExpressionsMenu.Control>
                     {
                         new VRCExpressionsMenu.Control
@@ -1802,7 +1839,7 @@ namespace ASMLite.Editor
                             icon    = iconReset,
                         },
                     };
-                    AssetDatabase.CreateAsset(slotMenu, slotPath);
+                    PersistGeneratedMenu(slotMenu, slotPath);
                     slotMenus[slot - 1] = slotMenu;
                 }
             }
@@ -1817,7 +1854,6 @@ namespace ASMLite.Editor
             // ── Build the ASM-Lite wrapper menu using in-memory slot references ──
             // StopAssetEditing() has processed the batch; in-memory ScriptableObject
             // references are valid: no LoadAssetAtPath reload needed.
-            var presetsMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
             presetsMenu.controls = new List<VRCExpressionsMenu.Control>();
             for (int slot = 1; slot <= slotCount; slot++)
             {
@@ -1829,7 +1865,7 @@ namespace ASMLite.Editor
                     icon    = slotIcons[slot - 1],
                 });
             }
-            AssetDatabase.CreateAsset(presetsMenu, presetsMenuPath);
+            PersistGeneratedMenu(presetsMenu, presetsMenuPath);
             // presetsMenu in-memory reference remains valid: no reload needed.
 
             // ── Point root at the ASM-Lite wrapper (single entry) ────────────
@@ -1853,6 +1889,14 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] PopulateExpressionMenu: generated root + ASM-Lite wrapper + {slotCount} slot menus + {slotCount} confirm menus.");
 #endif
+        }
+
+        private static void PersistGeneratedMenu(VRCExpressionsMenu menu, string path)
+        {
+            if (EditorUtility.IsPersistent(menu))
+                EditorUtility.SetDirty(menu);
+            else
+                AssetDatabase.CreateAsset(menu, path);
         }
 
         // ─── Migration ────────────────────────────────────────────────────────
@@ -1903,10 +1947,31 @@ namespace ASMLite.Editor
             var expandedExcludedNames = ExpandExcludedNamesWithToggleMappings(exclusionReport.CanonicalExcludedNames);
             var discoveredParams = GetFinalAvatarParams(avDesc, expandedExcludedNames, out _);
 
-            PopulateExpressionMenu(component);
-            InjectFXLayers(avDesc, discoveredParams, component.slotCount);
-            InjectExpressionParams(avDesc, component.slotCount, discoveredParams);
-            InjectExpressionMenu(avDesc, component);
+            if (!TryPreflightDirectDelivery(avDesc, out detail))
+                return false;
+
+            string generatedDir = component.useVendorizedGeneratedAssets
+                ? component.vendorizedGeneratedAssetsPath : ASMLiteAssetPaths.ResolveGeneratedDirectory(component);
+            if (generatedDir == ASMLiteAssetPaths.GeneratedDir)
+            {
+                if (Build(component) < 0)
+                {
+                    detail = GetLatestBuildDiagnosticResult().ToLogString();
+                    return false;
+                }
+                generatedDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(component);
+            }
+            var retarget = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avDesc, generatedDir);
+            if (!retarget.Success)
+            {
+                detail = retarget.ToLogString();
+                return false;
+            }
+            PopulateExpressionMenu(component, generatedDir);
+            if (!InjectExpressionMenu(avDesc, component, out detail)
+                || !InjectFXLayers(avDesc, discoveredParams, component.slotCount, generatedDir, out detail)
+                || !InjectExpressionParams(avDesc, component.slotCount, discoveredParams, out detail))
+                return false;
 
             EditorUtility.SetDirty(avDesc);
             AssetDatabase.SaveAssets();
@@ -1918,14 +1983,31 @@ namespace ASMLite.Editor
 
         // ─── Legacy descriptor-injection helpers (retired from normal flow) ───
 
+        internal static bool TryPreflightDirectDelivery(VRCAvatarDescriptor avatar, out string detail)
+        {
+            detail = string.Empty;
+            if (avatar?.expressionsMenu == null)
+                detail = "[ASM-Lite] Detach failed: no expressionsMenu on avatar descriptor.";
+            else if (avatar.expressionParameters == null)
+                detail = "[ASM-Lite] Detach failed: no expressionParameters on avatar descriptor.";
+            else if (avatar.baseAnimationLayers == null
+                || !avatar.baseAnimationLayers.Any(layer => layer.type == VRCAvatarDescriptor.AnimLayerType.FX))
+                detail = "[ASM-Lite] Detach failed: no FX layer on avatar descriptor.";
+            else if ((avatar.expressionsMenu.controls?.Count(control =>
+                !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control, avatar)) ?? 0) >= 8)
+                detail = "[ASM-Lite] Detach failed: avatar expression menu already has 8 unrelated controls.";
+            return string.IsNullOrEmpty(detail);
+        }
+
         /// <summary>
         /// Injects ASM-Lite FX layers and parameters directly into the avatar's
         /// FX AnimatorController. Removes any previously injected ASMLite_ layers
         /// and parameters first (idempotent). If the avatar has no custom FX
         /// controller, the stub controller is assigned directly.
         /// </summary>
-        private static void InjectFXLayers(VRCAvatarDescriptor avDesc, List<VRCExpressionParameters.Parameter> avatarParams, int slotCount)
+        private static bool InjectFXLayers(VRCAvatarDescriptor avDesc, List<VRCExpressionParameters.Parameter> avatarParams, int slotCount, string generatedDir, out string detail)
         {
+            detail = string.Empty;
             // Find the FX layer in baseAnimationLayers (type == FX)
             int fxIndex = -1;
             for (int i = 0; i < avDesc.baseAnimationLayers.Length; i++)
@@ -1939,8 +2021,8 @@ namespace ASMLite.Editor
 
             if (fxIndex < 0)
             {
-                Debug.LogWarning("[ASM-Lite] No FX layer found in avatar descriptor. Cannot inject FX layers.");
-                return;
+                detail = "[ASM-Lite] No FX layer found in avatar descriptor. Cannot inject FX layers.";
+                return false;
             }
 
             var fxLayer = avDesc.baseAnimationLayers[fxIndex];
@@ -1949,7 +2031,7 @@ namespace ASMLite.Editor
             // If no custom FX controller exists, assign our stub directly
             if (ctrl == null || fxLayer.isDefault)
             {
-                var stubCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+                var stubCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.InGeneratedDirectory(generatedDir, ASMLiteAssetPaths.FXController));
                 if (stubCtrl != null)
                 {
                     fxLayer.isDefault = false;
@@ -1962,9 +2044,10 @@ namespace ASMLite.Editor
                 }
                 else
                 {
-                    Debug.LogError("[ASM-Lite] InjectFXLayers: stub FX controller not found.");
+                    detail = "[ASM-Lite] InjectFXLayers: stub FX controller not found.";
+                    return false;
                 }
-                return;
+                return true;
             }
 
             // Remove existing ASMLite_ layers (iterate backwards)
@@ -2017,33 +2100,6 @@ namespace ASMLite.Editor
                     ctrl.AddParameter(avatarParams[i].name, mappedTypes[i]);
             }
 
-            // Backups are expression-only storage in direct delivery too.
-            // Add default parameters without per-slot FX declarations.
-            for (int i = 0; i < avatarParams.Count; i++)
-            {
-                string defName = $"ASMLite_Def_{avatarParams[i].name}";
-                if (!addedParams.Add(defName))
-                    continue;
-
-                var acp = new AnimatorControllerParameter
-                {
-                    name = defName,
-                    type = mappedTypes[i]
-                };
-                switch (avatarParams[i].valueType)
-                {
-                    case VRCExpressionParameters.ValueType.Int:
-                        acp.defaultInt = (int)avatarParams[i].defaultValue;
-                        break;
-                    case VRCExpressionParameters.ValueType.Float:
-                        acp.defaultFloat = avatarParams[i].defaultValue;
-                        break;
-                    case VRCExpressionParameters.ValueType.Bool:
-                        acp.defaultBool = avatarParams[i].defaultValue != 0f;
-                        break;
-                }
-                ctrl.AddParameter(acp);
-            }
 
             // Add slot layers
             for (int slot = 1; slot <= slotCount; slot++)
@@ -2054,6 +2110,7 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] InjectFXLayers: injected {slotCount} slot layers into avatar FX controller '{AssetDatabase.GetAssetPath(ctrl)}'.");
 #endif
+            return true;
         }
 
         /// <summary>
@@ -2061,13 +2118,14 @@ namespace ASMLite.Editor
         /// VRCExpressionParameters asset. Removes any previously injected ASMLite_
         /// parameters first (idempotent).
         /// </summary>
-        private static void InjectExpressionParams(VRCAvatarDescriptor avDesc, int slotCount, List<VRCExpressionParameters.Parameter> avatarParams)
+        private static bool InjectExpressionParams(VRCAvatarDescriptor avDesc, int slotCount, List<VRCExpressionParameters.Parameter> avatarParams, out string detail)
         {
+            detail = string.Empty;
             var exprParams = avDesc.expressionParameters;
             if (exprParams == null)
             {
-                Debug.LogWarning("[ASM-Lite] InjectExpressionParams: no expressionParameters on avatar descriptor.");
-                return;
+                detail = "[ASM-Lite] InjectExpressionParams: no expressionParameters on avatar descriptor.";
+                return false;
             }
 
             // Filter out any existing ASMLite_ entries
@@ -2133,6 +2191,7 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] InjectExpressionParams: {asmParams.Count} ASM-Lite params injected into avatar expression parameters.");
 #endif
+            return true;
         }
 
         /// <summary>
@@ -2140,40 +2199,38 @@ namespace ASMLite.Editor
         /// VRCExpressionsMenu. Removes any previously injected entry first
         /// (idempotent). The submenu references the generated presets menu asset.
         /// </summary>
-        private static void InjectExpressionMenu(VRCAvatarDescriptor avDesc, ASMLiteComponent component)
+        private static bool InjectExpressionMenu(VRCAvatarDescriptor avDesc, ASMLiteComponent component, out string detail)
         {
+            detail = string.Empty;
             var rootMenu = avDesc.expressionsMenu;
             if (rootMenu == null)
             {
-                Debug.LogWarning("[ASM-Lite] InjectExpressionMenu: no expressionsMenu on avatar descriptor.");
-                return;
+                detail = "[ASM-Lite] InjectExpressionMenu: no expressionsMenu on avatar descriptor.";
+                return false;
             }
 
             if (rootMenu.controls == null)
                 rootMenu.controls = new List<VRCExpressionsMenu.Control>();
 
             // Load the generated presets menu that PopulateExpressionMenu created.
-            string presetsMenuPath = ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath;
+            string generatedDir = component.useVendorizedGeneratedAssets ? component.vendorizedGeneratedAssetsPath : ASMLiteAssetPaths.ResolveGeneratedDirectory(component);
+            string presetsMenuPath = generatedDir + "/" + ASMLiteGeneratedOwnershipPolicy.PresetsMenuFileName;
             var presetsMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(presetsMenuPath);
             if (presetsMenu == null)
             {
-                Debug.LogError($"[ASM-Lite] InjectExpressionMenu: presets menu not found at '{presetsMenuPath}'. Was PopulateExpressionMenu called first?");
-                return;
+                detail = $"[ASM-Lite] InjectExpressionMenu: presets menu not found at '{presetsMenuPath}'. Was PopulateExpressionMenu called first?";
+                return false;
             }
 
             string effectiveRootControlName = ResolveEffectiveRootControlName(component);
 
-            // Remove existing ASM-Lite root entries (idempotent), including stale names
-            // from toggle flips between custom and default root naming.
-            rootMenu.controls.RemoveAll(c =>
-                ASMLiteGeneratedOwnershipPolicy.IsInjectedRootMenuControl(c, effectiveRootControlName));
-
-            // Check VRC menu control limit (8 max)
-            if (rootMenu.controls.Count >= 8)
+            // Labels do not establish ownership. Check capacity before removing proven generated entries.
+            if (rootMenu.controls.Count(c => !ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(c, avDesc)) >= 8)
             {
-                Debug.LogError($"[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add {effectiveRootControlName} entry.");
-                return;
+                detail = $"[ASM-Lite] InjectExpressionMenu: avatar expression menu already has 8 controls. Cannot add {effectiveRootControlName} entry.";
+                return false;
             }
+            rootMenu.controls.RemoveAll(c => ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(c, avDesc));
 
             var iconPresets = AssetDatabase.LoadAssetAtPath<Texture2D>(ASMLiteAssetPaths.IconPresets);
             Texture2D effectiveRootControlIcon = ResolveEffectiveRootControlIcon(component, iconPresets);
@@ -2191,6 +2248,7 @@ namespace ASMLite.Editor
 #if ASM_LITE_VERBOSE
             Debug.Log($"[ASM-Lite] InjectExpressionMenu: '{effectiveRootControlName}' entry added to avatar expression menu.");
 #endif
+            return true;
         }
 
         /// <summary>

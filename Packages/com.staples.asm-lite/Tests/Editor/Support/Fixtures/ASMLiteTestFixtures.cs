@@ -71,7 +71,10 @@ namespace ASMLite.Tests.Editor
         {
             var isolationScope = AsmLiteFixtureIsolationScope.Capture(nameof(CreateTestAvatar));
             var context = CreateTestAvatarCore("TestAvatar", isolationScope);
-            RegisterFixtureIsolationScope(context.AvatarGo, isolationScope, FixtureGeneratedAssetPaths());
+            RegisterFixtureIsolationScope(context.AvatarGo, isolationScope, FixtureGeneratedAssetPaths().Concat(new[]
+            {
+                Path.GetDirectoryName(ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(context.AvDesc)).Replace('\\', '/'),
+            }));
             return context;
         }
 
@@ -282,6 +285,18 @@ namespace ASMLite.Tests.Editor
             return firstExistingProperty;
         }
 
+        internal static T ReadGeneratedAsset<T>(ASMLiteComponent component, params string[] propertyPaths)
+            where T : UnityEngine.Object
+        {
+            var vf = FindLiveVrcFuryComponent(component != null ? component.gameObject : null);
+            var reference = ReadSerializedObjectReferenceFromAnyPath(vf, propertyPaths);
+            Assert.IsTrue(reference.PropertyExists, "The generated output must have a live FullController reference path.");
+            Assert.IsInstanceOf<T>(reference.Reference, "The live FullController must reference the generated output of the expected type.");
+            StringAssert.StartsWith("Assets/ASM-Lite/", reference.AssetPath,
+                "Build output must be avatar-owned, not a package template.");
+            return (T)reference.Reference;
+        }
+
         internal static string[] ReadSerializedStringArray(MonoBehaviour vfComponent, string arrayPath)
         {
             if (vfComponent == null || string.IsNullOrWhiteSpace(arrayPath))
@@ -345,9 +360,16 @@ namespace ASMLite.Tests.Editor
 
         public static void TearDownTestAvatar(GameObject avatarGo)
         {
-            var isolationScope = UnregisterFixtureIsolationScope(avatarGo);
-            string avatarName = avatarGo != null ? avatarGo.name : string.Empty;
+            var registration = UnregisterFixtureIsolationScope(avatarGo);
+            var isolationScope = registration?.Scope;
             var generatedAssetPaths = CaptureFixtureVendorizedGeneratedAssetPaths(avatarGo);
+            var avatar = avatarGo != null ? avatarGo.GetComponent<VRCAvatarDescriptor>() : null;
+            var ownedAssetPaths = (registration?.GeneratedAssetPaths ?? new HashSet<string>())
+                .Concat(avatar != null ? new[]
+                {
+                    Path.GetDirectoryName(ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(avatar)).Replace('\\', '/'),
+                } : Array.Empty<string>())
+                .ToArray();
             var selectionBeforeCleanup = Selection.objects ?? Array.Empty<UnityEngine.Object>();
             try
             {
@@ -355,14 +377,21 @@ namespace ASMLite.Tests.Editor
                     UnityEngine.Object.DestroyImmediate(avatarGo);
 
                 DeleteFixtureTempDir();
-                DeleteFixtureVendorizedGeneratedAssets(generatedAssetPaths);
+                if (isolationScope == null)
+                    DeleteFixtureVendorizedGeneratedAssets(generatedAssetPaths);
             }
             finally
             {
-                RestoreSelection(selectionBeforeCleanup);
-                isolationScope?.DeleteFixtureGeneratedAssetLeaks(avatarName);
-                RestoreSelection(selectionBeforeCleanup);
-                isolationScope?.Dispose();
+                try
+                {
+                    RestoreSelection(selectionBeforeCleanup);
+                    isolationScope?.DeleteFixtureGeneratedAssetLeaks(ownedAssetPaths);
+                }
+                finally
+                {
+                    RestoreSelection(selectionBeforeCleanup);
+                    isolationScope?.Dispose();
+                }
             }
         }
 
@@ -378,11 +407,14 @@ namespace ASMLite.Tests.Editor
             if (avatarGo == null)
                 return Array.Empty<string>();
 
+            var avatar = avatarGo.GetComponent<VRCAvatarDescriptor>();
+            var working = avatar != null ? new[] { ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(avatar) } : Array.Empty<string>();
             return avatarGo.GetComponentsInChildren<ASMLiteComponent>(true)
                 .Where(component => component != null)
                 .Select(component => NormalizeAssetPath(component.vendorizedGeneratedAssetsPath))
                 .Where(path => path.StartsWith("Assets/ASM-Lite/", StringComparison.Ordinal))
                 .Where(path => path.EndsWith("/GeneratedAssets", StringComparison.Ordinal))
+                .Concat(working)
                 .Distinct(StringComparer.Ordinal)
                 .ToArray();
         }
@@ -543,7 +575,7 @@ namespace ASMLite.Tests.Editor
             s_fixtureIsolationRegistrations[avatarGo.GetInstanceID()] = new FixtureIsolationRegistration(avatarGo, scope, generatedAssetPaths);
         }
 
-        private static AsmLiteFixtureIsolationScope UnregisterFixtureIsolationScope(GameObject avatarGo)
+        private static FixtureIsolationRegistration UnregisterFixtureIsolationScope(GameObject avatarGo)
         {
             if (avatarGo == null)
                 return null;
@@ -553,7 +585,7 @@ namespace ASMLite.Tests.Editor
                 return null;
 
             s_fixtureIsolationRegistrations.Remove(key);
-            return registration.Scope;
+            return registration;
         }
 
         internal static bool IsRegisteredFixtureAvatarRootId(int instanceId)
@@ -569,7 +601,10 @@ namespace ASMLite.Tests.Editor
 
             PruneDeadFixtureIsolationRegistrations();
             return s_fixtureIsolationRegistrations.Values.Any(registration =>
-                registration.GeneratedAssetPaths.Contains(assetPath));
+                registration.GeneratedAssetPaths.Any(ownedPath =>
+                    string.Equals(assetPath, ownedPath, StringComparison.Ordinal)
+                    || assetPath.StartsWith(ownedPath + "/", StringComparison.Ordinal)
+                    || ownedPath.StartsWith(assetPath + "/", StringComparison.Ordinal)));
         }
 
         private static void PruneDeadFixtureIsolationRegistrations()

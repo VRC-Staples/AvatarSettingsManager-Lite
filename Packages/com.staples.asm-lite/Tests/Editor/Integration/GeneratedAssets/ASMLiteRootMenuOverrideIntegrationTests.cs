@@ -74,7 +74,8 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"{aid}: Build() failed with result {buildResult}.");
 
-            var rootMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var rootMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(rootMenu,
                 $"{aid}: generated root menu missing at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(rootMenu.controls, $"{aid}: generated root menu controls list is null.");

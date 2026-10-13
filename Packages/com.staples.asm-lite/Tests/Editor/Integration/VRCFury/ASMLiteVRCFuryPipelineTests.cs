@@ -293,16 +293,19 @@ namespace ASMLite.Tests.Editor
             return (string)field.GetValue(target);
         }
 
-        private static AnimatorController LoadGeneratedController(string aid)
+        private AnimatorController LoadGeneratedController(string aid)
         {
-            var generatedCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var generatedCtrl = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
             Assert.IsNotNull(generatedCtrl, $"{aid}: generated FX controller must exist.");
             return generatedCtrl;
         }
 
-        private static VRCExpressionParameters LoadGeneratedParams(string aid)
+        private VRCExpressionParameters LoadGeneratedParams(string aid)
         {
-            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var generatedExpr = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsNotNull(generatedExpr, $"{aid}: generated expression params must exist.");
             Assert.IsNotNull(generatedExpr.parameters, $"{aid}: generated expression params list must not be null.");
             return generatedExpr;
@@ -350,9 +353,10 @@ namespace ASMLite.Tests.Editor
             Assert.AreEqual(liveMenuSettingsBefore, liveMenuSettingsAfter,
                 $"Build should not inject Settings Manager into fixture descriptor root menu. before={liveMenuSettingsBefore}, after={liveMenuSettingsAfter}.");
 
-            var generatedCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var generatedCtrl = LoadGeneratedController(nameof(Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces));
+            var generatedExpr = LoadGeneratedParams(nameof(Build_WritesGeneratedAssets_ButDoesNotMutateFixtureDescriptorSurfaces));
+            var generatedMenu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
 
             Assert.IsNotNull(generatedCtrl, "generated FX controller must exist.");
             Assert.IsNotNull(generatedExpr, "generated expression params must exist.");
@@ -360,11 +364,11 @@ namespace ASMLite.Tests.Editor
 
             Assert.AreEqual(2, generatedCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer),
                 "generated FX controller should carry one ASMLite layer per configured slot.");
-            Assert.AreEqual(4,
+            Assert.AreEqual(3,
                 generatedExpr.parameters.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedExpressionParameter),
-                "generated expression params should contain ASMLite_Ctrl + one Clear-default key + one backup per slot.");
+                "generated expression params should contain ASMLite_Ctrl + one backup per slot, without unused default storage.");
             Assert.AreEqual(1,
-                generatedMenu.controls.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl),
+                generatedMenu.controls.Count(control => ASMLiteGeneratedOwnershipPolicy.IsGeneratedRootMenuControl(control, _ctx.AvDesc)),
                 "generated root menu should contain one Settings Manager wrapper.");
         }
 
@@ -413,8 +417,8 @@ namespace ASMLite.Tests.Editor
                 "regression guard: first rebuild must not require a second upload cycle to evict stale FX schema names.");
             Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_Brokered_Clothing/Rezz"),
                 "regression guard: first rebuild must emit backup key for the current brokered parameter.");
-            Assert.IsTrue(rebuiltExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_Brokered_Clothing/Rezz"),
-                "regression guard: first rebuild must emit Clear Preset default key for the current brokered parameter.");
+            Assert.IsFalse(rebuiltExpr.parameters.Any(p => p != null && p.name.StartsWith("ASMLite_Def_", StringComparison.Ordinal)),
+                "Literal Clear defaults must not require expression default storage.");
         }
 
         [Test, Category("Integration")]
@@ -544,10 +548,8 @@ namespace ASMLite.Tests.Editor
                 "regression guard: generated backup keys must include broker deterministic source names without rewriting.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Bak_S1_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
                 "regression guard: generated backup keys must include broker deterministic source names without rewriting.");
-            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hood__Avatar_ASM_Lite"),
-                "regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
-            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == "ASMLite_Def_ASM_VF_Outfit_Hat__Avatar_ASM_Lite"),
-                "regression guard: generated Clear Preset default keys must include broker deterministic source names without rewriting.");
+            Assert.IsFalse(generatedExpr.parameters.Any(p => p != null && p.name.StartsWith("ASMLite_Def_", StringComparison.Ordinal)),
+                "Literal Clear defaults must not require expression default storage.");
         }
 
         [Test, Category("Integration")]
@@ -584,8 +586,8 @@ namespace ASMLite.Tests.Editor
                 "regression guard: generated FX controller must declare the VRCFury toggle source parameter.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == backup),
                 "regression guard: generated expression params must include a slot backup for the VRCFury toggle source.");
-            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
-                "regression guard: generated expression params must include the Clear Preset default key for the VRCFury toggle source.");
+            Assert.IsFalse(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
+                "Literal Clear defaults must not require expression default storage.");
 
             Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == source && p.name == backup),
                 "save must copy VRCFury toggle source into the slot backup.");
@@ -618,9 +620,17 @@ namespace ASMLite.Tests.Editor
             string backup = $"ASMLite_Bak_S1_{plannedSource}";
             string defaultKey = $"ASMLite_Def_{plannedSource}";
 
-            int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
-            Assert.AreEqual(1, buildResult,
-                $"surface VRCFury toggles should be planned into generated assets before VRCFury bake. got {buildResult}.");
+            Assert.Less(new ASMLiteTogglePreprocessAvatarCallback().callbackOrder, _ctx.Comp.PreprocessOrder,
+                "SDK preprocessing must enroll names before the component consumes them.");
+            Assert.IsTrue(new ASMLiteToggleBuildRequestedCallback().OnBuildRequested(
+                VRC.SDKBase.Editor.BuildPipeline.VRCSDKRequestedBuildType.Avatar));
+            Assert.IsTrue(ReadBoolField(toggle, "useGlobalParam"),
+                "Build-request enrollment must precede generated-asset consumption.");
+            Assert.AreEqual(plannedSource, ReadStringField(toggle, "globalParam"));
+            Assert.IsTrue(new ASMLiteTogglePreprocessAvatarCallback().OnPreprocessAvatar(_ctx.AvatarGo));
+            Assert.AreEqual(plannedSource, ReadStringField(toggle, "globalParam"));
+            Assert.AreEqual(1, ASMLiteBuilder.Build(_ctx.Comp),
+                "The builder must consume the source names enrolled by the SDK callbacks.");
 
             var generatedCtrl = LoadGeneratedController("surface VF toggle global");
             var generatedExpr = LoadGeneratedParams("surface VF toggle global");
@@ -631,16 +641,13 @@ namespace ASMLite.Tests.Editor
                 "regression guard: generated FX controller must declare the planned VRCFury surface-toggle parameter.");
             Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == backup),
                 "regression guard: generated expression params must include a slot backup for the planned VRCFury surface-toggle parameter.");
-            Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
-                "regression guard: generated expression params must include the Clear Preset default key for the planned VRCFury surface-toggle parameter.");
+            Assert.IsFalse(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
+                "Literal Clear defaults must not require expression default storage.");
             Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == plannedSource && p.name == backup),
                 "save must copy planned VRCFury surface-toggle source into the slot backup.");
             Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == backup && p.name == plannedSource),
                 "load must copy the slot backup back into the planned VRCFury surface-toggle source.");
 
-            var callback = new ASMLiteTogglePreprocessAvatarCallback();
-            Assert.IsTrue(callback.OnPreprocessAvatar(_ctx.AvatarGo),
-                "preprocess enrollment callback should not block VRCFury/SDK preprocessing.");
             Assert.IsTrue(ReadBoolField(toggle, "useGlobalParam"),
                 "preprocess enrollment should make the surface toggle consume the planned global parameter before VRCFury bakes.");
             Assert.AreEqual(plannedSource, ReadStringField(toggle, "globalParam"),
@@ -735,8 +742,8 @@ namespace ASMLite.Tests.Editor
                     "regression guard: generated expression params must include a slot 1 backup for the VRCFury FullController source.");
                 Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == backupSlot2),
                     "repro guard: generated expression params must include a slot 2 backup so loading untouched slot 2 resets the lollipop toggle.");
-                Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
-                    "regression guard: generated expression params must include the Clear Preset default key for the VRCFury FullController source.");
+                Assert.IsFalse(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
+                    "Literal Clear defaults must not require expression default storage.");
 
                 Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == source && p.name == backupSlot1),
                     "save must copy VRCFury FullController source into the slot 1 backup.");
@@ -796,8 +803,19 @@ namespace ASMLite.Tests.Editor
                     "regression guard: generated expression params must include a slot 1 backup for the FullController.prms source.");
                 Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == backupSlot2),
                     "repro guard: generated expression params must include a slot 2 backup so loading untouched slot 2 resets the lollipop toggle.");
-                Assert.IsTrue(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
-                    "regression guard: generated expression params must include the Clear Preset default key for the FullController.prms source.");
+                Assert.IsFalse(generatedExpr.parameters.Any(p => p != null && p.name == defaultKey),
+                    "Clear Preset uses literal driver values, not expression default storage.");
+                for (int slot = 1; slot <= 2; slot++)
+                {
+                    var resetDriver = LoadSlotDriver("full controller prms literal reset", generatedCtrl,
+                        $"ASMLite_Slot{slot}", $"ResetSlot{slot}");
+                    foreach (string destination in new[] { source, slot == 1 ? backupSlot1 : backupSlot2 })
+                    {
+                        var reset = resetDriver.parameters.Single(p => p.name == destination);
+                        Assert.AreEqual(VRC_AvatarParameterDriver.ChangeType.Set, reset.type, destination);
+                        Assert.AreEqual(0f, reset.value, destination);
+                    }
+                }
                 Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == source && p.name == backupSlot1),
                     "save must copy FullController.prms source into the slot 1 backup.");
                 Assert.IsTrue(loadSlot2Driver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == backupSlot2 && p.name == source),

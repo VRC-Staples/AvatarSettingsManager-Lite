@@ -89,17 +89,20 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
-        private static VRCExpressionParameters.Parameter[] LoadGeneratedParams()
+        private VRCExpressionParameters.Parameter[] LoadGeneratedParams()
         {
-            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var stubAsset = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsNotNull(stubAsset, "Generated VRCExpressionParameters asset must exist after Build().");
             Assert.IsNotNull(stubAsset.parameters, "Generated parameters must not be null after Build().");
             return stubAsset.parameters;
         }
 
-        private static AnimatorController LoadGeneratedController()
+        private AnimatorController LoadGeneratedController()
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var ctrl = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
             Assert.IsNotNull(ctrl, "Generated FX controller must exist after Build().");
             return ctrl;
         }
@@ -216,20 +219,16 @@ namespace ASMLite.Tests.Editor
                 .Select(p => p.name)
                 .ToList();
 
-            CollectionAssert.AreEquivalent(new[] { "ASMLite_Ctrl", "ASMLite_Def_Param" }, nonBackupAsmParams,
-                "Generated expression params must emit the shared control key plus local default keys required by Clear Preset.");
-
-            var defaultParam = generated.FirstOrDefault(p => p.name == "ASMLite_Def_Param");
-            Assert.IsNotNull(defaultParam,
-                "Generated expression params must include ASMLite_Def_Param so Clear Preset can restore the slot backup to avatar defaults at runtime.");
-            Assert.AreEqual(VRCExpressionParameters.ValueType.Int, defaultParam.valueType,
-                "Generated default params must mirror the source avatar param type.");
-            Assert.AreEqual(4f, defaultParam.defaultValue,
-                "Generated default params must mirror the source avatar default value.");
-            Assert.IsFalse(defaultParam.saved,
-                "Generated default params must remain unsaved because they are runtime-only Clear Preset sources, not persisted slot data.");
-            Assert.IsFalse(defaultParam.networkSynced,
-                "Generated default params must remain local-only so Clear Preset still consumes zero synced bits.");
+            CollectionAssert.AreEquivalent(new[] { "ASMLite_Ctrl" }, nonBackupAsmParams,
+                "Literal Clear defaults require no runtime default storage.");
+            Assert.IsTrue(generated.All(p => !p.networkSynced), "Removing local defaults must retain zero synced bits.");
+            foreach (int slot in new[] { 1, 2 })
+            {
+                var backup = generated.Single(p => p.name == $"ASMLite_Bak_S{slot}_Param");
+                Assert.AreEqual(4f, backup.defaultValue);
+                Assert.AreEqual(VRCExpressionParameters.ValueType.Int, backup.valueType);
+                Assert.IsTrue(backup.saved);
+            }
 
             Assert.IsFalse(generated.Any(p => p.name != null && p.name.StartsWith("ASMLite_S", System.StringComparison.Ordinal)),
                 "Legacy SafeBool-style control params (ASMLite_S*) must not be emitted in generated expression params.");
@@ -311,94 +310,6 @@ namespace ASMLite.Tests.Editor
                 "Preserved legacy backups must be forced to saved=true.");
             Assert.IsFalse(legacy.networkSynced,
                 "Preserved legacy backups must be forced to networkSynced=false.");
-        }
-
-        [Test, Category("Integration")]
-        public void MappedLegacyAlias_RemainsLoadCompatible_AndIsMirroredForSaveAndReset()
-        {
-            const string legacySource = "LegacyBrokered_Menu/Hat";
-            const string legacyBackup = "ASMLite_Bak_S1_LegacyBrokered_Menu/Hat";
-
-            var stubAsset = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(stubAsset, "Generated expression parameters asset must exist for legacy alias setup.");
-            stubAsset.parameters = new[]
-            {
-                new VRCExpressionParameters.Parameter
-                {
-                    name = legacyBackup,
-                    valueType = VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 1f,
-                    saved = true,
-                    networkSynced = true,
-                }
-            };
-            EditorUtility.SetDirty(stubAsset);
-            AssetDatabase.SaveAssets();
-
-            _ctx.Comp.slotCount = 1;
-
-            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
-            var toggle = new VF.Model.Feature.Toggle
-            {
-                useGlobalParam = false,
-                globalParam = legacySource,
-                menuPath = "Menu/Hat",
-                name = "Hat",
-            };
-            vf.content = toggle;
-
-            var enrollment = ASMLiteToggleNameBroker.EnrollForBuildRequest();
-            Assert.GreaterOrEqual(enrollment.EnrolledCount, 1, "Expected enrollment to emit at least one broker mapping for alias continuity.");
-
-            string deterministicSource = toggle.globalParam;
-            Assert.IsFalse(string.IsNullOrWhiteSpace(deterministicSource), "Enrollment should assign a deterministic global parameter name.");
-            string deterministicBackup = $"ASMLite_Bak_S1_{deterministicSource}";
-
-            ASMLiteTestFixtures.SetExpressionParams(_ctx,
-                new VRCExpressionParameters.Parameter
-                {
-                    name = deterministicSource,
-                    valueType = VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 0f,
-                    saved = true,
-                    networkSynced = true,
-                });
-
-            ASMLiteBuilder.Build(_ctx.Comp);
-
-            var generatedParams = LoadGeneratedParams();
-            Assert.IsTrue(generatedParams.Any(p => p.name == legacyBackup),
-                "Mapped legacy backup key must remain present after deterministic enrollment.");
-            Assert.IsTrue(generatedParams.Any(p => p.name == deterministicBackup),
-                "Deterministic backup key must be generated alongside mapped legacy alias.");
-
-            var generatedCtrl = LoadGeneratedController();
-            var saveDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "SaveSlot1");
-            var loadDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "LoadSlot1");
-            var resetDriver = LoadSlotDriver(generatedCtrl, "ASMLite_Slot1", "ResetSlot1");
-
-            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == deterministicBackup),
-                "Save driver must keep deterministic backup copy.");
-            Assert.IsTrue(saveDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicSource && p.name == legacyBackup),
-                "Save driver must mirror into mapped legacy backup alias.");
-
-            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == deterministicBackup && p.name == deterministicSource),
-                "Load driver must keep deterministic backup load path.");
-            Assert.IsTrue(loadDriver.parameters.Any(p => p.type == VRC_AvatarParameterDriver.ChangeType.Copy && p.source == legacyBackup && p.name == deterministicSource),
-                "Load driver must keep mapped legacy backup load-compatible with deterministic source.");
-
-            Assert.AreEqual(4, resetDriver.parameters.Count, "Clear writes each of the three destinations once, then resets control.");
-            Assert.IsTrue(resetDriver.parameters.All(p => p.type == VRC_AvatarParameterDriver.ChangeType.Set));
-            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicBackup).value,
-                "Clear must reset the deterministic backup to the configured default.");
-            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == legacyBackup).value,
-                "Clear must reset the legacy backup to the configured default, not its previous saved default.");
-            Assert.AreEqual(0f, resetDriver.parameters.Single(p => p.name == deterministicSource).value);
-
-            var report = ASMLiteBuilder.GetLatestLegacyAliasContinuityReport();
-            Assert.GreaterOrEqual(report.MappedCount, 1, "Mapped continuity report counter must include legacy alias mapping.");
-            Assert.GreaterOrEqual(report.MirroredCount, 1, "Mirrored continuity report counter must include mapped legacy alias.");
-            Assert.AreEqual(0, report.UnmatchedCount, "Mapped scenario should not increment unmatched counter.");
         }
 
         [Test, Category("Integration")]

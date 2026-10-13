@@ -455,6 +455,7 @@ namespace ASMLite.Tests.Editor
                 using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.AfterStagedCopy))
                 {
                     LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
+                    LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\. Context: 'Assets/ASM-Lite/[^']+/GeneratedAssets__stage__[a-f0-9]{8}'\. Remediation: Disable the staged-copy failure injection after validating rollback behavior\. Diagnostic: \[ASM-Lite\] BUILD-302: \[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
                     window.VendorizeForAutomation();
                 }
 

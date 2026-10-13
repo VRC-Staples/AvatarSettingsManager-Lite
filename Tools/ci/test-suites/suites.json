@@ -64,11 +64,12 @@
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBackupPresetResolverTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterBudgetTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteParameterDiscoveryTests(?:\\.|$)",
+              "^ASMLite\\.Tests\\.Editor\\.ASMLiteSharedResetBuildTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteToggleBrokerTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteVisibleAutomationCommandLineTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteAv3SaveLoadConfigurationTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowActionHierarchyTests(?:\\.|$)",
-              "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowAdapterBoundaryTests(?:\\.|$)",
+
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowCustomizationTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowNamingGroupingTests(?:\\.|$)",
               "^ASMLite\\.Tests\\.Editor\\.ASMLiteWindowRiskAffordanceTests(?:\\.|$)",

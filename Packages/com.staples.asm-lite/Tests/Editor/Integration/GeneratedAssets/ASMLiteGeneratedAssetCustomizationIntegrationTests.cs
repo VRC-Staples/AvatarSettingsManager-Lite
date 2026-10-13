@@ -128,8 +128,8 @@ namespace ASMLite.Tests.Editor
 
             Assert.IsTrue(fxNames.Contains("Keep_Int"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded live parameter should remain in generated FX schema.");
             Assert.IsTrue(fxNames.Contains("Keep_Float"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded live parameter should remain in generated FX schema.");
-            Assert.IsTrue(fxNames.Contains("ASMLite_Def_Keep_Int"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded default key should remain in generated FX schema.");
-            Assert.IsTrue(fxNames.Contains("ASMLite_Def_Keep_Float"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded default key should remain in generated FX schema.");
+            Assert.IsFalse(fxNames.Any(name => name.StartsWith("ASMLite_Def_", System.StringComparison.Ordinal)),
+                "Literal Clear defaults must not require FX default storage.");
 
             Assert.IsFalse(fxNames.Contains("Drop_Float"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: excluded live parameter must be removed from generated FX schema.");
             Assert.IsFalse(fxNames.Contains("Drop_Bool"), "CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: excluded live parameter must be removed from generated FX schema.");
@@ -138,10 +138,8 @@ namespace ASMLite.Tests.Editor
 
             for (int slot = 1; slot <= _ctx.Comp.slotCount; slot++)
             {
-                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_Int"),
-                    $"CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded backup key ASMLite_Bak_S{slot}_Keep_Int should remain in generated FX schema.");
-                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_Float"),
-                    $"CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: non-excluded backup key ASMLite_Bak_S{slot}_Keep_Float should remain in generated FX schema.");
+                Assert.IsFalse(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_Int"), "Backup storage remains expression-only.");
+                Assert.IsFalse(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_Float"), "Backup storage remains expression-only.");
 
                 Assert.IsFalse(fxNames.Contains($"ASMLite_Bak_S{slot}_Drop_Float"),
                     $"CombinedCustomizationFixture_ComposesRootOverridesExclusionsAndInstallPrefix: excluded backup key ASMLite_Bak_S{slot}_Drop_Float must be removed from generated FX schema.");
@@ -304,15 +302,13 @@ namespace ASMLite.Tests.Editor
                 "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep discovered Keep_A source parameter in generated FX schema.");
             Assert.IsTrue(fxNames.Contains("Drop_B"),
                 "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep discovered Drop_B source parameter in generated FX schema.");
-            Assert.IsTrue(fxNames.Contains("ASMLite_Def_Keep_A") && fxNames.Contains("ASMLite_Def_Drop_B"),
-                "AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep default keys for all discovered parameters.");
+            Assert.IsFalse(fxNames.Any(name => name.StartsWith("ASMLite_Def_", System.StringComparison.Ordinal)),
+                "Literal Clear defaults must not require FX default storage.");
 
             for (int slot = 1; slot <= _ctx.Comp.slotCount; slot++)
             {
-                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_A"),
-                    $"AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep Keep_A backup key ASMLite_Bak_S{slot}_Keep_A in FX schema.");
-                Assert.IsTrue(fxNames.Contains($"ASMLite_Bak_S{slot}_Drop_B"),
-                    $"AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep Drop_B backup key ASMLite_Bak_S{slot}_Drop_B in FX schema.");
+                Assert.IsFalse(fxNames.Contains($"ASMLite_Bak_S{slot}_Keep_A"), "Backup storage remains expression-only.");
+                Assert.IsFalse(fxNames.Contains($"ASMLite_Bak_S{slot}_Drop_B"), "Backup storage remains expression-only.");
                 Assert.IsTrue(exprNames.Contains($"ASMLite_Bak_S{slot}_Keep_A"),
                     $"AllCustomizationTogglesDisabled_IgnoresStaleSerializedValuesAndMatchesBaselineContracts: disabled exclusion toggle must keep Keep_A backup key ASMLite_Bak_S{slot}_Keep_A in expression schema.");
                 Assert.IsTrue(exprNames.Contains($"ASMLite_Bak_S{slot}_Drop_B"),
@@ -419,10 +415,10 @@ namespace ASMLite.Tests.Editor
                 .Select(p => p.name)
                 .ToList();
 
-            Assert.IsTrue(secondFxNames.Contains("Drop_First") && secondFxNames.Contains("ASMLite_Def_Drop_First"),
-                "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild: disabled exclusion toggle must keep previously excluded source/default keys in generated FX schema.");
-            Assert.IsTrue(secondFxNames.Contains("ASMLite_Bak_S1_Drop_First") && secondExprNames.Contains("ASMLite_Bak_S1_Drop_First"),
-                "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild: disabled exclusion toggle must restore previously excluded backup keys in generated FX and expression schemas.");
+            Assert.IsTrue(secondFxNames.Contains("Drop_First"), "Disabled exclusions retain the live source.");
+            Assert.IsFalse(secondFxNames.Contains("ASMLite_Def_Drop_First"), "Clear uses literals.");
+            Assert.IsFalse(secondFxNames.Contains("ASMLite_Bak_S1_Drop_First"), "Backup storage remains expression-only.");
+            Assert.IsTrue(secondExprNames.Contains("ASMLite_Bak_S1_Drop_First"), "Disabled exclusions restore expression backups.");
             Assert.AreEqual(0, CountDuplicateNames(secondFxNames),
                 "DisabledToggleBaseline_RemainsDeterministicAfterPriorEnabledBuild: repeated disabled-toggle build must not introduce duplicate generated FX keys.");
             Assert.AreEqual(0, CountDuplicateNames(secondExprNames),
@@ -447,17 +443,20 @@ namespace ASMLite.Tests.Editor
             return ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf);
         }
 
-        private static AnimatorController LoadGeneratedFxController()
+        private AnimatorController LoadGeneratedFxController()
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var ctrl = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
             Assert.IsNotNull(ctrl,
                 $"Generated FX controller missing at '{ASMLiteAssetPaths.FXController}'.");
             return ctrl;
         }
 
-        private static VRCExpressionParameters LoadGeneratedExprParams()
+        private VRCExpressionParameters LoadGeneratedExprParams()
         {
-            var expr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var expr = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsNotNull(expr,
                 $"Generated expression params missing at '{ASMLiteAssetPaths.ExprParams}'.");
             Assert.IsNotNull(expr.parameters,
@@ -465,9 +464,10 @@ namespace ASMLite.Tests.Editor
             return expr;
         }
 
-        private static VRCExpressionsMenu LoadGeneratedRootMenu()
+        private VRCExpressionsMenu LoadGeneratedRootMenu()
         {
-            var root = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var root = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(root,
                 $"Generated root menu missing at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(root.controls,

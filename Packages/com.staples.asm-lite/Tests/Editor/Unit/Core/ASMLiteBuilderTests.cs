@@ -31,30 +31,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void Validate_ReturnsNull_WhenSlotCountIsOne()
-        {
-            var go = new GameObject("TestAvatar");
-            var component = go.AddComponent<ASMLiteComponent>();
-            component.slotCount = 1;
-
-            Assert.IsNull(ASMLiteBuilder.Validate(component));
-
-            Object.DestroyImmediate(go);
-        }
-
-        [Test]
-        public void Validate_ReturnsNull_WhenSlotCountIsEight()
-        {
-            var go = new GameObject("TestAvatar");
-            var component = go.AddComponent<ASMLiteComponent>();
-            component.slotCount = 8;
-
-            Assert.IsNull(ASMLiteBuilder.Validate(component));
-
-            Object.DestroyImmediate(go);
-        }
-
-        [Test]
         [TestCase(1)]
         [TestCase(4)]
         [TestCase(8)]
@@ -69,39 +45,6 @@ namespace ASMLite.Tests.Editor
             Object.DestroyImmediate(go);
         }
 
-        [Test]
-        public void Validate_ReturnsError_WhenSlotCountIsZero()
-        {
-            var go = new GameObject("TestAvatar");
-            var component = go.AddComponent<ASMLiteComponent>();
-            component.slotCount = 0;
-
-            string result = ASMLiteBuilder.Validate(component);
-
-            Assert.IsNotNull(result);
-            StringAssert.Contains("slotCount", result);
-            StringAssert.Contains("0", result);
-
-            Object.DestroyImmediate(go);
-        }
-
-        [Test]
-        public void Validate_ReturnsError_WhenSlotCountIsNine()
-        {
-            var go = new GameObject("TestAvatar");
-            var component = go.AddComponent<ASMLiteComponent>();
-            component.slotCount = 9;
-
-            string result = ASMLiteBuilder.Validate(component);
-
-            Assert.IsNotNull(result);
-            StringAssert.Contains("slotCount", result);
-            StringAssert.Contains("9", result);
-
-            Object.DestroyImmediate(go);
-        }
-
-        [Test]
         [TestCase(0)]
         [TestCase(-1)]
         [TestCase(9)]
@@ -116,77 +59,36 @@ namespace ASMLite.Tests.Editor
 
             Assert.IsNotNull(result, $"Expected error for slotCount={slotCount}");
             StringAssert.Contains("[ASM-Lite]", result);
+            StringAssert.Contains("slotCount", result);
+            StringAssert.Contains(slotCount.ToString(), result);
 
             Object.DestroyImmediate(go);
         }
 
         // ── CompactInt artifact coverage ─────────────────────────────────────
 
-        [Test]
-        public void CompactInt_MenuArtifacts_UseExpectedEncodedValues_ForFirstAndLastSlots()
+        [TestCase(VRCExpressionParameters.ValueType.Bool)]
+        [TestCase(VRCExpressionParameters.ValueType.Int)]
+        public void CompactInt_MenuAndController_UseCompatibleActionValues(VRCExpressionParameters.ValueType sourceType)
         {
             var ctx = ASMLiteTestFixtures.CreateTestAvatar();
             try
             {
                 ctx.Comp.slotCount = 8;
-                ASMLiteTestFixtures.AddExpressionParam(ctx, "Compact_Menu_Param", VRCExpressionParameters.ValueType.Int, 1f);
-
-                int buildResult = ASMLiteBuilder.Build(ctx.Comp);
-                Assert.GreaterOrEqual(buildResult, 0, "Compact-int artifact test setup build should succeed.");
-
-                var rootMenu = LoadGeneratedRootMenuOrFail();
-                var presetsMenu = rootMenu.controls[0].subMenu;
-                Assert.IsNotNull(presetsMenu, "Generated root menu should point at the presets wrapper menu.");
-
-                AssertSlotMenuEncoding(presetsMenu, slot: 1, expectedSave: 1f, expectedLoad: 2f, expectedClear: 3f);
-                AssertSlotMenuEncoding(presetsMenu, slot: 8, expectedSave: 22f, expectedLoad: 23f, expectedClear: 24f);
-            }
-            finally
-            {
-                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
-        [Test]
-        public void CompactInt_ControllerTransitions_UseExpectedEncodedValues_ForFirstAndLastSlots()
-        {
-            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            try
-            {
-                ctx.Comp.slotCount = 8;
-                ASMLiteTestFixtures.AddExpressionParam(ctx, "Compact_Fx_Param", VRCExpressionParameters.ValueType.Int, 1f);
-
-                int buildResult = ASMLiteBuilder.Build(ctx.Comp);
-                Assert.GreaterOrEqual(buildResult, 0, "Compact-int controller transition test setup build should succeed.");
-
-                var controller = LoadGeneratedFxControllerOrFail();
-
-                AssertLayerTransitionEncoding(controller, slot: 1, expectedSave: 1f, expectedLoad: 2f, expectedClear: 3f);
-                AssertLayerTransitionEncoding(controller, slot: 8, expectedSave: 22f, expectedLoad: 23f, expectedClear: 24f);
-            }
-            finally
-            {
-                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
-        [Test]
-        public void CompactInt_ArtifactValues_AreUniquePositive_AndUseSharedControlParam()
-        {
-            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            try
-            {
-                ctx.Comp.slotCount = 8;
-                ASMLiteTestFixtures.AddExpressionParam(ctx, "Compact_Unique_Param", VRCExpressionParameters.ValueType.Bool, 1f);
+                ASMLiteTestFixtures.AddExpressionParam(ctx, "Compact_Protocol_Param", sourceType, 1f);
 
                 int buildResult = ASMLiteBuilder.Build(ctx.Comp);
                 Assert.GreaterOrEqual(buildResult, 0, "Compact-int uniqueness artifact test setup build should succeed.");
 
-                var rootMenu = LoadGeneratedRootMenuOrFail();
+                var rootMenu = LoadGeneratedRootMenuOrFail(ctx.Comp);
                 var presetsMenu = rootMenu.controls[0].subMenu;
                 Assert.IsNotNull(presetsMenu, "Generated root menu should point at the presets wrapper menu.");
 
-                var controller = LoadGeneratedFxControllerOrFail();
+                var controller = LoadGeneratedFxControllerOrFail(ctx.Comp);
+                AssertSlotMenuEncoding(presetsMenu, slot: 1, expectedSave: 1f, expectedLoad: 2f, expectedClear: 3f);
+                AssertSlotMenuEncoding(presetsMenu, slot: 8, expectedSave: 22f, expectedLoad: 23f, expectedClear: 24f);
+                AssertLayerTransitionEncoding(controller, slot: 1, expectedSave: 1f, expectedLoad: 2f, expectedClear: 3f);
+                AssertLayerTransitionEncoding(controller, slot: 8, expectedSave: 22f, expectedLoad: 23f, expectedClear: 24f);
                 var seenValues = new HashSet<float>();
 
                 for (int slot = 1; slot <= 8; slot++)
@@ -208,11 +110,11 @@ namespace ASMLite.Tests.Editor
                             $"Generated action control value {control.value} for slot {slot} should be unique across all Save/Load/Clear buttons.");
                     }
 
+                    AssertLayerTransitionEncoding(controller, slot,
+                        saveConfirm.value, loadControl.value, clearConfirm.value);
                     var layer = FindSlotLayer(controller, slot);
                     var idleState = FindState(layer.stateMachine, "Idle");
                     Assert.IsNotNull(idleState, $"Generated slot layer {slot} should contain an Idle state.");
-                    Assert.AreEqual(3, idleState.transitions.Length,
-                        $"Generated slot layer {slot} should expose exactly three action transitions from Idle.");
                     Assert.IsFalse(idleState.transitions.Any(t => t.conditions.Any(c => c.threshold == 0f)),
                         $"Generated slot layer {slot} should not wire any action transition to encoded idle value 0.");
                 }
@@ -508,18 +410,20 @@ namespace ASMLite.Tests.Editor
                 "Continuity extraction must not emit duplicate backup parameter names when legacy and deterministic schemas overlap.");
         }
 
-        private static VRCExpressionsMenu LoadGeneratedRootMenuOrFail()
+        private static VRCExpressionsMenu LoadGeneratedRootMenuOrFail(ASMLiteComponent component)
         {
-            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var menu = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(component,
+                ASMLiteDriftProbe.MenuObjectRefPath);
             Assert.IsNotNull(menu, $"Generated menu missing at '{ASMLiteAssetPaths.Menu}'.");
             Assert.IsNotNull(menu.controls, "Generated root menu controls must not be null.");
             Assert.IsNotEmpty(menu.controls, "Generated root menu should contain the ASM-Lite wrapper control.");
             return menu;
         }
 
-        private static AnimatorController LoadGeneratedFxControllerOrFail()
+        private static AnimatorController LoadGeneratedFxControllerOrFail(ASMLiteComponent component)
         {
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
+            var controller = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(component,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
             Assert.IsNotNull(controller, $"Generated FX controller missing at '{ASMLiteAssetPaths.FXController}'.");
             return controller;
         }

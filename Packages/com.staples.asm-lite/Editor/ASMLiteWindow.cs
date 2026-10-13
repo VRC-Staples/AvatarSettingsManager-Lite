@@ -2310,7 +2310,7 @@ namespace ASMLite.Editor
 
         // ── Install Path Tree UI ──────────────────────────────────────────────
 
-        private void DrawInstallPathTree(ASMLiteComponent component)
+        private MenuTreeNode GetCachedInstallPathTree()
         {
             // Invalidate cached tree when avatar changes.
             if (_lastInstallPathTreeAvatar != _selectedAvatar)
@@ -2322,6 +2322,13 @@ namespace ASMLite.Editor
 
             if (_cachedInstallPathTree == null)
                 _cachedInstallPathTree = BuildInstallPathTree(_selectedAvatar);
+
+            return _cachedInstallPathTree;
+        }
+
+        private void DrawInstallPathTree(ASMLiteComponent component)
+        {
+            GetCachedInstallPathTree();
 
             string currentPath = component
                 ? NormalizeOptionalString(component.customInstallPath)
@@ -2712,7 +2719,7 @@ namespace ASMLite.Editor
             return expanded.OrderBy(p => p, StringComparer.Ordinal).ToArray();
         }
 
-        private void DrawParameterChecklist(ASMLiteComponent component)
+        private void EnsureCachedParameterDiscovery()
         {
             if (_lastParamListAvatar != _selectedAvatar)
             {
@@ -2725,6 +2732,11 @@ namespace ASMLite.Editor
                 _cachedParamList = GetBackableParameterNames(_selectedAvatar);
             if (_cachedParamTree == null)
                 _cachedParamTree = BuildParamTree(_selectedAvatar);
+        }
+
+        private void DrawParameterChecklist(ASMLiteComponent component)
+        {
+            EnsureCachedParameterDiscovery();
 
             EditorGUILayout.Space(2f);
             EditorGUILayout.BeginHorizontal();
@@ -7010,7 +7022,26 @@ namespace ASMLite.Editor
 
         internal string[] GetVisibleParameterBackupOptionsForAutomation()
         {
-            return GetVisibleParameterBackupOptionsForTesting(_selectedAvatar);
+            EnsureCachedParameterDiscovery();
+            var names = new List<string>();
+            CollectParameterTreeNames(_cachedParamTree, names);
+            return ASMLiteParameterBackupPresetResolver.NormalizeVisibleNames(names.Intersect(_cachedParamList));
+        }
+
+        private static void CollectParameterTreeNames(ParamTreeNode node, List<string> names)
+        {
+            if (node.IsParam)
+                names.Add(node.ParamName);
+            foreach (var child in node.Children)
+                CollectParameterTreeNames(child, names);
+        }
+
+        internal string[] GetVisibleInstallPathOptionsForAutomation()
+        {
+            var paths = new List<string>();
+            CollectTreePaths(GetCachedInstallPathTree(), paths);
+            return paths.Where(path => !string.IsNullOrEmpty(path))
+                .Distinct(StringComparer.Ordinal).OrderBy(path => path, StringComparer.Ordinal).ToArray();
         }
 
         internal static string[] NormalizeParameterBackupOptionNamesForAutomation(IEnumerable<string> names)

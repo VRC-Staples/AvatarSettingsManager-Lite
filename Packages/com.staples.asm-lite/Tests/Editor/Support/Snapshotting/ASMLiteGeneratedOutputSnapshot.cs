@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.Animations;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -17,6 +18,7 @@ namespace ASMLite.Tests.Editor
         internal string FxControllerMainObjectName { get; }
         internal string[] FxLayerNames { get; }
         internal string[] FxParameterNames { get; }
+        internal string[] ExpressionParameterNames { get; }
         internal int FxDanglingLocalFileIdCount { get; }
         internal int SettingsManagerControlCount { get; }
         internal int LiveVrcFuryComponentCount { get; }
@@ -32,6 +34,7 @@ namespace ASMLite.Tests.Editor
             string fxControllerMainObjectName,
             string[] fxLayerNames,
             string[] fxParameterNames,
+            string[] expressionParameterNames,
             int fxDanglingLocalFileIdCount,
             int settingsManagerControlCount,
             int liveVrcFuryComponentCount,
@@ -46,6 +49,7 @@ namespace ASMLite.Tests.Editor
             FxControllerMainObjectName = fxControllerMainObjectName ?? string.Empty;
             FxLayerNames = fxLayerNames ?? Array.Empty<string>();
             FxParameterNames = fxParameterNames ?? Array.Empty<string>();
+            ExpressionParameterNames = expressionParameterNames ?? Array.Empty<string>();
             FxDanglingLocalFileIdCount = fxDanglingLocalFileIdCount;
             SettingsManagerControlCount = settingsManagerControlCount;
             LiveVrcFuryComponentCount = liveVrcFuryComponentCount;
@@ -57,9 +61,18 @@ namespace ASMLite.Tests.Editor
 
         internal static ASMLiteGeneratedOutputSnapshot Capture(ASMLiteComponent component, int buildResult)
         {
-            var fxController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            var exprParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var liveVrcFury = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component != null ? component.gameObject : null);
+            int liveVrcFuryCount = ASMLiteTestFixtures.FindLiveVrcFuryComponents(component != null ? component.gameObject : null).Length;
+            var controllerRef = ASMLiteTestFixtures.ReadSerializedObjectReference(liveVrcFury, ASMLiteDriftProbe.ControllerObjectRefPath);
+            var menuRef = ASMLiteTestFixtures.ReadSerializedObjectReference(liveVrcFury, ASMLiteDriftProbe.MenuObjectRefPath);
+            var parameterRef = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
+                liveVrcFury,
+                ASMLiteDriftProbe.ParametersObjectRefPath,
+                ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
+            var fxController = controllerRef.Reference as AnimatorController;
+            var exprParams = parameterRef.Reference as VRCExpressionParameters;
+            var menu = menuRef.Reference as VRCExpressionsMenu;
 
             string[] fxLayerNames = fxController != null
                 ? fxController.layers
@@ -82,27 +95,17 @@ namespace ASMLite.Tests.Editor
                     && string.Equals(control.name, "Settings Manager", StringComparison.Ordinal))
                 : 0;
 
-            var liveVrcFury = ASMLiteTestFixtures.FindLiveVrcFuryComponent(component != null ? component.gameObject : null);
-            int liveVrcFuryCount = ASMLiteTestFixtures.FindLiveVrcFuryComponents(component != null ? component.gameObject : null).Length;
-
-            var controllerRef = ASMLiteTestFixtures.ReadSerializedObjectReference(liveVrcFury, ASMLiteDriftProbe.ControllerObjectRefPath);
-            var menuRef = ASMLiteTestFixtures.ReadSerializedObjectReference(liveVrcFury, ASMLiteDriftProbe.MenuObjectRefPath);
-            var parameterRef = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
-                liveVrcFury,
-                ASMLiteDriftProbe.ParametersObjectRefPath,
-                ASMLiteDriftProbe.ParameterObjectRefPath,
-                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
-
-            string fxText = ReadPackageAssetText(ASMLiteAssetPaths.FXController);
+            string fxText = ReadPackageAssetText(controllerRef.AssetPath);
             int danglingFxLocalFileIdCount = CountDanglingLocalFileIds(fxText);
 
             return new ASMLiteGeneratedOutputSnapshot(
                 buildResult: buildResult,
-                exprParamsText: ReadPackageAssetText(ASMLiteAssetPaths.ExprParams),
-                menuText: ReadPackageAssetText(ASMLiteAssetPaths.Menu),
+                exprParamsText: ReadPackageAssetText(parameterRef.AssetPath),
+                menuText: ReadMenuContent(menuRef.AssetPath),
                 fxControllerMainObjectName: fxController != null ? fxController.name ?? string.Empty : string.Empty,
                 fxLayerNames: fxLayerNames,
                 fxParameterNames: fxParameterNames,
+                expressionParameterNames: exprParams?.parameters?.Select(parameter => parameter?.name).ToArray(),
                 fxDanglingLocalFileIdCount: danglingFxLocalFileIdCount,
                 settingsManagerControlCount: settingsManagerControlCount,
                 liveVrcFuryComponentCount: liveVrcFuryCount,
@@ -125,13 +128,23 @@ namespace ASMLite.Tests.Editor
             return NormalizeNewlines(text);
         }
 
+        private static string ReadMenuContent(string assetPath)
+        {
+            // Rebuilt private submenu GUIDs can change. Keep their exact persistent paths and all payload fields.
+            return Regex.Replace(ReadPackageAssetText(assetPath), @"guid: ([a-f0-9]{32})", match =>
+            {
+                string referencePath = AssetDatabase.GUIDToAssetPath(match.Groups[1].Value);
+                return string.IsNullOrEmpty(referencePath) ? match.Value : "assetPath: " + referencePath;
+            });
+        }
+
         private static string ResolveAssetAbsolutePath(string assetPath)
         {
             string projectRoot = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, ".."));
             return Path.GetFullPath(Path.Combine(projectRoot, assetPath.Replace('\\', Path.DirectorySeparatorChar)));
         }
 
-        private static string NormalizeNewlines(string text)
+        internal static string NormalizeNewlines(string text)
         {
             return (text ?? string.Empty)
                 .Replace("\r\n", "\n")
@@ -140,9 +153,7 @@ namespace ASMLite.Tests.Editor
 
         private static int CountDanglingLocalFileIds(string fxText)
         {
-            // Keep this intentionally conservative for determinism checks.
-            // The current suite only asserts that healthy generated assets report zero.
-            return 0;
+            return ASMLiteCustomizationScaffoldTests.CountDanglingLocalFileIdsForTest(fxText);
         }
     }
 }

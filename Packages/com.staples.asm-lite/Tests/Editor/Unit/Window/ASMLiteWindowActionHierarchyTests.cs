@@ -214,20 +214,22 @@ namespace ASMLite.Tests.Editor
                 "Expanded Advanced disclosure must surface attached vendorized return controls.");
         }
 
-        [Test]
-        public void BuildActionHierarchyContract_ComponentMissingDetached_StaysExplicit()
+        [TestCase((int)ASMLite.Editor.ASMLiteInstallationState.Detached, TestName = "ComponentMissing_DetachedRecovery")]
+        [TestCase((int)ASMLite.Editor.ASMLiteInstallationState.Vendorized, TestName = "ComponentMissing_VendorizedRecovery")]
+        public void BuildActionHierarchyContract_ComponentMissing_StaysExplicit(int stateValue)
         {
+            var state = (ASMLite.Editor.ASMLiteInstallationState)stateValue;
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteInstallationState.Detached,
+                state,
                 hasComponent: false,
                 advancedDisclosureExpanded: false);
 
             Assert.True(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged),
-                "Detached avatars without an attached component must expose Return to Package Managed as primary recovery.");
+                "Component-missing avatars without an attached component must expose Return to Package Managed as primary recovery.");
             Assert.AreEqual(0, hierarchy.AdvancedActions.Length,
-                "Detached recovery flow should not require advanced disclosure to access its only recovery action.");
+                "Component-missing recovery flow should not require advanced disclosure to access its only recovery action.");
             AssertPrimaryContainsNoMaintenanceActions(hierarchy,
-                "Component-missing detached hierarchy");
+                "Component-missing recovery hierarchy");
 
             var recovery = hierarchy.GetDescriptor(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged);
             AssertDescriptor(
@@ -243,22 +245,6 @@ namespace ASMLite.Tests.Editor
                 confirmationRequired: false,
                 supportsVisibleAutomation: true);
             Assert.AreEqual("Return to Package Managed Mode", recovery.Heading);
-        }
-
-        [Test]
-        public void BuildActionHierarchyContract_ComponentMissingVendorized_StaysExplicit()
-        {
-            var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteInstallationState.Vendorized,
-                hasComponent: false,
-                advancedDisclosureExpanded: false);
-
-            Assert.True(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnToPackageManaged),
-                "Vendorized avatars without an attached component must expose Return to Package Managed as primary recovery.");
-            Assert.AreEqual(0, hierarchy.AdvancedActions.Length,
-                "Vendorized recovery flow should not hide the only recovery action behind advanced disclosure.");
-            AssertPrimaryContainsNoMaintenanceActions(hierarchy,
-                "Component-missing vendorized hierarchy");
         }
 
         [Test]

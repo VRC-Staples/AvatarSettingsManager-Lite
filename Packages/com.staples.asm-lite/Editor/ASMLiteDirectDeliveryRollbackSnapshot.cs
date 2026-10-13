@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -12,7 +13,7 @@ namespace ASMLite.Editor
         private readonly VRCExpressionParameters _expressionParametersAsset;
         private readonly VRCExpressionParameters _expressionParametersClone;
         private readonly VRCExpressionsMenu _expressionsMenuAsset;
-        private readonly VRCExpressionsMenu _expressionsMenuClone;
+        private readonly Dictionary<VRCExpressionsMenu, VRCExpressionsMenu> _menuClones = new Dictionary<VRCExpressionsMenu, VRCExpressionsMenu>();
         private readonly AnimatorController _fxControllerAsset;
         private readonly AnimatorController _fxControllerClone;
         private readonly int _fxLayerIndex;
@@ -21,10 +22,23 @@ namespace ASMLite.Editor
 
         private ASMLiteDirectDeliveryRollbackSnapshot(VRCAvatarDescriptor avatar)
         {
+            DetachedBaselineState = ASMLiteInstallationStateService.Resolve(avatar, null);
             _expressionParametersAsset = avatar != null ? avatar.expressionParameters : null;
             _expressionParametersClone = CloneForRollback(_expressionParametersAsset);
             _expressionsMenuAsset = avatar != null ? avatar.expressionsMenu : null;
-            _expressionsMenuClone = CloneForRollback(_expressionsMenuAsset);
+            var menus = new Stack<VRCExpressionsMenu>();
+            if (_expressionsMenuAsset != null)
+                menus.Push(_expressionsMenuAsset);
+            while (menus.Count != 0)
+            {
+                var menu = menus.Pop();
+                if (menu == null || _menuClones.ContainsKey(menu))
+                    continue;
+                _menuClones.Add(menu, CloneForRollback(menu));
+                foreach (var control in menu.controls ?? new List<VRCExpressionsMenu.Control>())
+                    if (control?.subMenu != null)
+                        menus.Push(control.subMenu);
+            }
             _fxLayerIndex = FindFxLayerIndex(avatar);
             if (_fxLayerIndex >= 0 && avatar != null)
             {
@@ -42,6 +56,8 @@ namespace ASMLite.Editor
         {
             return new ASMLiteDirectDeliveryRollbackSnapshot(avatar);
         }
+
+        internal ASMLiteInstallationState DetachedBaselineState { get; }
 
         internal bool TryRestore(VRCAvatarDescriptor avatar, out string failureContext, out string failureRemediation)
         {
@@ -75,8 +91,9 @@ namespace ASMLite.Editor
             _disposed = true;
             if (_expressionParametersClone != null)
                 UnityEngine.Object.DestroyImmediate(_expressionParametersClone);
-            if (_expressionsMenuClone != null)
-                UnityEngine.Object.DestroyImmediate(_expressionsMenuClone);
+            foreach (var clone in _menuClones.Values)
+                if (clone != null)
+                    UnityEngine.Object.DestroyImmediate(clone);
             if (_fxControllerClone != null)
                 UnityEngine.Object.DestroyImmediate(_fxControllerClone);
         }
@@ -85,25 +102,33 @@ namespace ASMLite.Editor
         {
             if (_expressionParametersAsset != null && _expressionParametersClone != null)
             {
+                var hideFlags = _expressionParametersAsset.hideFlags;
                 EditorUtility.CopySerialized(_expressionParametersClone, _expressionParametersAsset);
+                _expressionParametersAsset.hideFlags = hideFlags;
                 if (avatar.expressionParameters != _expressionParametersAsset)
                     avatar.expressionParameters = _expressionParametersAsset;
                 EditorUtility.SetDirty(_expressionParametersAsset);
             }
 
-            if (_expressionsMenuAsset != null && _expressionsMenuClone != null)
+            foreach (var menu in _menuClones)
             {
-                EditorUtility.CopySerialized(_expressionsMenuClone, _expressionsMenuAsset);
-                if (avatar.expressionsMenu != _expressionsMenuAsset)
-                    avatar.expressionsMenu = _expressionsMenuAsset;
-                EditorUtility.SetDirty(_expressionsMenuAsset);
+                if (menu.Key == null)
+                    throw new InvalidOperationException("A captured submenu was deleted; its original identity must be restored before rollback.");
+                var hideFlags = menu.Key.hideFlags;
+                EditorUtility.CopySerialized(menu.Value, menu.Key);
+                menu.Key.hideFlags = hideFlags;
+                EditorUtility.SetDirty(menu.Key);
             }
+            if (_expressionsMenuAsset != null && avatar.expressionsMenu != _expressionsMenuAsset)
+                avatar.expressionsMenu = _expressionsMenuAsset;
 
             if (_fxLayerIndex >= 0 && _fxLayerIndex < avatar.baseAnimationLayers.Length)
             {
                 if (_fxControllerAsset != null && _fxControllerClone != null)
                 {
+                    var hideFlags = _fxControllerAsset.hideFlags;
                     EditorUtility.CopySerialized(_fxControllerClone, _fxControllerAsset);
+                    _fxControllerAsset.hideFlags = hideFlags;
                     EditorUtility.SetDirty(_fxControllerAsset);
                 }
 
@@ -124,6 +149,7 @@ namespace ASMLite.Editor
                 return null;
 
             var clone = UnityEngine.Object.Instantiate(source);
+            clone.name = source.name;
             clone.hideFlags = HideFlags.HideAndDontSave;
             return clone;
         }

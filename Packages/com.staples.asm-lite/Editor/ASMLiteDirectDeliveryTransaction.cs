@@ -119,60 +119,78 @@ namespace ASMLite.Editor
             ASMLiteDirectDeliveryTransactionPlan plan,
             Func<ASMLiteLifecycleTransactionTestFailurePoint, bool> shouldFailForTesting)
         {
-            shouldFailForTesting = shouldFailForTesting ?? (_ => false);
-            if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
+            using (var snapshot = ASMLiteDirectDeliveryRollbackSnapshot.Capture(avatar))
             {
-                return ASMLiteDirectDeliveryTransactionResult.Fail(
-                    ASMLiteLifecycleTransactionStage.Execute,
-                    detail,
-                    avatar != null ? avatar.gameObject.name : "avatar",
-                    plan.ExecuteFailureRemediation,
-                    plan.ExpectedDetachedState);
-            }
-
-            if (shouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterDetachExecute))
-            {
-                return ASMLiteDirectDeliveryTransactionResult.Fail(
-                    ASMLiteLifecycleTransactionStage.Execute,
-                    plan.AfterApplyFailureMessage,
-                    avatar != null ? avatar.gameObject.name : "avatar",
-                    plan.AfterApplyFailureRemediation,
-                    plan.ExpectedDetachedState);
-            }
-
-            if (plan.RetargetDescriptorToVendorized)
-            {
-                var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, plan.VendorizedDir);
-                if (!descriptorRetargetResult.Success)
+                bool completed = false;
+                try
                 {
-                    return ASMLiteDirectDeliveryTransactionResult.Fail(
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        descriptorRetargetResult.Message,
-                        descriptorRetargetResult.ContextPath,
-                        descriptorRetargetResult.Remediation,
-                        plan.ExpectedDetachedState);
+                    shouldFailForTesting = shouldFailForTesting ?? (_ => false);
+                    if (!ASMLiteBuilder.TryDetachToDirectDelivery(component, out string detail))
+                    {
+                        return ASMLiteDirectDeliveryTransactionResult.Fail(
+                            ASMLiteLifecycleTransactionStage.Execute,
+                            detail,
+                            avatar != null ? avatar.gameObject.name : "avatar",
+                            plan.ExecuteFailureRemediation,
+                            plan.ExpectedDetachedState);
+                    }
+
+                    if (shouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.ThrowAfterDetachExecute))
+                        throw new InvalidOperationException("Injected exception after direct-delivery content was applied.");
+
+                    if (shouldFailForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterDetachExecute))
+                    {
+                        return ASMLiteDirectDeliveryTransactionResult.Fail(
+                            ASMLiteLifecycleTransactionStage.Execute,
+                            plan.AfterApplyFailureMessage,
+                            avatar != null ? avatar.gameObject.name : "avatar",
+                            plan.AfterApplyFailureRemediation,
+                            plan.ExpectedDetachedState);
+                    }
+
+                    if (plan.RetargetDescriptorToVendorized)
+                    {
+                        var descriptorRetargetResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, plan.VendorizedDir);
+                        if (!descriptorRetargetResult.Success)
+                        {
+                            return ASMLiteDirectDeliveryTransactionResult.Fail(
+                                ASMLiteLifecycleTransactionStage.Execute,
+                                descriptorRetargetResult.Message,
+                                descriptorRetargetResult.ContextPath,
+                                descriptorRetargetResult.Remediation,
+                                plan.ExpectedDetachedState);
+                        }
+                    }
+
+                    string verifyFailureMessage = string.Empty;
+                    string verifyFailureContext = string.Empty;
+                    if (shouldFailForTesting(plan.VerifyFailurePoint)
+                        || !ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                            component,
+                            avatar,
+                            plan.ExpectedDetachedState,
+                            plan.VendorizedDir,
+                            out verifyFailureMessage,
+                            out verifyFailureContext))
+                    {
+                        return ASMLiteDirectDeliveryTransactionResult.Fail(
+                            ASMLiteLifecycleTransactionStage.Verify,
+                            shouldFailForTesting(plan.VerifyFailurePoint) ? plan.VerifyFailureMessage : verifyFailureMessage,
+                            shouldFailForTesting(plan.VerifyFailurePoint) ? VerificationFailureContext(avatar, plan) : verifyFailureContext,
+                            shouldFailForTesting(plan.VerifyFailurePoint) ? plan.VerifyFailureRemediation : plan.VerificationFailureRemediation,
+                            plan.ExpectedDetachedState);
+                    }
+
+                    completed = true;
+                    return ASMLiteDirectDeliveryTransactionResult.Pass(detail, plan.ExpectedDetachedState);
+                }
+                finally
+                {
+                    // Restore the mutation boundary before outer rollback validates mirror ownership.
+                    if (!completed && !snapshot.TryRestore(avatar, out string context, out string remediation))
+                        throw new InvalidOperationException("Direct-delivery rollback failed at '" + context + "': " + remediation);
                 }
             }
-
-            string verifyFailureMessage = string.Empty;
-            string verifyFailureContext = string.Empty;
-            if (shouldFailForTesting(plan.VerifyFailurePoint)
-                || !ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
-                    avatar,
-                    plan.ExpectedDetachedState,
-                    plan.VendorizedDir,
-                    out verifyFailureMessage,
-                    out verifyFailureContext))
-            {
-                return ASMLiteDirectDeliveryTransactionResult.Fail(
-                    ASMLiteLifecycleTransactionStage.Verify,
-                    shouldFailForTesting(plan.VerifyFailurePoint) ? plan.VerifyFailureMessage : verifyFailureMessage,
-                    shouldFailForTesting(plan.VerifyFailurePoint) ? VerificationFailureContext(avatar, plan) : verifyFailureContext,
-                    shouldFailForTesting(plan.VerifyFailurePoint) ? plan.VerifyFailureRemediation : plan.VerificationFailureRemediation,
-                    plan.ExpectedDetachedState);
-            }
-
-            return ASMLiteDirectDeliveryTransactionResult.Pass(detail, plan.ExpectedDetachedState);
         }
 
         private static string VerificationFailureContext(VRCAvatarDescriptor avatar, ASMLiteDirectDeliveryTransactionPlan plan)

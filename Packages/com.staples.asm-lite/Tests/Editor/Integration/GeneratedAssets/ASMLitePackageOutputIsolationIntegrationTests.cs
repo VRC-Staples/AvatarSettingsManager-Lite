@@ -78,8 +78,8 @@ namespace ASMLite.Tests.Editor
                 $"{aid}: setup should leave the avatar in PackageManaged state before vendorize.");
             AssertDescriptorGeneratedAssetReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
                 $"{aid}: setup should leave descriptor references on package generated assets before vendorize.");
-            AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                $"{aid}: setup should leave live FullController references on package generated assets before vendorize.");
+            AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp),
+                $"{aid}: setup should leave live FullController references on the avatar-owned working graph before vendorize.");
         }
 
         protected void MutateGeneratedInputsBeforeVendorize(string paramName)
@@ -291,7 +291,7 @@ namespace ASMLite.Tests.Editor
                 return Path.GetFullPath(fullPath).Replace('\\', '/');
             }
 
-            private static string ToFullPath(string assetPath)
+            internal static string ToFullPath(string assetPath)
             {
                 var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
                 if (packageInfo != null && !string.IsNullOrWhiteSpace(packageInfo.resolvedPath))
@@ -314,6 +314,172 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteAttachedVendorizePackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
     {
+        [TestCase(1)]
+        [TestCase(8)]
+        public void Build_TwoAvatars_KeepIndependentGraphsAndPackageBytes(int slotCount)
+        {
+            var packageBaseline = PackageOutputBytesSnapshot.Capture();
+            ASMLiteTestFixtures.AddExpressionParam(_ctx, "FirstAvatarValue", VRCExpressionParameters.ValueType.Float, 0.25f);
+            _ctx.Comp.slotCount = slotCount;
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = "First avatar presets";
+            Assert.GreaterOrEqual(ASMLiteBuilder.Build(_ctx.Comp), 0, ASMLiteBuilder.GetLatestBuildDiagnosticResult().ToLogString());
+            string firstDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(_ctx.AvDesc, firstDir));
+            AssertLiveFullControllerReferencesUnderPrefix(firstDir, "First avatar owns its generated graph.");
+            var firstBytes = Directory.GetFiles(PackageOutputBytesSnapshot.ToFullPath(firstDir))
+                .ToDictionary(path => path, File.ReadAllBytes);
+
+            var second = UnityEngine.Object.Instantiate(_ctx.AvatarGo);
+            second.name = "SecondFixtureAvatar";
+            try
+            {
+                var secondDescriptor = second.GetComponent<VRCAvatarDescriptor>();
+                var secondComponent = second.GetComponentInChildren<ASMLiteComponent>(true);
+                secondComponent.slotCount = slotCount == 1 ? 8 : 1;
+                secondComponent.customRootName = "Second avatar presets";
+                Assert.GreaterOrEqual(ASMLiteBuilder.Build(secondComponent), 0, ASMLiteBuilder.GetLatestBuildDiagnosticResult().ToLogString());
+                string secondDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(secondComponent);
+                Assert.AreNotEqual(firstDir, secondDir);
+                Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(secondDescriptor, secondDir));
+                var secondParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(secondDir + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+                Assert.IsTrue(secondParameters.parameters.Any(parameter => parameter.name == "ASMLite_Bak_S" + secondComponent.slotCount + "_FirstAvatarValue"));
+                var secondMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(secondDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+                Assert.AreEqual("Second avatar presets", secondMenu.controls[0].name);
+                foreach (var file in firstBytes)
+                    CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), file.Key);
+                AssertLiveFullControllerReferencesUnderPrefix(firstDir, "Building a second avatar must not change the first avatar's wiring.");
+                packageBaseline.AssertMatches(nameof(Build_TwoAvatars_KeepIndependentGraphsAndPackageBytes));
+            }
+            finally
+            {
+                ASMLiteTestFixtures.TearDownTestAvatar(second);
+            }
+        }
+
+        [Test]
+        public void Build_StagingFailure_PreservesPreviousAvatarGraphAndPackageBytes()
+        {
+            Assert.GreaterOrEqual(ASMLiteBuilder.Build(_ctx.Comp), 0);
+            string generatedDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            var files = Directory.GetFiles(PackageOutputBytesSnapshot.ToFullPath(generatedDir)).ToDictionary(path => path, File.ReadAllBytes);
+            var packageBaseline = PackageOutputBytesSnapshot.Capture();
+            ASMLiteBuildDiagnosticResult result;
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.AfterStagedCopy))
+                result = ASMLiteBuilder.TryBuildWithDiagnostics(_ctx.Comp, out _);
+            Assert.IsFalse(result.Success);
+            foreach (var file in files)
+                CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), file.Key);
+            AssertLiveFullControllerReferencesUnderPrefix(generatedDir, "Failed staging must preserve prior live references.");
+            packageBaseline.AssertMatches(nameof(Build_StagingFailure_PreservesPreviousAvatarGraphAndPackageBytes));
+        }
+
+        [Test]
+        public void FixtureSnapshot_PreservesModifiedOutputAndPreExistingUntrackedFile()
+        {
+            string output = PackageOutputBytesSnapshot.ToFullPath(ASMLiteAssetPaths.FXController);
+            string extra = Path.Combine(Path.GetDirectoryName(output), "UserBaseline-" + Guid.NewGuid().ToString("N") + ".txt");
+            File.AppendAllText(output, "\n# pre-existing local output edit\n");
+            File.WriteAllText(extra, "pre-existing untracked work");
+            AssetDatabase.Refresh();
+            byte[] outputBytes = File.ReadAllBytes(output);
+            byte[] extraBytes = File.ReadAllBytes(extra);
+            var baseline = ASMLitePackageGeneratedOutputSnapshot.Capture();
+
+            File.AppendAllText(output, "\n# fixture mutation\n");
+            File.WriteAllText(extra, "fixture mutation");
+            baseline.Restore();
+
+            CollectionAssert.AreEqual(outputBytes, File.ReadAllBytes(output));
+            CollectionAssert.AreEqual(extraBytes, File.ReadAllBytes(extra));
+        }
+
+        [Test]
+        public void VendorizeAndDetach_ChildFailureAndOuterRestoreFailure_ReturnsRecoveryDiagnostic()
+        {
+            PreparePackageManagedAvatarForVendorize("NestedRestoreFailure");
+            int restoresPrepared = 0;
+            ASMLiteLifecycleTransactionResult result;
+            using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget))
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+            {
+                if (phase == "prepared" && ++restoresPrepared == 3)
+                    throw new IOException("Injected outer restore failure.");
+            }))
+                result = ASMLiteLifecycleTransactionService.ExecuteVendorizeAndDetach(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.AreEqual(3, restoresPrepared, "The child restores package bytes before and after working-graph rollback; the third restore is the outer operation.");
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(ASMLiteLifecycleOperation.VendorizeAndDetach, result.Operation);
+            Assert.IsFalse(result.RollbackSucceeded);
+            Assert.AreEqual("ASMLITE_PACKAGE_OUTPUT_RESTORE_FAILED", result.Diagnostic.Code);
+            Assert.IsNotNull(result.Diagnostic.InnerDiagnostic, "Preserve the failed child diagnostic.");
+            Assert.IsFalse(result.Diagnostic.InnerDiagnostic.Success);
+            StringAssert.Contains("Injected attached-vendorize failure after live FullController", result.Diagnostic.InnerDiagnostic.Message);
+            StringAssert.Contains("Injected outer restore failure", result.Remediation);
+            Assert.IsNotNull(_ctx.Comp);
+        }
+
+        [Test]
+        public void DirectDeliveryVerification_MissingGeneratedSubmenu_RejectsPartialDelivery()
+        {
+            PreparePackageManagedAvatarForVendorize(nameof(DirectDeliveryVerification_MissingGeneratedSubmenu_RejectsPartialDelivery));
+            var retarget = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(_ctx.AvDesc,
+                ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp));
+            Assert.IsTrue(retarget.Success, retarget.ToLogString());
+            Assert.IsTrue(ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                _ctx.Comp, _ctx.AvDesc, ASMLiteInstallationState.Detached, string.Empty,
+                out string failureMessage, out string failureContext), failureMessage);
+
+            _ctx.AvDesc.expressionsMenu.controls[0].subMenu = null;
+
+            Assert.IsFalse(ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
+                _ctx.Comp, _ctx.AvDesc, ASMLiteInstallationState.Detached, string.Empty,
+                out failureMessage, out failureContext));
+            StringAssert.Contains("menu: False", failureMessage);
+            Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
+        }
+
+        [TestCase(false, false)]
+        [TestCase(true, false)]
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        public void Detach_IncompleteMenu_FailsBeforeMutation(bool vendorize, bool missingMenu)
+        {
+            _ctx.Comp.useCustomRootName = true;
+            _ctx.Comp.customRootName = "Inventory";
+            if (missingMenu)
+                _ctx.AvDesc.expressionsMenu = null;
+            else
+                for (int i = 0; i < 8; i++)
+                    _ctx.MenuAsset.controls.Add(new VRCExpressionsMenu.Control
+                    {
+                        name = i == 0 ? "Inventory" : i == 1 ? ASMLiteBuilder.DefaultRootControlName : "User " + i,
+                        type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                        subMenu = _ctx.MenuAsset,
+                    });
+            EditorUtility.SetDirty(_ctx.MenuAsset);
+            AssetDatabase.SaveAssets();
+            var packageBaseline = PackageOutputBytesSnapshot.Capture();
+            string menuBefore = EditorJsonUtility.ToJson(_ctx.MenuAsset);
+            string parametersBefore = EditorJsonUtility.ToJson(_ctx.ParamsAsset);
+            string controllerBefore = EditorJsonUtility.ToJson(_ctx.Ctrl);
+
+            var result = vendorize
+                ? ASMLiteLifecycleTransactionService.ExecuteVendorizeAndDetach(_ctx.Comp, _ctx.AvDesc)
+                : ASMLiteLifecycleTransactionService.ExecuteDetachToDirectDelivery(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual(ASMLiteLifecycleTransactionStage.Preflight, result.FailedStage);
+            Assert.IsFalse(result.RollbackAttempted, "Reject the operation before touching any assets.");
+            Assert.IsNotNull(_ctx.Comp);
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(menuBefore, EditorJsonUtility.ToJson(_ctx.MenuAsset));
+            Assert.AreEqual(parametersBefore, EditorJsonUtility.ToJson(_ctx.ParamsAsset));
+            Assert.AreEqual(controllerBefore, EditorJsonUtility.ToJson(_ctx.Ctrl));
+            packageBaseline.AssertMatches(nameof(Detach_IncompleteMenu_FailsBeforeMutation));
+        }
+
         [Test]
         public void AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget()
         {
@@ -333,6 +499,8 @@ namespace ASMLite.Tests.Editor
                 "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: descriptor references should remain on avatar-local generated assets after package outputs are restored.");
             AssertLiveFullControllerReferencesUnderPrefix(result.MirrorResult.TargetPath,
                 "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: live FullController references should remain on avatar-local generated assets after package outputs are restored.");
+            var ownership = ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(_ctx.AvDesc, result.MirrorResult.TargetPath);
+            Assert.IsTrue(ownership.Success, ownership.Message);
             baseline.AssertMatches("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
         }
 
@@ -356,6 +524,208 @@ namespace ASMLite.Tests.Editor
                 "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the generated-assets package path.");
             StringAssert.Contains(ASMLiteAssetPaths.Prefab, result.ContextPath,
                 "AttachedVendorize_RestoreFailure_ReturnsFailure: failure context should name the package prefab path.");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AttachedVendorize_FinalizeException_RestoresPackageOutputsAndPriorMirror(bool priorMirror)
+        {
+            const string aid = "Vendorize_FinalizeException";
+            PreparePackageManagedAvatarForVendorize(aid);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            var existing = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc);
+            Assert.IsTrue(existing.Success, existing.Message);
+            Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(existing).Success);
+            string mirrorMenu = existing.TargetPath + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu);
+            string guid = AssetDatabase.AssetPathToGUID(mirrorMenu);
+            byte[] bytes = File.ReadAllBytes(Path.GetFullPath(mirrorMenu));
+            if (!priorMirror)
+                Assert.IsTrue(AssetDatabase.DeleteAsset(existing.TargetPath));
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            ASMLiteLifecycleTransactionResult result;
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+                result = ASMLiteWindowOperations.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.RollbackAttempted);
+            Assert.IsTrue(result.RollbackSucceeded, result.ToLogString());
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+            Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+            Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+            AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp), aid);
+            Assert.AreEqual(priorMirror, AssetDatabase.IsValidFolder(existing.TargetPath));
+            if (priorMirror)
+            {
+                Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(mirrorMenu));
+                CollectionAssert.AreEqual(bytes, File.ReadAllBytes(Path.GetFullPath(mirrorMenu)));
+            }
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
+        public void DirectDelivery_RollbackSnapshot_RestoresNestedMenuContent()
+        {
+            PreparePackageManagedAvatarForVendorize(nameof(DirectDelivery_RollbackSnapshot_RestoresNestedMenuContent));
+            var vendorize = ASMLiteWindowOperations.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+            Assert.IsTrue(vendorize.Success, vendorize.ToLogString());
+            var nestedMenu = _ctx.AvDesc.expressionsMenu.controls[0].subMenu;
+            Assert.IsNotNull(nestedMenu);
+            Assert.Greater(nestedMenu.controls.Count, 0);
+            string before = EditorJsonUtility.ToJson(nestedMenu);
+            string path = AssetDatabase.GetAssetPath(nestedMenu);
+            string guid = AssetDatabase.AssetPathToGUID(path);
+            using (var snapshot = ASMLiteDirectDeliveryRollbackSnapshot.Capture(_ctx.AvDesc))
+            {
+                nestedMenu.controls.Clear();
+                EditorUtility.SetDirty(nestedMenu);
+                AssetDatabase.SaveAssetIfDirty(nestedMenu);
+                Assert.IsTrue(snapshot.TryRestore(_ctx.AvDesc, out string context, out string remediation), context + ": " + remediation);
+            }
+            Assert.AreSame(nestedMenu, _ctx.AvDesc.expressionsMenu.controls[0].subMenu);
+            Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(path));
+            Assert.AreEqual(before, EditorJsonUtility.ToJson(nestedMenu), "Restoring only the root menu leaves mutated submenu payloads behind.");
+        }
+
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void DirectDelivery_Exception_RestoresAttachedAssetsAndPackageOutputs(bool vendorizeAndDetach, bool alreadyVendorized)
+        {
+            const string aid = "DirectDelivery_Exception";
+            PreparePackageManagedAvatarForVendorize(aid);
+            if (alreadyVendorized)
+                Assert.IsTrue(ASMLiteWindowOperations.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            string expectedDir = alreadyVendorized ? previousPath : ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            string parametersBefore = EditorJsonUtility.ToJson(oldParameters);
+            string menuDirectory = Path.GetDirectoryName(AssetDatabase.GetAssetPath(oldMenu)).Replace('\\', '/');
+            var menusBefore = AssetDatabase.FindAssets("t:VRCExpressionsMenu", new[] { menuDirectory })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .ToDictionary(path => path, path => new
+                {
+                    Guid = AssetDatabase.AssetPathToGUID(path),
+                    Json = EditorJsonUtility.ToJson(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(path)),
+                });
+            var controllerBefore = (AnimatorController)oldFx;
+            var fxBefore = controllerBefore.parameters.Select(p => (p.name, p.type, p.defaultBool, p.defaultFloat, p.defaultInt)).ToArray();
+            var layerNamesBefore = controllerBefore.layers.Select(layer => layer.name).ToArray();
+            var controllerHideFlags = controllerBefore.hideFlags;
+
+            ASMLiteLifecycleTransactionResult result;
+            using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(ASMLiteLifecycleTransactionTestFailurePoint.ThrowAfterDetachExecute))
+                result = vendorizeAndDetach
+                    ? ASMLiteWindowOperations.ExecuteVendorizeAndDetach(_ctx.Comp, _ctx.AvDesc)
+                    : ASMLiteWindowOperations.ExecuteDetachToDirectDelivery(_ctx.Comp, _ctx.AvDesc);
+
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.RollbackAttempted);
+            Assert.IsTrue(result.RollbackSucceeded, result.ToLogString());
+            Assert.AreEqual(alreadyVendorized, _ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+            Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+            Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+            Assert.AreEqual(parametersBefore, EditorJsonUtility.ToJson(oldParameters));
+            foreach (var menu in menusBefore)
+            {
+                Assert.AreEqual(menu.Value.Guid, AssetDatabase.AssetPathToGUID(menu.Key), "Rollback must preserve submenu identity: " + menu.Key);
+                Assert.AreEqual(menu.Value.Json, EditorJsonUtility.ToJson(AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(menu.Key)),
+                    "Rollback must restore the complete generated menu payload: " + menu.Key);
+            }
+            CollectionAssert.AreEqual(fxBefore, controllerBefore.parameters.Select(p => (p.name, p.type, p.defaultBool, p.defaultFloat, p.defaultInt)).ToArray());
+            CollectionAssert.AreEqual(layerNamesBefore, controllerBefore.layers.Select(layer => layer.name).ToArray());
+            Assert.AreEqual(controllerHideFlags, controllerBefore.hideFlags);
+            AssertLiveFullControllerReferencesUnderPrefix(expectedDir, aid);
+            baseline.AssertMatches(aid);
+        }
+
+        [TestCase("root")]
+        [TestCase("unrelated")]
+        [TestCase("sibling")]
+        [TestCase("mixed")]
+        [TestCase("nonowned")]
+        [TestCase("menu")]
+        public void AttachedReturn_RejectsUnownedDeletionWithoutChangingFilesOrReferences(string targetKind)
+        {
+            PreparePackageManagedAvatarForVendorize("Return_Unowned");
+            Assert.IsTrue(ASMLiteWindowOperations.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+            string target = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            var sibling = new GameObject("OtherAvatar");
+            string siblingFolder = null;
+            try
+            {
+                if (targetKind == "root")
+                    target = ASMLiteGeneratedOwnershipPolicy.VendorizedGeneratedAssetsRoot;
+                else if (targetKind == "unrelated")
+                    target = Path.GetDirectoryName(AssetDatabase.GetAssetPath(_ctx.ParamsAsset)).Replace('\\', '/');
+                else if (targetKind == "sibling")
+                {
+                    var mirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(sibling.AddComponent<VRCAvatarDescriptor>());
+                    Assert.IsTrue(mirror.Success, mirror.Message);
+                    siblingFolder = Path.GetDirectoryName(mirror.TargetPath).Replace('\\', '/');
+                    Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirror).Success);
+                    target = mirror.TargetPath;
+                }
+                else if (targetKind == "mixed")
+                    AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<VRCExpressionsMenu>(), target + "/UserMenu.asset");
+                else if (targetKind == "menu")
+                {
+                    _ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
+                    {
+                        type = VRCExpressionsMenu.Control.ControlType.Button,
+                        parameter = new VRCExpressionsMenu.Control.Parameter { name = "User" },
+                    });
+                    EditorUtility.SetDirty(_ctx.AvDesc.expressionsMenu);
+                }
+                else
+                {
+                    var parameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(target + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams));
+                    parameters.parameters = new[] { new VRCExpressionParameters.Parameter { name = "User" } };
+                    EditorUtility.SetDirty(parameters);
+                }
+                AssetDatabase.SaveAssets();
+                _ctx.Comp.vendorizedGeneratedAssetsPath = target;
+                var oldMenu = _ctx.AvDesc.expressionsMenu;
+                var oldParameters = _ctx.AvDesc.expressionParameters;
+                var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+                var files = Directory.GetFiles(Path.GetFullPath(target), "*", SearchOption.AllDirectories)
+                    .ToDictionary(path => path, File.ReadAllBytes);
+                string assetPath = AssetDatabase.GetAssetPath(oldMenu);
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+
+                var rejected = ASMLiteGeneratedAssetMirrorService.BackupVendorizedFolderForDelete(_ctx.AvDesc, target);
+                Assert.IsFalse(rejected.Success);
+                Assert.IsFalse(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedFolderDelete(_ctx.AvDesc, rejected).Success);
+                var result = ASMLiteWindowOperations.ExecuteAttachedReturnToPackageManaged(_ctx.Comp, _ctx.AvDesc);
+
+                Assert.IsFalse(result.Success);
+                Assert.IsFalse(result.RollbackAttempted, "Ownership rejection must precede all mutations.");
+                Assert.AreEqual(target, _ctx.Comp.vendorizedGeneratedAssetsPath);
+                Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+                Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+                Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+                Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+                Assert.AreEqual(guid, AssetDatabase.AssetPathToGUID(assetPath));
+                CollectionAssert.AreEquivalent(files.Keys, Directory.GetFiles(Path.GetFullPath(target), "*", SearchOption.AllDirectories));
+                foreach (var file in files)
+                    CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(sibling);
+                if (!string.IsNullOrEmpty(siblingFolder) && AssetDatabase.IsValidFolder(siblingFolder))
+                    Assert.IsTrue(AssetDatabase.DeleteAsset(siblingFolder), "Remove only the sibling mirror created by this test.");
+            }
         }
 
         [Test]
@@ -458,6 +828,7 @@ namespace ASMLite.Tests.Editor
             var baseline = PackageOutputBytesSnapshot.Capture();
             MutateGeneratedInputsBeforeVendorize("PackageManagedRebuild_MirrorFailure_RestoresPackageOutputs_AddedParam");
             LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\..*$"));
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] BUILD-302: \[ASM-Lite\] Injected staged-copy failure before vendorized mirror promotion\. Context: 'Assets/ASM-Lite/[^']+/GeneratedAssets__stage__[a-f0-9]{8}'\. Remediation: Disable the staged-copy failure injection after validating rollback behavior\.$"));
 
             var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
             try
@@ -572,9 +943,23 @@ namespace ASMLite.Tests.Editor
                 var oldMenu = _ctx.AvDesc.expressionsMenu;
                 var oldParameters = _ctx.AvDesc.expressionParameters;
                 var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+                var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+                Assert.IsNotNull(vf);
+                Func<UnityEngine.Object[]> readLiveReferences = () => new[]
+                {
+                    ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath).Reference,
+                    ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath).Reference,
+                    ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(vf,
+                        ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                        ASMLiteDriftProbe.ParameterLegacyObjectRefPath).Reference,
+                };
+                var liveReferencesBefore = readLiveReferences();
+                Assert.IsTrue(liveReferencesBefore.All(reference => reference != null));
                 string menuGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(oldMenu));
                 byte[] menuBytes = File.ReadAllBytes(Path.GetFullPath(AssetDatabase.GetAssetPath(oldMenu)));
                 MutateGeneratedInputsBeforeVendorize("LateFailure_NewParam");
+                if (duringStagedCopy)
+                    LogAssert.Expect(LogType.Error, "[ASM-Lite] Vendorized mirror staging threw an exception.");
                 LogAssert.Expect(duringStagedCopy ? LogType.Error : LogType.Exception,
                     new Regex(duringStagedCopy ? "Injected exception during staged copy" : "Injected failure before mirror finalization"));
                 using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(duringStagedCopy
@@ -588,7 +973,8 @@ namespace ASMLite.Tests.Editor
                 Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
                 Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
                 AssertDescriptorGeneratedAssetReferencesUnderPrefix(assetDir, "Late rollback");
-                AssertLiveFullControllerReferencesUnderPrefix(assetDir, "Late rollback");
+                CollectionAssert.AreEqual(liveReferencesBefore, readLiveReferences(),
+                    "Late rollback must restore the actual pre-action FullController references, including mixed routing.");
                 Assert.AreEqual(menuGuid, AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)));
                 CollectionAssert.AreEqual(menuBytes, File.ReadAllBytes(Path.GetFullPath(AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu))));
                 baseline.AssertMatches("Late rollback");
@@ -646,6 +1032,92 @@ namespace ASMLite.Tests.Editor
     [Category("Integration")]
     public class ASMLiteLifecycleRebuildPackageOutputIsolationIntegrationTests : ASMLitePackageOutputIsolationIntegrationTestBase
     {
+        [TestCase("Rebuild", false, false)]
+        [TestCase("Rebuild", true, true)]
+        [TestCase("Vendorize", false, false)]
+        [TestCase("Vendorize", true, true)]
+        [TestCase("Build", false, true)]
+        [TestCase("Build", true, true)]
+        public void FailedGeneration_RestoresIndependentFullControllerReferences(string operation, bool nullReferences, bool earlyFailure)
+        {
+            PreparePackageManagedAvatarForVendorize("IndependentReferenceRollback");
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            Assert.IsNotNull(vf);
+            var controller = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath).Reference;
+            var menu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteAssetPaths.Menu);
+            var parameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            Assert.IsNotNull(controller);
+            Assert.IsNotNull(menu);
+            Assert.IsNotNull(parameters);
+            var expected = new UnityEngine.Object[] { nullReferences ? null : controller, menu, nullReferences ? null : parameters };
+            var serializedVf = new SerializedObject(vf);
+            string[][] referencePaths =
+            {
+                new[] { ASMLiteDriftProbe.ControllerObjectRefPath, ASMLiteDriftProbe.ControllerMirrorPath },
+                new[] { ASMLiteDriftProbe.MenuObjectRefPath, ASMLiteDriftProbe.MenuMirrorPath },
+                new[] { ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParametersMirrorPath },
+            };
+            for (int i = 0; i < referencePaths.Length; i++)
+                foreach (string path in referencePaths[i])
+                {
+                    var property = serializedVf.FindProperty(path);
+                    Assert.IsNotNull(property, "The native FullController schema must contain the seeded reference field.");
+                    property.objectReferenceValue = expected[i];
+                }
+            serializedVf.ApplyModifiedPropertiesWithoutUndo();
+            Assert.AreNotEqual(AssetDatabase.GetAssetPath(menu),
+                Path.GetDirectoryName(AssetDatabase.GetAssetPath(controller)).Replace('\\', '/') + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu),
+                "The regression must seed independently routed live assets.");
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize("IndependentReferenceRollback_NewParam");
+
+            if (earlyFailure && operation != "Build")
+            {
+                LogAssert.Expect(LogType.Error, "[ASM-Lite] Vendorized mirror staging threw an exception.");
+                if (operation == "Rebuild")
+                    LogAssert.Expect(LogType.Error, new Regex("BUILD-302.*Vendorized mirror staging threw an exception"));
+            }
+            using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(earlyFailure
+                ? ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringStagedCopy
+                : ASMLiteGeneratedAssetMirrorTestFailurePoint.None))
+            using (ASMLiteLifecycleTransactionService.PushFailurePointForTesting(operation == "Vendorize" && !earlyFailure
+                ? ASMLiteLifecycleTransactionTestFailurePoint.AfterLiveFullControllerRetarget
+                : ASMLiteLifecycleTransactionTestFailurePoint.None))
+            {
+                if (operation == "Rebuild")
+                {
+                    using (ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(earlyFailure
+                        ? ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringStagedCopy
+                        : ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize))
+                        Assert.IsFalse(ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc).Completed);
+                }
+                else if (operation == "Vendorize")
+                    Assert.IsFalse(ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+                else
+                    Assert.IsFalse(ASMLiteBuilder.TryBuildWithDiagnostics(_ctx.Comp, out _).Success);
+            }
+
+            vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            var actual = new[]
+            {
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(vf, ASMLiteDriftProbe.ParametersObjectRefPath,
+                    ASMLiteDriftProbe.ParameterObjectRefPath, ASMLiteDriftProbe.ParameterLegacyObjectRefPath).Reference,
+            };
+            CollectionAssert.AreEqual(expected, actual,
+                "Failed generation must restore each admitted live reference independently, including explicit nulls.");
+            for (int i = 0; i < referencePaths.Length; i++)
+                Assert.AreEqual(expected[i], ASMLiteTestFixtures.ReadSerializedObjectReference(vf, referencePaths[i][1]).Reference);
+            Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+            Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+            Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+            baseline.AssertMatches("Independent reference rollback");
+        }
+
         [Test]
         public void LifecycleRebuild_StagesAvatarLocalGeneratedAssets_AndRestoresPackageOutputs()
         {
@@ -674,9 +1146,8 @@ namespace ASMLite.Tests.Editor
             AddLegacyGeneratedRemnantsToPackageManagedGeneratedOutputs(aid);
             var baseline = PackageOutputBytesSnapshot.Capture();
             _ctx.Comp.slotCount = 0;
-            LogAssert.Expect(LogType.Error, "[ASM-Lite] slotCount must be between 1 and 8 (got 0).");
             LogAssert.Expect(LogType.Error,
-                $"[ASM-Lite] {ASMLiteDiagnosticCodes.Build.ValidationFailed}: [ASM-Lite] slotCount must be between 1 and 8 (got 0). Context: 'slotCount'. Remediation: Set slotCount to a value between 1 and 8 before building.");
+                "[ASM-Lite] BUILD-305: [ASM-Lite] Select an avatar and a preset count between 1 and 8. Context: 'expressionParameters'. Remediation: Assign readable parameter assets and resolve name/type conflicts before generation.");
 
             var result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
 
@@ -740,9 +1211,10 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
             Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
             Assert.IsTrue(string.IsNullOrEmpty(_ctx.Comp.vendorizedGeneratedAssetsPath));
-            Assert.IsFalse(controllerBefore.SequenceEqual(File.ReadAllBytes(controllerPath)), "No-staging rebuild should update package outputs, not restore them.");
-            AssertDescriptorGeneratedAssetReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir, aid);
-            AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir, aid);
+            CollectionAssert.AreEqual(controllerBefore, File.ReadAllBytes(controllerPath), "Ordinary rebuilds must leave package templates read-only.");
+            string generatedDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(generatedDir, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(generatedDir, aid);
         }
 
         [Test]

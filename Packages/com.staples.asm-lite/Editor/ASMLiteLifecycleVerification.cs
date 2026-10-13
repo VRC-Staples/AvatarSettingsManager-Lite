@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
+using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
 
@@ -57,7 +60,7 @@ namespace ASMLite.Editor
             if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
                 return false;
 
-            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.GeneratedDir, out failureMessage, out failureContext))
+            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.ResolveGeneratedDirectory(component), out failureMessage, out failureContext))
                 return false;
 
             if (AssetDatabase.IsValidFolder(vendorizedDir))
@@ -108,6 +111,7 @@ namespace ASMLite.Editor
         }
 
         internal static bool VerifyDirectDeliveryState(
+            ASMLiteComponent component,
             VRCAvatarDescriptor avatar,
             ASMLiteInstallationState expectedDetachedState,
             string vendorizedDir,
@@ -121,9 +125,27 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            if (!ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(avatar))
+            string generatedDir = expectedDetachedState == ASMLiteInstallationState.Vendorized
+                ? NormalizeOptionalPath(vendorizedDir) : ASMLiteAssetPaths.ResolveGeneratedDirectory(component);
+            var presets = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(generatedDir + "/" + ASMLiteGeneratedOwnershipPolicy.PresetsMenuFileName);
+            var fx = avatar.baseAnimationLayers?
+                .FirstOrDefault(layer => layer.type == VRCAvatarDescriptor.AnimLayerType.FX).animatorController as AnimatorController;
+            var parameters = avatar.expressionParameters?.parameters;
+            bool menuDelivered = component != null && presets?.controls != null && presets.controls.Count == component.slotCount
+                && presets.controls.All(control => control?.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu != null)
+                && avatar.expressionsMenu?.controls != null
+                && avatar.expressionsMenu.controls.Any(control => control?.type == VRCExpressionsMenu.Control.ControlType.SubMenu && control.subMenu == presets);
+            bool parametersDelivered = parameters != null && parameters.Any(parameter => parameter != null
+                && parameter.name == ASMLiteBuilder.CtrlParam && parameter.valueType == VRCExpressionParameters.ValueType.Int)
+                && fx != null && fx.parameters.Where(parameter => parameter.name.StartsWith("ASMLite_Bak_", StringComparison.Ordinal))
+                    .All(backup => parameters.Any(parameter => parameter != null && parameter.name == backup.name));
+            bool fxDelivered = component != null && fx != null
+                && fx.parameters.Any(parameter => parameter.name == ASMLiteBuilder.CtrlParam && parameter.type == AnimatorControllerParameterType.Int)
+                && Enumerable.Range(1, component.slotCount).All(slot => fx.layers.Any(layer =>
+                    layer.name == $"ASMLite_Slot{slot}" && layer.stateMachine != null && layer.stateMachine.states.Length >= 4));
+            if (!menuDelivered || !parametersDelivered || !fxDelivered)
             {
-                failureMessage = "[ASM-Lite] Detach verification failed because ASM-Lite runtime markers were not present after direct delivery.";
+                failureMessage = $"[ASM-Lite] Detach verification failed because required direct-delivery content was missing (menu: {menuDelivered}, parameters: {parametersDelivered}, FX: {fxDelivered}).";
                 failureContext = avatar.gameObject.name;
                 return false;
             }
@@ -163,33 +185,18 @@ namespace ASMLite.Editor
             ASMLiteComponent component,
             VRCAvatarDescriptor avatar,
             ASMLiteInstallationState beforeState,
+            ASMLiteInstallationState detachedBaselineState,
             out string failureMessage,
             out string failureContext)
         {
-            if (beforeState == ASMLiteInstallationState.Vendorized)
-            {
-                string expectedVendorizedPath = NormalizeOptionalPath(component != null ? component.vendorizedGeneratedAssetsPath : string.Empty);
-                if (!VerifyComponentVendorizedState(component, expectedUseVendorized: true, expectedPath: expectedVendorizedPath, out failureMessage, out failureContext))
-                    return false;
-
-                if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.Vendorized)
-                {
-                    failureMessage = "[ASM-Lite] Detach rollback failed because the detached avatar state no longer resolved to Vendorized after restoring the attached vendorized baseline.";
-                    failureContext = "toolState";
-                    return false;
-                }
-
-                failureMessage = string.Empty;
-                failureContext = string.Empty;
-                return true;
-            }
-
-            if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
+            bool vendorized = beforeState == ASMLiteInstallationState.Vendorized;
+            string expectedPath = vendorized ? NormalizeOptionalPath(component != null ? component.vendorizedGeneratedAssetsPath : string.Empty) : string.Empty;
+            if (!VerifyComponentVendorizedState(component, vendorized, expectedPath, out failureMessage, out failureContext))
                 return false;
 
-            if (ASMLiteInstallationStateService.Resolve(avatar, null) != ASMLiteInstallationState.NotInstalled)
+            if (ASMLiteInstallationStateService.Resolve(avatar, null) != detachedBaselineState)
             {
-                failureMessage = "[ASM-Lite] Detach rollback failed because detached runtime markers still remained on the avatar after restoring the attached package-managed baseline.";
+                failureMessage = "[ASM-Lite] Detach rollback failed because the descriptor did not recover its original runtime-marker state.";
                 failureContext = "toolState";
                 return false;
             }
@@ -208,7 +215,7 @@ namespace ASMLite.Editor
             if (!VerifyComponentVendorizedState(component, expectedUseVendorized: false, expectedPath: string.Empty, out failureMessage, out failureContext))
                 return false;
 
-            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.GeneratedDir, out failureMessage, out failureContext))
+            if (!VerifyLiveFullControllerReferencesUnderPrefix(component, ASMLiteAssetPaths.ResolveGeneratedDirectory(component), out failureMessage, out failureContext))
                 return false;
 
             if (ResolveToolState(avatar, component) != ASMLiteInstallationState.PackageManaged)

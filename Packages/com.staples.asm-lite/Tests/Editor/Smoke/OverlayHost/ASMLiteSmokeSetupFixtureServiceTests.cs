@@ -594,6 +594,51 @@ namespace ASMLite.Tests.Editor
             Assert.That(_service.HasCleanResetProof, Is.True);
         }
 
+        [Test]
+        public void ImportedShaderDirtyFlag_DoesNotBypassUnrelatedDirtyMaterialProtection()
+        {
+            string shaderPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLite_DirtyImportedControl.shader");
+            string materialPath = AssetDatabase.GenerateUniqueAssetPath("Assets/ASMLite_DirtyNativeControl.mat");
+            try
+            {
+                File.WriteAllText(Path.GetFullPath(shaderPath), "Shader \"Hidden/ASMLite/DirtyImportedControl\" { SubShader { Pass {} } }");
+                AssetDatabase.ImportAsset(shaderPath, ImportAssetOptions.ForceSynchronousImport);
+                var shader = AssetDatabase.LoadAssetAtPath<Shader>(shaderPath);
+                Assert.That(shader, Is.Not.Null);
+                Assert.That(AssetDatabase.IsNativeAsset(shader), Is.False);
+                var material = new Material(shader);
+                AssetDatabase.CreateAsset(material, materialPath);
+                AssetDatabase.SaveAssets();
+                Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/FixtureBaseline.unity"), Is.True);
+                byte[] materialBytes = File.ReadAllBytes(Path.GetFullPath(materialPath));
+                byte[] shaderBytes = File.ReadAllBytes(Path.GetFullPath(shaderPath));
+                byte[] shaderMeta = File.ReadAllBytes(Path.GetFullPath(shaderPath + ".meta"));
+                EditorUtility.SetDirty(shader);
+                material.renderQueue = 3001;
+                EditorUtility.SetDirty(material);
+                var args = new ASMLiteSmokeStepArgs
+                {
+                    avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline,
+                };
+
+                Assert.That(_service.ApplyMutation(args, string.Empty, "FixtureAvatar", string.Empty, out string blocked), Is.False);
+                StringAssert.Contains(materialPath, blocked, "Admission must identify the unsaved native material, not a compiler-dirty imported shader.");
+                CollectionAssert.AreEqual(materialBytes, File.ReadAllBytes(Path.GetFullPath(materialPath)));
+                Assert.That(EditorUtility.IsDirty(material), Is.True);
+                Assert.That(AssetDatabase.DeleteAsset(materialPath), Is.True);
+
+                Assert.That(_service.ApplyMutation(args, string.Empty, "FixtureAvatar", string.Empty, out string admitted), Is.True, admitted);
+                Assert.That(_service.Reset(out string restored), Is.True, restored);
+                CollectionAssert.AreEqual(shaderBytes, File.ReadAllBytes(Path.GetFullPath(shaderPath)));
+                CollectionAssert.AreEqual(shaderMeta, File.ReadAllBytes(Path.GetFullPath(shaderPath + ".meta")));
+            }
+            finally
+            {
+                DeleteTestAssetIfExists(materialPath);
+                DeleteTestAssetIfExists(shaderPath);
+            }
+        }
+
         private bool ApplyAdmittedMutation(ASMLiteSmokeStepArgs args, string scene, string avatar, out string detail)
         {
             return ApplyAdmittedMutation(args, scene, avatar, string.Empty, out detail);

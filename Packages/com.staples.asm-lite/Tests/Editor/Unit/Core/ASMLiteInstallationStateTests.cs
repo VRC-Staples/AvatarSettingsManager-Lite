@@ -116,12 +116,12 @@ namespace ASMLite.Tests.Editor
             Assert.IsFalse(ASMLite.Editor.ASMLiteInstallationStateService.HasAsmLiteRuntimeMarkers(_ctx.AvDesc));
 
             bool verified = ASMLite.Editor.ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
-                _ctx.AvDesc, ASMLite.Editor.ASMLiteInstallationState.Vendorized,
+                _ctx.Comp, _ctx.AvDesc, ASMLite.Editor.ASMLiteInstallationState.Vendorized,
                 "Assets/ASM-Lite/StateTests", out string failureMessage, out string failureContext);
 
             Assert.IsFalse(verified,
                 "Vendorized classification alone must not prove that direct delivery installed runtime markers.");
-            StringAssert.Contains("runtime markers", failureMessage);
+            StringAssert.Contains("required direct-delivery content", failureMessage);
             Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
         }
 
@@ -137,9 +137,58 @@ namespace ASMLite.Tests.Editor
                 "Avatar-selected without component or runtime markers should resolve explicitly to NotInstalled state.");
         }
 
+        [TestCase(false, false)]
+        [TestCase(false, true)]
+        [TestCase(true, false)]
+        [TestCase(true, true)]
+        public void Resolve_NestedVendorizedMenu_UsesOwnershipPolicyWithAuthoredAssets(bool cyclic, bool vendorized)
+        {
+            Object.DestroyImmediate(_ctx.Comp.gameObject);
+            _ctx.Comp = null;
+            var root = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            var child = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+            try
+            {
+                root.controls.Add(new VRCExpressionsMenu.Control
+                {
+                    name = "User Tools", type = VRCExpressionsMenu.Control.ControlType.SubMenu, subMenu = child,
+                });
+                if (cyclic)
+                    child.controls.Add(new VRCExpressionsMenu.Control
+                    {
+                        name = "Back", type = VRCExpressionsMenu.Control.ControlType.SubMenu, subMenu = root,
+                    });
+                if (vendorized)
+                {
+                    EnsureAssetFolder("Assets", "ASM-Lite");
+                    EnsureAssetFolder("Assets/ASM-Lite", "StateTests");
+                    var menu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
+                    AssetDatabase.CreateAsset(menu, "Assets/ASM-Lite/StateTests/TestMenu.asset");
+                    child.controls.Add(new VRCExpressionsMenu.Control
+                    {
+                        name = "Presets", type = VRCExpressionsMenu.Control.ControlType.SubMenu, subMenu = menu,
+                    });
+                }
+                _ctx.AvDesc.expressionsMenu = root;
+                Assert.IsFalse(ASMLite.Editor.ASMLiteGeneratedOwnershipPolicy.PathStartsWith(
+                    AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters), "Assets/ASM-Lite"));
+                Assert.AreEqual(vendorized, ASMLite.Editor.ASMLiteGeneratedOwnershipPolicy.HasVendorizedReferences(_ctx.AvDesc));
+                Assert.AreEqual(vendorized ? ASMLite.Editor.ASMLiteInstallationState.Vendorized
+                    : ASMLite.Editor.ASMLiteInstallationState.NotInstalled,
+                    ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null));
+            }
+            finally
+            {
+                _ctx.AvDesc.expressionsMenu = _ctx.MenuAsset;
+                Object.DestroyImmediate(child);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         private static void CleanupStateTestAssets()
         {
             DeleteAssetIfExists("Assets/ASM-Lite/StateTests/TestParams.asset");
+            DeleteAssetIfExists("Assets/ASM-Lite/StateTests/TestMenu.asset");
             DeleteAssetIfExists("Assets/ASM-Lite/StateTests");
             DeleteAssetIfExists("Assets/ASM-Lite");
         }

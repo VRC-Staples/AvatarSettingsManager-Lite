@@ -93,9 +93,13 @@ namespace ASMLite.Tests.Editor
             _ctx.Comp.slotCount = 8;
             var settings = ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp);
             Object.DestroyImmediate(_ctx.Comp.gameObject);
+            var presets = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(
+                ASMLiteAssetPaths.GeneratedDir + "/ASMLite_Presets_Menu.asset");
+            Assert.IsNotNull(presets, "Detached recovery setup requires an owned presets menu marker.");
             _ctx.MenuAsset.controls.Add(new VRCExpressionsMenu.Control
             {
                 name = "Settings Manager", type = VRCExpressionsMenu.Control.ControlType.SubMenu,
+                subMenu = presets,
             });
             string parametersBefore = EditorJsonUtility.ToJson(_ctx.ParamsAsset);
             string menuBefore = EditorJsonUtility.ToJson(_ctx.MenuAsset);
@@ -211,7 +215,9 @@ namespace ASMLite.Tests.Editor
             AssertProjectionMatchesBuild();
             _ctx.Comp.slotCount = 1;
             int retained = AssertProjectionMatchesBuild();
-            var generated = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var generated = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsTrue(generated.parameters.Any(p => p.name == "ASMLite_Bak_S4_User"), "Reducing presets must not silently prune retained slots.");
             Assert.AreEqual(retained, AssertProjectionMatchesBuild(), "Repeated rebuild must not count a second payload.");
             _ctx.Comp.useParameterExclusions = true;
@@ -231,7 +237,7 @@ namespace ASMLite.Tests.Editor
             string before = EditorJsonUtility.ToJson(_ctx.ParamsAsset);
             var budget = ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc, draft.ToComponentSnapshot());
             Assert.AreEqual(1, budget.OriginalCount);
-            Assert.AreEqual(4, budget.Contribution);
+            Assert.AreEqual(3, budget.Contribution);
             draft.UseParameterExclusions = true;
             draft.ExcludedParameterNames = new[] { "User" };
             Assert.AreEqual(2, ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc, draft.ToComponentSnapshot()).Total);
@@ -282,7 +288,9 @@ namespace ASMLite.Tests.Editor
                 ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp));
             Assert.IsTrue(budget.Readable, budget.Message);
             Assert.IsTrue(ASMLiteBuilder.TryBuildWithDiagnostics(_ctx.Comp, out _).Success);
-            var generated = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            var generated = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.AreEqual(generated.parameters.Length, budget.Contribution);
             Assert.AreEqual(_ctx.ParamsAsset.parameters.Length + generated.parameters.Length, budget.Total);
             return budget.Total;
@@ -319,7 +327,7 @@ namespace ASMLite.Tests.Editor
             ASMLiteTestFixtures.AddExpressionParam(_ctx, "User", VRCExpressionParameters.ValueType.Int);
             var budget = ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc,
                 ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp));
-            Assert.AreEqual(1 + _ctx.Comp.slotCount + 1 + 1, budget.Contribution, "Retained legacy entry consumes capacity even when its source is absent.");
+            Assert.AreEqual(1 + _ctx.Comp.slotCount + 1, budget.Contribution, "Retained legacy entry consumes capacity even when its source is absent.");
             _ctx.ParamsAsset.parameters = _ctx.ParamsAsset.parameters.Concat(new[]
             {
                 new VRCExpressionParameters.Parameter { name = "User", valueType = VRCExpressionParameters.ValueType.Float },

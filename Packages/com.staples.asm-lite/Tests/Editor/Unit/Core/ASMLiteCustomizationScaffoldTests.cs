@@ -3,9 +3,11 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.TestTools;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDK3.Avatars.ScriptableObjects;
 using ASMLite.Editor;
 
 namespace ASMLite.Tests.Editor
@@ -246,9 +248,12 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(healedBuildResult, 0,
                 $"Build should auto-heal stale FullController parameter wiring before generating assets. result={healedBuildResult}.");
 
-            var expectedParameters = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(ASMLiteAssetPaths.ExprParams);
+            var generatedController = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
+            string generatedDirectory = Path.GetDirectoryName(AssetDatabase.GetAssetPath(generatedController)).Replace(Path.DirectorySeparatorChar, '/');
+            var expectedParameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(generatedDirectory + "/ASMLite_Params.asset");
             Assert.IsNotNull(expectedParameters,
-                "Auto-heal validation requires the generated expression-parameters asset to exist.");
+                "Auto-heal validation requires the avatar-owned generated expression-parameters asset to exist.");
 
             var afterSo = new SerializedObject(vf);
             afterSo.Update();
@@ -282,6 +287,10 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Scaffold Retarget Missing Wiring Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget failure validation.");
 
+            string controllerPath = AssetDatabase.GetAssetPath(ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(
+                _ctx.Comp, ASMLiteDriftProbe.ControllerObjectRefPath));
+            string generatedDirectory = Path.GetDirectoryName(controllerPath).Replace('\\', '/');
+
             var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
             Assert.IsNotNull(vf,
                 "Setup should leave a live VF.Model.VRCFury component on the ASM-Lite object.");
@@ -297,23 +306,21 @@ namespace ASMLite.Tests.Editor
             so.FindProperty("content.parameters.objRef").objectReferenceValue = null;
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            var missingControllerAssetPath = ASMLiteAssetPaths.FXController + ".bak-test";
-            AssetDatabase.MoveAsset(ASMLiteAssetPaths.FXController, missingControllerAssetPath);
+            var missingControllerAssetPath = controllerPath + ".bak-test";
+            Assert.AreEqual(string.Empty, AssetDatabase.MoveAsset(controllerPath, missingControllerAssetPath));
             AssetDatabase.Refresh();
             try
             {
                 LogAssert.Expect(LogType.Error,
-                    $"[ASM-Lite] Retarget Generated Assets Generated FX Repair: Generated FX controller file was not found at '{ASMLiteAssetPaths.FXController}'.");
-                LogAssert.Expect(LogType.Error,
-                    $"[ASM-Lite] BUILD-302: [ASM-Lite] Retarget Generated Assets: Generated FX controller repair failed before live FullController refresh. Context: '{ASMLiteAssetPaths.FXController}'. Remediation: Repair the generated FX controller before refreshing FullController wiring.");
+                    $"[ASM-Lite] BUILD-302: [ASM-Lite] Retarget Generated Assets: Required generated assets were missing under '{generatedDirectory}' while retargeting live FullController references. Context: '{generatedDirectory}'. Remediation: Ensure the generated FX controller, menu, and expression-parameters assets exist before retargeting live FullController references.");
 
-                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, generatedDirectory);
                 Assert.IsFalse(retargeted,
                     "Retargeting should fail closed when a required generated FullController asset is missing, instead of silently reporting success with partial preset-action wiring.");
             }
             finally
             {
-                AssetDatabase.MoveAsset(missingControllerAssetPath, ASMLiteAssetPaths.FXController);
+                Assert.AreEqual(string.Empty, AssetDatabase.MoveAsset(missingControllerAssetPath, controllerPath));
                 AssetDatabase.Refresh();
             }
         }
@@ -325,7 +332,8 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(baselineBuildResult, 0,
                 $"Baseline build should succeed before simulating generated FX corruption. result={baselineBuildResult}.");
 
-            string controllerPath = ASMLiteAssetPaths.FXController;
+            string controllerPath = AssetDatabase.GetAssetPath(ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(
+                _ctx.Comp, ASMLiteDriftProbe.ControllerObjectRefPath));
             string fullPath = Path.GetFullPath(controllerPath);
             Assert.IsTrue(File.Exists(fullPath),
                 $"Generated FX controller must exist before corruption simulation at '{fullPath}'.");
@@ -347,8 +355,9 @@ namespace ASMLite.Tests.Editor
                 Assert.That(CountDanglingLocalFileIdsForTest(corruptedOnDisk), Is.GreaterThan(0),
                     "Corruption setup should leave at least one dangling local fileID reference in the generated FX controller text.");
 
+                ExpectInjectedControllerParserErrors(controllerPath, "5092237740239409533");
                 LogAssert.Expect(LogType.Warning,
-                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
+                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build staged FX: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
 
                 int repairedBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
                 Assert.GreaterOrEqual(repairedBuildResult, 0,
@@ -366,8 +375,9 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test]
-        public void RetargetLiveFullControllerGeneratedAssets_RepairsCorruptedGeneratedControllerBeforeRebinding()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void RetargetLiveFullControllerGeneratedAssets_RepairsCorruptedGeneratedControllerBeforeRebinding(bool inheritedFeature)
         {
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);
             Assert.GreaterOrEqual(buildResult, 0,
@@ -376,7 +386,21 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(_ctx.Comp.gameObject, _ctx.Comp, "Retarget Corruption Setup"),
                 "Setup should create a live VF.Model.VRCFury FullController payload before retarget corruption validation.");
 
-            string controllerPath = ASMLiteAssetPaths.FXController;
+            string controllerPath = AssetDatabase.GetAssetPath(ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(
+                _ctx.Comp, ASMLiteDriftProbe.ControllerObjectRefPath));
+            string generatedDirectory = Path.GetDirectoryName(controllerPath).Replace('\\', '/');
+            if (inheritedFeature)
+            {
+                var parent = _ctx.Comp.transform.parent;
+                UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ASMLiteAssetPaths.Prefab);
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+                _ctx.Comp = instance.GetComponent<ASMLiteComponent>();
+                Assert.IsNotNull(_ctx.Comp);
+                var inheritedVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(instance);
+                Assert.IsNotNull(PrefabUtility.GetCorrespondingObjectFromSource(inheritedVf),
+                    "The repair regression must start with an inherited feature, not an already localized component.");
+            }
             string fullPath = Path.GetFullPath(controllerPath);
             Assert.IsTrue(File.Exists(fullPath),
                 $"Generated FX controller must exist before corruption simulation at '{fullPath}'.");
@@ -397,12 +421,23 @@ namespace ASMLite.Tests.Editor
                 Assert.That(CountDanglingLocalFileIdsForTest(File.ReadAllText(fullPath)), Is.GreaterThan(0),
                     "Corruption setup should leave a dangling local fileID reference before retarget recovery runs.");
 
+                ExpectInjectedControllerParserErrors(controllerPath, "2225763566423020120", inheritedFeature ? 1 : 2);
                 LogAssert.Expect(LogType.Warning,
-                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Retarget Generated Assets Generated FX Repair: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
+                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build staged FX: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
 
-                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, ASMLiteAssetPaths.GeneratedDir);
+                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, generatedDirectory);
                 Assert.IsTrue(retargeted,
                     "Retargeting should repair the corrupted generated FX controller before reapplying live FullController references.");
+
+                var liveVf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+                Assert.IsNotNull(liveVf, "Repair must select the live replacement feature after the nested build.");
+                Assert.AreEqual(1, _ctx.Comp.GetComponents<MonoBehaviour>().Count(c => c != null && c.GetType().FullName == "VF.Model.VRCFury"));
+                Assert.AreEqual(controllerPath, ASMLiteTestFixtures.ReadSerializedObjectReference(liveVf, ASMLiteDriftProbe.ControllerObjectRefPath).AssetPath);
+                Assert.AreEqual(generatedDirectory + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu),
+                    ASMLiteTestFixtures.ReadSerializedObjectReference(liveVf, ASMLiteDriftProbe.MenuObjectRefPath).AssetPath);
+                Assert.AreEqual(generatedDirectory + "/" + Path.GetFileName(ASMLiteAssetPaths.ExprParams),
+                    ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(liveVf, ASMLiteDriftProbe.ParametersObjectRefPath,
+                        ASMLiteDriftProbe.ParameterObjectRefPath, ASMLiteDriftProbe.ParameterLegacyObjectRefPath).AssetPath);
 
                 Assert.AreEqual(0, CountDanglingLocalFileIdsForTest(File.ReadAllText(fullPath)),
                     "Retarget-driven repair should clear dangling local fileID references from the generated FX controller text.");
@@ -854,8 +889,7 @@ namespace ASMLite.Tests.Editor
 
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/Rollback/Settings Manager",
                     "Vendorize rollback setup should establish deterministic install-path routing before failure injection.");
-                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                    "Vendorize rollback setup should leave live FullController references on package-managed generated assets.");
+                var baselineReferences = ReadGeneratedFullControllerReferences();
                 string baselineExprPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/');
                 string baselineMenuPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/');
                 int baselineFxIndex = FindFxLayerIndex();
@@ -894,9 +928,10 @@ namespace ASMLite.Tests.Editor
                     "Vendorize rollback should preserve the avatar FX layer after live retarget failure.");
                 Assert.AreEqual(baselineFxController, _ctx.AvDesc.baseAnimationLayers[fxIndex].animatorController,
                     "Vendorize rollback should preserve the avatar FX controller assignment that existed before vendorize failure injection.");
-                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                    "Vendorize rollback should restore live FullController references back to package-managed assets after live retarget failure.");
-                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(EnsureLiveFullControllerPayload(_ctx.Comp)),
+                CollectionAssert.AreEqual(baselineReferences, ReadGeneratedFullControllerReferences(),
+                    "Vendorize rollback must restore all actual pre-action FullController references.");
+                Assert.AreEqual(string.Empty, ASMLiteTestFixtures.ReadSerializedMenuPrefix(
+                    ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject)),
                     "Vendorize rollback should keep prefab-instance FullController prefix overrides cleared after live retarget failure.");
                 Assert.AreEqual(ASMLiteInstallationState.PackageManaged,
                     ASMLiteWindow.GetAsmLiteToolState(_ctx.AvDesc, _ctx.Comp),
@@ -934,8 +969,7 @@ namespace ASMLite.Tests.Editor
 
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
                     "Detach rollback setup should establish deterministic install-path routing before failure injection.");
-                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                    "Detach rollback setup should leave live FullController references on package-managed generated assets.");
+                var baselineReferences = ReadGeneratedFullControllerReferences();
                 string baselineExprPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionParameters)?.Replace('\\', '/');
                 string baselineMenuPath = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu)?.Replace('\\', '/');
                 int baselineFxIndex = FindFxLayerIndex();
@@ -975,8 +1009,8 @@ namespace ASMLite.Tests.Editor
                     "Detach rollback should preserve the avatar FX layer after verify-stage failure.");
                 Assert.AreEqual(baselineFxController, _ctx.AvDesc.baseAnimationLayers[fxIndex].animatorController,
                     "Detach rollback should preserve the avatar FX controller assignment that existed before failure injection.");
-                AssertLiveFullControllerReferencesUnderPrefix(ASMLiteAssetPaths.GeneratedDir,
-                    "Detach rollback should restore live FullController references back to package-managed assets after verify-stage failure.");
+                CollectionAssert.AreEqual(baselineReferences, ReadGeneratedFullControllerReferences(),
+                    "Detach rollback must restore all actual pre-action FullController references.");
                 AssertInstallPathRoutingHelper("Settings Manager", "Tools/DetachRollback/Settings Manager",
                     "Detach rollback should preserve install-path routing after verify-stage failure.");
                 Assert.AreEqual(ASMLiteInstallationState.NotInstalled,
@@ -1054,9 +1088,10 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private static int CountDanglingLocalFileIdsForTest(string controllerText)
+        internal static int CountDanglingLocalFileIdsForTest(string controllerText)
         {
             Assert.IsNotNull(controllerText, "Controller text should not be null when scanning for dangling file IDs.");
+            controllerText = ASMLiteGeneratedOutputSnapshot.NormalizeNewlines(controllerText);
 
             var definedIds = System.Text.RegularExpressions.Regex.Matches(controllerText, @"^--- !u!\d+ &(-?\d+)$", System.Text.RegularExpressions.RegexOptions.Multiline)
                 .Cast<System.Text.RegularExpressions.Match>()
@@ -1127,33 +1162,28 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Unexpected routing helper destination path.");
         }
 
-        private void AssertLiveFullControllerReferencesUnderPrefix(string expectedPrefix, string assertionMessage)
+        private static void ExpectInjectedControllerParserErrors(string controllerPath, string injectedFileId, int sourceErrorCount = 2)
         {
-            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp != null ? _ctx.Comp.gameObject : null);
-            Assert.IsNotNull(vf,
-                assertionMessage + " Expected a live VF.Model.VRCFury component on the ASM-Lite object.");
+            string sourceError = $"Broken text PPtr in file({controllerPath}). Local file identifier ({injectedFileId}) doesn't exist!";
+            for (int i = 0; i < sourceErrorCount; i++)
+                LogAssert.Expect(LogType.Error, sourceError);
+            string avatarFolder = Path.GetDirectoryName(Path.GetDirectoryName(controllerPath)).Replace('\\', '/');
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+                "^Broken text PPtr in file\\(" + System.Text.RegularExpressions.Regex.Escape(avatarFolder)
+                + "/GeneratedAssets__stage__[a-f0-9]{8}/ASMLite_FX\\.controller\\)\\. Local file identifier \\("
+                + injectedFileId + "\\) doesn't exist!$"));
+        }
 
-            string normalizedPrefix = expectedPrefix.Replace('\\', '/').TrimEnd('/');
-            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
-            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
-            var parametersReference = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
-                vf,
-                ASMLiteDriftProbe.ParametersObjectRefPath,
-                ASMLiteDriftProbe.ParameterObjectRefPath,
-                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
-
-            Assert.IsTrue(controllerReference.HasReference,
-                assertionMessage + " Expected a populated FullController FX controller reference.");
-            Assert.IsTrue(menuReference.HasReference,
-                assertionMessage + " Expected a populated FullController menu reference.");
-            Assert.IsTrue(parametersReference.HasReference,
-                assertionMessage + " Expected a populated FullController parameter reference.");
-            Assert.IsTrue(controllerReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + $" Expected the FullController FX controller reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{controllerReference.AssetPath}', property='{controllerReference.PropertyPath}'.");
-            Assert.IsTrue(menuReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + $" Expected the FullController menu reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{menuReference.AssetPath}', property='{menuReference.PropertyPath}'.");
-            Assert.IsTrue(parametersReference.AssetPath.StartsWith(normalizedPrefix, StringComparison.Ordinal),
-                assertionMessage + $" Expected the FullController parameter reference to point at the expected generated-assets prefix. expectedPrefix='{normalizedPrefix}', actual='{parametersReference.AssetPath}', property='{parametersReference.PropertyPath}'.");
+        private UnityEngine.Object[] ReadGeneratedFullControllerReferences()
+        {
+            return new UnityEngine.Object[]
+            {
+                ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp, ASMLiteDriftProbe.ControllerObjectRefPath),
+                ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionsMenu>(_ctx.Comp, ASMLiteDriftProbe.MenuObjectRefPath),
+                ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                    ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                    ASMLiteDriftProbe.ParameterLegacyObjectRefPath),
+            };
         }
 
         private static VF.Model.VRCFury EnsureLiveFullControllerPayload(ASMLiteComponent component)

@@ -181,7 +181,8 @@ namespace ASMLite.Tests.Editor
             {
                 LogAssert.Expect(LogType.Error, new Regex("BUILD-304"));
                 LogAssert.Expect(LogType.Error, new Regex("ASMLiteParameterBudgetFinalCallback.*reported a failure"));
-                LogAssert.Expect(LogType.Assert, new Regex("Cancelling DisplayDialog: Preprocess Callback Failed"));
+                if (Application.isBatchMode)
+                    LogAssert.Expect(LogType.Assert, new Regex("Cancelling DisplayDialog: Preprocess Callback Failed"));
             }
             Assert.AreEqual(allowed, VRCBuildPipelineCallbacks.OnPreprocessAvatar(_ctx.AvatarGo));
             Assert.AreEqual(8193, _ctx.AvDesc.expressionParameters.parameters.Length,

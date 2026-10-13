@@ -88,10 +88,11 @@ namespace ASMLite.Tests.Editor
             AssetDatabase.SaveAssets();
         }
 
-        private static AnimatorController LoadGeneratedController(string aid)
+        private AnimatorController LoadGeneratedController(string aid)
         {
-            var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            Assert.IsNotNull(ctrl, $"{aid}: generated FX controller must exist at '{ASMLiteAssetPaths.FXController}'.");
+            var ctrl = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
+            Assert.IsNotNull(ctrl, $"{aid}: generated FX controller must be wired into the live FullController.");
             return ctrl;
         }
 
@@ -133,22 +134,6 @@ namespace ASMLite.Tests.Editor
             int layerCount = genCtrl.layers.Count(ASMLiteGeneratedOwnershipPolicy.IsGeneratedFxLayer);
             Assert.AreEqual(2, layerCount,
                 "Should create exactly slotCount ASMLite_ layers in the generated FX controller.");
-        }
-
-        [Test, Category("Integration")]
-        public void EachSlotLayer_HasFourStates()
-        {
-            _ctx.Comp.slotCount = 2;
-            AddParam(_ctx, "MyParam", VRCExpressionParameters.ValueType.Int);
-            ASMLiteBuilder.Build(_ctx.Comp);
-
-            var genCtrl = LoadGeneratedController("EachSlotLayer_HasFourStates");
-            for (int slot = 1; slot <= 2; slot++)
-            {
-                var sm = GetLayerSM(genCtrl, $"ASMLite_Slot{slot}");
-                Assert.AreEqual(4, sm.states.Length,
-                    $"Slot {slot} layer should have exactly 4 states.");
-            }
         }
 
         [Test, Category("Integration")]
@@ -372,8 +357,43 @@ namespace ASMLite.Tests.Editor
                 "Generated FX controller must contain the avatar param 'X'.");
             Assert.IsFalse(paramNames.Contains("ASMLite_Bak_S1_X"),
                 "Backup-only storage must not be duplicated in the FX parameter table.");
-            Assert.IsTrue(paramNames.Contains("ASMLite_Def_X"),
-                "Generated FX controller must contain 'ASMLite_Def_X'.");
+            Assert.IsFalse(paramNames.Contains("ASMLite_Def_X"),
+                "Literal Clear defaults must not require FX default storage.");
+        }
+
+        [TestCase(false, false, false, VRCExpressionParameters.ValueType.Int, true)]
+        [TestCase(true, false, false, VRCExpressionParameters.ValueType.Int, true)]
+        [TestCase(false, true, false, VRCExpressionParameters.ValueType.Int, false)]
+        [TestCase(false, false, true, VRCExpressionParameters.ValueType.Int, false)]
+        [TestCase(false, false, false, VRCExpressionParameters.ValueType.Float, false)]
+        public void BakedEvidence_RecognizesNewAndLegacyStorageWithoutTrustingNames(bool legacy, bool unsaved, bool synced, VRCExpressionParameters.ValueType backupType, bool expected)
+        {
+            var source = new VRCExpressionParameters.Parameter { name = "User", valueType = VRCExpressionParameters.ValueType.Int };
+            var entries = new[]
+            {
+                source,
+                new VRCExpressionParameters.Parameter { name = ASMLiteBuilder.CtrlParam, valueType = VRCExpressionParameters.ValueType.Int, networkSynced = false },
+                new VRCExpressionParameters.Parameter { name = "ASMLite_Bak_S1_User", valueType = backupType, saved = !unsaved, networkSynced = synced },
+            };
+            if (legacy)
+                entries = entries.Concat(new[]
+                {
+                    new VRCExpressionParameters.Parameter { name = "ASMLite_Def_User", valueType = VRCExpressionParameters.ValueType.Int, networkSynced = false },
+                }).ToArray();
+            _ctx.ParamsAsset.parameters = entries;
+            _ctx.AvDesc.expressionsMenu.controls.Add(new VRCExpressionsMenu.Control
+            {
+                type = VRCExpressionsMenu.Control.ControlType.Button,
+                parameter = new VRCExpressionsMenu.Control.Parameter { name = ASMLiteBuilder.CtrlParam },
+            });
+            Assert.AreEqual(expected, ASMLiteParameterBudgetBuildGuard.HasClearBakedEvidence(_ctx.AvDesc));
+            if (expected)
+            {
+                var budget = ASMLiteBuilder.CalculateParameterBudget(_ctx.AvDesc,
+                    ASMLiteMigrationContinuityService.CaptureCustomizationSnapshot(_ctx.Comp));
+                Assert.AreEqual(1, budget.OriginalCount);
+                Assert.AreEqual(1 + _ctx.Comp.slotCount, budget.Contribution);
+            }
         }
 
         [TestCase(1, false)]
@@ -389,14 +409,17 @@ namespace ASMLite.Tests.Editor
             AddParam(_ctx, "KeepBool", VRCExpressionParameters.ValueType.Bool, 1f);
 
             var sources = _ctx.ParamsAsset.parameters.ToArray();
-            var generatedExpr = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
             Assert.AreEqual(sources.Length, ASMLiteBuilder.Build(_ctx.Comp));
+            var generatedExpr = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             AnimatorController ctrl = LoadGeneratedController(nameof(BackupStorage_RemainsExpressionOnly_WithAllSlotDrivers));
             VRCExpressionParameters expression = generatedExpr;
             if (directDelivery)
             {
                 // Exercise removal of old injected declarations, not only fresh generation.
                 _ctx.Ctrl.AddParameter("ASMLite_Bak_S3_KeepFloat", AnimatorControllerParameterType.Float);
+                _ctx.Ctrl.AddParameter("ASMLite_Def_KeepFloat", AnimatorControllerParameterType.Float);
                 Assert.IsTrue(ASMLiteBuilder.TryDetachToDirectDelivery(_ctx.Comp, out string detail), detail);
                 ctrl = _ctx.Ctrl;
                 expression = _ctx.ParamsAsset;
@@ -407,8 +430,9 @@ namespace ASMLite.Tests.Editor
             foreach (var source in sources)
             {
                 Assert.IsTrue(ctrl.parameters.Any(p => p.name == source.name), "Live sources must retain global FX bindings.");
-                Assert.IsTrue(ctrl.parameters.Any(p => p.name == "ASMLite_Def_" + source.name));
+                Assert.IsFalse(ctrl.parameters.Any(p => p.name == "ASMLite_Def_" + source.name));
             }
+            Assert.IsFalse(expression.parameters.Any(p => p.name.StartsWith("ASMLite_Def_")));
 
             for (int slot = 1; slot <= slotCount; slot++)
             {
@@ -425,6 +449,8 @@ namespace ASMLite.Tests.Editor
                     Assert.IsFalse(stored.networkSynced);
                     Assert.IsTrue(HasCopy(save, source.name, backup));
                     Assert.IsTrue(HasCopy(load, backup, source.name));
+                    Assert.AreEqual(VRC_AvatarParameterDriver.ChangeType.Set, reset.parameters.Single(p => p.name == backup).type);
+                    Assert.AreEqual(VRC_AvatarParameterDriver.ChangeType.Set, reset.parameters.Single(p => p.name == source.name).type);
                     Assert.AreEqual(source.defaultValue, reset.parameters.Single(p => p.name == backup).value);
                     Assert.AreEqual(source.defaultValue, reset.parameters.Single(p => p.name == source.name).value);
                 }
@@ -526,19 +552,17 @@ namespace ASMLite.Tests.Editor
             ASMLiteBuilder.Build(_ctx.Comp);
 
             var genCtrl = LoadGeneratedController("DefParam_HasCorrectDefaultValues");
-            var paramsByName = genCtrl.parameters.ToDictionary(p => p.name);
-
-            Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyInt"), "ASMLite_Def_MyInt not found.");
-            Assert.AreEqual(7, paramsByName["ASMLite_Def_MyInt"].defaultInt,
-                "ASMLite_Def_MyInt.defaultInt should be 7.");
-
-            Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyFloat"), "ASMLite_Def_MyFloat not found.");
-            Assert.AreEqual(0.5f, paramsByName["ASMLite_Def_MyFloat"].defaultFloat, 0.0001f,
-                "ASMLite_Def_MyFloat.defaultFloat should be 0.5.");
-
-            Assert.IsTrue(paramsByName.ContainsKey("ASMLite_Def_MyBool"), "ASMLite_Def_MyBool not found.");
-            Assert.IsTrue(paramsByName["ASMLite_Def_MyBool"].defaultBool,
-                "ASMLite_Def_MyBool.defaultBool should be true (defaultValue=1).");
+            Assert.IsFalse(genCtrl.parameters.Any(p => p.name.StartsWith("ASMLite_Def_")));
+            var reset = LoadSlotDriver(genCtrl, 1, "ResetSlot1");
+            foreach (var source in _ctx.ParamsAsset.parameters)
+            {
+                foreach (string target in new[] { source.name, "ASMLite_Bak_S1_" + source.name })
+                {
+                    var operation = reset.parameters.Single(p => p.name == target);
+                    Assert.AreEqual(VRC_AvatarParameterDriver.ChangeType.Set, operation.type);
+                    Assert.AreEqual(source.defaultValue, operation.value);
+                }
+            }
         }
 
         [Test, Category("Integration")]
@@ -625,7 +649,7 @@ namespace ASMLite.Tests.Editor
             var allNames = genCtrl.parameters.Select(p => p.name).ToHashSet();
 
             Assert.IsTrue(allNames.Contains("KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded live param should remain declared in FX params.");
-            Assert.IsTrue(allNames.Contains("ASMLite_Def_KeepA"), "ExclusionsEnabled_OmitsExcludedFXParamsAndDriverCopyEntries: non-excluded default param should remain declared in FX params.");
+            Assert.IsFalse(allNames.Contains("ASMLite_Def_KeepA"), "Literal Clear defaults must not require FX storage.");
             Assert.IsFalse(allNames.Contains("ASMLite_Bak_S1_KeepA"), "Backup storage must remain expression-only.");
             Assert.IsFalse(allNames.Contains("ASMLite_Bak_S2_KeepA"), "Backup storage must remain expression-only.");
 

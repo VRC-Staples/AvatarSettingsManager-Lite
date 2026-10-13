@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import runpy
 import sys
 from pathlib import Path
 from typing import Any
@@ -329,6 +330,63 @@ def assert_default_batch_runs(
             errors.append(f"default CI batch run {group_id}/{run_name} must declare at least one selector")
 
 
+def assert_default_method_coverage(
+    repo_root: Path,
+    groups: dict[str, dict[str, Any]],
+    errors: list[str],
+) -> None:
+    # Reuse source inventory, not the editable ledger or its human classifications.
+    inventory = runpy.run_path(str(Path(__file__).with_name("validate-suite-ledger.py")))["inventory_tests"]
+    excluded_files = {
+        filename
+        for group in groups.values() if group.get("defaultCi") is not True
+        for filename in string_list(group.get("testFiles"))
+    }
+    filters: list[dict[str, Any]] = []
+    for group in groups.values():
+        if group.get("defaultCi") is not True:
+            continue
+        run = group.get("batchRun", {})
+        if not isinstance(run, dict):
+            continue
+        filters.extend(item for item in run.get("filters", []) if isinstance(item, dict))
+        if any(string_list(run.get(key)) for key in ("testNames", "groupNames", "categoryNames", "assemblyNames")):
+            filters.append(run)
+    namespaces: dict[str, str] = {}
+    for identity in inventory(repo_root):
+        # This focused obligation prevents the shared-reset regression class from
+        # disappearing again without enrolling runner self-tests or other lanes.
+        if identity.class_name != "ASMLiteSharedResetBuildTests":
+            continue
+        categories = set(identity.categories)
+        if "/Tests/Editor/" not in identity.file or Path(identity.file).name in excluded_files:
+            continue
+        if not categories.intersection({"Headless", "Integration"}) or categories.intersection(
+            {"Manual", "GraphicsRequired", "VisibleEditorAutomation", "PlayMode"}
+        ):
+            continue
+        if any(attribute.split("(", 1)[0].strip() in {"Explicit", "Ignore"} for attribute in identity.attributes):
+            continue
+        if identity.file not in namespaces:
+            source = (repo_root / identity.file).read_text(encoding="utf-8-sig")
+            match = re.search(r"\bnamespace\s+([\w.]+)", source)
+            namespaces[identity.file] = match.group(1) + "." if match else ""
+        name = namespaces[identity.file] + identity.class_name + "." + identity.method
+        try:
+            selected = any(
+                (not string_list(item.get("testNames")) or name in string_list(item.get("testNames")))
+                and (not string_list(item.get("groupNames")) or any(re.search(pattern, name) for pattern in string_list(item.get("groupNames"))))
+                and (not string_list(item.get("categoryNames")) or categories.intersection(string_list(item.get("categoryNames"))))
+                and (not string_list(item.get("assemblyNames")) or "ASMLite.Tests.Editor" in string_list(item.get("assemblyNames")))
+                for item in filters
+            )
+        except re.error as exc:
+            errors.append(f"invalid default CI group selector: {exc}")
+            return
+        if not selected:
+            errors.append(f"default CI method matches no selector: {name} ({identity.file}:{identity.line})")
+
+
 def catalog_suite_ids(catalog: dict[str, Any], errors: list[str]) -> tuple[set[str], set[str]]:
     ids: set[str] = set()
     playmode_ids: set[str] = set()
@@ -415,6 +473,7 @@ def main(argv: list[str] | None = None) -> int:
     if groups:
         assert_smoke_membership(groups, errors)
         assert_default_batch_runs(suites, groups, errors)
+        assert_default_method_coverage(repo_root, groups, errors)
         assert_smoke_catalog_parity(repo_root, suites, smoke_catalog, groups, errors)
     assert_no_coded_prefixes_in_smoke_catalog(smoke_catalog, errors)
     assert_removed_editmode_batch_files_absent(repo_root, errors)

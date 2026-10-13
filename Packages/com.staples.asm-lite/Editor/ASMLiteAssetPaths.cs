@@ -13,6 +13,20 @@ namespace ASMLite.Editor
         internal const string Prefab        = "Packages/com.staples.asm-lite/Prefabs/ASM-Lite.prefab";
         internal const string GeneratedDir  = "Packages/com.staples.asm-lite/GeneratedAssets";
 
+        internal static string InGeneratedDirectory(string directory, string templatePath)
+            => directory + "/" + System.IO.Path.GetFileName(templatePath);
+
+        internal static string ResolveGeneratedDirectory(ASMLiteComponent component)
+        {
+            var avatar = component != null ? component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>() : null;
+            if (avatar == null) return GeneratedDir;
+            string working = ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(avatar);
+            return UnityEditor.AssetDatabase.IsValidFolder(working) ? working : GeneratedDir;
+        }
+
+        internal static string ResolveGeneratedPath(ASMLiteComponent component, string templatePath)
+            => InGeneratedDirectory(ResolveGeneratedDirectory(component), templatePath);
+
         // ─── Action and menu icon paths ───────────────────────────────────────
 
         internal const string IconSave     = "Packages/com.staples.asm-lite/Icons/Save.png";

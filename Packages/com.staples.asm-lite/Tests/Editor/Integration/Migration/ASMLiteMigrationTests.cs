@@ -316,10 +316,14 @@ namespace ASMLite.Tests.Editor
                 }
             };
 
+            var legacyPresets = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu>(
+                ASMLiteAssetPaths.GeneratedDir + "/ASMLite_Presets_Menu.asset");
+            Assert.IsNotNull(legacyPresets, "Selective cleanup setup requires the package-owned presets menu marker.");
             _ctx.AvDesc.expressionsMenu.controls.Add(new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control
             {
                 name = "Settings Manager",
                 type = VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control.ControlType.SubMenu,
+                subMenu = legacyPresets,
             });
             _ctx.AvDesc.expressionsMenu.controls.Add(new VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu.Control
             {
@@ -425,7 +429,9 @@ namespace ASMLite.Tests.Editor
             Assert.GreaterOrEqual(buildResult, 0,
                 $"build should succeed after detach/recover continuity validation. result={buildResult}.");
 
-            generatedExprParams = UnityEditor.AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
+            generatedExprParams = ASMLiteTestFixtures.ReadGeneratedAsset<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(recovered,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsNotNull(generatedExprParams, "generated expression-parameters asset must exist after detach/recover rebuild.");
             Assert.IsTrue(generatedExprParams.parameters.Any(p => p != null && p.name == unmatchedLegacy),
                 "unmatched but well-formed legacy backup aliases must remain preserved after detach/recover rebuild.");

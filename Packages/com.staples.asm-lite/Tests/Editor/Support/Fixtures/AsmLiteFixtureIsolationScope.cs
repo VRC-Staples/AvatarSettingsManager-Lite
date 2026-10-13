@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using NUnit.Framework;
 using UnityEditor;
@@ -29,17 +30,37 @@ namespace ASMLite.Tests.Editor
         private readonly SceneSetup[] _baselineSceneSetup;
         private readonly string _baselineOpenSceneSignature;
         private bool _disposed;
+        private static int s_activeScopes;
+        private static ASMLiteGeneratedAssetTestIsolation.SourceAssetsSnapshot s_expressionParametersBaseline;
+        private static readonly HashSet<AsmLiteFixtureIsolationScope> FailedCleanupScopes = new HashSet<AsmLiteFixtureIsolationScope>();
 
         private AsmLiteFixtureIsolationScope(string owner)
         {
+            if (FailedCleanupScopes.Count != 0)
+                throw new InvalidOperationException("Fixture capture is blocked after incomplete cleanup. Repair the cause and call RetryFailedCleanup before creating another fixture. Failed owners: "
+                    + string.Join(", ", FailedCleanupScopes.Select(scope => scope._owner)));
             _owner = string.IsNullOrWhiteSpace(owner) ? "ASM-Lite fixture" : owner;
+            if (s_activeScopes == 0)
+            {
+                var parameters = AssetDatabase.LoadMainAssetAtPath(ASMLiteAssetPaths.ExprParams);
+                if (parameters != null && EditorUtility.IsDirty(parameters))
+                    throw new InvalidOperationException("Fixture capture cannot preserve unsaved expression parameter edits.");
+            }
             AssetDatabase.Refresh();
+            InitializeNdmfSceneHelpers();
             _baselineAssetPathsByGuid = CaptureGeneratedAssetPathsByGuid();
             _baselineSceneRootPathsById = CaptureSceneRootPathsById();
             _baselineSceneRootPaths = new HashSet<string>(_baselineSceneRootPathsById.Values, StringComparer.Ordinal);
             _baselineSelectionObjects = Selection.objects ?? Array.Empty<UnityEngine.Object>();
             _baselineSceneSetup = EditorSceneManager.GetSceneManagerSetup() ?? Array.Empty<SceneSetup>();
             _baselineOpenSceneSignature = OpenSceneSignature();
+            // Concurrent Editor fixtures share this template and must retain its first baseline.
+            if (s_activeScopes == 0 && File.Exists(ASMLiteAssetPaths.ExprParams))
+            {
+                s_expressionParametersBaseline = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(_owner,
+                    new[] { ASMLiteAssetPaths.ExprParams });
+            }
+            s_activeScopes++;
         }
 
         internal static AsmLiteFixtureIsolationScope Capture(string owner)
@@ -47,27 +68,61 @@ namespace ASMLite.Tests.Editor
             return new AsmLiteFixtureIsolationScope(owner);
         }
 
-        internal void DeleteFixtureGeneratedAssetLeaks(string avatarName)
+        internal static void RetryFailedCleanup()
+        {
+            // Keep failed owners reachable even after their avatars have been unregistered and destroyed.
+            foreach (var scope in FailedCleanupScopes.ToArray())
+                scope.Dispose();
+        }
+
+        private static void InitializeNdmfSceneHelpers()
+        {
+            // NDMF defers scene activation until delayCall, after synchronous SetUp.
+            // Initialize the framework environment before capturing fixture-owned changes.
+            var activatorType = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(assembly => assembly.GetName().Name == "nadena.dev.ndmf.runtime")
+                .Select(assembly => assembly.GetType("nadena.dev.ndmf.runtime.ApplyOnPlayGlobalActivator"))
+                .SingleOrDefault(type => type != null);
+            if (activatorType == null || EditorApplication.isPlaying)
+                return;
+
+            var initialize = activatorType.GetMethod("CreateIfNotPresent", BindingFlags.Static | BindingFlags.NonPublic,
+                null, new[] { typeof(Scene) }, null);
+            if (initialize == null)
+                throw new InvalidOperationException("Installed NDMF scene initialization API is unavailable; fixture baseline cannot be captured safely.");
+
+            for (int index = 0; index < SceneManager.sceneCount; index++)
+            {
+                var scene = SceneManager.GetSceneAt(index);
+                if (!scene.IsValid() || !scene.isLoaded || EditorSceneManager.IsPreviewScene(scene))
+                    continue;
+                // Preserve existing helpers, including their flags and any duplicate state.
+                if (scene.GetRootGameObjects().Any(root => root.GetComponent(activatorType) != null))
+                    continue;
+                initialize.Invoke(null, new object[] { scene });
+            }
+        }
+
+        internal void DeleteFixtureGeneratedAssetLeaks(IEnumerable<string> ownedAssetPaths)
         {
             AssetDatabase.Refresh();
+            var ownedPaths = ownedAssetPaths.Select(NormalizeAssetPath).Where(path => !string.IsNullOrEmpty(path)).ToArray();
             var leakedAssetPaths = CaptureGeneratedAssetPathsByGuid()
                 .Where(pair => !_baselineAssetPathsByGuid.ContainsKey(pair.Key))
                 .Select(pair => pair.Value)
-                .Where(path => IsFixtureGeneratedAssetLeakPath(path, avatarName))
+                .Where(path => IsFixtureGeneratedAssetLeakPath(path, ownedPaths))
                 .Where(path => !ASMLiteTestFixtures.IsRegisteredFixtureGeneratedAssetPath(path))
                 .OrderByDescending(path => path.Length)
                 .ToArray();
 
             foreach (var leakedAssetPath in leakedAssetPaths)
             {
-                if (string.Equals(NormalizeAssetPath(leakedAssetPath), "Assets/ASM-Lite", StringComparison.Ordinal))
-                    continue;
-
-                DeleteFixtureAssetPath(leakedAssetPath);
+                if (AssetDatabase.IsValidFolder(leakedAssetPath))
+                    DeleteFixtureFolderIfEmpty(leakedAssetPath);
+                else
+                    DeleteFixtureAssetPath(leakedAssetPath);
             }
 
-            DeleteEmptyFixtureDirectoryTree("Assets/ASM-Lite");
-            DeleteFixtureFolderIfEmpty("Assets/ASM-Lite");
             AssetDatabase.Refresh();
         }
 
@@ -76,8 +131,26 @@ namespace ASMLite.Tests.Editor
             if (_disposed)
                 return;
 
-            var contamination = CaptureContaminationMessages();
-            RestoreEditorState();
+            List<string> contamination;
+            try
+            {
+                contamination = CaptureContaminationMessages();
+                if (s_activeScopes == 1)
+                {
+                    s_expressionParametersBaseline?.Restore();
+                    s_expressionParametersBaseline?.AssertUnchanged(_owner);
+                }
+                RestoreEditorState();
+            }
+            catch
+            {
+                FailedCleanupScopes.Add(this);
+                throw;
+            }
+            FailedCleanupScopes.Remove(this);
+            s_activeScopes--;
+            if (s_activeScopes == 0)
+                s_expressionParametersBaseline = null;
             _disposed = true;
 
             if (contamination.Count == 0)
@@ -196,27 +269,17 @@ namespace ASMLite.Tests.Editor
             return pathsByGuid;
         }
 
-        private static bool IsFixtureGeneratedAssetLeakPath(string assetPath, string avatarName)
+        private static bool IsFixtureGeneratedAssetLeakPath(string assetPath, IEnumerable<string> ownedPaths)
         {
             string normalizedPath = NormalizeAssetPath(assetPath);
             if (string.IsNullOrEmpty(normalizedPath))
                 return false;
 
-            if (string.Equals(normalizedPath, ASMLiteTestFixtures.TempDir, StringComparison.Ordinal)
-                || normalizedPath.StartsWith(ASMLiteTestFixtures.TempDir + "/", StringComparison.Ordinal))
-                return true;
-
             if (string.Equals(normalizedPath, "Assets/ASM-Lite", StringComparison.Ordinal))
                 return true;
 
-            string normalizedAvatarName = NormalizeAssetPath(avatarName);
-            if (string.IsNullOrEmpty(normalizedAvatarName))
-                return false;
-
-            string avatarRoot = "Assets/ASM-Lite/" + normalizedAvatarName;
-            return string.Equals(normalizedPath, avatarRoot, StringComparison.Ordinal)
-                || normalizedPath.StartsWith(avatarRoot + "/", StringComparison.Ordinal)
-                || normalizedPath.StartsWith(avatarRoot + "__", StringComparison.Ordinal);
+            return ownedPaths.Any(ownedPath => string.Equals(normalizedPath, ownedPath, StringComparison.Ordinal)
+                || normalizedPath.StartsWith(ownedPath + "/", StringComparison.Ordinal));
         }
 
         private static void DeleteFixtureAssetPath(string assetPath)
@@ -269,21 +332,6 @@ namespace ASMLite.Tests.Editor
             DeleteFixtureAssetPath(normalizedPath);
         }
 
-        private static void DeleteEmptyFixtureDirectoryTree(string assetFolderPath)
-        {
-            string normalizedPath = NormalizeAssetPath(assetFolderPath);
-            if (string.IsNullOrEmpty(normalizedPath) || !Directory.Exists(normalizedPath))
-                return;
-
-            var directories = Directory.GetDirectories(normalizedPath, "*", SearchOption.AllDirectories)
-                .Select(NormalizeAssetPath)
-                .OrderByDescending(path => path.Length)
-                .ToList();
-            directories.Add(normalizedPath);
-
-            foreach (var directory in directories)
-                DeleteFixtureFolderIfEmpty(directory);
-        }
 
         private static string NormalizeAssetPath(string assetPath)
         {
