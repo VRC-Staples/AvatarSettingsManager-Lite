@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Text;
 using ASMLite.Editor;
@@ -877,6 +878,9 @@ namespace ASMLite.Tests.Editor
                     case "add-prefab":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.AddPrefabForAutomation();
                         detail = "ASM-Lite prefab added.";
                         return true;
@@ -884,6 +888,9 @@ namespace ASMLite.Tests.Editor
                     case "rebuild":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.RebuildForAutomation();
                         detail = "Rebuild completed.";
                         return true;
@@ -891,6 +898,9 @@ namespace ASMLite.Tests.Editor
                     case "vendorize":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.VendorizeForAutomation();
                         detail = "Vendorize completed.";
                         return true;
@@ -898,6 +908,9 @@ namespace ASMLite.Tests.Editor
                     case "detach":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.DetachForAutomation();
                         detail = "Detach completed.";
                         return true;
@@ -905,6 +918,9 @@ namespace ASMLite.Tests.Editor
                     case "lifecycle-hygiene-cleanup":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.ReturnToPackageManagedForAutomation();
                         detail = "Hygiene cleanup completed: known ASM-Lite lifecycle state returned to package-managed baseline.";
                         return true;
@@ -912,6 +928,9 @@ namespace ASMLite.Tests.Editor
                     case "return-to-package-managed":
                         window = ASMLiteWindow.OpenForAutomation();
                         SelectAvatarIfFound(window, avatarName);
+                        if (!_fixtureService.CaptureGeneratedGraphFootprint(
+                            window.GetPendingCustomizationSnapshotForTesting().SelectedAvatar, out detail))
+                            return false;
                         window.ReturnToPackageManagedForAutomation();
                         detail = "Return-to-package-managed completed.";
                         return true;
@@ -2558,9 +2577,32 @@ namespace ASMLite.Tests.Editor
         }
     }
 
+    [InitializeOnLoad]
     internal static class ASMLiteSmokeOverlayHost
     {
         private static ASMLiteSmokeOverlayHostRunner s_activeRunner;
+        private static readonly ConditionalWeakTable<ASMLiteWindow, ASMLiteSmokePresentation> s_presentations
+            = new ConditionalWeakTable<ASMLiteWindow, ASMLiteSmokePresentation>();
+
+        static ASMLiteSmokeOverlayHost()
+        {
+            ASMLiteWindow.SmokePresentationFactory = window =>
+            {
+                var presentation = s_presentations.GetValue(window, owner => new ASMLiteSmokePresentation(owner));
+                return presentation.CreateCallbacks(() =>
+                {
+                    presentation.Dispose();
+                    s_presentations.Remove(window);
+                });
+            };
+        }
+
+        internal static ASMLiteSmokePresentation GetPresentation(ASMLiteWindow window)
+        {
+            if (s_presentations.TryGetValue(window, out var presentation))
+                return presentation;
+            throw new InvalidOperationException("This window has no active smoke presentation.");
+        }
 
         public static void RunFromCommandLine()
         {

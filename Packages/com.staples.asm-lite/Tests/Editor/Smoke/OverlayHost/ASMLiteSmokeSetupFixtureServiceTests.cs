@@ -644,12 +644,244 @@ namespace ASMLite.Tests.Editor
             return ApplyAdmittedMutation(args, scene, avatar, string.Empty, out detail);
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GeneratedGraphFootprint_RealAddRebuildReset_RestoresBytesGuidsAndPriorAbsence(bool existingGraph)
+        {
+            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
+            string unrelated = "Assets/ASM-Lite/UnrelatedOwner_" + System.Guid.NewGuid().ToString("N");
+            try
+            {
+                EnsureTestAssetFolder("Assets", "ASM-Lite");
+                EnsureTestAssetFolder("Assets/ASM-Lite", Path.GetFileName(unrelated));
+                string sentinel = unrelated + "/sentinel.txt";
+                File.WriteAllText(Path.GetFullPath(sentinel), "preserve other owner");
+                AssetDatabase.ImportAsset(sentinel, ImportAssetOptions.ForceSynchronousImport);
+                byte[] sentinelMeta = File.ReadAllBytes(Path.GetFullPath(sentinel + ".meta"));
+                Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+                string working = ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(_ctx.AvDesc);
+                string owner = Path.GetDirectoryName(working).Replace('\\', '/');
+                string generated = owner + "/GeneratedAssets";
+                if (existingGraph)
+                {
+                    var staged = ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, workingAssets: true);
+                    Assert.That(staged.Success, Is.True, staged.ToLogString());
+                    Assert.That(ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(staged).Success, Is.True);
+                }
+                if (!existingGraph)
+                {
+                    Object.DestroyImmediate(_ctx.Comp.gameObject);
+                    _ctx.Comp = null;
+                }
+                AssetDatabase.SaveAssets();
+                Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+                string descriptorBefore = EditorJsonUtility.ToJson(_ctx.AvDesc);
+                Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.Null);
+                Object[] baselineSelection = Selection.objects;
+                Object baselineActive = Selection.activeObject;
+                var before = Directory.Exists(Path.GetFullPath(owner))
+                    ? Directory.GetFiles(Path.GetFullPath(owner), "*", SearchOption.AllDirectories)
+                        .Concat(new[] { Path.GetFullPath(owner + ".meta") }).ToDictionary(path => path, File.ReadAllBytes)
+                    : new System.Collections.Generic.Dictionary<string, byte[]>();
+                string controllerGuid = AssetDatabase.AssetPathToGUID(working + "/ASMLite_FX.controller");
+                Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string capture), Is.True, capture);
+                string recovery = _service.RecoveryPath;
+                Assert.That(File.Exists(Path.Combine(recovery, "pending-0000.json")), Is.True);
+                if (existingGraph)
+                {
+                    Assert.That(_service.ApplyMutation(new ASMLiteSmokeStepArgs
+                    {
+                        avatarName = "FixtureAvatar", fixtureMutation = ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline,
+                    }, string.Empty, "FixtureAvatar", out string clean), Is.True, clean);
+                }
+                window.SelectAvatarForAutomation(_ctx.AvDesc);
+                window.AddPrefabForAutomation();
+                Assert.That(_ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true), Is.Not.Null);
+                Assert.That(AssetDatabase.IsValidFolder(working), Is.True);
+                // Exercise the stock SDK inspector reached by Add's avatar-selection restore,
+                // even in a synchronous EditMode run without an Inspector repaint.
+                var descriptorEditor = UnityEditor.Editor.CreateEditor(_ctx.AvDesc);
+                Object.DestroyImmediate(descriptorEditor);
+                Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.Not.Null);
+                // A second admission must not replace the pre-add bytes or component absence.
+                Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string extension), Is.True, extension);
+                window.RebuildForAutomation();
+                Assert.That(AssetDatabase.IsValidFolder(generated), Is.True, "Real rebuild must exercise the sibling generated graph.");
+                // Keep a real tracked SDK inspector alive, not just a throwaway editor.
+                ActiveEditorTracker.sharedTracker.ForceRebuild();
+                Assert.That(ActiveEditorTracker.sharedTracker.activeEditors.Any(editor => editor != null && editor.target == _ctx.AvDesc), Is.True);
+                _service.RecoveryPhaseForTesting = phase =>
+                {
+                    if (phase == "before-unrelated-dirty-comparison" || phase == "target-scenes-saved")
+                    {
+                        Assert.That(Selection.objects, Is.Empty, phase);
+                        Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.Null, phase);
+                        Assert.That(EditorJsonUtility.ToJson(_ctx.AvDesc), Is.EqualTo(descriptorBefore), phase);
+                    }
+                };
+                Assert.That(_service.Reset(out string reset), Is.True, reset);
+                Assert.That(_service.HasCleanResetProof, Is.True);
+                Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.Null);
+                Assert.That(EditorJsonUtility.ToJson(_ctx.AvDesc), Is.EqualTo(descriptorBefore));
+                CollectionAssert.AreEqual(baselineSelection, Selection.objects);
+                Assert.That(Selection.activeObject, Is.SameAs(baselineActive));
+                Assert.That(AssetDatabase.IsValidFolder(generated), Is.False);
+                Assert.That(File.Exists(Path.GetFullPath(generated + ".meta")), Is.False);
+                if (existingGraph)
+                {
+                    CollectionAssert.AreEquivalent(before.Keys, Directory.GetFiles(Path.GetFullPath(owner), "*", SearchOption.AllDirectories)
+                        .Concat(new[] { Path.GetFullPath(owner + ".meta") }));
+                    foreach (var file in before) CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), file.Key);
+                    Assert.That(AssetDatabase.AssetPathToGUID(working + "/ASMLite_FX.controller"), Is.EqualTo(controllerGuid));
+                }
+                else
+                {
+                    Assert.That(Directory.Exists(Path.GetFullPath(owner)), Is.False);
+                    Assert.That(File.Exists(Path.GetFullPath(owner + ".meta")), Is.False);
+                }
+                Assert.That(File.ReadAllText(Path.GetFullPath(sentinel)), Is.EqualTo("preserve other owner"));
+                CollectionAssert.AreEqual(sentinelMeta, File.ReadAllBytes(Path.GetFullPath(sentinel + ".meta")));
+                _ctx.Comp = _ctx.AvDesc.GetComponentInChildren<ASMLiteComponent>(true);
+            }
+            finally
+            {
+                Object.DestroyImmediate(window);
+                AssetDatabase.DeleteAsset(unrelated);
+            }
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_OperatorPipelineData_BlocksResetWithoutDeletingIt()
+        {
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+            Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.Null);
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string capture), Is.True, capture);
+            var descriptorEditor = UnityEditor.Editor.CreateEditor(_ctx.AvDesc);
+            Object.DestroyImmediate(descriptorEditor);
+            var pipeline = _ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>();
+            Assert.That(pipeline, Is.Not.Null);
+            pipeline.blueprintId = "avtr_operator_data";
+            EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+            Selection.activeObject = _ctx.AvatarGo;
+            Selection.objects = new Object[] { _ctx.AvatarGo, _ctx.Comp.gameObject };
+            Object[] operatorSelection = Selection.objects;
+            Object operatorActive = Selection.activeObject;
+            Assert.That(_service.Reset(out string blocked), Is.False);
+            StringAssert.Contains("unrelated pipeline data", blocked);
+            Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.SameAs(pipeline));
+            Assert.That(pipeline.blueprintId, Is.EqualTo("avtr_operator_data"));
+            Assert.That(SceneManager.GetActiveScene().isDirty, Is.True);
+            Assert.That(_service.HasCleanResetProof, Is.False);
+            CollectionAssert.AreEqual(operatorSelection, Selection.objects);
+            Assert.That(Selection.activeObject, Is.SameAs(operatorActive));
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_LiveDescriptorEditor_BlocksResetWithoutDestroyingIt()
+        {
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string capture), Is.True, capture);
+            // This editor is not owned by the selection tracker. Recovery must not destroy
+            // it or change inspector locks to make an absent-pipeline baseline pass.
+            var descriptorEditor = UnityEditor.Editor.CreateEditor(_ctx.AvDesc);
+            try
+            {
+                var pipeline = _ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>();
+                bool inspectorLocked = ActiveEditorTracker.sharedTracker.isLocked;
+                Assert.That(pipeline, Is.Not.Null);
+                Assert.That(_service.Reset(out string blocked), Is.False);
+                StringAssert.Contains("editor lifetime is not controlled by selection", blocked);
+                Assert.That(descriptorEditor != null, Is.True);
+                Assert.That(descriptorEditor.target, Is.SameAs(_ctx.AvDesc));
+                Assert.That(_ctx.AvDesc.GetComponent<VRC.Core.PipelineManager>(), Is.SameAs(pipeline));
+                Assert.That(ActiveEditorTracker.sharedTracker.isLocked, Is.EqualTo(inspectorLocked));
+                Assert.That(_service.HasCleanResetProof, Is.False);
+            }
+            finally { Object.DestroyImmediate(descriptorEditor); }
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_UnownedOwnerContents_FailsBeforePublishingOrMutating()
+        {
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+            string working = ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(_ctx.AvDesc);
+            string owner = Path.GetDirectoryName(working).Replace('\\', '/');
+            EnsureTestAssetFolder("Assets", "ASM-Lite");
+            EnsureTestAssetFolder("Assets/ASM-Lite", Path.GetFileName(owner));
+            string sentinel = owner + "/unrelated.txt";
+            File.WriteAllText(Path.GetFullPath(sentinel), "do not claim");
+            AssetDatabase.ImportAsset(sentinel, ImportAssetOptions.ForceSynchronousImport);
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string detail), Is.False);
+            StringAssert.Contains("ownership", detail);
+            Assert.That(_service.RecoveryPath, Is.Empty);
+            Assert.That(File.ReadAllText(Path.GetFullPath(sentinel)), Is.EqualTo("do not claim"));
+        }
+
         private bool ApplyAdmittedMutation(ASMLiteSmokeStepArgs args, string scene, string avatar, string evidence, out string detail)
         {
             // Explicit test preparation: production admission never saves a dirty baseline.
             AssetDatabase.SaveAssets();
             Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), "Assets/FixtureBaseline.unity"), Is.True);
             return _service.ApplyMutation(args, scene, avatar, evidence, out detail);
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_CorruptPendingPublication_BlocksNextAdmission()
+        {
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string capture), Is.True, capture);
+            File.WriteAllText(Path.Combine(_service.RecoveryPath, "pending-0000.json"), "invalid pending publication");
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string blocked), Is.False);
+            StringAssert.Contains("pending publication", blocked);
+            Assert.That(_service.HasCleanResetProof, Is.False);
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_ForeignOwnerReference_RefusesCapture()
+        {
+            var other = new GameObject("ForeignGraphOwner");
+            string owner = null;
+            try
+            {
+                var avatar = other.AddComponent<VRCAvatarDescriptor>();
+                Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+                var graph = ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar);
+                Assert.That(graph.Success, Is.True, graph.ToLogString());
+                Assert.That(ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(graph).Success, Is.True);
+                owner = Path.GetDirectoryName(graph.TargetPath).Replace('\\', '/');
+                string parameters = graph.TargetPath + "/ASMLite_Params.asset";
+                byte[] bytes = File.ReadAllBytes(Path.GetFullPath(parameters));
+                byte[] meta = File.ReadAllBytes(Path.GetFullPath(parameters + ".meta"));
+                _ctx.AvDesc.expressionParameters = AssetDatabase.LoadAssetAtPath<VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters>(parameters);
+                Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+                Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string blocked), Is.False);
+                StringAssert.Contains("foreign descriptor reference", blocked);
+                Assert.That(_service.RecoveryPath, Is.Empty);
+                CollectionAssert.AreEqual(bytes, File.ReadAllBytes(Path.GetFullPath(parameters)));
+                CollectionAssert.AreEqual(meta, File.ReadAllBytes(Path.GetFullPath(parameters + ".meta")));
+            }
+            finally
+            {
+                Object.DestroyImmediate(other);
+                if (owner != null) AssetDatabase.DeleteAsset(owner);
+            }
+        }
+
+        [Test]
+        public void GeneratedGraphFootprint_UnrelatedFileAddedAfterCapture_BlocksResetWithoutDeletingIt()
+        {
+            Assert.That(EditorSceneManager.SaveScene(SceneManager.GetActiveScene()), Is.True);
+            Assert.That(_service.CaptureGeneratedGraphFootprint(_ctx.AvDesc, out string capture), Is.True, capture);
+            string working = ASMLite.Editor.ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(_ctx.AvDesc);
+            string owner = Path.GetDirectoryName(working).Replace('\\', '/');
+            Directory.CreateDirectory(Path.GetFullPath(owner));
+            string sentinel = owner + "/operator.txt";
+            File.WriteAllText(Path.GetFullPath(sentinel), "do not delete new unrelated work");
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            Assert.That(_service.Reset(out string blocked), Is.False);
+            StringAssert.Contains("ownership", blocked);
+            Assert.That(File.ReadAllText(Path.GetFullPath(sentinel)), Is.EqualTo("do not delete new unrelated work"));
+            Assert.That(_service.HasCleanResetProof, Is.False);
         }
 
         private static void EnsureTestAssetFolder(string parent, string child)

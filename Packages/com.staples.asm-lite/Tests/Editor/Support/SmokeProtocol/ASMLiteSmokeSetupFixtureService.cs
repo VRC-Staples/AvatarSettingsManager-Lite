@@ -149,6 +149,40 @@ namespace ASMLite.Tests.Editor
             return RestoreAndVerify(out detail);
         }
 
+        internal bool CaptureGeneratedGraphFootprint(VRCAvatarDescriptor avatar, out string detail)
+        {
+            HasCleanResetProof = false;
+            try
+            {
+                ConsumeExplicitClearance();
+                HasCleanResetProof = false;
+                if (_disposed || _recoveryFailed || avatar == null || EditorUtility.IsPersistent(avatar)
+                    || !avatar.gameObject.scene.IsValid() || !avatar.gameObject.scene.isLoaded)
+                    throw new InvalidOperationException("A supported live avatar and unblocked fixture service are required.");
+                string owner = OwnedGeneratedGraphRoot(avatar, requirePayload: false);
+                string id = DurableId(avatar);
+                if (_baseline != null && _baseline.files.Any(file => file.path == owner && file.directory && !file.parentOnly)
+                    && _baseline.objects.Any(value => value.id == id && !string.IsNullOrEmpty(value.json))
+                    && (_baseline.absentComponents.Contains(id) || _baseline.trees.Any(tree => tree.avatar == id)))
+                {
+                    // The first baseline is immutable, even after add creates a prefab or
+                    // rebuild replaces graph GUIDs. Its pending publication covers both.
+                    ValidateRecoveryCopies(_baseline);
+                    RequireGeneratedReferencesCovered(_baseline, avatar);
+                }
+                else
+                    CaptureBeforeMutation(ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline, avatar.gameObject.name, avatar);
+                detail = "Generated graph footprint admitted with durable baseline: " + owner;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (_baseline != null) _recoveryFailed = true;
+                detail = "SETUP_FIXTURE_RECOVERY_BLOCKED: " + ex.Message;
+                return false;
+            }
+        }
+
         internal bool AssertCleanBaseline(out string detail)
         {
             return CompareBaseline(out detail);

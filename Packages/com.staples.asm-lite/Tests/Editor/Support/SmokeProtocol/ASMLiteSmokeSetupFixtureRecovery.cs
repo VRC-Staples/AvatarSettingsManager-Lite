@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using ASMLite.Editor;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace ASMLite.Tests.Editor
         private FixtureBaseline _baseline;
         private bool _recoveryFailed;
         internal Action BeforeProofPublicationForTesting;
+        internal Action<string> RecoveryPhaseForTesting;
         internal string RecoveryPath => _baseline == null ? string.Empty : _baseline.directory;
         private static string RecoveryRoot => Path.Combine(ProjectRoot, ".artifacts/asm-lite-fixture-recovery");
         private static string ProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
@@ -38,6 +40,7 @@ namespace ASMLite.Tests.Editor
             public List<SceneCopy> copies = new List<SceneCopy>();
             public List<AmbientObject> ambient = new List<AmbientObject>();
             public List<string> absentComponents = new List<string>();
+            public List<CoveredPipeline> pipelines = new List<CoveredPipeline>();
             public List<string> ownedScenes = new List<string>();
             public List<IdentityPair> created = new List<IdentityPair>();
         }
@@ -48,6 +51,7 @@ namespace ASMLite.Tests.Editor
         }
         [Serializable] private sealed class ReferenceValue { public string path, target; }
         [Serializable] private sealed class CoveredProperty { public string id, path; public bool value; }
+        [Serializable] private sealed class CoveredPipeline { public string avatar, component; }
         [Serializable] private sealed class CoveredFile
         {
             public string path, copy, hash;
@@ -99,7 +103,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        private void CaptureBeforeMutation(string mutation, string avatarName)
+        private void CaptureBeforeMutation(string mutation, string avatarName, VRCAvatarDescriptor graphAvatar = null)
         {
             ConsumeExplicitClearance();
             if (_recoveryFailed) throw new InvalidOperationException("Fixture recovery is blocked; repair and explicitly verify the retained baseline.");
@@ -116,7 +120,7 @@ namespace ASMLite.Tests.Editor
                 next.selection = Selection.objects.Select(DurableId).ToArray();
                 next.active = DurableId(Selection.activeObject);
             }
-            VRCAvatarDescriptor avatar = FindSceneAvatarByName(avatarName, true);
+            VRCAvatarDescriptor avatar = graphAvatar != null ? graphAvatar : FindSceneAvatarByName(avatarName, true);
             bool generated = mutation == ASMLiteSmokeSetupFixtureMutationIds.StaleGeneratedFolder
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.MissingGeneratedFolder
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.VendorizedStateBaseline
@@ -130,6 +134,8 @@ namespace ASMLite.Tests.Editor
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.StaleVendorizedReferences
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.GeneratedFolderWithoutComponent;
+            if (avatar != null && (generated || component))
+                CaptureOwnedGeneratedGraph(next, avatar);
             if (generated)
             {
                 if (string.IsNullOrWhiteSpace(avatarName) || avatarName.IndexOfAny(new[] { '/', '\\', ':', '\0' }) >= 0
@@ -140,6 +146,8 @@ namespace ASMLite.Tests.Editor
                 CaptureParent(next, GeneratedRoot + "/" + avatarName);
                 CaptureParent(next, GeneratedRoot);
             }
+            if (avatar != null && mutation == ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline)
+                RequireGeneratedReferencesCovered(next, avatar);
             if (component && avatar != null)
             {
                 CaptureScene(next, avatar.gameObject.scene);
@@ -187,6 +195,10 @@ namespace ASMLite.Tests.Editor
             {
                 CaptureScene(next, avatar.gameObject.scene);
                 CaptureObject(next, avatar);
+                if (mutation == ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline
+                    && !next.pipelines.Any(item => item.avatar == DurableId(avatar)))
+                    next.pipelines.Add(new CoveredPipeline { avatar = DurableId(avatar),
+                        component = DurableId(avatar.GetComponent<VRC.Core.PipelineManager>()) });
             }
             if (avatar != null && (mutation == ASMLiteSmokeSetupFixtureMutationIds.CleanAddBaseline
                 || mutation == ASMLiteSmokeSetupFixtureMutationIds.DetachedStateBaseline))
@@ -203,7 +215,7 @@ namespace ASMLite.Tests.Editor
                         if (asset != null && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset)
                             && !(asset is Shader && !AssetDatabase.IsNativeAsset(asset))
                             && AssetDatabase.GetAssetPath(asset).StartsWith("Assets/", StringComparison.Ordinal)
-                            && !next.files.Any(file => file.path == AssetDatabase.GetAssetPath(asset)))
+                            && !CoversFile(next, AssetDatabase.GetAssetPath(asset)))
                             throw new InvalidOperationException("Cleanup would save an unrelated dirty asset: " + AssetDatabase.GetAssetPath(asset));
                 }
             }
@@ -227,7 +239,7 @@ namespace ASMLite.Tests.Editor
                     if (asset != null && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset)
                         && !(asset is Shader && !AssetDatabase.IsNativeAsset(asset))
                         && AssetDatabase.GetAssetPath(asset).StartsWith("Assets/", StringComparison.Ordinal)
-                        && !next.files.Any(file => file.path == AssetDatabase.GetAssetPath(asset)))
+                        && !CoversFile(next, AssetDatabase.GetAssetPath(asset)))
                         throw new InvalidOperationException("Fixture mutation would save an unrelated dirty asset.");
             // Admission and captures precede directory publication. Any interrupted preparation
             // after directory creation is deliberately visible as invalid, never implicitly cleared.
@@ -249,6 +261,58 @@ namespace ASMLite.Tests.Editor
             ValidateRecoveryCopies(next);
             DurableWrite(Path.Combine(next.directory, "capture-correspondence-" + revision.ToString("D4") + ".json"),
                 JsonUtility.ToJson(CreateMapping(true), true));
+        }
+
+        private static void RequireGeneratedReferencesCovered(FixtureBaseline baseline, VRCAvatarDescriptor avatar)
+        {
+            if (ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, GeneratedRoot,
+                path => !CoversFile(baseline, path)))
+                throw new InvalidOperationException("Generated graph ownership does not cover a foreign descriptor reference.");
+            var component = avatar.GetComponentInChildren<ASMLiteComponent>(true);
+            if (component != null && component.useVendorizedGeneratedAssets
+                && !CoversFile(baseline, ASMLiteGeneratedOwnershipPolicy.NormalizeAssetPath(component.vendorizedGeneratedAssetsPath)))
+                throw new InvalidOperationException("Generated graph ownership does not cover the component's vendorized path.");
+        }
+
+        private static string OwnedGeneratedGraphRoot(VRCAvatarDescriptor avatar, bool requirePayload = true)
+        {
+            string working = ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(avatar);
+            string owner = SafeAssetPath(Path.GetDirectoryName(working).Replace('\\', '/'));
+            string generated = owner + "/GeneratedAssets";
+            if (Directory.Exists(ToAbsoluteProjectPath(owner)))
+            {
+                foreach (string member in Directory.EnumerateFileSystemEntries(ToAbsoluteProjectPath(owner)))
+                {
+                    string name = Path.GetFileName(member);
+                    if (name != "WorkingAssets" && name != "WorkingAssets.meta" && name != "GeneratedAssets" && name != "GeneratedAssets.meta")
+                        throw new InvalidOperationException("Generated graph ownership does not cover owner member: " + name);
+                }
+                foreach (string entry in DirectoryEntries(ToAbsoluteProjectPath(owner)))
+                {
+                    if (entry == "WorkingAssets/" || entry == "GeneratedAssets/" || entry == "WorkingAssets.meta" || entry == "GeneratedAssets.meta") continue;
+                    string[] parts = entry.Split('/');
+                    string name = parts.Last();
+                    if (name.EndsWith(".meta", StringComparison.Ordinal)) name = name.Substring(0, name.Length - 5);
+                    if (parts.Length != 2 || (parts[0] != "WorkingAssets" && parts[0] != "GeneratedAssets")
+                        || !Regex.IsMatch(name, @"\AASMLite_(FX\.controller|Params\.asset|Menu\.asset|Presets_Menu\.asset|Slot[1-8]_(Menu|ConfirmMenu|ResetConfirmMenu)\.asset)\z"))
+                        throw new InvalidOperationException("Generated graph ownership does not cover graph member: " + entry);
+                }
+                if (requirePayload && Directory.Exists(ToAbsoluteProjectPath(working)) && !ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(avatar, working))
+                    throw new InvalidOperationException("Working graph ownership could not be verified.");
+                if (requirePayload && Directory.Exists(ToAbsoluteProjectPath(generated)) && !ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(avatar, generated).Success)
+                    throw new InvalidOperationException("Generated graph ownership could not be verified.");
+            }
+            return owner;
+        }
+
+        private static void CaptureOwnedGeneratedGraph(FixtureBaseline baseline, VRCAvatarDescriptor avatar)
+        {
+            // Cover only this independently resolved owner, including both graphs, staging
+            // siblings and prior absence. Other avatar directories are never captured.
+            string owner = OwnedGeneratedGraphRoot(avatar);
+            CaptureFile(baseline, owner);
+            CaptureFile(baseline, owner + ".meta");
+            CaptureParent(baseline, GeneratedRoot);
         }
 
         private void CaptureScene(FixtureBaseline baseline, Scene scene)
@@ -293,11 +357,13 @@ namespace ASMLite.Tests.Editor
             if (asset == null) return;
             string path = AssetDatabase.GetAssetPath(asset);
             if (string.IsNullOrEmpty(path)) throw new InvalidOperationException("Covered assets must be saved.");
-            foreach (Object value in AssetDatabase.LoadAllAssetsAtPath(path))
+            Object[] assets = AssetDatabase.LoadAllAssetsAtPath(path);
+            if (assets.Length > 0 && assets.All(value => baseline.objects.Any(item => item.id == DurableId(value) && !string.IsNullOrEmpty(item.json)))) return;
+            foreach (Object value in assets)
                 if (EditorUtility.IsDirty(value)) throw new InvalidOperationException("Covered asset must be clean: " + path);
             CaptureFile(baseline, path);
             CaptureFile(baseline, path + ".meta");
-            foreach (Object value in AssetDatabase.LoadAllAssetsAtPath(path)) CaptureObject(baseline, value);
+            foreach (Object value in assets) CaptureObject(baseline, value);
         }
 
         private static void CaptureParent(FixtureBaseline baseline, string path)
@@ -309,10 +375,13 @@ namespace ASMLite.Tests.Editor
             CaptureFile(baseline, path + ".meta");
         }
 
+        private static bool CoversFile(FixtureBaseline baseline, string path)
+            => baseline.files.Any(file => file.path == path || (file.directory && !file.parentOnly && path.StartsWith(file.path + "/", StringComparison.Ordinal)));
+
         private static void CaptureFile(FixtureBaseline baseline, string path)
         {
             path = SafeAssetPath(path);
-            if (baseline.files.Any(file => file.path == path || (file.directory && !file.parentOnly && path.StartsWith(file.path + "/", StringComparison.Ordinal)))) return;
+            if (CoversFile(baseline, path)) return;
             if (baseline.files.Any(file => file.path.StartsWith(path + "/", StringComparison.Ordinal)))
                 throw new InvalidOperationException("Later coverage would replace an earlier file baseline.");
             string absolute = ToAbsoluteProjectPath(path);
@@ -359,6 +428,8 @@ namespace ASMLite.Tests.Editor
 
         private bool RestoreAndVerify(out string detail)
         {
+            Object[] suspendedSelection = null;
+            Object suspendedActive = null;
             try
             {
                 ConsumeExplicitClearance();
@@ -373,6 +444,14 @@ namespace ASMLite.Tests.Editor
                 ValidateRecoveryCopies(_baseline);
                 var initiallyDirty = new HashSet<string>(_baseline.copies
                     .Where(copy => SceneManager.GetSceneByPath(copy.scene).isDirty).Select(copy => copy.scene));
+                if (_baseline.pipelines.Any(item => string.IsNullOrEmpty(item.component)))
+                {
+                    suspendedSelection = Selection.objects;
+                    suspendedActive = Selection.activeObject;
+                    SuspendRecoverySelection();
+                }
+                RestorePipelineAbsence();
+                RecoveryPhaseForTesting?.Invoke("pipeline-restored");
                 foreach (string avatarId in _baseline.absentComponents)
                 {
                     var avatar = ResolveCaptured(avatarId) as VRCAvatarDescriptor;
@@ -384,7 +463,21 @@ namespace ASMLite.Tests.Editor
                     }
                 }
                 foreach (CoveredTree tree in _baseline.trees)
-                    if (ResolveCaptured(tree.root) == null || tree.members.Any(id => ResolveCaptured(id) == null)) RestoreTree(tree);
+                    if (ResolveCaptured(tree.root) == null || tree.members.Any(id => ResolveCaptured(id) == null))
+                    {
+                        var avatar = ResolveCaptured(tree.avatar) as VRCAvatarDescriptor;
+                        if (avatar == null) throw new InvalidOperationException("Covered avatar correspondence is missing.");
+                        // Clean-add followed by the real Add action replaces the captured child
+                        // with the shipped prefab. Remove only that replacement, never ambient
+                        // components or a custom/operator-created hierarchy.
+                        foreach (ASMLiteComponent component in avatar.GetComponentsInChildren<ASMLiteComponent>(true))
+                            if (component.transform.parent == ResolveCaptured(tree.parent)
+                                && !_baseline.ambient.Any(item => ResolveCaptured(item.id) == component.gameObject)
+                                && PrefabUtility.GetNearestPrefabInstanceRoot(component.gameObject) == component.gameObject
+                                && AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromOriginalSource(component.gameObject)) == ASMLiteAssetPaths.Prefab)
+                                Object.DestroyImmediate(component.gameObject);
+                        RestoreTree(tree);
+                    }
                 foreach (CoveredObject item in _baseline.objects)
                 {
                     if (string.IsNullOrEmpty(item.rawJson)) continue;
@@ -417,9 +510,13 @@ namespace ASMLite.Tests.Editor
                     CleanupEntry entry = _cleanupLedger.Pop();
                     entry.Cleanup?.Invoke();
                 }
-                ProtectUnrelatedDirtyState(initiallyDirty);
-                PublishCorrespondenceAndSave();
+                // Cleanup entries can restore the action's avatar selection. Drain that
+                // inspector lifetime too, before native save/import callbacks can rebuild it.
+                if (suspendedSelection != null) SuspendRecoverySelection();
+                PublishCorrespondenceAndSave(initiallyDirty);
                 RestoreSceneSetupAndSelection();
+                if (suspendedSelection != null) ActiveEditorTracker.sharedTracker.ForceRebuild();
+                RecoveryPhaseForTesting?.Invoke("selection-restored");
                 if (!CompareBaseline(out detail)) throw new InvalidOperationException(detail);
                 BeforeProofPublicationForTesting?.Invoke();
                 PublishClearance(_baseline);
@@ -435,6 +532,50 @@ namespace ASMLite.Tests.Editor
                 HasCleanResetProof = false;
                 detail = "SETUP_FIXTURE_RECOVERY_BLOCKED: " + ex.Message + " Recovery: " + RecoveryPath;
                 return false;
+            }
+            finally
+            {
+                if (suspendedSelection != null && !HasCleanResetProof)
+                {
+                    Selection.activeObject = suspendedActive;
+                    Selection.objects = suspendedSelection.Where(value => value != null).ToArray();
+                }
+            }
+        }
+
+        private void SuspendRecoverySelection()
+        {
+            // A selected descriptor's stock SDK OnEnable recreates an absent pipeline
+            // when Unity rebuilds its inspector. Quiesce only selection, never inspector locks.
+            Selection.objects = Array.Empty<Object>();
+            ActiveEditorTracker.sharedTracker.ForceRebuild();
+            var avatars = new HashSet<Object>(_baseline.pipelines.Where(item => string.IsNullOrEmpty(item.component))
+                .Select(item => ResolveCaptured(item.avatar)));
+            if (Resources.FindObjectsOfTypeAll<UnityEditor.Editor>().Any(editor => editor != null && editor.targets.Any(avatars.Contains)))
+                throw new InvalidOperationException("Close the inspector for an absent-pipeline fixture avatar before reset; its editor lifetime is not controlled by selection.");
+        }
+
+        private void RestorePipelineAbsence()
+        {
+            foreach (CoveredPipeline item in _baseline.pipelines.Where(item => string.IsNullOrEmpty(item.component)))
+            {
+                var avatar = ResolveCaptured(item.avatar) as VRCAvatarDescriptor;
+                if (avatar == null) throw new InvalidOperationException("Covered avatar correspondence is missing.");
+                var pipeline = avatar.GetComponent<VRC.Core.PipelineManager>();
+                if (pipeline == null) continue;
+                // Selecting the avatar after real Add opens the stock SDK inspector, which
+                // adds this component. Only its pristine default is admitted, never upload data.
+                Scene preview = EditorSceneManager.NewPreviewScene();
+                try
+                {
+                    var probe = new GameObject("ASM-Lite pipeline default");
+                    SceneManager.MoveGameObjectToScene(probe, preview);
+                    var pristine = probe.AddComponent<VRC.Core.PipelineManager>();
+                    if (EditorJsonUtility.ToJson(pipeline) != EditorJsonUtility.ToJson(pristine))
+                        throw new InvalidOperationException("Cleanup would delete unrelated pipeline data on the covered avatar.");
+                    Object.DestroyImmediate(pipeline);
+                }
+                finally { EditorSceneManager.ClosePreviewScene(preview); }
             }
         }
 
@@ -495,6 +636,16 @@ namespace ASMLite.Tests.Editor
 
         private void RestoreFiles()
         {
+            foreach (string id in _baseline.trees.Select(tree => tree.avatar).Concat(_baseline.absentComponents).Distinct())
+            {
+                var avatar = ResolveCaptured(id) as VRCAvatarDescriptor;
+                if (avatar != null)
+                {
+                    string owner = OwnedGeneratedGraphRoot(avatar, requirePayload: false);
+                    if (!_baseline.files.Any(file => file.path == owner && file.directory && !file.parentOnly))
+                        throw new InvalidOperationException("Generated graph ownership moved outside the captured footprint.");
+                }
+            }
             foreach (CoveredFile file in _baseline.files.OrderByDescending(item => item.path.Length))
             {
                 string target = ToAbsoluteProjectPath(file.path);
@@ -556,7 +707,7 @@ namespace ASMLite.Tests.Editor
             return map;
         }
 
-        private void PublishCorrespondenceAndSave()
+        private void PublishCorrespondenceAndSave(HashSet<string> initiallyDirty)
         {
             foreach (SceneCopy copy in _baseline.copies)
             {
@@ -565,7 +716,15 @@ namespace ASMLite.Tests.Editor
                 string path = Path.Combine(_baseline.directory, "prepared-" + Guid.NewGuid().ToString("N") + ".unity").Replace('\\', '/');
                 if (!EditorSceneManager.SaveScene(scene, path, true)) throw new IOException("Native external scene preparation failed.");
             }
+            RecoveryPhaseForTesting?.Invoke("external-scene-prepared");
+            // Preparation can flush native editor callbacks. Recheck pristine state at
+            // the last pre-save boundary; never classify a re-created pipeline as ambient coverage.
+            RestorePipelineAbsence();
             Mapping map = CreateMapping(false);
+            // Native subtree restoration assigns new IDs. Compare ambient references only
+            // after preparing their captured correspondence, still before saving the target.
+            RecoveryPhaseForTesting?.Invoke("before-unrelated-dirty-comparison");
+            ProtectUnrelatedDirtyState(initiallyDirty);
             DurableWrite(Path.Combine(_baseline.directory, "correspondence.json"), JsonUtility.ToJson(map, true));
             foreach (SceneCopy copy in _baseline.copies)
             {
@@ -582,6 +741,7 @@ namespace ASMLite.Tests.Editor
                 if (AssetDatabase.AssetPathToGUID(tree.stage) != tree.stageGuid) throw new InvalidOperationException("Staging cleanup ownership mismatch.");
                 if (!AssetDatabase.DeleteAsset(tree.stage)) throw new IOException("Owned staging asset cleanup failed.");
             }
+            RecoveryPhaseForTesting?.Invoke("target-scenes-saved");
         }
 
         private void RestoreSceneSetupAndSelection()
@@ -613,7 +773,8 @@ namespace ASMLite.Tests.Editor
                     if (_ownedObjects.Contains(value)) continue;
                     AmbientObject before = _baseline.ambient.FirstOrDefault(item => item.id == id);
                     if (before == null || before.json != CanonicalJson(value))
-                        throw new InvalidOperationException("Cleanup would save unrelated dirty scene changes. Save or repair them first: " + copy.scene);
+                        throw new InvalidOperationException("Cleanup would save unrelated dirty scene changes. Save or repair them first: " + copy.scene
+                            + " object=" + id + " type=" + value.GetType().FullName);
                 }
                 foreach (AmbientObject before in _baseline.ambient.Where(item => item.scene == copy.scene && !covered.Contains(item.id)))
                     if (ResolveCaptured(before.id) == null)
@@ -700,6 +861,10 @@ namespace ASMLite.Tests.Editor
                 foreach (string id in _baseline.absentComponents)
                     if (!(ResolveCaptured(id) is VRCAvatarDescriptor avatar) || avatar.GetComponentInChildren<ASMLiteComponent>(true) != null)
                         throw new InvalidOperationException("Covered component absence differs from capture.");
+                foreach (CoveredPipeline item in _baseline.pipelines)
+                    if (!(ResolveCaptured(item.avatar) is VRCAvatarDescriptor avatar)
+                        || CanonicalId(avatar.GetComponent<VRC.Core.PipelineManager>()) != item.component)
+                        throw new InvalidOperationException("Covered pipeline presence differs from capture.");
                 foreach (IdentityPair created in _baseline.created)
                     if (ResolveId(created.current) != null)
                         throw new InvalidOperationException("Fixture-created object absence cannot be proved: " + created.current);
@@ -755,6 +920,7 @@ namespace ASMLite.Tests.Editor
             return baseline.objects.Select(item => item.id)
                 .Concat(baseline.objects.SelectMany(item => item.references.Select(reference => reference.target)))
                 .Concat(baseline.properties.Select(item => item.id)).Concat(baseline.absentComponents)
+                .Concat(baseline.pipelines.SelectMany(item => new[] { item.avatar, item.component }))
                 .Concat(baseline.trees.Select(item => item.parent)).Concat(baseline.selection).Append(baseline.active)
                 .Where(value => !string.IsNullOrEmpty(value)).Distinct(StringComparer.Ordinal);
         }
@@ -805,6 +971,9 @@ namespace ASMLite.Tests.Editor
                 || baseline.properties == null || baseline.absentComponents == null || baseline.ambient == null || baseline.created == null || baseline.ownedScenes == null
                 || !string.Equals(Path.GetFullPath(baseline.directory), Path.GetFullPath(directory), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Unsupported or incomplete fixture baseline.");
+            // Older retained baselines did not admit SDK-created pipeline components.
+            // Keep their existing coverage and refusal behavior without rewriting them.
+            if (baseline.pipelines == null) baseline.pipelines = new List<CoveredPipeline>();
             foreach (CoveredFile file in baseline.files) { SafeAssetPath(file.path); SafeRecoveryMember(directory, file.copy); }
             foreach (SceneCopy copy in baseline.copies) { SafeAssetPath(copy.scene); SafeRecoveryMember(directory, copy.copy); SafeRecoveryMember(directory, copy.metaCopy); }
             foreach (CoveredTree tree in baseline.trees)

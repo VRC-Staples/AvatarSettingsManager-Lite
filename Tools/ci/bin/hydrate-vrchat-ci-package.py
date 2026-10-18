@@ -1,327 +1,240 @@
 #!/usr/bin/env python3
-"""Hydrate filtered VRChat SDK files needed by CI Unity test packages."""
+"""Hydrate and assert complete, stock VRChat 3.10.2 packages in the CI project.
+
+Pins come from https://vrchat.github.io/packages/index.json (Official / VRChat).
+Existing SDK bytes are never overwritten: custom files or source/version drift
+fail before any project write. Run only in a disposable checkout or fixture.
+"""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import io
+import json
+import stat
 import sys
+import tempfile
 import urllib.request
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 BASE_VERSION = "3.10.2"
-BASE_URL = (
-    "https://github.com/vrchat/packages/releases/download/"
-    f"{BASE_VERSION}/com.vrchat.base-{BASE_VERSION}.zip"
-)
 BASE_SHA256 = "e4268b7677baedc50f15e22c5d7d73c8d173d39fa49d78821b3c23e1e9c6555e"
+AVATARS_SHA256 = "c70b66cd42f1aae9352297a455177ca910cfcab7670c5717afad68f6818a2cf6"
+PACKAGE_NAMES = ("com.vrchat.base", "com.vrchat.avatars")
+MAX_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAX_EXPANDED_BYTES = 256 * 1024 * 1024
 
-BUILD_PIPELINE_FALLBACK_SOURCE = """using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEditor;
-using UnityEngine;
-
-#pragma warning disable 0067
-
-namespace VRC.SDKBase.Editor.BuildPipeline
-{
-    public enum VRCSDKRequestedBuildType
-    {
-        Avatar,
-        Scene,
-    }
-
-    public interface IVRCSDKBuildRequestedCallback
-    {
-        int callbackOrder { get; }
-        bool OnBuildRequested(VRCSDKRequestedBuildType requestedBuildType);
-    }
-
-    public interface IVRCSDKPreprocessAvatarCallback
-    {
-        int callbackOrder { get; }
-        bool OnPreprocessAvatar(GameObject avatarGameObject);
-    }
-
-    public interface IVRCSDKPostprocessAvatarCallback
-    {
-        int callbackOrder { get; }
-        void OnPostprocessAvatar();
-    }
-
-    public static class VRCBuildPipelineCallbacks
-    {
-        private static readonly List<IVRCSDKPreprocessAvatarCallback> _preprocessAvatarCallbacks = new List<IVRCSDKPreprocessAvatarCallback>();
-
-        public static bool OnPreprocessAvatar(GameObject avatarGameObject)
-        {
-            RefreshPreprocessAvatarCallbacks();
-            foreach (var callback in _preprocessAvatarCallbacks.OrderBy(callback => callback.callbackOrder).ToArray())
-            {
-                if (!callback.OnPreprocessAvatar(avatarGameObject))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private static void RefreshPreprocessAvatarCallbacks()
-        {
-            _preprocessAvatarCallbacks.Clear();
-            foreach (var type in TypeCache.GetTypesDerivedFrom<IVRCSDKPreprocessAvatarCallback>())
-            {
-                if (type.IsAbstract || type.IsInterface)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    if (Activator.CreateInstance(type) is IVRCSDKPreprocessAvatarCallback callback)
-                    {
-                        _preprocessAvatarCallbacks.Add(callback);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogWarning($"Skipping preprocess callback {type.FullName}: {exception.Message}");
-                }
-            }
-        }
-    }
+# Ownership receipts for the old helper's exact UTF-8 output and the workflow's
+# exact copied DLL. Unknown variants (including generated DLL metadata) fail;
+# they are not ours to delete. No replacement SDK implementation is retained.
+KNOWN_CI_FILES = {
+    "Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs":
+        "88daf02ebb18f8590986c3996296e06c40e99f0c17ed16550c12a9c7b45d9e8e",
+    "Packages/com.vrchat.base/Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs.meta":
+        "9ea935a4b24a9254710afe0d9fa54ddbc11bc8d46d31bab76ce7a805c7211c47",
+    "Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll":
+        "57431782b3b16619f3337b14b71f1fc8b966a63464e862a2118b3ca9280fdb67",
 }
 
-namespace VRC.SDKBase.Editor
-{
-    public static class VRC_SdkBuilder
-    {
-        public enum BuildType
-        {
-            None,
-            Avatar,
-            Scene,
-        }
 
-        public static BuildType ActiveBuildType => BuildType.None;
-    }
-}
-
-public class VRCExpressionsMenuEditor : Editor
-{
-}
-
-namespace VF.Inspector
-{
-    public static class HandlesUtil
-    {
-        public static void DrawWireCapsule(Vector3 worldPos, Quaternion worldRot, float worldLength, float worldRadius)
-        {
-        }
-    }
-}
-
-public static class VRCSdkControlPanel
-{
-    public static event EventHandler OnSdkPanelEnable;
-
-    public static bool TryGetBuilder<T>(out T builder)
-    {
-        builder = default(T);
-        return false;
-    }
-}
-
-public static class AvatarDynamicsSetup
-{
-    public static event Func<object, bool> IsUnityConstraintAutoConverted;
-    public static event Func<IEnumerable<GameObject>, bool, bool> OnConvertUnityConstraintsAcrossGameObjects;
-
-    public static bool TryGetSubstituteAnimationBinding(
-        Type type,
-        string propertyName,
-        out Type newType,
-        out string newPropertyName,
-        out bool isArrayProperty)
-    {
-        newType = type;
-        newPropertyName = propertyName;
-        isArrayProperty = false;
-        return false;
-    }
-
-    public static void DoConvertUnityConstraints(object[] unityConstraints, object avatarDescriptor, bool isAutoFix)
-    {
-    }
-
-    public static void RebindConstraintAnimationClip(object clip)
-    {
-    }
-}
-
-namespace VRC.SDK3A.Editor
-{
-    public interface IVRCSdkAvatarBuilderApi
-    {
-        event EventHandler<object> OnSdkBuildStart;
-        event EventHandler<object> OnSdkUploadFinish;
-        event EventHandler<object> OnSdkUploadSuccess;
-    }
-
-    public static class VRCSdkControlPanel
-    {
-        public static event EventHandler OnSdkPanelEnable;
-
-        public static bool TryGetBuilder<T>(out T builder)
-        {
-            builder = default(T);
-            return false;
-        }
-    }
-}
-
-namespace VRC.Editor
-{
-    public static class EnvConfig
-    {
-        public static void SetAudioSettings()
-        {
-        }
-    }
-}
-"""
-
-BUILD_PIPELINE_FALLBACK_META = """fileFormatVersion: 2
-guid: 8fc8b5e7cb6b4f8c9aafdf5d9c85fbd1
-MonoImporter:
-  externalObjects: {}
-  serializedVersion: 2
-  defaultReferences: []
-  executionOrder: 0
-  icon: {instanceID: 0}
-  userData:
-  assetBundleName:
-  assetBundleVariant:
-"""
-
-REQUIRED_BASE_FILES = (
-    "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll",
-    "Runtime/VRCSDK/Plugins/VRCCore-Standalone.dll.meta",
-    "Runtime/VRCSDK/Plugins/VRCCore-Editor.dll",
-    "Runtime/VRCSDK/Plugins/VRCCore-Editor.dll.meta",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.dll",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.dll.meta",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.dll",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.dll.meta",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.dll",
-    "Runtime/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.dll.meta",
-    "Runtime/VRCSDK/Plugins/Harmony/0Harmony.dll",
-    "Runtime/VRCSDK/Plugins/Harmony/0Harmony.dll.meta",
-    "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRC.SDKBase.Editor.BuildPipeline.asmdef",
-    "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRC.SDKBase.Editor.BuildPipeline.asmdef.meta",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.Editor.dll",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.PhysBone.Editor.dll.meta",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.Editor.dll",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.Contact.Editor.dll.meta",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.Editor.dll",
-    "Editor/VRCSDK/Plugins/VRC.SDK3.Dynamics.Constraint.Editor.dll.meta",
-)
+def reject_links(path: Path) -> None:
+    for candidate in (path, *path.parents):
+        if candidate.is_symlink() or getattr(candidate, "is_junction", lambda: False)():
+            raise RuntimeError(f"unsafe linked path: {candidate}")
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Download the official VRChat Base package and copy CI-required DLLs."
-    )
-    parser.add_argument(
-        "--repo",
-        type=Path,
-        default=Path.cwd(),
-        help="Repository root; defaults to cwd.",
-    )
-    parser.add_argument(
-        "--cache",
-        type=Path,
-        default=Path("/tmp/asmlite-vrchat-package-cache"),
-        help="Download cache directory.",
-    )
-    return parser.parse_args()
+def inventory(root: Path) -> tuple[dict[str, bytes], set[str]]:
+    reject_links(root)
+    files: dict[str, bytes] = {}
+    directories: set[str] = set()
+    pending = [root] if root.exists() else []
+    while pending:
+        for path in pending.pop().iterdir():
+            reject_links(path)
+            name = path.relative_to(root).as_posix()
+            if path.is_dir():
+                directories.add(name)
+                pending.append(path)
+            elif path.is_file():
+                files[name] = path.read_bytes()
+            else:
+                raise RuntimeError(f"unexpected non-file SDK entry: {path}")
+    return files, directories
 
 
-def read_cached_or_download(cache: Path) -> bytes:
+def assert_identity(content: bytes, package: str) -> None:
+    identity = json.loads(content)
+    if identity.get("name") != package or identity.get("version") != BASE_VERSION:
+        raise RuntimeError(f"SDK identity mismatch for {package}: expected {BASE_VERSION}")
+    if package == "com.vrchat.avatars" and identity.get("vpmDependencies", {}).get("com.vrchat.base") != BASE_VERSION:
+        raise RuntimeError("SDK identity mismatch: Avatars must depend on Base 3.10.2")
+
+
+def read_cached_or_download(cache: Path, package: str) -> bytes:
+    reject_links(cache)
     cache.mkdir(parents=True, exist_ok=True)
-    package_path = cache / f"com.vrchat.base-{BASE_VERSION}.zip"
-    if package_path.exists():
+    filename = f"{package}-{BASE_VERSION}.zip"
+    package_path = cache / filename
+    reject_links(package_path)
+    cached = package_path.exists()
+    if cached:
+        if package_path.stat().st_size > MAX_ARCHIVE_BYTES:
+            raise RuntimeError(f"oversized SDK archive: {filename}")
         data = package_path.read_bytes()
     else:
-        req = urllib.request.Request(BASE_URL, headers={"User-Agent": "ASM-Lite CI"})
-        with urllib.request.urlopen(req, timeout=120) as response:
-            data = response.read()
-        package_path.write_bytes(data)
-
+        url = f"https://github.com/vrchat/packages/releases/download/{BASE_VERSION}/{filename}"
+        request = urllib.request.Request(url, headers={"User-Agent": "ASM-Lite CI"})
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = response.read(MAX_ARCHIVE_BYTES + 1)
+        if len(data) > MAX_ARCHIVE_BYTES:
+            raise RuntimeError(f"oversized SDK archive: {filename}")
+    expected = BASE_SHA256 if package == "com.vrchat.base" else AVATARS_SHA256
     digest = hashlib.sha256(data).hexdigest()
-    if digest != BASE_SHA256:
-        package_path.unlink(missing_ok=True)
-        raise RuntimeError(
-            f"unexpected com.vrchat.base package sha256: {digest}; expected {BASE_SHA256}"
-        )
+    if digest != expected:
+        raise RuntimeError(f"unexpected {package} package sha256: {digest}; expected {expected}")
+    if not cached:
+        package_path.write_bytes(data)
     return data
 
 
-def hydrate(repo: Path, cache: Path) -> list[Path]:
-    project_base = repo / "Tools/ci/unity-project/Packages/com.vrchat.base"
-    data = read_cached_or_download(cache)
-    written: list[Path] = []
-
+def read_package(data: bytes, package: str) -> tuple[dict[str, bytes], set[str]]:
+    files: dict[str, bytes] = {}
+    directories: set[str] = set()
+    seen: set[str] = set()
+    spellings: dict[str, str] = {}
+    reserved = {"CON", "PRN", "AUX", "NUL"} | {f"{prefix}{n}" for prefix in ("COM", "LPT") for n in range(1, 10)}
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
-        names = set(archive.namelist())
-        missing = [name for name in REQUIRED_BASE_FILES if name not in names]
+        members = archive.infolist()
+        if len(members) > 10000 or sum(member.file_size for member in members) > MAX_EXPANDED_BYTES:
+            raise RuntimeError(f"oversized expanded SDK archive: {package}")
+        for member in members:
+            name = member.filename[:-1] if member.is_dir() else member.filename
+            parts = name.split("/")
+            kind = stat.S_IFMT(member.external_attr >> 16)
+            if (member.orig_filename != member.filename or "\\" in name or ":" in name
+                    or any(not part or part in (".", "..") or part.rstrip(" .") != part
+                           or any(ord(char) < 32 or char in '<>"|?*' for char in part)
+                           or part.split(".")[0].upper() in reserved for part in parts)
+                    or name.casefold() in seen or member.flag_bits & 1
+                    or kind not in (0, stat.S_IFREG, stat.S_IFDIR)
+                    or (kind == stat.S_IFDIR and not member.is_dir())
+                    or (kind == stat.S_IFREG and member.is_dir())):
+                raise RuntimeError(f"unsafe SDK archive member: {member.orig_filename!r}")
+            seen.add(name.casefold())
+            parents = [str(parent) for parent in PurePosixPath(name).parents if str(parent) != "."]
+            for spelling in [name, *parents]:
+                if spellings.setdefault(spelling.casefold(), spelling) != spelling:
+                    raise RuntimeError(f"unsafe SDK archive case alias: {name}")
+            if member.is_dir():
+                directories.add(name)
+            else:
+                files[name] = archive.read(member)
+            directories.update(parents)
+    if {name.casefold() for name in files} & {name.casefold() for name in directories}:
+        raise RuntimeError("unsafe SDK archive: file/directory collision")
+    if "package.json" not in files:
+        raise RuntimeError(f"SDK identity missing for {package}")
+    assert_identity(files["package.json"], package)
+    return files, directories
+
+
+def assert_sources(project: Path) -> None:
+    reject_links(project / "Packages/manifest.json")
+    manifest = json.loads((project / "Packages/manifest.json").read_bytes())
+    for package in PACKAGE_NAMES:
+        if manifest.get("dependencies", {}).get(package) != f"file:{package}":
+            raise RuntimeError(f"unexpected SDK source for {package}; expected file:{package}")
+    lock_path = project / "Packages/packages-lock.json"
+    reject_links(lock_path)
+    if lock_path.exists():
+        lock = json.loads(lock_path.read_bytes())
+        for package in PACKAGE_NAMES:
+            entry = lock.get("dependencies", {}).get(package, {})
+            if entry.get("version") != f"file:{package}" or entry.get("source") != "embedded":
+                raise RuntimeError(f"unexpected SDK lock source for {package}")
+
+
+def check_sdk(target: Path, package: str, expected: dict[str, bytes], directories: set[str],
+              removable: set[Path]) -> list[Path]:
+    files, current_dirs = inventory(target)
+    for path in removable:
+        if path.is_relative_to(target):
+            files.pop(path.relative_to(target).as_posix(), None)
+    if files:
+        if "package.json" not in files:
+            raise RuntimeError(f"SDK identity missing for existing {package}")
+        assert_identity(files["package.json"], package)
+    unexpected = (set(files) - set(expected)) | (current_dirs - directories)
+    if unexpected:
+        raise RuntimeError(f"unexpected custom SDK entries in {package}: {', '.join(sorted(unexpected))}")
+    changed = [name for name in files if files[name] != expected[name]]
+    if changed:
+        raise RuntimeError(f"SDK stock identity mismatch in {package}: {', '.join(sorted(changed))}")
+    return [target / name for name in sorted(set(expected) - set(files))]
+
+
+def hydrate(repo: Path, cache: Path, *, check_only: bool = False,
+            remove_known_ci_shims: bool = False) -> list[Path]:
+    reject_links(repo)
+    repo = repo.resolve()
+    project = repo / "Tools/ci/unity-project"
+    assert_sources(project)
+    packages = {name: read_package(read_cached_or_download(cache, name), name) for name in PACKAGE_NAMES}
+    removable: set[Path] = set()
+    for relative, digest in KNOWN_CI_FILES.items():
+        path = project / relative
+        reject_links(path)
+        if path.exists():
+            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise RuntimeError(f"unexpected CI shim ownership: {relative}")
+            if check_only or not remove_known_ci_shims:
+                raise RuntimeError(f"known CI shim present: {relative}; opt in with --remove-known-ci-shims")
+            removable.add(path)
+    duplicate_meta = project / "Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll.meta"
+    reject_links(duplicate_meta)
+    if duplicate_meta.exists():
+        raise RuntimeError("unexpected CI provider metadata; no verified ownership, refusing removal")
+    missing: list[Path] = []
+    for name, (files, directories) in packages.items():
+        missing.extend(check_sdk(project / "Packages" / name, name, files, directories, removable))
+    if check_only:
         if missing:
-            raise RuntimeError("VRChat base package missing expected files: " + ", ".join(missing))
-
-        for name in REQUIRED_BASE_FILES:
-            destination = project_base / name
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            content = archive.read(name)
-            if destination.exists() and destination.read_bytes() == content:
-                continue
-            destination.write_bytes(content)
-            written.append(destination.relative_to(repo))
-
-    fallback_files = {
-        "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs": BUILD_PIPELINE_FALLBACK_SOURCE,
-        "Editor/VRCSDK/Dependencies/VRChat/BuildPipeline/VRCSDKBuildPipelineCIFallback.cs.meta": BUILD_PIPELINE_FALLBACK_META,
-    }
-    for name, content in fallback_files.items():
-        destination = project_base / name
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        data = content.encode("utf-8")
-        if destination.exists() and destination.read_bytes() == data:
-            continue
-        destination.write_bytes(data)
-        written.append(destination.relative_to(repo))
-
-    return written
+            raise RuntimeError(f"stock SDK files missing: {len(missing)}")
+        return []
+    # Preflight both packages and every deletion before touching the project.
+    for path in sorted(removable):
+        path.unlink()
+    for name, (files, directories) in packages.items():
+        target = project / "Packages" / name
+        for directory in sorted(directories):
+            (target / directory).mkdir(parents=True, exist_ok=True)
+        for path in missing:
+            if path.is_relative_to(target):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(files[path.relative_to(target).as_posix()])
+        if check_sdk(target, name, files, directories, set()):
+            raise RuntimeError(f"stock SDK verification failed: {name}")
+    return [path.relative_to(repo) for path in sorted(removable) + missing]
 
 
 def main() -> int:
-    args = parse_args()
-    repo = args.repo.resolve()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", type=Path, default=Path.cwd(), help="Disposable repository root.")
+    parser.add_argument("--cache", type=Path, default=Path(tempfile.gettempdir()) / "asmlite-vrchat-package-cache")
+    parser.add_argument("--check-only", action="store_true", help="Assert exact stock SDK bytes without project writes.")
+    parser.add_argument("--remove-known-ci-shims", action="store_true", help="Remove only checksum-owned legacy CI shims.")
+    args = parser.parse_args()
     try:
-        written = hydrate(repo, args.cache)
+        written = hydrate(args.repo, args.cache, check_only=args.check_only,
+                          remove_known_ci_shims=args.remove_known_ci_shims)
     except Exception as exc:  # noqa: BLE001 - CI helper should print concise failures.
         print(f"error: {exc}", file=sys.stderr)
         return 1
-
-    if written:
-        print("hydrated VRChat CI package files:")
-        for path in written:
-            print(f"  {path.as_posix()}")
-    else:
-        print("VRChat CI package hydration already up to date")
+    for name, digest in zip(PACKAGE_NAMES, (BASE_SHA256, AVATARS_SHA256)):
+        print(f"stock-sdk-ok: {name} {BASE_VERSION} archive-sha256={digest}")
+    print(f"stock SDK project changes: {len(written)}")
     return 0
 
 

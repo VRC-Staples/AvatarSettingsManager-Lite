@@ -21,7 +21,7 @@ namespace ASMLite.Editor
             var avatar = component != null ? component.GetComponentInParent<VRC.SDK3.Avatars.Components.VRCAvatarDescriptor>() : null;
             if (avatar == null) return GeneratedDir;
             string working = ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(avatar);
-            return UnityEditor.AssetDatabase.IsValidFolder(working) ? working : GeneratedDir;
+            return ASMLiteGeneratedAssetMirrorService.IsOwnedWorkingFolder(avatar, working) ? working : GeneratedDir;
         }
 
         internal static string ResolveGeneratedPath(ASMLiteComponent component, string templatePath)

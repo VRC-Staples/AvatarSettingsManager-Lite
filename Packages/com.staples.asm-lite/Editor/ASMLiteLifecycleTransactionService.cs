@@ -73,6 +73,7 @@ namespace ASMLite.Editor
                     return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
                 }
                 bool wasUsingVendorizedGeneratedAssets = component.useVendorizedGeneratedAssets;
+                var originalComponentState = CaptureComponentVendorizedState(component);
                 bool shouldIsolateGeneratedOutputs = wasUsingVendorizedGeneratedAssets || stagePackageManagedGeneratedAssets;
                 if (stagePackageManagedGeneratedAssets
                     && !wasUsingVendorizedGeneratedAssets
@@ -87,11 +88,11 @@ namespace ASMLite.Editor
                     : null;
                 using var descriptorRollback = ASMLiteDirectDeliveryRollbackSnapshot.Capture(rebuildAvatar);
                 ASMLiteGeneratedAssetMirrorResult retainedWorkingGraph = null;
+                ASMLiteGeneratedAssetMirrorResult stagedMirror = null;
                 var initialReferenceCapture = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(
                     component, "Rebuild rollback baseline", out var initialReferences);
                 ASMLiteFullControllerReferenceSnapshot previousWorkingReferences = default;
                 bool rebuildCompleted = false;
-                bool mirrorStagingAttempted = false;
                 bool rebuildAbortedBeforeBuild = false;
                 Exception rebuildException = null;
                 Exception packageOutputRestoreException = null;
@@ -121,11 +122,11 @@ namespace ASMLite.Editor
                     else
                     {
                         var buildResult = ASMLiteGeneratedAssetBuildTransaction.Execute(component,
-                            shouldIsolateGeneratedOutputs ? (graph, references) =>
+                            shouldIsolateGeneratedOutputs ? (Action<ASMLiteGeneratedAssetMirrorResult, ASMLiteFullControllerReferenceSnapshot>)((graph, references) =>
                             {
                                 retainedWorkingGraph = graph;
                                 previousWorkingReferences = initialReferenceCapture.Success ? initialReferences : references;
-                            } : null);
+                            }) : null);
                         if (!buildResult.Success)
                         {
                             Debug.LogError(buildResult.Diagnostic.ToLogString());
@@ -140,17 +141,18 @@ namespace ASMLite.Editor
                             }
                             else
                             {
-                                mirrorStagingAttempted = true;
                                 if (TryStageRebuildGeneratedAssetsToAvatarLocal(
                                     component,
                                     rebuildAvatar,
-                                    wasUsingVendorizedGeneratedAssets,
-                                    out string syncedDir))
+                                    out stagedMirror))
                                 {
+                                    // Exercise the existing pre-finalize seam without releasing either backup.
+                                    ASMLiteGeneratedAssetMirrorService.ThrowBeforeFinalizeForTesting(stagedMirror.TargetPath);
+                                    ApplyComponentVendorizedState(component, true, stagedMirror.TargetPath);
+                                    if (!ASMLiteLifecycleVerification.VerifyAttachedVendorizeState(component, rebuildAvatar,
+                                        stagedMirror.TargetPath, out string message, out string context))
+                                        throw new InvalidOperationException(message + " Context: '" + context + "'.");
                                     rebuildCompleted = true;
-                                    Debug.Log(wasUsingVendorizedGeneratedAssets
-                                        ? $"[ASM-Lite] Vendorized payload sync complete at '{syncedDir}'."
-                                        : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{syncedDir}' and restored package templates.");
                                 }
                             }
                         }
@@ -175,35 +177,69 @@ namespace ASMLite.Editor
                     }
                 }
 
-                if (wasUsingVendorizedGeneratedAssets && !rebuildCompleted && !mirrorStagingAttempted)
+                if (rebuildCompleted && packageOutputRestoreException == null)
                 {
-                    var descriptorRecovery = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(
-                        rebuildAvatar, component.vendorizedGeneratedAssetsPath);
-                    if (!descriptorRecovery.Success)
-                        Debug.LogError(descriptorRecovery.ToLogString());
-                    TryRetargetLiveFullControllerGeneratedAssets(component, component.vendorizedGeneratedAssetsPath);
-                }
-
-                if (retainedWorkingGraph != null)
-                {
-                    var graphResult = rebuildCompleted && packageOutputRestoreException == null
-                        ? ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(retainedWorkingGraph)
-                        : ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(retainedWorkingGraph);
-                    if (!graphResult.Success)
+                    try
+                    {
+                        // Reimporting protected package assets must not invalidate the selected graph.
+                        if (stagedMirror != null && !ASMLiteLifecycleVerification.VerifyAttachedVendorizeState(
+                            component, rebuildAvatar, stagedMirror.TargetPath, out string message, out string context))
+                            throw new InvalidOperationException(message + " Context: '" + context + "'.");
+                        AssetDatabase.Refresh();
+                    }
+                    catch (Exception ex)
                     {
                         rebuildCompleted = false;
-                        rebuildException = new InvalidOperationException(graphResult.ToLogString(), rebuildException);
+                        rebuildException = ex;
                     }
-                    else if (!rebuildCompleted || packageOutputRestoreException != null)
+                }
+
+                if (!rebuildCompleted || packageOutputRestoreException != null)
+                {
+                    rebuildCompleted = false;
+                    try
                     {
+                        if (stagedMirror != null && stagedMirror.Success)
+                        {
+                            // Unbind replacement descriptor identities before removing the replacement.
+                            var descriptorRestore = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(
+                                rebuildAvatar, stagedMirror.TargetPath);
+                            if (!descriptorRestore.Success)
+                                Debug.LogError(descriptorRestore.ToLogString());
+                            var mirrorRollback = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(stagedMirror);
+                            if (!mirrorRollback.Success)
+                            {
+                                Debug.LogError(mirrorRollback.ToLogString());
+                                rebuildException = new InvalidOperationException(mirrorRollback.ToLogString(), rebuildException);
+                            }
+                        }
+                        if (retainedWorkingGraph != null)
+                        {
+                            var graphRollback = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(retainedWorkingGraph);
+                            if (!graphRollback.Success)
+                                rebuildException = new InvalidOperationException(graphRollback.ToLogString(), rebuildException);
+                        }
+
+                        ApplyComponentVendorizedState(component, originalComponentState.UseVendorizedGeneratedAssets,
+                            originalComponentState.VendorizedGeneratedAssetsPath);
                         if (!descriptorRollback.TryRestore(rebuildAvatar, out string context, out string remediation))
                             rebuildException = new InvalidOperationException("Rebuild descriptor rollback failed at '" + context + "': " + remediation, rebuildException);
-                        var liveRestore = ASMLiteFullControllerWiring.TryRestoreLiveFullControllerReferenceSnapshot(
-                            component, previousWorkingReferences,
-                            "Rebuild working-graph rollback");
-                        if (!liveRestore.Success)
-                            rebuildException = new InvalidOperationException(liveRestore.ToLogString(), rebuildException);
-                        // Restoring live payloads saves assets. Reapply the protected package bytes last.
+                        if (retainedWorkingGraph != null || initialReferenceCapture.Success)
+                        {
+                            var liveRestore = ASMLiteFullControllerWiring.TryRestoreLiveFullControllerReferenceSnapshot(
+                                component, retainedWorkingGraph != null ? previousWorkingReferences : initialReferences,
+                                "Rebuild working-graph rollback");
+                            if (!liveRestore.Success)
+                                rebuildException = new InvalidOperationException(liveRestore.ToLogString(), rebuildException);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        rebuildException = new InvalidOperationException("Rebuild rollback threw an exception: " + ex.Message, rebuildException);
+                    }
+                    finally
+                    {
+                        // Component, descriptor and live restoration save assets. Protected bytes go last.
                         try
                         {
                             packageOutputSnapshot?.Restore();
@@ -215,27 +251,10 @@ namespace ASMLite.Editor
                     }
                 }
 
-                if (!rebuildCompleted && retainedWorkingGraph == null && initialReferenceCapture.Success)
-                {
-                    if (!descriptorRollback.TryRestore(rebuildAvatar, out string context, out string remediation))
-                        rebuildException = new InvalidOperationException("Rebuild descriptor rollback failed at '" + context + "': " + remediation, rebuildException);
-                    var liveRestore = ASMLiteFullControllerWiring.TryRestoreLiveFullControllerReferenceSnapshot(
-                        component, initialReferences, "Rebuild pre-retention rollback");
-                    if (!liveRestore.Success)
-                        rebuildException = new InvalidOperationException(liveRestore.ToLogString(), rebuildException);
-                    try
-                    {
-                        packageOutputSnapshot?.Restore();
-                    }
-                    catch (Exception ex)
-                    {
-                        packageOutputRestoreException = ex;
-                    }
-                }
-
                 if (packageOutputRestoreException != null)
                 {
-                    Debug.LogError($"[ASM-Lite] Failed to restore package generated outputs after rebuild. Context: '{ASMLiteAssetPaths.GeneratedDir}; {ASMLiteAssetPaths.Prefab}'. Remediation: Restore the protected package generated outputs before rebuilding again. {packageOutputRestoreException.Message}");
+                    string rollbackDetail = rebuildException == null ? string.Empty : " Rollback detail: " + rebuildException.Message;
+                    Debug.LogError($"[ASM-Lite] Failed to restore package generated outputs after rebuild. Context: '{ASMLiteAssetPaths.GeneratedDir}; {ASMLiteAssetPaths.Prefab}'. Remediation: Restore the protected package generated outputs before rebuilding again.{rollbackDetail} {packageOutputRestoreException.Message}");
                     return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
                 }
 
@@ -247,7 +266,13 @@ namespace ASMLite.Editor
                 if (rebuildAbortedBeforeBuild || !rebuildCompleted)
                     return new ASMLiteRebuildResult(false, discoveredParamCount, migrationReport);
 
-                AssetDatabase.Refresh();
+                // Commit is complete. Cleanup can retain recovery material, but cannot undo this graph.
+                CleanupCommittedGeneratedGraph(stagedMirror);
+                CleanupCommittedGeneratedGraph(retainedWorkingGraph);
+                if (stagedMirror != null)
+                    Debug.Log(wasUsingVendorizedGeneratedAssets
+                        ? $"[ASM-Lite] Vendorized payload sync complete at '{stagedMirror.TargetPath}'."
+                        : $"[ASM-Lite] Package-managed rebuild staged generated assets at '{stagedMirror.TargetPath}' and restored package templates.");
                 return new ASMLiteRebuildResult(true, discoveredParamCount, migrationReport);
             }
             catch (Exception ex)
@@ -287,10 +312,9 @@ namespace ASMLite.Editor
         private static bool TryStageRebuildGeneratedAssetsToAvatarLocal(
             ASMLiteComponent component,
             VRCAvatarDescriptor avatar,
-            bool wasUsingVendorizedGeneratedAssets,
-            out string syncedDir)
+            out ASMLiteGeneratedAssetMirrorResult mirrorResult)
         {
-            syncedDir = string.Empty;
+            mirrorResult = null;
             if (component == null)
             {
                 Debug.LogError("[ASM-Lite] Rebuild generated-asset staging failed because the ASM-Lite component was null.");
@@ -303,103 +327,39 @@ namespace ASMLite.Editor
                 return false;
             }
 
-            string previousVendorizedDir = string.IsNullOrWhiteSpace(component.vendorizedGeneratedAssetsPath)
-                ? string.Empty
-                : component.vendorizedGeneratedAssetsPath.Trim();
-            bool restoredExistingVendorizedReferencesToPackage = false;
-            if (wasUsingVendorizedGeneratedAssets && !string.IsNullOrWhiteSpace(previousVendorizedDir))
-            {
-                var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, previousVendorizedDir);
-                if (!descriptorRestoreResult.Success)
-                {
-                    Debug.LogError(descriptorRestoreResult.ToLogString());
-                    return false;
-                }
-
-                if (!TryRetargetLiveFullControllerGeneratedAssets(
-                    component,
-                    ASMLiteAssetPaths.GeneratedDir))
-                {
-                    ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
-                    return false;
-                }
-
-                restoredExistingVendorizedReferencesToPackage = true;
-            }
-
-            var mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar, ASMLiteAssetPaths.ResolveGeneratedDirectory(component));
+            mirrorResult = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(avatar, ASMLiteAssetPaths.ResolveGeneratedDirectory(component));
             if (!mirrorResult.Success)
             {
                 Debug.LogError(mirrorResult.ToLogString());
-                if (restoredExistingVendorizedReferencesToPackage)
-                {
-                    var descriptorRollbackResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, previousVendorizedDir);
-                    if (!descriptorRollbackResult.Success)
-                        Debug.LogError(descriptorRollbackResult.ToLogString());
-
-                    TryRetargetLiveFullControllerGeneratedAssets(component, previousVendorizedDir);
-                }
-
                 return false;
             }
 
-            bool shouldRollbackMirror = true;
+            var descriptorResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, mirrorResult.TargetPath);
+            if (!descriptorResult.Success)
+            {
+                Debug.LogError(descriptorResult.ToLogString());
+                return false;
+            }
+
+            return TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath);
+        }
+
+        private static void CleanupCommittedGeneratedGraph(ASMLiteGeneratedAssetMirrorResult graph, string operation = "Rebuild")
+        {
+            if (graph == null)
+                return;
+
             try
             {
-                var descriptorResult = ASMLiteGeneratedAssetMirrorService.RetargetAvatarGeneratedAssetsToVendorized(avatar, mirrorResult.TargetPath);
-                if (!descriptorResult.Success)
-                {
-                    Debug.LogError(descriptorResult.ToLogString());
-                    return false;
-                }
-
-                if (!TryRetargetLiveFullControllerGeneratedAssets(component, mirrorResult.TargetPath))
-                {
-                    return false;
-                }
-
-                var finalizeResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirrorResult);
-                if (!finalizeResult.Success)
-                {
-                    Debug.LogError(finalizeResult.ToLogString());
-                    return false;
-                }
-
-                shouldRollbackMirror = false;
-                component.useVendorizedGeneratedAssets = true;
-                component.vendorizedGeneratedAssetsPath = mirrorResult.TargetPath;
-                EditorUtility.SetDirty(component);
-                AssetDatabase.SaveAssets();
-                syncedDir = mirrorResult.TargetPath;
-                return true;
+                var cleanup = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(graph);
+                if (!cleanup.Success)
+                    Debug.LogWarning($"[ASM-Lite] {operation} committed; recovery backup cleanup incomplete at '{graph.BackupPath}'. {cleanup.ToLogString()}"
+                        + (System.IO.Directory.Exists(graph.BackupPath) ? " Recovery backup retained." : " No backup remains at that path."));
             }
-            finally
+            catch (Exception ex)
             {
-                if (shouldRollbackMirror)
-                {
-                    // Remove references to replacement identities before deleting the replacement.
-                    // Only rebind to the old mirror after its original assets are back in place.
-                    var descriptorRestoreResult = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToPackageManaged(avatar, mirrorResult.TargetPath);
-                    if (!descriptorRestoreResult.Success)
-                        Debug.LogError(descriptorRestoreResult.ToLogString());
-
-                    var rollbackResult = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(mirrorResult);
-                    if (!rollbackResult.Success)
-                    {
-                        Debug.LogError(rollbackResult.ToLogString());
-                    }
-                    else
-                    {
-                        string restoreDir = wasUsingVendorizedGeneratedAssets ? previousVendorizedDir : ASMLiteAssetPaths.GeneratedDir;
-                        if (wasUsingVendorizedGeneratedAssets)
-                        {
-                            var descriptorRollback = ASMLiteGeneratedAssetMirrorService.RestoreAvatarGeneratedAssetsToVendorized(avatar, restoreDir);
-                            if (!descriptorRollback.Success)
-                                Debug.LogError(descriptorRollback.ToLogString());
-                        }
-                        TryRetargetLiveFullControllerGeneratedAssets(component, restoreDir);
-                    }
-                }
+                Debug.LogWarning($"[ASM-Lite] {operation} committed; recovery backup cleanup incomplete at '{graph.BackupPath}'. {ex.Message}"
+                    + (System.IO.Directory.Exists(graph.BackupPath) ? " Recovery backup retained." : " No backup remains at that path."));
             }
         }
 
@@ -499,7 +459,29 @@ namespace ASMLite.Editor
                 ASMLiteComponent currentComponent,
                 VRCAvatarDescriptor currentAvatar)
             {
+                bool completing = result.Success;
                 result = CompleteAttachedVendorizeWithPackageOutputRestore(snapshot, result, currentComponent, currentAvatar);
+                if (completing)
+                {
+                    if (result.Success)
+                    {
+                        // Package reimport must not invalidate the selected graph. Both backups still exist.
+                        if (!ASMLiteLifecycleVerification.VerifyAttachedVendorizeState(currentComponent, currentAvatar,
+                            mirrorResult.TargetPath, out string message, out string context))
+                            throw new InvalidOperationException(message + " Context: '" + context + "'.");
+
+                        // Commit is complete. No more package restoration or rollback after backup retirement.
+                        CleanupCommittedGeneratedGraph(mirrorResult, "Attached vendorize");
+                        CleanupCommittedGeneratedGraph(retainedWorkingGraph, "Attached vendorize");
+                        retainedWorkingGraph = null;
+                        return result;
+                    }
+
+                    result = FailAttachedVendorizeAndRollback(
+                        currentComponent, currentAvatar, beforeState, originalComponentState, mirrorResult,
+                        result.Message, result.ContextPath, result.Remediation, result.FailedStage,
+                        discoveredParamCount, result.Diagnostic);
+                }
                 if (retainedWorkingGraph == null)
                 {
                     if (!result.Success && initialReferenceCapture.Success)
@@ -522,17 +504,20 @@ namespace ASMLite.Editor
                 }
 
                 var graph = retainedWorkingGraph;
-                var graphResult = result.Success
-                    ? ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(graph)
-                    : ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(graph);
+                var graphResult = ASMLiteGeneratedAssetMirrorService.RollbackVendorizedMirror(graph);
                 retainedWorkingGraph = null;
                 if (!graphResult.Success)
-                    return ASMLiteLifecycleTransactionResult.Fail(
+                    return CompleteAttachedVendorizeWithPackageOutputRestore(snapshot, ASMLiteLifecycleTransactionResult.Fail(
                         ASMLiteLifecycleOperation.AttachedVendorize, ASMLiteLifecycleTransactionStage.Rollback,
                         beforeState, ResolveToolState(currentAvatar, currentComponent), ResolveToolState(currentAvatar, currentComponent),
                         rollbackAttempted: true, rollbackSucceeded: false,
-                        contextPath: graph.BackupPath, remediation: graphResult.Remediation,
-                        message: graphResult.Message, mirrorResult: graphResult, discoveredParamCount: discoveredParamCount);
+                        contextPath: graph.BackupPath + (mirrorResult != null && !string.IsNullOrEmpty(mirrorResult.BackupPath)
+                            && AssetDatabase.IsValidFolder(mirrorResult.BackupPath)
+                            ? "; " + mirrorResult.BackupPath : string.Empty), remediation: graphResult.Remediation,
+                        message: graphResult.Message,
+                        diagnostic: BuildRollbackDiagnostic(result.Diagnostic,
+                            ASMLiteBuildDiagnosticResult.Fail(string.Empty, graph.BackupPath, graphResult.Remediation, graphResult.Message), false),
+                        mirrorResult: graphResult, discoveredParamCount: discoveredParamCount), currentComponent, currentAvatar);
 
                 if (!result.Success)
                 {
@@ -738,30 +723,8 @@ namespace ASMLite.Editor
                         avatar);
                 }
 
-                // Keep the mirror recovery backup until protected outputs are restored.
-                packageOutputSnapshot.Restore();
-                var finalizeMirrorResult = ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(mirrorResult);
-                if (!finalizeMirrorResult.Success)
-                {
-                    return Complete(
-                        packageOutputSnapshot,
-                        FailAttachedVendorizeAndRollback(
-                        component,
-                        avatar,
-                        beforeState,
-                        originalComponentState,
-                        mirrorResult,
-                        finalizeMirrorResult.Message,
-                        finalizeMirrorResult.ContextPath,
-                        finalizeMirrorResult.Remediation,
-                        ASMLiteLifecycleTransactionStage.Execute,
-                        discoveredParamCount,
-                        diagnostic: null,
-                        mirrorDetail: finalizeMirrorResult,
-                        expectedAfterFailureState: afterMutationState),
-                        component,
-                        avatar);
-                }
+                // Preserve the pre-finalize failure seam without retiring the delivery backup.
+                ASMLiteGeneratedAssetMirrorService.ThrowBeforeFinalizeForTesting(mirrorResult.TargetPath);
 
                 return Complete(
                     packageOutputSnapshot,

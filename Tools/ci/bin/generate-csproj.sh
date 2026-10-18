@@ -16,17 +16,10 @@ PACKAGE_PATH="${PACKAGE_PATH:-Packages/com.staples.asm-lite}"
 CI_PROJECT_PATH="${CI_PROJECT_PATH:-Tools/ci/unity-project}"
 
 VRC_SDK_BASE="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase.dll"
-VRC_SDK_BASE_EDITOR_PRIMARY="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase-Editor.dll"
-VRC_SDK_BASE_EDITOR_FALLBACK="${REPO_ROOT}/Test Project/Test Project Packages/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase-Editor.dll"
-if [[ -f "${VRC_SDK_BASE_EDITOR_PRIMARY}" ]]; then
-  VRC_SDK_BASE_EDITOR="${VRC_SDK_BASE_EDITOR_PRIMARY}"
-else
-  VRC_SDK_BASE_EDITOR="${VRC_SDK_BASE_EDITOR_FALLBACK}"
-fi
+VRC_SDK_BASE_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRCSDKBase-Editor.dll"
 VRC_SDK3A="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A.dll"
 VRC_SDK3A_EDITOR="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.avatars/Runtime/VRCSDK/Plugins/VRCSDK3A-Editor.dll"
 VRC_DYNAMICS="${REPO_ROOT}/${CI_PROJECT_PATH}/Packages/com.vrchat.base/Runtime/VRCSDK/Plugins/VRC.Dynamics.dll"
-VRC_BUILD_PIPELINE="${REPO_ROOT}/${UNITY_PATH}/VRC.SDKBase.Editor.BuildPipeline.dll"
 
 OUT_DIR="${REPO_ROOT}/${CI_PROJECT_PATH}"
 
@@ -128,10 +121,7 @@ cat > "${OUT_DIR}/ASMLite.Editor.csproj" <<CSPROJ
       <HintPath>${VRC_DYNAMICS}</HintPath>
       <Private>false</Private>
     </Reference>
-    <Reference Include="VRC.SDKBase.Editor.BuildPipeline">
-      <HintPath>${VRC_BUILD_PIPELINE}</HintPath>
-      <Private>false</Private>
-    </Reference>
+
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="${REPO_ROOT}/${CI_PROJECT_PATH}/ASMLite.Runtime.csproj" />

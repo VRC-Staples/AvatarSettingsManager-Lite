@@ -484,13 +484,47 @@ namespace ASMLite.Tests.Editor
         public void AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget()
         {
             PreparePackageManagedAvatarForVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
+            string workingDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            string oldWorkingGuid = AssetDatabase.AssetPathToGUID(workingDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            var priorMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, workingDir);
+            Assert.IsTrue(priorMirror.Success, priorMirror.ToLogString());
+            Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(priorMirror).Success);
+            string oldMirrorGuid = AssetDatabase.AssetPathToGUID(priorMirror.TargetPath + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
             var baseline = PackageOutputBytesSnapshot.Capture();
             MutateGeneratedInputsBeforeVendorize("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget_AddedParam");
 
-            var result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+            int restoresPrepared = 0;
+            int replacementsDeleted = 0;
+            bool backupsObserved = false;
+            ASMLiteLifecycleTransactionResult result;
+            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+            {
+                if (phase == "prepared")
+                {
+                    if (++restoresPrepared != 1
+                        || !AssetDatabase.GUIDToAssetPath(oldMirrorGuid).Contains("GeneratedAssets__backup__")
+                        || !AssetDatabase.GUIDToAssetPath(oldWorkingGuid).Contains("GeneratedAssets__backup__"))
+                        throw new IOException("Package restoration attempted twice or after graph backup retirement.");
+                    backupsObserved = true;
+                }
+                if (phase == "replacement-deleted")
+                    replacementsDeleted++;
+            }))
+                result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
 
             Assert.IsTrue(result.Success,
                 "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should succeed for a valid package-managed avatar.");
+            Assert.AreEqual(1, restoresPrepared, "Successful attached vendorize must have one package restoration owner.");
+            Assert.AreEqual(1, replacementsDeleted, "The real snapshot must replace package roots only once on success.");
+            Assert.IsTrue(backupsObserved, "Keep both original graph identities recoverable through restoration.");
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(priorMirror.TargetPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreEqual(ASMLiteInstallationState.Vendorized, result.AfterState);
+            Assert.IsFalse(result.RollbackAttempted);
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            // Default GUID lookups include recently deleted assets; require a live GUID round trip.
+            Assert.AreNotEqual(oldMirrorGuid, AssetDatabase.AssetPathToGUID(AssetDatabase.GUIDToAssetPath(oldMirrorGuid), AssetPathToGUIDOptions.OnlyExistingAssets), "Retire the prior mirror only after commit.");
+            Assert.AreNotEqual(oldWorkingGuid, AssetDatabase.AssetPathToGUID(AssetDatabase.GUIDToAssetPath(oldWorkingGuid), AssetPathToGUIDOptions.OnlyExistingAssets), "Retire the prior working graph only after commit.");
             Assert.IsNotNull(result.MirrorResult,
                 "AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget: vendorize should report the avatar-local generated-assets mirror.");
             Assert.IsTrue(AssetDatabase.IsValidFolder(result.MirrorResult.TargetPath),
@@ -502,6 +536,187 @@ namespace ASMLite.Tests.Editor
             var ownership = ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(_ctx.AvDesc, result.MirrorResult.TargetPath);
             Assert.IsTrue(ownership.Success, ownership.Message);
             baseline.AssertMatches("AttachedVendorize_RestoresPackageGeneratedOutputs_AfterRetarget");
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void AttachedVendorize_PackageRestoreFailureBeforeCommit_RecoversOrIdentifiesBothBackups(bool refuseRollback)
+        {
+            const string aid = "AttachedVendorize_PreCommitRestoreFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            string workingDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            var priorMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, workingDir);
+            Assert.IsTrue(priorMirror.Success, priorMirror.ToLogString());
+            Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(priorMirror).Success);
+            string mirrorDir = priorMirror.TargetPath;
+            var graphFiles = new[] { workingDir, mirrorDir }
+                .SelectMany(dir => Directory.GetFiles(Path.GetFullPath(dir), "*", SearchOption.AllDirectories)
+                    .Append(Path.GetFullPath(dir + ".meta")))
+                .ToDictionary(path => path, File.ReadAllBytes);
+            var graphGuids = new[] { workingDir, mirrorDir }
+                .SelectMany(dir => AssetDatabase.FindAssets(string.Empty, new[] { dir }))
+                .ToDictionary(AssetDatabase.GUIDToAssetPath, guid => guid);
+            string oldMirrorGuid = AssetDatabase.AssetPathToGUID(mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            string oldWorkingGuid = AssetDatabase.AssetPathToGUID(workingDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            Assert.IsNotNull(vf);
+            Func<UnityEngine.Object[]> readLiveReferences = () => new[]
+            {
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(vf,
+                    ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                    ASMLiteDriftProbe.ParameterLegacyObjectRefPath).Reference,
+            };
+            var liveBefore = readLiveReferences();
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+            bool injected = false;
+            bool selectedGraphObserved = false;
+            string mirrorBackup = null;
+            string workingBackup = null;
+            IDisposable rollbackFailure = null;
+            ASMLiteLifecycleTransactionResult result;
+            try
+            {
+                using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+                {
+                    if (phase != "replacement-deleted" || injected)
+                        return;
+                    injected = true;
+                    selectedGraphObserved = _ctx.Comp.useVendorizedGeneratedAssets
+                        && _ctx.Comp.vendorizedGeneratedAssetsPath == mirrorDir
+                        && AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu) == mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu)
+                        && readLiveReferences().All(reference => AssetDatabase.GetAssetPath(reference).StartsWith(mirrorDir + "/", StringComparison.Ordinal));
+                    mirrorBackup = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(oldMirrorGuid)).Replace('\\', '/');
+                    workingBackup = Path.GetDirectoryName(AssetDatabase.GUIDToAssetPath(oldWorkingGuid)).Replace('\\', '/');
+                    if (refuseRollback)
+                        rollbackFailure = ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.DuringMirrorRollback);
+                    throw new IOException("Injected attached-vendorize pre-commit package restore failure.");
+                }))
+                    result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+            }
+            finally
+            {
+                rollbackFailure?.Dispose();
+            }
+
+            Assert.IsTrue(injected);
+            Assert.IsTrue(selectedGraphObserved, "Restoration must run after selecting the replacement descriptor/live/component graph.");
+            StringAssert.Contains("GeneratedAssets__backup__", mirrorBackup);
+            StringAssert.Contains("GeneratedAssets__backup__", workingBackup);
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(result.RollbackAttempted);
+            Assert.AreEqual(!refuseRollback, result.RollbackSucceeded, result.ToLogString());
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            Assert.AreEqual("ASMLITE_PACKAGE_OUTPUT_RESTORE_FAILED", result.Diagnostic.Code, "Preserve the typed package failure even if graph rollback also fails.");
+            Assert.IsFalse(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            foreach (var asset in graphGuids)
+            {
+                string actualPath = AssetDatabase.GUIDToAssetPath(asset.Value);
+                string originalDir = ASMLiteGeneratedOwnershipPolicy.PathStartsWith(asset.Key, workingDir) ? workingDir : mirrorDir;
+                string expectedDir = refuseRollback ? (originalDir == workingDir ? workingBackup : mirrorBackup) : originalDir;
+                Assert.AreEqual(expectedDir + asset.Key.Substring(originalDir.Length), actualPath, "Preserve each old graph asset identity.");
+            }
+            foreach (var file in graphFiles)
+            {
+                string originalDir = file.Key.StartsWith(Path.GetFullPath(workingDir), StringComparison.Ordinal) ? workingDir : mirrorDir;
+                string expectedDir = refuseRollback ? (originalDir == workingDir ? workingBackup : mirrorBackup) : originalDir;
+                string restoredPath = Path.GetFullPath(expectedDir) + file.Key.Substring(Path.GetFullPath(originalDir).Length);
+                CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(restoredPath), "Preserve original graph bytes and metadata: " + file.Key);
+            }
+            if (refuseRollback)
+            {
+                Assert.IsNotNull(result.Diagnostic.InnerDiagnostic, "Keep the rollback failure nested under the original package diagnostic.");
+                StringAssert.Contains(mirrorBackup, result.ToLogString());
+                StringAssert.Contains(workingBackup, result.ToLogString());
+                Assert.IsTrue(AssetDatabase.IsValidFolder(mirrorBackup));
+                Assert.IsTrue(AssetDatabase.IsValidFolder(workingBackup));
+            }
+            else
+            {
+                Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+                Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+                Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+                CollectionAssert.AreEqual(liveBefore, readLiveReferences(), "Restore actual independent FullController identities.");
+            }
+            var recovery = Regex.Match(result.Diagnostic.Remediation, @"Verified recovery copies retained at '([^']+)'");
+            Assert.IsTrue(recovery.Success, result.ToLogString());
+            string recoveryDir = recovery.Groups[1].Value;
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "RECOVERY.txt")));
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "captured-baseline", "roots.txt")));
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "pre-restore", "roots.txt")));
+            baseline.AssertMatches(aid);
+        }
+
+        [Test]
+        public void AttachedVendorize_CleanupFailureAfterCommit_RetainsMirrorWithoutRollbackOrSecondRestore()
+        {
+            const string aid = "AttachedVendorize_CommittedCleanupFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            string workingDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            var priorMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(_ctx.AvDesc, workingDir);
+            Assert.IsTrue(priorMirror.Success, priorMirror.ToLogString());
+            Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(priorMirror).Success);
+            string mirrorDir = priorMirror.TargetPath;
+            string menuPath = mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu);
+            string oldMirrorGuid = AssetDatabase.AssetPathToGUID(menuPath);
+            byte[] oldMirrorBytes = File.ReadAllBytes(Path.GetFullPath(menuPath));
+            string oldWorkingGuid = AssetDatabase.AssetPathToGUID(workingDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+            var logs = new List<string>();
+            Application.LogCallback record = (message, stack, type) => logs.Add(message);
+            IDisposable cleanupFailure = null;
+            int restoresPrepared = 0;
+            int replacementsDeleted = 0;
+            LogAssert.Expect(LogType.Warning, new Regex(@"Attached vendorize committed; recovery backup cleanup incomplete at 'Assets/ASM-Lite/[^']+/GeneratedAssets__backup__[a-f0-9]{8}'\..*Injected failure before mirror finalization"));
+            ASMLiteLifecycleTransactionResult result;
+            Application.logMessageReceived += record;
+            try
+            {
+                using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+                {
+                    if (phase == "prepared")
+                    {
+                        if (++restoresPrepared != 1)
+                            throw new IOException("Package restoration attempted again after commit/cleanup.");
+                        cleanupFailure = ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize);
+                    }
+                    if (phase == "replacement-deleted")
+                        replacementsDeleted++;
+                }))
+                    result = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+            }
+            finally
+            {
+                cleanupFailure?.Dispose();
+                Application.logMessageReceived -= record;
+            }
+
+            Assert.IsTrue(result.Success, result.ToLogString());
+            Assert.IsFalse(result.RollbackAttempted, "Cleanup refusal must not claim rollback of a verified commit.");
+            Assert.AreEqual(1, restoresPrepared);
+            Assert.AreEqual(1, replacementsDeleted);
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0);
+            Assert.AreEqual(ASMLiteInstallationState.Vendorized, result.AfterState);
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(mirrorDir, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreNotEqual(oldMirrorGuid, AssetDatabase.AssetPathToGUID(menuPath));
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(mirrorDir, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(mirrorDir, aid);
+            string retainedMenu = AssetDatabase.GUIDToAssetPath(oldMirrorGuid);
+            StringAssert.Contains("GeneratedAssets__backup__", retainedMenu);
+            CollectionAssert.AreEqual(oldMirrorBytes, File.ReadAllBytes(Path.GetFullPath(retainedMenu)));
+            string recoveryDir = Path.GetDirectoryName(retainedMenu).Replace('\\', '/');
+            Assert.IsTrue(logs.Any(message => message.Contains(recoveryDir) && message.Contains("Recovery backup retained.")), "Name the actual retained delivery backup.");
+            Assert.AreNotEqual(oldWorkingGuid, AssetDatabase.AssetPathToGUID(AssetDatabase.GUIDToAssetPath(oldWorkingGuid), AssetPathToGUIDOptions.OnlyExistingAssets), "Attempt independent working backup cleanup despite mirror cleanup refusal.");
+            baseline.AssertMatches(aid);
         }
 
         [Test]
@@ -1215,6 +1430,169 @@ namespace ASMLite.Tests.Editor
             string generatedDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
             AssertDescriptorGeneratedAssetReferencesUnderPrefix(generatedDir, aid);
             AssertLiveFullControllerReferencesUnderPrefix(generatedDir, aid);
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LifecycleRebuild_PackageRestoreFailureAfterStaging_RestoresBothGraphsAndOriginalState(bool vendorized)
+        {
+            const string aid = "LifecycleRebuild_RestoreFailureAfterStaging";
+            PreparePackageManagedAvatarForVendorize(aid);
+            string mirrorDir;
+            if (vendorized)
+            {
+                var vendorize = ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc);
+                Assert.IsTrue(vendorize.Success, vendorize.ToLogString());
+                mirrorDir = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            }
+            else
+            {
+                // A package-managed avatar can still have an unreferenced prior delivery mirror.
+                var priorMirror = ASMLiteGeneratedAssetMirrorService.StageVendorizedMirror(
+                    _ctx.AvDesc, ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp));
+                Assert.IsTrue(priorMirror.Success, priorMirror.ToLogString());
+                Assert.IsTrue(ASMLiteGeneratedAssetMirrorService.FinalizeVendorizedMirror(priorMirror).Success);
+                mirrorDir = priorMirror.TargetPath;
+            }
+
+            string workingDir = ASMLiteAssetPaths.ResolveGeneratedDirectory(_ctx.Comp);
+            string previousPath = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            var graphFiles = new[] { workingDir, mirrorDir }
+                .SelectMany(dir => Directory.GetFiles(Path.GetFullPath(dir), "*", SearchOption.AllDirectories)
+                    .Append(Path.GetFullPath(dir + ".meta")))
+                .ToDictionary(path => path, File.ReadAllBytes);
+            var graphGuids = new[] { workingDir, mirrorDir }
+                .SelectMany(dir => AssetDatabase.FindAssets(string.Empty, new[] { dir }))
+                .ToDictionary(AssetDatabase.GUIDToAssetPath, guid => guid);
+            string oldMirrorMenuGuid = AssetDatabase.AssetPathToGUID(mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            string oldWorkingMenuGuid = AssetDatabase.AssetPathToGUID(workingDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu));
+            var oldMenu = _ctx.AvDesc.expressionsMenu;
+            var oldParameters = _ctx.AvDesc.expressionParameters;
+            var oldFx = _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController;
+            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
+            Assert.IsNotNull(vf);
+            Func<UnityEngine.Object[]> readLiveReferences = () => new[]
+            {
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath).Reference,
+                ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(vf,
+                    ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                    ASMLiteDriftProbe.ParameterLegacyObjectRefPath).Reference,
+            };
+            var liveBefore = readLiveReferences();
+            Assert.IsTrue(liveBefore.All(reference => reference != null));
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+
+            bool injected = false;
+            bool stagedReferencesObserved = false;
+            bool mirrorBackupObserved = false;
+            bool workingBackupObserved = false;
+            var logs = new List<string>();
+            Application.LogCallback record = (message, stack, type) => logs.Add(message);
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[ASM-Lite\] Failed to restore package generated outputs after rebuild\..*Injected post-staging package restore failure.*$"));
+            ASMLiteRebuildResult result;
+            Application.logMessageReceived += record;
+            try
+            {
+                using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+                {
+                    if (phase != "replacement-deleted" || injected)
+                        return;
+                    injected = true;
+                    stagedReferencesObserved = AssetDatabase.GetAssetPath(_ctx.AvDesc.expressionsMenu) == mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu)
+                        && readLiveReferences().All(reference => AssetDatabase.GetAssetPath(reference).StartsWith(mirrorDir + "/", StringComparison.Ordinal));
+                    mirrorBackupObserved = AssetDatabase.GUIDToAssetPath(oldMirrorMenuGuid).Contains("GeneratedAssets__backup__");
+                    workingBackupObserved = AssetDatabase.GUIDToAssetPath(oldWorkingMenuGuid).Contains("GeneratedAssets__backup__");
+                    throw new IOException("Injected post-staging package restore failure.");
+                }))
+                    result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+            }
+            finally
+            {
+                Application.logMessageReceived -= record;
+            }
+
+            Assert.IsTrue(injected, "Exercise package restoration, not the earlier BeforeFinalize failure seam.");
+            Assert.IsTrue(stagedReferencesObserved, "Descriptor and live references must reach the replacement mirror before restoration fails.");
+            Assert.IsTrue(mirrorBackupObserved, "The original mirror identities must remain recoverable until package restoration succeeds.");
+            Assert.IsTrue(workingBackupObserved, "The original working graph must remain recoverable at the same boundary.");
+            Assert.IsFalse(result.Completed);
+            Assert.IsNull(result.Exception, "Package restore failure keeps the existing log-and-return path.");
+            Assert.GreaterOrEqual(result.DiscoveredParamCount, 0, "Do not erase a successful build count on restoration failure.");
+            Assert.AreEqual(vendorized, _ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(previousPath, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreEqual(oldMenu, _ctx.AvDesc.expressionsMenu);
+            Assert.AreEqual(oldParameters, _ctx.AvDesc.expressionParameters);
+            Assert.AreEqual(oldFx, _ctx.AvDesc.baseAnimationLayers[FindFxLayerIndex(_ctx.AvDesc)].animatorController);
+            CollectionAssert.AreEqual(liveBefore, readLiveReferences(), "Restore the actual pre-action FullController references, not a guessed common prefix.");
+            foreach (var asset in graphGuids)
+                Assert.AreEqual(asset.Value, AssetDatabase.AssetPathToGUID(asset.Key), "Restore each original working and delivery asset GUID: " + asset.Key);
+            CollectionAssert.AreEquivalent(graphFiles.Keys, new[] { workingDir, mirrorDir }
+                .SelectMany(dir => Directory.GetFiles(Path.GetFullPath(dir), "*", SearchOption.AllDirectories)
+                    .Append(Path.GetFullPath(dir + ".meta"))), "Rollback must restore the original graph file set.");
+            foreach (var file in graphFiles)
+                CollectionAssert.AreEqual(file.Value, File.ReadAllBytes(file.Key), "Restore original graph bytes and metadata: " + file.Key);
+            baseline.AssertMatches(aid);
+
+            var recovery = logs.Select(message => Regex.Match(message, @"Verified recovery copies retained at '([^']+)'")).FirstOrDefault(match => match.Success);
+            Assert.IsNotNull(recovery, "The package restore diagnostic must identify the retained recovery directory.");
+            string recoveryDir = recovery.Groups[1].Value;
+            Assert.IsTrue(Directory.Exists(recoveryDir), recoveryDir);
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "RECOVERY.txt")));
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "captured-baseline", "roots.txt")));
+            Assert.IsTrue(File.Exists(Path.Combine(recoveryDir, "pre-restore", "roots.txt")));
+            Assert.IsFalse(logs.Any(message => message.Contains("Vendorized payload sync complete")
+                || message.Contains("Package-managed rebuild staged generated assets")), "An incomplete operation must not log commit success.");
+        }
+
+        [Test]
+        public void LifecycleRebuild_CleanupFailureAfterCommit_RetainsMirrorWithoutRollback()
+        {
+            const string aid = "LifecycleRebuild_CommittedCleanupFailure";
+            PreparePackageManagedAvatarForVendorize(aid);
+            Assert.IsTrue(ASMLiteLifecycleTransactionService.ExecuteAttachedVendorize(_ctx.Comp, _ctx.AvDesc).Success);
+            string mirrorDir = _ctx.Comp.vendorizedGeneratedAssetsPath;
+            string menuPath = mirrorDir + "/" + Path.GetFileName(ASMLiteAssetPaths.Menu);
+            string oldGuid = AssetDatabase.AssetPathToGUID(menuPath);
+            byte[] oldBytes = File.ReadAllBytes(Path.GetFullPath(menuPath));
+            var baseline = PackageOutputBytesSnapshot.Capture();
+            MutateGeneratedInputsBeforeVendorize(aid + "_AddedParam");
+            var logs = new List<string>();
+            Application.LogCallback record = (message, stack, type) => logs.Add(message);
+            IDisposable cleanupFailure = null;
+            LogAssert.Expect(LogType.Warning, new Regex(@"Rebuild committed; recovery backup cleanup incomplete at 'Assets/ASM-Lite/[^']+/GeneratedAssets__backup__[a-f0-9]{8}'\..*Injected failure before mirror finalization"));
+            ASMLiteRebuildResult result;
+            Application.logMessageReceived += record;
+            try
+            {
+                // Enable the existing seam only after its non-destructive pre-commit check passed.
+                using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
+                {
+                    if (phase == "prepared" && cleanupFailure == null)
+                        cleanupFailure = ASMLiteGeneratedAssetMirrorService.PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize);
+                }))
+                    result = ASMLiteLifecycleTransactionService.ExecuteRebuild(_ctx.Comp, _ctx.AvDesc);
+            }
+            finally
+            {
+                cleanupFailure?.Dispose();
+                Application.logMessageReceived -= record;
+            }
+
+            Assert.IsTrue(result.Completed, "Backup cleanup failure must not undo an already verified commit.");
+            Assert.IsNull(result.Exception);
+            Assert.IsTrue(_ctx.Comp.useVendorizedGeneratedAssets);
+            Assert.AreEqual(mirrorDir, _ctx.Comp.vendorizedGeneratedAssetsPath);
+            Assert.AreNotEqual(oldGuid, AssetDatabase.AssetPathToGUID(menuPath));
+            AssertDescriptorGeneratedAssetReferencesUnderPrefix(mirrorDir, aid);
+            AssertLiveFullControllerReferencesUnderPrefix(mirrorDir, aid);
+            string retainedMenu = AssetDatabase.GUIDToAssetPath(oldGuid);
+            StringAssert.Contains("GeneratedAssets__backup__", retainedMenu);
+            CollectionAssert.AreEqual(oldBytes, File.ReadAllBytes(Path.GetFullPath(retainedMenu)));
+            string recoveryDir = Path.GetDirectoryName(retainedMenu).Replace('\\', '/');
+            Assert.IsTrue(logs.Any(message => message.Contains(recoveryDir)), "Identify the retained mirror recovery material, not an impossible rollback.");
+            baseline.AssertMatches(aid);
         }
 
         [Test]

@@ -764,12 +764,12 @@ namespace ASMLite.Tests.Editor
 
         private static bool InvokeShouldAnimateVisibleAutomationOverlay(ASMLite.Editor.ASMLiteWindow window)
         {
-            var method = typeof(ASMLite.Editor.ASMLiteWindow).GetMethod(
+            var method = typeof(ASMLiteSmokePresentation).GetMethod(
                 "ShouldAnimateVisibleAutomationOverlay",
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(method,
-                "Expected private method 'ShouldAnimateVisibleAutomationOverlay' on ASMLiteWindow.");
-            return (bool)method.Invoke(window, null);
+                "Expected presentation method 'ShouldAnimateVisibleAutomationOverlay' on ASMLiteSmokePresentation.");
+            return (bool)method.Invoke(ASMLiteSmokeOverlayHost.GetPresentation(window), null);
         }
 
         private static ChecklistPaletteSnapshot InvokeChecklistItemPalette(
@@ -778,11 +778,11 @@ namespace ASMLite.Tests.Editor
             double now,
             bool presentationMode)
         {
-            var method = typeof(ASMLite.Editor.ASMLiteWindow).GetMethod(
+            var method = typeof(ASMLiteSmokePresentation).GetMethod(
                 "GetVisibleAutomationChecklistItemPalette",
                 BindingFlags.Static | BindingFlags.NonPublic);
             Assert.IsNotNull(method,
-                "Expected private method 'GetVisibleAutomationChecklistItemPalette' on ASMLiteWindow.");
+                "Expected presentation method 'GetVisibleAutomationChecklistItemPalette' on ASMLiteSmokePresentation.");
 
             object[] args =
             {
@@ -894,6 +894,10 @@ namespace ASMLite.Tests.Editor
 
         private static T GetPrivateField<T>(object instance, string fieldName)
         {
+            if (instance is ASMLite.Editor.ASMLiteWindow window
+                && fieldName.StartsWith("_visibleAutomation", StringComparison.Ordinal))
+                instance = ASMLiteSmokeOverlayHost.GetPresentation(window);
+
             var field = instance.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(field, $"Expected private field '{fieldName}' on {instance.GetType().FullName}.");
             return (T)field.GetValue(instance);

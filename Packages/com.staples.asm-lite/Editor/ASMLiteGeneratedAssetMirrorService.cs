@@ -163,6 +163,7 @@ namespace ASMLite.Editor
     internal static class ASMLiteGeneratedAssetMirrorService
     {
         private static ASMLiteGeneratedAssetMirrorTestFailurePoint s_testFailurePoint;
+        private static readonly HashSet<GameObject> s_unsavedOwners = new HashSet<GameObject>();
 
         internal static IDisposable PushFailurePointForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint failurePoint)
         {
@@ -431,11 +432,16 @@ namespace ASMLite.Editor
                     rollbackSucceeded: false);
         }
 
-        internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedMirror(ASMLiteGeneratedAssetMirrorResult mirrorResult)
+        internal static void ThrowBeforeFinalizeForTesting(string targetPath)
         {
             if (ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint.BeforeFinalize)
-                && mirrorResult?.TargetPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal) == true)
+                && targetPath?.EndsWith("/GeneratedAssets", StringComparison.Ordinal) == true)
                 throw new InvalidOperationException("Injected failure before mirror finalization.");
+        }
+
+        internal static ASMLiteGeneratedAssetMirrorResult FinalizeVendorizedMirror(ASMLiteGeneratedAssetMirrorResult mirrorResult)
+        {
+            ThrowBeforeFinalizeForTesting(mirrorResult?.TargetPath);
 
             if (mirrorResult == null || string.IsNullOrWhiteSpace(mirrorResult.BackupPath))
             {
@@ -524,7 +530,8 @@ namespace ASMLite.Editor
                 && string.Equals(normalizedDir, expectedDir, StringComparison.Ordinal)
                 && (payloadDir == null || (Path.GetDirectoryName(payloadPath) == Path.GetDirectoryName(normalizedDir)
                     && System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(payloadPath), @"^GeneratedAssets__delete__[0-9a-f]{8}$")))
-                && (!AssetDatabase.IsValidFolder(payloadPath) || IsOwnedVendorizedPayload(payloadPath));
+                && ((!Directory.Exists(ResolveProjectPhysicalAssetPath(payloadPath)) && !File.Exists(ResolveProjectPhysicalAssetPath(payloadPath)))
+                    || IsOwnedVendorizedPayload(payloadPath));
             return owned
                 ? ASMLiteGeneratedAssetMirrorResult.Pass(
                     ASMLiteGeneratedAssetMirrorOperation.BackupVendorizedFolderForDelete,
@@ -1036,11 +1043,34 @@ namespace ASMLite.Editor
 
         private static string BuildVendorizeAvatarFolderKey(VRCAvatarDescriptor avatar)
         {
-            string avatarName = SanitizePathFragment(avatar != null ? avatar.gameObject.name : "Avatar");
+            if (avatar == null) return "Avatar__avatar";
             string avatarKey = ResolveVendorizeAvatarFolderSuffix(avatar);
-            return string.IsNullOrEmpty(avatarKey)
-                ? avatarName
-                : $"{avatarName}__{avatarKey}";
+            string root = ASMLiteGeneratedOwnershipPolicy.VendorizedGeneratedAssetsRoot;
+            string physicalRoot = ResolveProjectPhysicalAssetPath(root);
+            if (Directory.Exists(physicalRoot))
+            {
+                if ((File.GetAttributes(physicalRoot) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Generated owner root must not be a reparse point.");
+                // Display prefixes from older installs are decorative. The suffix must still
+                // match this object, and callers separately verify the generated payload.
+                // ponytail: scan immediate owners; add an index only if lookup becomes measurable.
+                s_unsavedOwners.RemoveWhere(owner => owner == null);
+                string instanceKey = avatar != null && s_unsavedOwners.Contains(avatar.gameObject)
+                    ? unchecked((uint)avatar.gameObject.GetInstanceID()).ToString("x8") : avatarKey;
+                var matches = Directory.GetDirectories(physicalRoot)
+                    .Where(path => Path.GetFileName(path).EndsWith("__" + avatarKey, StringComparison.Ordinal)
+                        || Path.GetFileName(path).EndsWith("__" + instanceKey, StringComparison.Ordinal))
+                    .ToArray();
+                if (matches.Length > 1)
+                    throw new IOException("Multiple generated folders claim the same avatar identity; preserve them and resolve ownership before rebuilding.");
+                if (matches.Length == 1)
+                {
+                    if ((File.GetAttributes(matches[0]) & FileAttributes.ReparsePoint) != 0)
+                        throw new IOException("Generated owner folder must not be a reparse point.");
+                    return Path.GetFileName(matches[0]);
+                }
+            }
+            return "Avatar__" + avatarKey;
         }
 
         private static string ResolveVendorizeAvatarFolderSuffix(VRCAvatarDescriptor avatar)
@@ -1055,6 +1085,7 @@ namespace ASMLite.Editor
                 return ShortHashPathFragment(stableKeyMaterial);
             }
 
+            s_unsavedOwners.Add(avatarObject);
             return unchecked((uint)avatarObject.GetInstanceID()).ToString("x8");
         }
 
@@ -1077,11 +1108,11 @@ namespace ASMLite.Editor
 
             try
             {
-                string globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(avatarObject).ToString();
-                if (string.IsNullOrWhiteSpace(globalObjectId))
+                var id = GlobalObjectId.GetGlobalObjectIdSlow(avatarObject);
+                if (id.targetObjectId == 0 || GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) != avatarObject)
                     return false;
 
-                stableKeyMaterial = globalObjectId;
+                stableKeyMaterial = id.ToString();
                 return true;
             }
             catch
@@ -1212,22 +1243,6 @@ namespace ASMLite.Editor
             return ASMLiteGeneratedOwnershipPolicy.NormalizeAssetPath(path);
         }
 
-        private static string SanitizePathFragment(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return "Avatar";
-
-            var invalid = Path.GetInvalidFileNameChars();
-            var sb = new System.Text.StringBuilder(value.Length);
-            for (int i = 0; i < value.Length; i++)
-            {
-                char c = value[i];
-                sb.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
-            }
-
-            string cleaned = sb.ToString().Trim();
-            return string.IsNullOrWhiteSpace(cleaned) ? "Avatar" : cleaned;
-        }
 
         private static bool ShouldFailForTesting(ASMLiteGeneratedAssetMirrorTestFailurePoint failurePoint)
         {

@@ -18,6 +18,23 @@ namespace ASMLite.Tests.Editor
     {
         private const string PackagePrefix = "Packages/com.staples.asm-lite/";
 
+        [Test]
+        public void GeneratedDirectory_FirstInstallAndUnownedWorkingFolder_UsePackageFallback()
+        {
+            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
+            try
+            {
+                Assert.That(ASMLiteAssetPaths.ResolveGeneratedDirectory(ctx.Comp), Is.EqualTo(ASMLiteAssetPaths.GeneratedDir));
+                string working = ASMLiteGeneratedAssetMirrorService.ResolveAvatarWorkingDirectory(ctx.AvDesc);
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetFullPath(working));
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                Assert.That(AssetDatabase.IsValidFolder(working), Is.True);
+                Assert.That(ASMLiteAssetPaths.ResolveGeneratedDirectory(ctx.Comp), Is.EqualTo(ASMLiteAssetPaths.GeneratedDir),
+                    "An owner-keyed directory alone is not generated-payload ownership.");
+            }
+            finally { ASMLiteTestFixtures.TearDownTestAvatar(ctx.AvatarGo); }
+        }
+
         // ── GearIconPaths ─────────────────────────────────────────────────────
 
         [Test]

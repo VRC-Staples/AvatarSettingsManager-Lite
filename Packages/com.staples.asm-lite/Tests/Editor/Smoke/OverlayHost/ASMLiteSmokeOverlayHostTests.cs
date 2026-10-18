@@ -154,6 +154,92 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
+        public void Presentation_UnchangedExternalStateIsNotRewrittenAndClosePublishesInactiveSession()
+        {
+            WithPresentationWindow((window, statePath, ackPath) =>
+            {
+                window.ConfigureExternalVisibleAutomationOverlay(statePath, ackPath);
+                window.SetVisibleAutomationOverlayStatus("Smoke", "Add", 1, 2, checklistItems: new[] { "Add", "Rebuild" });
+                string baseline = File.ReadAllText(statePath);
+                var marker = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                File.SetLastWriteTimeUtc(statePath, marker);
+
+                window.SetVisibleAutomationOverlayStatus("Smoke", "Add", 1, 2, checklistItems: new[] { "Add", "Rebuild" });
+                window.GetVisibleAutomationOverlayHostSnapshotForTesting();
+                Assert.AreEqual(baseline, File.ReadAllText(statePath));
+                Assert.AreEqual(marker, File.GetLastWriteTimeUtc(statePath));
+
+                window.SetVisibleAutomationOverlayStatus("Smoke", "Rebuild", 2, 2);
+                var changed = window.GetVisibleAutomationExternalOverlayStateForTesting();
+                Assert.AreEqual(2, changed.stepIndex);
+                Assert.AreEqual("Completed", changed.checklist[0].state);
+                Assert.AreEqual("Active", changed.checklist[1].state);
+                Assert.IsTrue(changed.sessionActive);
+
+                File.WriteAllText(ackPath, "stale acknowledgement");
+                UnityEngine.Object.DestroyImmediate(window);
+                var closed = JsonUtility.FromJson<ASMLiteWindow.VisibleAutomationExternalOverlayStateDocument>(File.ReadAllText(statePath));
+                Assert.IsFalse(closed.sessionActive);
+                Assert.IsFalse(closed.completionReviewVisible);
+                Assert.IsEmpty(closed.checklist);
+                Assert.IsFalse(File.Exists(ackPath));
+            });
+        }
+
+        [Test]
+        public void Presentation_CompletionReviewRejectsStaleSessionAndRequestThenConsumesValidAck()
+        {
+            WithPresentationWindow((window, statePath, ackPath) =>
+            {
+                window.ConfigureExternalVisibleAutomationOverlay(statePath, ackPath);
+                window.SetVisibleAutomationOverlayStatus("Smoke", "Done", 1, 1, ASMLiteWindow.VisibleAutomationOverlayState.Success);
+                window.ShowVisibleAutomationCompletionReview();
+                var first = window.GetVisibleAutomationExternalOverlayStateForTesting();
+                var acknowledgement = new ASMLiteWindow.VisibleAutomationExternalOverlayAckDocument
+                {
+                    sessionId = "another-session",
+                    completionReviewRequestId = first.completionReviewRequestId,
+                    acknowledged = true,
+                };
+                File.WriteAllText(ackPath, JsonUtility.ToJson(acknowledgement));
+                Assert.IsFalse(window.TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting());
+                Assert.IsTrue(window.IsVisibleAutomationCompletionReviewVisibleForAutomation());
+
+                acknowledgement.sessionId = first.sessionId;
+                window.ShowVisibleAutomationCompletionReview();
+                var current = window.GetVisibleAutomationExternalOverlayStateForTesting();
+                Assert.AreNotEqual(first.completionReviewRequestId, current.completionReviewRequestId);
+                File.WriteAllText(ackPath, JsonUtility.ToJson(acknowledgement));
+                Assert.IsFalse(window.TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting());
+                Assert.IsFalse(window.WasVisibleAutomationCompletionReviewAcknowledgedForAutomation());
+
+                acknowledgement.completionReviewRequestId = current.completionReviewRequestId;
+                File.WriteAllText(ackPath, JsonUtility.ToJson(acknowledgement));
+                Assert.IsTrue(window.TryConsumeVisibleAutomationExternalOverlayAcknowledgementForTesting());
+                Assert.IsFalse(window.IsVisibleAutomationCompletionReviewVisibleForAutomation());
+                Assert.IsTrue(window.WasVisibleAutomationCompletionReviewAcknowledgedForAutomation());
+                Assert.IsFalse(File.Exists(ackPath));
+                var accepted = window.GetVisibleAutomationExternalOverlayStateForTesting();
+                Assert.IsTrue(accepted.completionReviewAcknowledged);
+                Assert.IsFalse(accepted.completionReviewVisible);
+            });
+        }
+
+        private static void WithPresentationWindow(Action<ASMLiteWindow, string, string> check)
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "asmlite-presentation-window-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var window = ScriptableObject.CreateInstance<ASMLiteWindow>();
+            try { check(window, Path.Combine(directory, "state.json"), Path.Combine(directory, "ack.json")); }
+            finally
+            {
+                if (window != null)
+                    UnityEngine.Object.DestroyImmediate(window);
+                Directory.Delete(directory, true);
+            }
+        }
+
+        [Test]
         public void CommandLine_ParsesRequiredSessionAndCatalogPaths()
         {
             string sessionRoot = Path.Combine(Path.GetTempPath(), "asmlite-smoke-host-session", "..", "asmlite-smoke-host-session-normalized");

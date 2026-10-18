@@ -129,6 +129,13 @@ jobs:
       - name: Validate test suite map parity
         run: python3 Tools/ci/test-suites/validate-suites.py
 
+      - name: Test stock SDK hydration in disposable synthetic fixtures
+        env:
+          TMPDIR: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
+        run: python3 -B Tools/ci/tests/validators/test_hydrate_vrchat_ci_package.py
+
   lint:
     name: Super-Linter
     runs-on: ubuntu-latest
@@ -186,6 +193,11 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Hydrate and assert stock VRChat SDK 3.10.2
+        run: |
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py \
+            --cache "${RUNNER_TEMP}/asmlite-vrchat-package-cache" --remove-known-ci-shims
+
       - name: Generate .csproj files
         env:
           UNITY_PATH: Tools/ci/unity-project/UnityManaged
@@ -231,6 +243,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Hydrate and assert stock VRChat SDK 3.10.2
+        run: |
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py \
+            --cache "${RUNNER_TEMP}/asmlite-vrchat-package-cache" --remove-known-ci-shims
       - name: Cache Unity Library
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
@@ -332,12 +348,6 @@ jobs:
             exit 1
           fi
 
-          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
-
-          mkdir -p Tools/ci/unity-project/Assets/Editor
-          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
-            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
-
           export ASMLITE_BATCH_RESULTS_DIR=/github/workspace/artifacts
 
           # Write the inner script to a temp file to avoid quoting issues
@@ -383,17 +393,6 @@ jobs:
           # Remove stale Unity lockfile so unity-editor can open the project.
           # The Temp/ dir is gitignored but may be checked out from prior runs.
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
-
-          unity-editor \
-            -batchmode \
-            -quit \
-            -nographics \
-            -projectPath Tools/ci/unity-project \
-            -logFile /github/workspace/artifacts/unity-resolve.log || true
-          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
-            /github/workspace/Tools/ci/unity-project
-          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
-            /github/workspace/Tools/ci/unity-project/Library/Bee
 
           # Run the chained EditMode selections against the shadow project in one Unity process.
           unity-editor \
@@ -467,6 +466,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Hydrate and assert stock VRChat SDK 3.10.2
+        run: |
+          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py \
+            --cache "${RUNNER_TEMP}/asmlite-vrchat-package-cache" --remove-known-ci-shims
       - name: Cache Unity Library
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -513,12 +516,6 @@ jobs:
           fi
           echo "::add-mask::${UNITY_SERIAL}"
 
-          python3 Tools/ci/bin/hydrate-vrchat-ci-package.py
-
-          mkdir -p Tools/ci/unity-project/Assets/Editor
-          cp Tools/ci/unity-project/UnityManaged/VRC.SDKBase.Editor.BuildPipeline.dll \
-            Tools/ci/unity-project/Assets/Editor/VRC.SDKBase.Editor.BuildPipeline.dll
-
           RUNNER_SCRIPT="$(mktemp /tmp/unity-playmode-runner.XXXXXX.sh)"
           cat > "${RUNNER_SCRIPT}" <<'RUNNER'
           set -euo pipefail
@@ -553,17 +550,6 @@ jobs:
           rm -f "${ACTIVATE_LOG}"
 
           rm -rf /github/workspace/Tools/ci/unity-project/Temp
-
-          unity-editor \
-            -batchmode \
-            -quit \
-            -nographics \
-            -projectPath Tools/ci/unity-project \
-            -logFile /github/workspace/artifacts/playmode-unity-resolve.log || true
-          python3 /github/workspace/Tools/ci/bin/patch-lyuma-av3emulator-ci-package.py \
-            /github/workspace/Tools/ci/unity-project
-          rm -rf /github/workspace/Tools/ci/unity-project/Library/ScriptAssemblies \
-            /github/workspace/Tools/ci/unity-project/Library/Bee
 
           unity-editor \
             -batchmode \
