@@ -911,14 +911,15 @@ namespace ASMLite.Tests.Editor
                 aid + " Expected exactly one populated FullController parameter fallback-group member.");
         }
 
-        private static void AssertCanonicalVendorizedGeneratedAssetsPath(
+        private void AssertCanonicalVendorizedGeneratedAssetsPath(
             string vendorizedGeneratedAssetsPath,
             string assertionMessage)
         {
             Assert.IsFalse(string.IsNullOrWhiteSpace(vendorizedGeneratedAssetsPath),
                 assertionMessage + " Expected a populated vendorized generated-assets folder path.");
-            Assert.IsTrue(vendorizedGeneratedAssetsPath.StartsWith("Assets/ASM-Lite/TestAvatar", StringComparison.Ordinal),
-                assertionMessage + " Expected the canonical vendorized generated-assets folder to stay under the TestAvatar vendorized root.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(vendorizedGeneratedAssetsPath), assertionMessage);
+            var ownership = ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(_ctx.AvDesc, vendorizedGeneratedAssetsPath);
+            Assert.IsTrue(ownership.Success, assertionMessage + " " + ownership.Message);
             Assert.IsTrue(vendorizedGeneratedAssetsPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal),
                 assertionMessage + " Expected the canonical vendorized generated-assets folder to end with '/GeneratedAssets'.");
         }

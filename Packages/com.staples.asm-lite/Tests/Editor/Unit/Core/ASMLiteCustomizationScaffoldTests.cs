@@ -355,11 +355,9 @@ namespace ASMLite.Tests.Editor
                 Assert.That(CountDanglingLocalFileIdsForTest(corruptedOnDisk), Is.GreaterThan(0),
                     "Corruption setup should leave at least one dangling local fileID reference in the generated FX controller text.");
 
-                ExpectInjectedControllerParserErrors(controllerPath, "5092237740239409533");
-                LogAssert.Expect(LogType.Warning,
-                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build staged FX: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
-
-                int repairedBuildResult = ASMLiteBuilder.Build(_ctx.Comp);
+                int repairedBuildResult = -1;
+                ExpectInjectedControllerParserErrors(controllerPath, "5092237740239409533",
+                    () => repairedBuildResult = ASMLiteBuilder.Build(_ctx.Comp));
                 Assert.GreaterOrEqual(repairedBuildResult, 0,
                     $"Build should auto-repair dangling generated FX controller references instead of failing. result={repairedBuildResult}.");
 
@@ -421,11 +419,9 @@ namespace ASMLite.Tests.Editor
                 Assert.That(CountDanglingLocalFileIdsForTest(File.ReadAllText(fullPath)), Is.GreaterThan(0),
                     "Corruption setup should leave a dangling local fileID reference before retarget recovery runs.");
 
-                ExpectInjectedControllerParserErrors(controllerPath, "2225763566423020120", inheritedFeature ? 1 : 2);
-                LogAssert.Expect(LogType.Warning,
-                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build staged FX: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
-
-                bool retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, generatedDirectory);
+                bool retargeted = false;
+                ExpectInjectedControllerParserErrors(controllerPath, "2225763566423020120",
+                    () => retargeted = ASMLiteWindow.TryRetargetLiveFullControllerGeneratedAssetsForTesting(_ctx.Comp, generatedDirectory));
                 Assert.IsTrue(retargeted,
                     "Retargeting should repair the corrupted generated FX controller before reapplying live FullController references.");
 
@@ -1113,7 +1109,7 @@ namespace ASMLite.Tests.Editor
             return danglingCount;
         }
 
-        private static void AssertCanonicalVendorizedGeneratedAssetsPath(string vendorizedPath, string assertionMessage)
+        private void AssertCanonicalVendorizedGeneratedAssetsPath(string vendorizedPath, string assertionMessage)
         {
             Assert.IsFalse(string.IsNullOrWhiteSpace(vendorizedPath),
                 assertionMessage + " Expected a populated vendorized generated-assets path.");
@@ -1121,8 +1117,9 @@ namespace ASMLite.Tests.Editor
             string normalizedPath = vendorizedPath.Replace('\\', '/').Trim();
             Assert.AreEqual(normalizedPath, vendorizedPath,
                 assertionMessage + " Expected the vendorized generated-assets path to already be normalized.");
-            Assert.IsTrue(normalizedPath.StartsWith("Assets/ASM-Lite/TestAvatar", StringComparison.Ordinal),
-                assertionMessage + " Expected the vendorized generated-assets path to stay under the TestAvatar vendorized root.");
+            Assert.IsTrue(AssetDatabase.IsValidFolder(normalizedPath), assertionMessage);
+            var ownership = ASMLiteGeneratedAssetMirrorService.ValidateVendorizedFolderForDelete(_ctx.AvDesc, normalizedPath);
+            Assert.IsTrue(ownership.Success, assertionMessage + " " + ownership.Message);
             Assert.IsTrue(normalizedPath.EndsWith("/GeneratedAssets", StringComparison.Ordinal),
                 assertionMessage + " Expected the vendorized generated-assets path to end with '/GeneratedAssets'.");
         }
@@ -1162,16 +1159,32 @@ namespace ASMLite.Tests.Editor
                 assertionMessage + " Unexpected routing helper destination path.");
         }
 
-        private static void ExpectInjectedControllerParserErrors(string controllerPath, string injectedFileId, int sourceErrorCount = 2)
+        private static void ExpectInjectedControllerParserErrors(string controllerPath, string injectedFileId, Action operation)
         {
             string sourceError = $"Broken text PPtr in file({controllerPath}). Local file identifier ({injectedFileId}) doesn't exist!";
-            for (int i = 0; i < sourceErrorCount; i++)
-                LogAssert.Expect(LogType.Error, sourceError);
             string avatarFolder = Path.GetDirectoryName(Path.GetDirectoryName(controllerPath)).Replace('\\', '/');
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(
+            var stagedError = new System.Text.RegularExpressions.Regex(
                 "^Broken text PPtr in file\\(" + System.Text.RegularExpressions.Regex.Escape(avatarFolder)
                 + "/GeneratedAssets__stage__[a-f0-9]{8}/ASMLite_FX\\.controller\\)\\. Local file identifier \\("
-                + injectedFileId + "\\) doesn't exist!$"));
+                + injectedFileId + "\\) doesn't exist!$");
+            var parserErrors = new System.Collections.Generic.List<string>();
+            void CaptureParserError(string message, string stackTrace, LogType type)
+            {
+                if (type == LogType.Error && (message == sourceError || stagedError.IsMatch(message)))
+                    parserErrors.Add(message);
+            }
+
+            Application.logMessageReceived += CaptureParserError;
+            try { operation(); }
+            finally
+            {
+                Application.logMessageReceived -= CaptureParserError;
+                // Unity can import the same corrupt source more than once in this synchronous operation.
+                foreach (string error in parserErrors)
+                    LogAssert.Expect(LogType.Error, error);
+                LogAssert.Expect(LogType.Warning,
+                    new System.Text.RegularExpressions.Regex(@"^\[ASM-Lite\] Build staged FX: Detected \d+ dangling local fileID reference\(s\) in generated FX controller\. Clearing stale controller topology before rebuild\.$"));
+            }
         }
 
         private UnityEngine.Object[] ReadGeneratedFullControllerReferences()

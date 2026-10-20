@@ -114,6 +114,12 @@ namespace ASMLite.Tests.Editor
                         continue;
                     Assert.AreNotEqual(typeof(ASMLiteBatchTestRunnerTests).FullName, test.ClassName,
                         $"Canonical run '{run.name}' must exclude runner self-test {test.FullName}.");
+                    Assert.AreNotEqual(typeof(ASMLiteFixtureIsolationContractTests).FullName + "."
+                        + nameof(ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_FailedTemplateRestore_BlocksCaptureUntilExplicitRetry),
+                        test.FullName, "Default CI must not select the Windows-only file restoration case.");
+                    Assert.AreNotEqual(typeof(ASMLiteFixtureIsolationContractTests).FullName + "."
+                        + nameof(ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline),
+                        test.FullName, "Default CI must not select the installed-NDMF-only case.");
                     selectedCount++;
                 }
             }

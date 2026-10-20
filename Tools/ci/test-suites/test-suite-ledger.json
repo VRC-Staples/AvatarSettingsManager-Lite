@@ -783,21 +783,21 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline",
-      "line": 143,
+      "line": 142,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "UnityTest"
+        "UnityTest",
+        "Category(\"InstalledNdmf\")"
       ],
       "categories": [
         "Headless",
-        "Integration"
+        "InstalledNdmf"
       ],
       "lane": "integration-headless",
       "headlessViability": "conditional-installed-ndmf",
       "honesty": "fixture-isolation-contract-coverage",
-      "recommendation": "default-ci",
+      "recommendation": "explicit-disposable-project",
       "publicBehaviorClaim": "Fixture Isolation Scope Capture Initializes Deferred Ndmf Scene Helpers Before Baseline",
       "fixtureDependencies": [
         "fixture isolation scope",
@@ -806,7 +806,7 @@
       "assetSceneMutations": "creates a temporary scene and deferred NDMF helper; disposes isolation scope and restores original scene setup",
       "externalProcessFilesystemEnvUsage": "Unity EditMode coroutine, scene-created callback, and installed NDMF",
       "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline",
-      "notes": "Explicitly skipped if NDMF is unavailable. Checks initialization before capture without bypassing scene-leak detection."
+      "notes": "Select explicitly in an NDMF-equipped disposable project through InstalledNdmf or the exact method filter. Excluded from default Integration selection. Checks initialization before capture without bypassing scene-leak detection."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
@@ -816,8 +816,8 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -846,8 +846,8 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -875,8 +875,8 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -904,8 +904,8 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -933,8 +933,8 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -958,16 +958,16 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_FailedTemplateRestore_BlocksCaptureUntilExplicitRetry",
-      "line": 23,
+      "line": 22,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"WindowsEditor\")"
       ],
       "categories": [
         "Headless",
-        "Integration"
+        "WindowsEditor"
       ],
       "lane": "integration-headless",
       "headlessViability": "conditional-windows-editor",
@@ -982,18 +982,18 @@
       "assetSceneMutations": "temporarily edits package expression parameters and read-only file attributes; explicit retry and finally restore original bytes/metadata/attributes",
       "externalProcessFilesystemEnvUsage": "Windows filesystem read-only semantics and Unity AssetDatabase",
       "runnerFilter": "ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_FailedTemplateRestore_BlocksCaptureUntilExplicitRetry",
-      "notes": "Explicitly skipped outside WindowsEditor. Verifies a failed restore blocks new fixtures until explicit retry; finally restores the admitted template and file attributes."
+      "notes": "Select explicitly in a Windows disposable Editor through WindowsEditor or the exact method filter. Excluded from default Integration selection. Verifies a failed restore blocks new fixtures until explicit retry; finally restores the admitted template and file attributes."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_ResetGeneratedParameters_ConcurrentFixturesRestoreFirstBaseline",
-      "line": 82,
+      "line": 81,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
-        "Test"
+        "Test",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -1022,9 +1022,9 @@
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
-        "Category(\"Integration\")",
         "TestCase(false)",
-        "TestCase(true)"
+        "TestCase(true)",
+        "Category(\"Integration\")"
       ],
       "categories": [
         "Headless",
@@ -4505,7 +4505,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "line": 381,
+      "line": 387,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4531,7 +4531,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "line": 349,
+      "line": 355,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4557,7 +4557,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "line": 315,
+      "line": 321,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4609,7 +4609,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "line": 243,
+      "line": 249,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4661,7 +4661,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "line": 219,
+      "line": 225,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4687,7 +4687,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "line": 231,
+      "line": 237,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4765,7 +4765,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "line": 420,
+      "line": 426,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4791,7 +4791,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "line": 172,
+      "line": 178,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10705,7 +10705,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "AddPrefab_CopiesPendingSlotCountToAttachedSnapshotAndComponent",
-      "line": 725,
+      "line": 721,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10731,7 +10731,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "AddPrefab_UsesSelectedAvatarCustomizationSnapshot_WithoutArrayAliasing",
-      "line": 652,
+      "line": 648,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10757,7 +10757,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "BakeAssets_MissingVrcFury_AutoHealsAndContinues",
-      "line": 1061,
+      "line": 1057,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10783,7 +10783,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "BakeAssets_RewritesLivePrefixDeterministically_WhenCustomizationFlipsEnabledDisabledAndBlank",
-      "line": 1027,
+      "line": 1023,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10861,7 +10861,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "DetachTransaction_VerifyFailure_RollsBackAttachedCustomizationAndRouting",
-      "line": 947,
+      "line": 943,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10887,7 +10887,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "RebuildMigration_PreservesCustomizationState_WhenStalePrmsDetected",
-      "line": 789,
+      "line": 785,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10913,7 +10913,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "RemovePrefab_RemovesAsmLiteVrcFuryArtifactsFromAvatar",
-      "line": 535,
+      "line": 531,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -10965,7 +10965,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "RetargetLiveFullControllerGeneratedAssets_RepairsCorruptedGeneratedControllerBeforeRebinding",
-      "line": 380,
+      "line": 378,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11044,7 +11044,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "SelectingAvatar_AdoptsMatchingMoveMenuInstallPath_WithoutTouchingVendorizedSnapshotState",
-      "line": 573,
+      "line": 569,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11148,7 +11148,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "SelectingInstallPath_RootSelectionKeepsCustomizationEnabledAndClearsSerializedAndVisiblePath",
-      "line": 482,
+      "line": 478,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11174,7 +11174,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "SelectingInstallPath_UpdatesSerializedAndVisibleCustomizationState",
-      "line": 454,
+      "line": 450,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11200,7 +11200,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "SelectingInstallPath_WithoutComponent_PreservesPendingCustomInstallModeAcrossRootSelection",
-      "line": 511,
+      "line": 507,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11226,7 +11226,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteCustomizationScaffoldTests.cs",
       "class": "ASMLiteCustomizationScaffoldTests",
       "method": "VendorizeTransaction_LiveRetargetFailure_RollsBackPackageManagedRefsAndRouting",
-      "line": 867,
+      "line": 863,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -11273,6 +11273,35 @@
       "externalProcessFilesystemEnvUsage": "Unity AssetDatabase fixture reads",
       "runnerFilter": "ASMLiteFullControllerWiringTests.CaptureLiveFullControllerReferenceSnapshot_ReadsReferencesThroughDedicatedModule",
       "notes": "Selected by default CI through the core-headless class filter."
+    },
+    {
+      "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteFullControllerWiringTests.cs",
+      "class": "ASMLiteFullControllerWiringTests",
+      "method": "CaptureRestoreLiveFullControllerReferenceSnapshot_PreservesEmptyArrays",
+      "line": 88,
+      "attributes": [
+        "TestFixture",
+        "Category(\"Headless\")",
+        "TestCase(0, 1, 0)",
+        "TestCase(1, 0, 1)",
+        "TestCase(0, 0, 0)"
+      ],
+      "categories": [
+        "Headless"
+      ],
+      "lane": "core-headless",
+      "headlessViability": "yes",
+      "honesty": "core-unit-contract-coverage",
+      "recommendation": "default-ci",
+      "publicBehaviorClaim": "Capture Restore Live Full Controller Reference Snapshot Preserves Empty Arrays",
+      "fixtureDependencies": [
+        "package fixture assets",
+        "live FullController wiring and lifecycle verification"
+      ],
+      "assetSceneMutations": "temporarily clears controller/menu/parameter arrays, repairs wiring, then restores the exact serialized baseline",
+      "externalProcessFilesystemEnvUsage": "Unity SerializedObject and AssetDatabase asset identity resolution",
+      "runnerFilter": "ASMLiteFullControllerWiringTests.CaptureRestoreLiveFullControllerReferenceSnapshot_PreservesEmptyArrays",
+      "notes": "Three parameterized cases preserve empty-array enrollment without mutating capture or certifying incomplete delivery. Selected by the default core-headless class filter."
     },
     {
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Unit/Core/ASMLiteFullControllerWiringTests.cs",

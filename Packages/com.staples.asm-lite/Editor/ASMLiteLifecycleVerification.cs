@@ -280,7 +280,8 @@ namespace ASMLite.Editor
             }
 
             string normalizedExpectedPrefix = NormalizeOptionalPath(expectedPrefix);
-            if (!PathStartsWith(snapshot.ControllerAssetPath, normalizedExpectedPrefix)
+            if (snapshot.ControllersArraySize == 0 || snapshot.MenusArraySize == 0
+                || !PathStartsWith(snapshot.ControllerAssetPath, normalizedExpectedPrefix)
                 || !PathStartsWith(snapshot.MenuAssetPath, normalizedExpectedPrefix)
                 || !PathStartsWith(snapshot.ParametersAssetPath, normalizedExpectedPrefix))
             {

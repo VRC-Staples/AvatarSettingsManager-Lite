@@ -9,7 +9,7 @@ namespace ASMLite.Editor
     internal readonly struct ASMLiteFullControllerReferenceSnapshot
     {
         internal ASMLiteFullControllerReferenceSnapshot(string controllerAssetPath, string menuAssetPath, string parametersAssetPath,
-            int parametersArraySize = 1)
+            int parametersArraySize = 1, int controllersArraySize = 1, int menusArraySize = 1)
         {
             ControllerAssetPath = controllerAssetPath ?? string.Empty;
             MenuAssetPath = menuAssetPath ?? string.Empty;
@@ -18,6 +18,8 @@ namespace ASMLite.Editor
             MenuAssetGuid = AssetDatabase.AssetPathToGUID(MenuAssetPath);
             ParametersAssetGuid = AssetDatabase.AssetPathToGUID(ParametersAssetPath);
             ParametersArraySize = parametersArraySize;
+            ControllersArraySize = controllersArraySize;
+            MenusArraySize = menusArraySize;
         }
 
         internal string ControllerAssetPath { get; }
@@ -27,6 +29,8 @@ namespace ASMLite.Editor
         internal string MenuAssetGuid { get; }
         internal string ParametersAssetGuid { get; }
         internal int ParametersArraySize { get; }
+        internal int ControllersArraySize { get; }
+        internal int MenusArraySize { get; }
     }
 
     /// <summary>
@@ -408,6 +412,13 @@ namespace ASMLite.Editor
             if (!probeResult.Success)
                 return probeResult.ToDiagnosticResult();
 
+            foreach (string path in new[] { ASMLiteDriftProbe.ControllersArrayPath,
+                ASMLiteDriftProbe.MenuArrayPath, ASMLiteDriftProbe.ParametersArrayPath })
+            {
+                if (!serializedVf.FindProperty(path).isArray)
+                    return CreateCriticalPathDiagnostic(path);
+            }
+
             var controllerProperty = serializedVf.FindProperty(ASMLiteDriftProbe.ControllerObjectRefPath);
             var menuProperty = serializedVf.FindProperty(ASMLiteDriftProbe.MenuObjectRefPath);
             var parametersProperty = FindWritableObjectReferenceProperty(
@@ -416,7 +427,11 @@ namespace ASMLite.Editor
                 ASMLiteDriftProbe.ParameterObjectRefPath,
                 ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             int parametersArraySize = serializedVf.FindProperty(ASMLiteDriftProbe.ParametersArrayPath).arraySize;
-            if (controllerProperty == null || menuProperty == null || (parametersProperty == null && parametersArraySize != 0))
+            int controllersArraySize = serializedVf.FindProperty(ASMLiteDriftProbe.ControllersArrayPath).arraySize;
+            int menusArraySize = serializedVf.FindProperty(ASMLiteDriftProbe.MenuArrayPath).arraySize;
+            if ((controllerProperty == null && controllersArraySize != 0)
+                || (menuProperty == null && menusArraySize != 0)
+                || (parametersProperty == null && parametersArraySize != 0))
             {
                 return ASMLiteBuildDiagnosticResult.Fail(
                     code: ASMLiteDiagnosticCodes.Build.FullControllerWiringFailed,
@@ -426,11 +441,13 @@ namespace ASMLite.Editor
             }
 
             snapshot = new ASMLiteFullControllerReferenceSnapshot(
-                AssetDatabase.GetAssetPath(controllerProperty.objectReferenceValue) ?? string.Empty,
-                AssetDatabase.GetAssetPath(menuProperty.objectReferenceValue) ?? string.Empty,
+                AssetDatabase.GetAssetPath(controllerProperty != null ? controllerProperty.objectReferenceValue
+                    : serializedVf.FindProperty(ASMLiteDriftProbe.ControllerMirrorPath).objectReferenceValue) ?? string.Empty,
+                AssetDatabase.GetAssetPath(menuProperty != null ? menuProperty.objectReferenceValue
+                    : serializedVf.FindProperty(ASMLiteDriftProbe.MenuMirrorPath).objectReferenceValue) ?? string.Empty,
                 AssetDatabase.GetAssetPath(parametersProperty != null ? parametersProperty.objectReferenceValue
                     : serializedVf.FindProperty(ASMLiteDriftProbe.ParametersMirrorPath).objectReferenceValue) ?? string.Empty,
-                parametersArraySize);
+                parametersArraySize, controllersArraySize, menusArraySize);
             return ASMLiteBuildDiagnosticResult.Pass();
         }
 
@@ -463,9 +480,11 @@ namespace ASMLite.Editor
                 var probe = ASMLiteDriftProbe.ValidateCriticalFullControllerWritePaths(serializedVf);
                 if (!probe.Success)
                     return probe.ToDiagnosticResult();
-                if (!EnsureArraySizeStrict(serializedVf, ASMLiteDriftProbe.ParametersArrayPath, snapshot.ParametersArraySize)
-                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.ControllerObjectRefPath, references[0])
-                    || !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.MenuObjectRefPath, references[1])
+                if (!EnsureArraySizeStrict(serializedVf, ASMLiteDriftProbe.ControllersArrayPath, snapshot.ControllersArraySize)
+                    || !EnsureArraySizeStrict(serializedVf, ASMLiteDriftProbe.MenuArrayPath, snapshot.MenusArraySize)
+                    || !EnsureArraySizeStrict(serializedVf, ASMLiteDriftProbe.ParametersArrayPath, snapshot.ParametersArraySize)
+                    || (snapshot.ControllersArraySize != 0 && !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.ControllerObjectRefPath, references[0]))
+                    || (snapshot.MenusArraySize != 0 && !SetObjectReferenceStrict(serializedVf, ASMLiteDriftProbe.MenuObjectRefPath, references[1]))
                     || (snapshot.ParametersArraySize != 0 && !SetAnyObjectReferenceStrict(serializedVf,
                         new[] { ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
                             ASMLiteDriftProbe.ParameterLegacyObjectRefPath }, references[2]))
