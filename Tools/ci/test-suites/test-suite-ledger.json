@@ -786,8 +786,8 @@
       "line": 142,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "UnityTest",
+        "Category(\"Headless\")",
         "Category(\"InstalledNdmf\")"
       ],
       "categories": [
@@ -812,11 +812,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenAnotherFixtureAvatarIsStillRegistered_DoesNotReportFixtureRootAsSceneLeak",
-      "line": 245,
+      "line": 246,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -842,11 +842,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak",
-      "line": 272,
+      "line": 273,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -871,11 +871,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup",
-      "line": 356,
+      "line": 357,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -900,11 +900,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak",
-      "line": 307,
+      "line": 308,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -929,11 +929,11 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection",
-      "line": 330,
+      "line": 331,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -961,8 +961,8 @@
       "line": 22,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"WindowsEditor\")"
       ],
       "categories": [
@@ -991,8 +991,8 @@
       "line": 81,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "Test",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -1018,12 +1018,12 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/GeneratedAssets/ASMLiteFixtureIsolationContractTests.cs",
       "class": "ASMLiteFixtureIsolationContractTests",
       "method": "FixtureTeardown_RenamedAvatar_RemovesOriginalWorkingAssetsAndPreservesOtherOwners",
-      "line": 184,
+      "line": 185,
       "attributes": [
         "TestFixture",
-        "Category(\"Headless\")",
         "TestCase(false)",
         "TestCase(true)",
+        "Category(\"Headless\")",
         "Category(\"Integration\")"
       ],
       "categories": [
@@ -4505,7 +4505,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_AcceptsTestSuiteRootDocuments_FromUnityBatchCallbacks",
-      "line": 387,
+      "line": 398,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4531,7 +4531,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_MergesCompletedRuns_IntoCanonicalNUnitOutput",
-      "line": 355,
+      "line": 366,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4557,7 +4557,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildCanonicalResultsDocument_UsesNestedAssemblyMetrics_WhenUnityWrappersReportZeroTotals",
-      "line": 321,
+      "line": 332,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4609,7 +4609,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "BuildSessionStateFromCommandLine_UsesExplicitCliArguments_ForBatchTransport",
-      "line": 249,
+      "line": 260,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4661,7 +4661,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesOuterXmlProperty_WhenToStringIsNotXml",
-      "line": 225,
+      "line": 236,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4687,7 +4687,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "ConvertRawXmlObjectToDocument_UsesWriteTo_WhenAvailable",
-      "line": 237,
+      "line": 248,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4765,7 +4765,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "RestoreFromSessionState_RequeuesActiveRun_AndLoadsCompletedResultsFromDisk",
-      "line": 426,
+      "line": 437,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",
@@ -4791,7 +4791,7 @@
       "file": "Packages/com.staples.asm-lite/Tests/Editor/Integration/Runner/ASMLiteBatchTestRunnerTests.cs",
       "class": "ASMLiteBatchTestRunnerTests",
       "method": "WrapResultDocumentWithResultMetrics_UsesChildResultMetrics_WhenTopLevelAdaptorReportsZeroCounts",
-      "line": 178,
+      "line": 189,
       "attributes": [
         "TestFixture",
         "Category(\"Headless\")",

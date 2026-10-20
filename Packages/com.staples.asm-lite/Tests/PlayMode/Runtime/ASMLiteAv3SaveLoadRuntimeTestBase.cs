@@ -202,14 +202,15 @@ namespace ASMLite.Tests.PlayMode
             Assert.AreEqual(expectedDiscoveredCount, buildResult,
                 $"Runtime: Build should discover only saved/non-excluded parameters. expected={expectedDiscoveredCount} got={buildResult}.");
 
-            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(generatedParams, $"Runtime: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");
+            var generatedParams = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsTrue((generatedParams.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
                     .Any(parameter => parameter != null && parameter.name == ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName),
                 "Runtime: generated expression params must include ASMLite_Ctrl before AV3 visibility check.");
 
-            var generatedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            Assert.IsNotNull(generatedController, $"Runtime: generated FX controller missing at {ASMLiteAssetPaths.FXController}.");
+            var generatedController = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
 
             var mergedParams = BuildMergedParameters(_ctx.ParamsAsset, generatedParams);
             AssetDatabase.DeleteAsset(MergedParamsPath);
@@ -240,14 +241,15 @@ namespace ASMLite.Tests.PlayMode
             Assert.AreEqual(sourceParameters.Length, buildResult,
                 $"Runtime: Build should discover exactly the supplied source parameters. expected={sourceParameters.Length} got={buildResult}.");
 
-            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(generatedParams, $"Runtime: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");
+            var generatedParams = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(_ctx.Comp,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsTrue((generatedParams.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
                     .Any(parameter => parameter != null && parameter.name == ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName),
                 "Runtime: generated expression params must include ASMLite_Ctrl before AV3 save/load checks.");
 
-            var generatedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            Assert.IsNotNull(generatedController, $"Runtime: generated FX controller missing at {ASMLiteAssetPaths.FXController}.");
+            var generatedController = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(_ctx.Comp,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
 
             var mergedParams = BuildMergedParameters(_ctx.ParamsAsset, generatedParams);
             AssetDatabase.DeleteAsset(MergedParamsPath);
@@ -321,14 +323,15 @@ namespace ASMLite.Tests.PlayMode
                 + $"selectedSaved=[{string.Join(", ", selectedSavedNames.OrderBy(name => name, StringComparer.Ordinal))}] "
                 + $"excludedCount={excludedNames.Length} got={buildResult}.");
 
-            var generatedParams = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            Assert.IsNotNull(generatedParams, $"External UAT: generated expression params missing at {ASMLiteAssetPaths.ExprParams}.");
+            var generatedParams = ASMLiteTestFixtures.ReadGeneratedAsset<VRCExpressionParameters>(component,
+                ASMLiteDriftProbe.ParametersObjectRefPath, ASMLiteDriftProbe.ParameterObjectRefPath,
+                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
             Assert.IsTrue((generatedParams.parameters ?? Array.Empty<VRCExpressionParameters.Parameter>())
                     .Any(parameter => parameter != null && parameter.name == ASMLiteAv3RuntimeBridge.ASMLiteControlParameterName),
                 "External UAT: generated expression params must include ASMLite_Ctrl before real UAT runtime check.");
 
-            var generatedController = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-            Assert.IsNotNull(generatedController, $"External UAT: generated FX controller missing at {ASMLiteAssetPaths.FXController}.");
+            var generatedController = ASMLiteTestFixtures.ReadGeneratedAsset<AnimatorController>(component,
+                ASMLiteDriftProbe.ControllerObjectRefPath);
 
             var mergedParams = BuildMergedParameters(descriptor.expressionParameters, generatedParams);
             AssetDatabase.DeleteAsset(RealUatMergedParamsPath);

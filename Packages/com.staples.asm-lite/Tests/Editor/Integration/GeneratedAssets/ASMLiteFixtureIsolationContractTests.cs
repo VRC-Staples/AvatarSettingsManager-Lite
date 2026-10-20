@@ -14,11 +14,11 @@ using Object = UnityEngine.Object;
 
 namespace ASMLite.Tests.Editor
 {
+    // Unity's category filter ignores method categories when the fixture has categories.
     [TestFixture]
-    [Category("Headless")]
     public class ASMLiteFixtureIsolationContractTests
     {
-        [Test, Category("WindowsEditor")]
+        [Test, Category("Headless"), Category("WindowsEditor")]
         public void FixtureIsolationScope_FailedTemplateRestore_BlocksCaptureUntilExplicitRetry()
         {
             if (Application.platform != RuntimePlatform.WindowsEditor)
@@ -77,7 +77,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_ResetGeneratedParameters_ConcurrentFixturesRestoreFirstBaseline()
         {
             var original = ASMLiteGeneratedAssetTestIsolation.CaptureSourceAssets(nameof(FixtureIsolationScope_ResetGeneratedParameters_ConcurrentFixturesRestoreFirstBaseline),
@@ -138,7 +138,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [UnityTest, Category("InstalledNdmf")]
+        [UnityTest, Category("Headless"), Category("InstalledNdmf")]
         public IEnumerator FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline()
         {
             var activatorType = AppDomain.CurrentDomain.GetAssemblies()
@@ -180,6 +180,7 @@ namespace ASMLite.Tests.Editor
 
         [TestCase(false)]
         [TestCase(true)]
+        [Category("Headless")]
         [Category("Integration")]
         public void FixtureTeardown_RenamedAvatar_RemovesOriginalWorkingAssetsAndPreservesOtherOwners(bool concurrentFixture)
         {
@@ -241,7 +242,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_Dispose_WhenAnotherFixtureAvatarIsStillRegistered_DoesNotReportFixtureRootAsSceneLeak()
         {
             AsmLiteTestContext first = null;
@@ -268,7 +269,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_Dispose_WhenGeneratedAssetAppearsUnderFixtureRoots_ReportsGeneratedAssetLeak()
         {
             const string assetPath = "Assets/ASMLiteTests_Temp/IsolationSentinel.asset";
@@ -303,7 +304,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak()
         {
             AsmLiteFixtureIsolationScope scope = AsmLiteFixtureIsolationScope.Capture(nameof(FixtureIsolationScope_Dispose_WhenSceneObjectSurvivesTeardown_ReportsSceneObjectLeak));
@@ -326,7 +327,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_Dispose_WhenSelectionChanges_ReportsSelectionLeakAndRestoresSelection()
         {
             var originalSelection = Selection.objects;
@@ -352,7 +353,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test, Category("Integration")]
+        [Test, Category("Headless"), Category("Integration")]
         public void FixtureIsolationScope_Dispose_WhenOpenScenesChange_ReportsOpenSceneLeakAndRestoresSetup()
         {
             const string baselineScenePath = ASMLiteTestFixtures.TempDir + "/FixtureIsolationBaseline.unity";

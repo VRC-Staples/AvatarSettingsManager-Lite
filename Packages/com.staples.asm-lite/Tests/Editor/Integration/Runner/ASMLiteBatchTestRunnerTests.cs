@@ -99,6 +99,7 @@ namespace ASMLite.Tests.Editor
                 inventory.Add(builder.BuildFrom(new NUnit.Framework.Internal.TypeWrapper(type)));
 
             int selectedCount = 0;
+            var selectedNames = new HashSet<string>(StringComparer.Ordinal);
             foreach (var run in configuration.runs)
             {
                 var normalizedRun = ASMLiteBatchTestRunner.NormalizeRun(run, 0);
@@ -121,9 +122,19 @@ namespace ASMLite.Tests.Editor
                         + nameof(ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline),
                         test.FullName, "Default CI must not select the installed-NDMF-only case.");
                     selectedCount++;
+                    selectedNames.Add(test.FullName);
                 }
             }
             Assert.Greater(selectedCount, 0, "The canonical selectors must select real non-runner tests.");
+            string isolationFixture = typeof(ASMLiteFixtureIsolationContractTests).FullName;
+            var portableIsolationCases = EnumerateTestCases(inventory)
+                .Where(test => test.ClassName == isolationFixture
+                    && test.FullName != isolationFixture + "." + nameof(ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_FailedTemplateRestore_BlocksCaptureUntilExplicitRetry)
+                    && test.FullName != isolationFixture + "." + nameof(ASMLiteFixtureIsolationContractTests.FixtureIsolationScope_Capture_InitializesDeferredNdmfSceneHelpersBeforeBaseline))
+                .Select(test => test.FullName).ToArray();
+            Assert.IsNotEmpty(portableIsolationCases, "The selector guard must discover portable fixture-isolation cases.");
+            CollectionAssert.IsSubsetOf(portableIsolationCases, selectedNames,
+                "Default CI must retain every portable fixture-isolation case, not merely exclude conditional cases.");
         }
 
         private static IEnumerable<NUnit.Framework.Interfaces.ITest> EnumerateTestCases(NUnit.Framework.Interfaces.ITest test)
