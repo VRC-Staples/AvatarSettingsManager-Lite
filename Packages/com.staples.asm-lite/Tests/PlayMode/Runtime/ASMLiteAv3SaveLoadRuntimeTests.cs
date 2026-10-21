@@ -21,7 +21,6 @@ namespace ASMLite.Tests.PlayMode
                 Assert.Inconclusive(runtimeResolution.Diagnostic);
 
             BuildAndWireAvatarFixture();
-            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();
@@ -70,7 +69,6 @@ namespace ASMLite.Tests.PlayMode
                 saved = true,
                 networkSynced = true,
             });
-            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();
@@ -112,7 +110,6 @@ namespace ASMLite.Tests.PlayMode
                     saved = true,
                     networkSynced = true,
                 });
-            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();
@@ -160,7 +157,6 @@ namespace ASMLite.Tests.PlayMode
                     name = local, valueType = VRCExpressionParameters.ValueType.Bool,
                     saved = false, networkSynced = false,
                 });
-            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
             yield return EnterPlayModeIfNeeded();
 
@@ -196,7 +192,6 @@ namespace ASMLite.Tests.PlayMode
                 Assert.Inconclusive(runtimeResolution.Diagnostic);
 
             BuildAndWireAvatarFixture();
-            ExpectAv3OscApiUserTypeLoadNoiseIfCi();
             ASMLiteAv3RuntimeBridge.EnsureEmulatorControlObject();
 
             yield return EnterPlayModeIfNeeded();

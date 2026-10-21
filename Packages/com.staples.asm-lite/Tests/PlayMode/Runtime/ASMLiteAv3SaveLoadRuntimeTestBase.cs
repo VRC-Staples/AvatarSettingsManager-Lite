@@ -135,8 +135,6 @@ namespace ASMLite.Tests.PlayMode
             ASMLiteAv3SaveLoadHarness.Descriptor("ASMTest_FloatUnsaved_B", VRCExpressionParameters.ValueType.Float),
         };
 
-        private const string Av3OscApiUserTypeLoadNoise = "TypeLoadException: VTable setup of type VRC.Core.APIUser failed";
-
         private AsmLiteTestContext _ctx;
         private GameObject _realUatRootInstance;
         private bool _hadVrcFuryPlayModePref;
@@ -165,12 +163,6 @@ namespace ASMLite.Tests.PlayMode
                 yield break;
 
             yield return new EnterPlayMode();
-        }
-
-        protected static void ExpectAv3OscApiUserTypeLoadNoiseIfCi()
-        {
-            if (string.Equals(Environment.GetEnvironmentVariable("CI"), "true", StringComparison.OrdinalIgnoreCase))
-                LogAssert.Expect(LogType.Exception, Av3OscApiUserTypeLoadNoise);
         }
 
         protected void BuildAndWireAvatarFixture(params VRCExpressionParameters.Parameter[] additionalSavedParameters)
