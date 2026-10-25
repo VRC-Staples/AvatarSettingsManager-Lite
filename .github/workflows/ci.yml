@@ -399,6 +399,7 @@ jobs:
           unity-editor \
             -batchmode \
             -nographics \
+            -overrideTextureCompression forceFastCompressor \
             -logFile /github/workspace/artifacts/editmode.log \
             -projectPath Tools/ci/unity-project \
             -coverageResultsPath /github/workspace/CodeCoverage \
@@ -555,6 +556,7 @@ jobs:
           unity-editor \
             -batchmode \
             -nographics \
+            -overrideTextureCompression forceFastCompressor \
             -runTests \
             -testPlatform playmode \
             -testFilter ASMLite.Tests.PlayMode.ASMLiteAv3SaveLoadRuntimeTests \
