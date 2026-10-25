@@ -8,6 +8,70 @@ All notable changes to ASM-Lite are documented here.
 
 ## [Unreleased]
 
+No changes recorded yet after the `1.2.0-beta` prerelease.
+
+## [1.2.0-beta] - 2026-10-25
+
+This maintenance beta contains the changes since `1.1.0`. It does not replace the stable VCC package.
+The release tag is `1.2.0-beta`; the tested Unity package's filename and internal version remain `1.2.0-beta.1`.
+Back up the complete project and test the beta in a separate copy.
+
+### Added
+
+- Parameter-capacity feedback in the editor and a final count check after avatar build processing.
+  Local backup parameters use no network sync bits, but still count toward the SDK's separate parameter-count limit.
+  An over-limit or unverifiable final count blocks a guarded ASM-Lite build instead of reporting success.
+- Regression coverage for generated-file ownership, rollback, partially initialized VRCFury connections, and parameter-budget checks.
+  Rollback means restoring the assets and references that existed before a failed operation.
+
+### Changed
+
+- Normal attached builds now generate each avatar's output under `Assets/ASM-Lite/<owner>/WorkingAssets`.
+  The package's `GeneratedAssets` folder supplies templates, rather than acting as a shared output folder for every avatar.
+- Generated folders use avatar identity rather than only the display name.
+  Renaming an avatar can retain its owned output, while two avatars with the same name must not share generated files.
+- Controller generation uses configured defaults directly instead of separate `ASMLite_Def_*` parameters.
+  Compatible Clear Preset reset operations share a driver in processed build output to reduce duplicate reset instructions.
+- Optional smoke-test presentation moved out of the normal product window into test-owned code.
+  This keeps test controls separate from the editor used to configure an avatar.
+
+### Fixed
+
+- Rebuild, Vendorize, and Detach retain previous generated assets until the complete operation commits.
+  A failure before commit can restore those assets and their references. A cleanup failure after commit is reported as cleanup failure, not a successful rollback.
+- Rebuild can repair supported empty VRCFury FullController lists without losing the original state if repair fails.
+  FullController is VRCFury's feature for connecting ASM-Lite's generated controller, menus, and parameters to the avatar.
+  Unknown layouts still stop the operation rather than being accepted as a complete installation.
+- Generated-file replacement and cleanup now require matching avatar ownership and expected file contents.
+  A familiar folder name alone is not permission to overwrite another avatar's assets or unrelated user files.
+- Test-fixture recovery preserves its original baseline and reports failed restoration rather than silently accepting changed files as a new baseline.
+  A fixture is the temporary avatar and project state a test creates before checking behavior.
+
+### Tests and CI
+
+- Restored six portable EditMode tests that Unity's category filtering had omitted.
+  Windows-specific file-behavior tests and installed-NDMF-specific tests remain separate from the default portable selection.
+- PlayMode setup now reads the generated assets connected to the test avatar through VRCFury, not unchanged package templates.
+  The `ASMLite_Ctrl`, generated-output ownership, and Save/Load assertions remain in place.
+- Removed a test expectation that required an SDK exception even when the exception never occurred.
+  Unexpected exceptions still fail the tests; they are not broadly suppressed.
+- CI hydrates checksum-verified stock VRChat SDK `3.10.2` packages.
+  Both Unity test launches use `-overrideTextureCompression forceFastCompressor` to avoid the Linux Crunch texture-import crash.
+  This lowers compression quality for test imports without changing SDK source files or their texture metadata.
+- The inventory contains 589 test methods; parameterized methods can produce more than one executed case.
+  [CI run 40171851917](https://github.com/VRC-Staples/AvatarSettingsManager-Lite/actions/runs/40171851917)
+  passed all eight jobs, including the exact expected 618 EditMode and 7 PlayMode cases.
+  This is automated Editor/emulator coverage, not complete real-avatar upgrade or VRChat-client certification.
+
+### Known Limitations
+
+- The armature-toggle discovery issue recorded under `1.1.0` has no confirmed resolution recorded here.
+  Do not treat this beta's automated test results as proof that the issue is fixed.
+
+## [1.1.0] - 2026-05-24
+
+These entries shipped in `1.1.0` but previously remained under the `[Unreleased]` heading.
+
 ### Added
 
 - Runtime workflow modes in ASM-Lite window:
@@ -156,7 +220,7 @@ All notable changes to ASM-Lite are documented here.
 
 ### Changed
 
-- (Historical for 1.0.5; superseded by the Unreleased revert.) ASM-Lite temporarily removed VRCFury
+- (Historical for 1.0.5; superseded by the 1.0.7 revert.) ASM-Lite temporarily removed VRCFury
   FullController delivery and directly injected FX layers, expression parameters, and menu entries into
   the avatar descriptor at preprocess time (`callbackOrder=-2048`) after VRCFury had merged Toggle parameters.
   This was later reverted back to generated-assets + FullController delivery.
