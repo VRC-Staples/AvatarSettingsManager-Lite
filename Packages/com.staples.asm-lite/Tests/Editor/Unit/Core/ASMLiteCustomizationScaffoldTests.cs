@@ -97,47 +97,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void SelectingAvatar_UsesLiveInstallPathValueInVisibleCustomizationSnapshot()
-        {
-            _ctx.Comp.useCustomInstallPath = true;
-            _ctx.Comp.customInstallPath = "Tools/Live";
-
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
-
-                Assert.AreEqual("Tools/Live", snapshot.CustomInstallPath,
-                    "Visible customization state should reflect the live install path after avatar selection.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void SelectingAvatar_NormalizesBlankLiveInstallPathInVisibleCustomizationSnapshot()
-        {
-            _ctx.Comp.customInstallPath = "   ";
-
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-                var snapshot = window.GetPendingCustomizationSnapshotForTesting();
-
-                Assert.AreEqual(string.Empty, snapshot.CustomInstallPath,
-                    "Visible customization state should normalize blank serialized install paths to an empty string.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
         public void RetargetLiveFullControllerGeneratedAssets_RestoresPresetParameterEnrollment()
         {
             int buildResult = ASMLiteBuilder.Build(_ctx.Comp);

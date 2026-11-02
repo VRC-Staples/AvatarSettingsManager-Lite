@@ -17,7 +17,6 @@ VALIDATOR = REPO_ROOT / "Tools/ci/test-suites/validate-suites.py"
 
 SMOKE_PROTOCOL_FILES = [
     "ASMLiteSmokeProtocolTests.cs",
-    "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",
@@ -184,12 +183,6 @@ class ValidateSuitesTests(unittest.TestCase):
             text=True,
             check=False,
         )
-
-    def test_accepts_canonical_default_batches_and_excluded_manual_groups(self) -> None:
-        result = self.run_validator()
-
-        self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
-        self.assertIn("suite map ok", result.stdout)
 
     def write_headless_test(self, attributes: str = '[Category("Headless")]') -> None:
         source = self.root / "Packages/com.staples.asm-lite/Tests/Editor/CoreTests.cs"

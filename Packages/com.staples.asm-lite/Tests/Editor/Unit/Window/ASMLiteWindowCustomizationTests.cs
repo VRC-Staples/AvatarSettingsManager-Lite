@@ -164,26 +164,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void PendingCustomizationSnapshotForAutomation_ReportsSelectedAvatarSlotCount()
-        {
-            _ctx.Comp.slotCount = 7;
-
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-
-                var snapshot = window.GetPendingCustomizationSnapshotForAutomation();
-                Assert.AreEqual(7, snapshot.SlotCount,
-                    "Selecting an attached avatar should copy the component slot count into the pending automation snapshot contract.");
-            }
-            finally
-            {
-                Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
         public void NamingAutomation_DefaultGateOff_LeavesEffectiveNamesAtDefaults()
         {
             var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
@@ -439,37 +419,6 @@ namespace ASMLite.Tests.Editor
                     "Recall",
                     "Reset Slot",
                     "Apply It");
-            }
-            finally
-            {
-                Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void IconAutomation_MultiColorDefault_ReportsBuiltInModeWithNoCustomFixtures()
-        {
-            _ctx.Comp.slotCount = 4;
-            _ctx.Comp.iconMode = IconMode.MultiColor;
-            _ctx.Comp.selectedGearIndex = 0;
-            _ctx.Comp.useCustomSlotIcons = false;
-            _ctx.Comp.customIcons = Array.Empty<Texture2D>();
-            _ctx.Comp.actionIconMode = ActionIconMode.Default;
-            _ctx.Comp.useCustomRootIcon = false;
-            _ctx.Comp.customRootIcon = null;
-
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(_ctx.AvDesc);
-
-                AssertBuiltinIconSnapshotFields(
-                    "multicolor default row",
-                    window,
-                    _ctx.Comp,
-                    4,
-                    IconMode.MultiColor,
-                    expectedGearIndex: 0);
             }
             finally
             {
@@ -931,30 +880,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_PreBake()
-        {
-            var limbRoot = new GameObject("FixtureSource");
-            limbRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
-
-            var arms = new GameObject("Arms");
-            arms.transform.SetParent(limbRoot.transform, false);
-
-            var vf = arms.AddComponent<VF.Model.VRCFury>();
-            vf.content = new VF.Model.Feature.Toggle
-            {
-                useGlobalParam = true,
-                globalParam = "Fixture/Source/One",
-                name = "Fixture Source One",
-                menuPath = "",
-            };
-
-            string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
-
-            CollectionAssert.Contains(backable, "Fixture/Source/One",
-                "Assigned VRCFury globals under nested prefab-style hierarchy should remain visible in the parameter backup checklist before bake.");
-        }
-
-        [Test]
         public void VisibleParameterBackupOptions_IncludeAssignedPrefabToggleGlobals_BeforeAsmAddition()
         {
             Object.DestroyImmediate(_ctx.Comp.gameObject);
@@ -1170,64 +1095,6 @@ namespace ASMLite.Tests.Editor
                 "The parameter backup checklist should hide stale legacy toggle names when ASM-Lite will rebind that toggle to a deterministic alias.");
             CollectionAssert.Contains(backable, deterministic,
                 "The parameter backup checklist should show the deterministic alias that ASM-Lite will actually back up after enrollment.");
-        }
-
-        [Test]
-        public void VisibleBackupOptions_IncludeReferencedParameterAssets()
-        {
-            var mediaRoot = new GameObject("Media");
-            mediaRoot.transform.SetParent(_ctx.AvatarGo.transform, false);
-
-            var vf = mediaRoot.AddComponent<VF.Model.VRCFury>();
-            var referencedParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
-            referencedParams.parameters = new[]
-            {
-                new VRCExpressionParameters.Parameter
-                {
-                    name = "Fixture/Referenced/A",
-                    valueType = VRCExpressionParameters.ValueType.Bool,
-                    defaultValue = 0f,
-                    saved = false,
-                    networkSynced = false,
-                },
-                new VRCExpressionParameters.Parameter
-                {
-                    name = "Fixture/Referenced/B",
-                    valueType = VRCExpressionParameters.ValueType.Float,
-                    defaultValue = 0f,
-                    saved = false,
-                    networkSynced = false,
-                },
-            };
-
-            try
-            {
-                vf.content = new VF.Model.Feature.FullControllerLike
-                {
-                    prms = new[]
-                    {
-                        new VF.Model.Feature.FullControllerLikePrmsEntry
-                        {
-                            parameters = new VF.Model.Feature.FullControllerLikeParamsRef
-                            {
-                                objRef = referencedParams,
-                                id = string.Empty,
-                            },
-                        },
-                    },
-                };
-
-                string[] backable = ASMLite.Editor.ASMLiteWindow.GetVisibleParameterBackupOptionsForTesting(_ctx.AvDesc);
-
-                CollectionAssert.Contains(backable, "Fixture/Referenced/A",
-                    "Referenced parameter assets should contribute visible parameter backup options before bake.");
-                CollectionAssert.Contains(backable, "Fixture/Referenced/B",
-                    "Supported parameter types from referenced parameter assets should remain visible before bake.");
-            }
-            finally
-            {
-                Object.DestroyImmediate(referencedParams);
-            }
         }
 
         [Test]

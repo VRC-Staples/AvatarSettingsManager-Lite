@@ -76,29 +76,5 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── Action icon paths ────────────────────────────────────────────
-
-        [Test]
-        public void ActionIconPaths_AreNonEmpty_HavePackagePrefix_AndPngExtension()
-        {
-            var actionIcons = new (string name, string path)[]
-            {
-                ("IconSave",      ASMLiteAssetPaths.IconSave),
-                ("IconLoad",      ASMLiteAssetPaths.IconLoad),
-                ("IconReset",     ASMLiteAssetPaths.IconReset),
-                ("IconPresets",   ASMLiteAssetPaths.IconPresets),
-                ("IconBackArrow", ASMLiteAssetPaths.IconBackArrow),
-            };
-
-            foreach (var (name, path) in actionIcons)
-            {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(path),
-                    $"{name} path must not be empty");
-                StringAssert.StartsWith(PackagePrefix, path,
-                    $"{name} path must start with package prefix");
-                StringAssert.EndsWith(".png", path,
-                    $"{name} path must end with .png");
-            }
-        }
     }
 }

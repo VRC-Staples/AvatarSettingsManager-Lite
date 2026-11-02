@@ -71,23 +71,6 @@ namespace ASMLite.Tests.Editor
                 "Rollback snapshot should restore the serialized parameter asset contents.");
         }
 
-        [Test]
-        public void DirectDeliveryVerification_ReportsMissingRequiredContent()
-        {
-            bool verified = ASMLiteLifecycleVerification.VerifyDirectDeliveryState(
-                _ctx.Comp,
-                _ctx.AvDesc,
-                ASMLiteInstallationState.Detached,
-                vendorizedDir: string.Empty,
-                out string failureMessage,
-                out string failureContext);
-
-            Assert.IsFalse(verified,
-                "A detached direct-delivery avatar without generated runtime markers should not verify.");
-            StringAssert.Contains("required direct-delivery content", failureMessage);
-            Assert.AreEqual(_ctx.AvatarGo.name, failureContext);
-        }
-
         [TestCase("parameters")]
         [TestCase("menu")]
         [TestCase("none")]

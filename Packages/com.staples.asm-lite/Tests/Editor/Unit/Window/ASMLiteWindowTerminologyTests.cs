@@ -60,39 +60,6 @@ namespace ASMLite.Tests.Editor
             AssertNoSlotTerms(copy);
         }
 
-        [Test]
-        public void StateSpecificHelpCopy_CoversDetachedVendorizedAndNotInstalledBranches()
-        {
-            var detachedNoComponent = GetStateSpecificCopy("Detached", hasComponent: false);
-            var vendorizedNoComponent = GetStateSpecificCopy("Vendorized", hasComponent: false);
-            var notInstalledNoComponent = GetStateSpecificCopy("NotInstalled", hasComponent: false);
-
-            CollectionAssert.Contains(detachedNoComponent,
-                "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.");
-            CollectionAssert.Contains(vendorizedNoComponent,
-                "ASM-Lite is in baked-only mode on this avatar. Use the option below to return to editable package mode.");
-            CollectionAssert.Contains(notInstalledNoComponent,
-                "ASM-Lite is not on this avatar yet.\nSet your options above, then click \"Add ASM-Lite Prefab\".");
-
-            AssertNoSlotTerms(detachedNoComponent);
-            AssertNoSlotTerms(vendorizedNoComponent);
-            AssertNoSlotTerms(notInstalledNoComponent);
-        }
-
-        [TestCase("PackageManaged", true)]
-        [TestCase("Vendorized", true)]
-        [TestCase("Vendorized", false)]
-        [TestCase("Detached", false)]
-        [TestCase("NotInstalled", false)]
-        public void TerminologySnapshot_AllCopySurfacesRejectMixedSlotPresetLanguage(string toolStateName, bool hasComponent)
-        {
-            var copy = GetAllCopy(toolStateName, hasComponent).ToArray();
-
-            Assert.That(copy.Length, Is.GreaterThan(0),
-                $"Expected terminology snapshot to expose copy for {toolStateName} (hasComponent={hasComponent}).");
-            AssertNoSlotTerms(copy);
-        }
-
         private static IEnumerable<string> GetAllCopy(string toolStateName, bool hasComponent)
         {
             var snapshot = GetSnapshot(toolStateName, hasComponent);

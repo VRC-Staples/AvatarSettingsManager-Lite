@@ -12,15 +12,13 @@ namespace ASMLite.Tests.Editor
 
     internal sealed class ASMLiteSmokeCommandDefinition
     {
-        internal ASMLiteSmokeCommandDefinition(string commandType, string payloadFieldName, ASMLiteSmokeCommandDispatchMode dispatchMode)
+        internal ASMLiteSmokeCommandDefinition(string commandType, ASMLiteSmokeCommandDispatchMode dispatchMode)
         {
             this.commandType = RequireToken(commandType, nameof(commandType));
-            this.payloadFieldName = string.IsNullOrWhiteSpace(payloadFieldName) ? string.Empty : payloadFieldName.Trim();
             this.dispatchMode = dispatchMode;
         }
 
         public string commandType;
-        public string payloadFieldName;
         public ASMLiteSmokeCommandDispatchMode dispatchMode;
 
         private static string RequireToken(string value, string fieldName)
@@ -41,23 +39,17 @@ namespace ASMLite.Tests.Editor
 
         private static readonly ASMLiteSmokeCommandDefinition[] s_definitions =
         {
-            new ASMLiteSmokeCommandDefinition(LaunchSession, "launchSession", ASMLiteSmokeCommandDispatchMode.StartupOnly),
-            new ASMLiteSmokeCommandDefinition(RunSuite, "runSuite", ASMLiteSmokeCommandDispatchMode.PolledCommand),
-            new ASMLiteSmokeCommandDefinition(ReviewDecision, "reviewDecision", ASMLiteSmokeCommandDispatchMode.PolledCommand),
-            new ASMLiteSmokeCommandDefinition(AbortRun, "abortRun", ASMLiteSmokeCommandDispatchMode.PolledCommand),
-            new ASMLiteSmokeCommandDefinition(ShutdownSession, string.Empty, ASMLiteSmokeCommandDispatchMode.PolledCommand),
+            new ASMLiteSmokeCommandDefinition(LaunchSession, ASMLiteSmokeCommandDispatchMode.StartupOnly),
+            new ASMLiteSmokeCommandDefinition(RunSuite, ASMLiteSmokeCommandDispatchMode.PolledCommand),
+            new ASMLiteSmokeCommandDefinition(ReviewDecision, ASMLiteSmokeCommandDispatchMode.PolledCommand),
+            new ASMLiteSmokeCommandDefinition(AbortRun, ASMLiteSmokeCommandDispatchMode.PolledCommand),
+            new ASMLiteSmokeCommandDefinition(ShutdownSession, ASMLiteSmokeCommandDispatchMode.PolledCommand),
         };
 
         private static readonly Dictionary<string, ASMLiteSmokeCommandDefinition> s_byType = s_definitions
             .ToDictionary(definition => definition.commandType, StringComparer.Ordinal);
 
         internal static IReadOnlyList<ASMLiteSmokeCommandDefinition> AllDefinitions => s_definitions;
-
-        internal static IEnumerable<string> AllCommandTypes => s_definitions.Select(definition => definition.commandType);
-
-        internal static IEnumerable<string> PolledCommandTypes => s_definitions
-            .Where(definition => definition.dispatchMode == ASMLiteSmokeCommandDispatchMode.PolledCommand)
-            .Select(definition => definition.commandType);
 
         internal static bool IsSupported(string commandType)
         {
@@ -70,14 +62,6 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeCommandDefinition definition;
             return TryGet(commandType, out definition)
                 && definition.dispatchMode == ASMLiteSmokeCommandDispatchMode.PolledCommand;
-        }
-
-        internal static ASMLiteSmokeCommandDefinition GetRequired(string commandType)
-        {
-            ASMLiteSmokeCommandDefinition definition;
-            if (!TryGet(commandType, out definition))
-                throw new InvalidOperationException($"commandType '{NormalizeToken(commandType)}' is not supported.");
-            return definition;
         }
 
         internal static bool TryGet(string commandType, out ASMLiteSmokeCommandDefinition definition)
@@ -152,8 +136,6 @@ namespace ASMLite.Tests.Editor
             StringComparer.Ordinal);
 
         internal static IReadOnlyList<ASMLiteSmokeActionDefinition> AllDefinitions => s_definitions;
-
-        internal static IEnumerable<string> AllActionTypes => s_definitions.Select(definition => definition.actionType);
 
         internal static bool IsSupported(string actionType)
         {

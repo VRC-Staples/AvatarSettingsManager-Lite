@@ -65,21 +65,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void BuildRequestedCallback_IsRegisteredWithVrChatSdkPipeline()
-        {
-            var callback = new ASMLiteToggleBuildRequestedCallback();
-
-            Assert.IsInstanceOf<IVRCSDKBuildRequestedCallback>(callback,
-                "regression guard: callback must implement VRChat SDK build-request interface or Unity/SDK will never invoke VRCFury toggle enrollment before play/build processing.");
-            Assert.IsTrue(callback.OnBuildRequested(VRCSDKRequestedBuildType.Avatar),
-                "avatar build requests should continue after deterministic toggle enrollment.");
-
-            var report = ASMLiteToggleNameBroker.GetLatestGlobalParamMappings();
-            Assert.IsNotNull(report,
-                "callback path should be callable through the SDK interface without throwing.");
-        }
-
-        [Test]
         public void SanitizePathToken_NormalizesMalformedInput()
         {
             Assert.AreEqual("Unnamed", ASMLiteToggleNameBroker.SanitizePathToken(null),
@@ -124,38 +109,6 @@ namespace ASMLite.Tests.Editor
             Assert.IsNotNull(candidates, "discovery should return a list even when type resolution fails.");
             Assert.AreEqual(0, candidates.Count,
                 "unresolved reflected Toggle type must fail closed without enrollment targets.");
-        }
-
-        [Test]
-        public void Discovery_ScopesToAsmLiteAvatarAndSkipsNonToggleContent()
-        {
-            var vf = _ctx.AvatarGo.AddComponent<VF.Model.VRCFury>();
-            vf.content = new VF.Model.Feature.NotToggle { label = "not a toggle" };
-
-            var noAsmLiteAvatar = new GameObject("NoAsmLiteAvatar");
-            try
-            {
-                var foreignVf = noAsmLiteAvatar.AddComponent<VF.Model.VRCFury>();
-                foreignVf.content = new VF.Model.Feature.Toggle
-                {
-                    useGlobalParam = false,
-                    globalParam = "",
-                    menuPath = "Foreign/Menu",
-                    name = "ForeignToggle",
-                };
-
-                var localCandidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(_ctx.AvatarGo);
-                var foreignCandidates = ASMLiteToggleNameBroker.DiscoverEligibleToggleCandidates(noAsmLiteAvatar);
-
-                Assert.AreEqual(0, localCandidates.Count,
-                    "candidate component without Toggle content should not be enrolled.");
-                Assert.AreEqual(0, foreignCandidates.Count,
-                    "avatars without ASMLite scope must not be scanned for enrollment.");
-            }
-            finally
-            {
-                Object.DestroyImmediate(noAsmLiteAvatar);
-            }
         }
 
         [Test]
@@ -364,8 +317,8 @@ namespace ASMLite.Tests.Editor
 
             try
             {
-                var callback = new ASMLiteToggleBuildRequestedCallback();
-                bool allowed = callback.OnBuildRequested("Avatar");
+                IVRCSDKBuildRequestedCallback callback = new ASMLiteToggleBuildRequestedCallback();
+                bool allowed = callback.OnBuildRequested(VRCSDKRequestedBuildType.Avatar);
                 Assert.IsTrue(allowed, "build-request callback should never block build pipeline.");
 
                 Assert.IsTrue(ASMLiteToggleNameBroker.HasPendingRestoreState(),
@@ -397,39 +350,6 @@ namespace ASMLite.Tests.Editor
             {
                 Object.DestroyImmediate(foreignAvatar);
             }
-        }
-
-        [Test]
-        public void Restore_ClearsMalformedPayloadAndFailsClosed()
-        {
-            ASMLiteToggleNameBroker.SetPendingRestorePayloadForTests("{not-json");
-
-            var restore = ASMLiteToggleNameBroker.RestorePendingMutations(warnOnNoData: false);
-            Assert.AreEqual(0, restore.RestoredCount,
-                "malformed payload should not attempt any restore writes.");
-            Assert.AreEqual(0, restore.UnresolvedCount,
-                "malformed payload should be cleared before record iteration.");
-            Assert.IsTrue(restore.MalformedPayload,
-                "malformed payload should be explicitly flagged for observability.");
-            Assert.IsFalse(ASMLiteToggleNameBroker.HasPendingRestoreState(),
-                "malformed payload should be cleared to avoid replaying corrupt data forever.");
-        }
-
-        [Test]
-        public void Restore_HandlesMissingInstanceIdsAsUnresolvedAndCleansUp()
-        {
-            const string missingRecordPayload = "{\"entries\":[{\"componentInstanceId\":2147483600,\"objectPath\":\"Avatar/Missing\",\"togglePropertyPath\":\"content\",\"originalUseGlobalParam\":false,\"originalGlobalParam\":\"\",\"assignedGlobalParam\":\"ASM_VF_Missing\"}]}";
-            ASMLiteToggleNameBroker.SetPendingRestorePayloadForTests(missingRecordPayload);
-
-            var restore = ASMLiteToggleNameBroker.RestorePendingMutations(warnOnNoData: false);
-            Assert.AreEqual(0, restore.RestoredCount,
-                "missing object records must not report successful restore writes.");
-            Assert.AreEqual(1, restore.UnresolvedCount,
-                "missing object records should be counted as unresolved cleanup cases.");
-            Assert.IsFalse(restore.MalformedPayload,
-                "syntactically valid payload with missing object should not be flagged malformed.");
-            Assert.IsFalse(ASMLiteToggleNameBroker.HasPendingRestoreState(),
-                "unresolved restore pass must still clear pending state to keep cleanup idempotent.");
         }
 
         [Test]

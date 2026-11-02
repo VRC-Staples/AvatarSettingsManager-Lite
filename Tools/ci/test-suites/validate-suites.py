@@ -68,7 +68,6 @@ MANUAL_OR_REVIEW_GROUP_IDS = {
 
 SMOKE_PROTOCOL_FILES = (
     "ASMLiteSmokeProtocolTests.cs",
-    "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",

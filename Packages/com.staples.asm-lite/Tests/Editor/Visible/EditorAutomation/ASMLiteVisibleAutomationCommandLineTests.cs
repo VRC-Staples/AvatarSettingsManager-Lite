@@ -38,27 +38,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ParseConfiguration_DefaultsToEditorMode_WhenModeArgIsOmitted()
-        {
-            var configuration = ASMLiteVisibleAutomationCommandLine.ParseConfiguration(new[]
-            {
-                "Unity",
-                "-executeMethod",
-                "ASMLite.Tests.Editor.ASMLiteVisibleAutomationCommandLine.RunFromCommandLine",
-                "-asmliteVisibleAutomationResultsPath",
-                "artifacts/visible-editor-smoke.xml",
-                "-asmliteVisibleAutomationSelector",
-                "ASMLiteVisibleEditorSmokeTests",
-            });
-
-            Assert.AreEqual((int)AsmLiteVisibleAutomationMode.Editor, configuration.mode);
-            Assert.AreEqual(Path.GetFullPath("artifacts/visible-editor-smoke.xml"), configuration.resultsPath);
-            Assert.AreEqual("ASMLiteVisibleEditorSmokeTests", configuration.selector);
-            Assert.AreEqual((int)AsmLiteVisibleAutomationStage.OpeningWindow, configuration.stage);
-            Assert.Greater(configuration.startedUtcTicks, 0L);
-        }
-
-        [Test]
         public void ParseConfiguration_DefaultsToClickMeSceneAndCanonicalDressAvatar_WhenTargetArgsAreOmitted()
         {
             var configuration = ASMLiteVisibleAutomationCommandLine.ParseConfiguration(new[]

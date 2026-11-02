@@ -44,7 +44,6 @@ CODED_PREFIX_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9])[A-Z]{1,8}\d{2,4}[A-Z]?(?=\
 CODED_METHOD_PREFIX_RE = re.compile(r"^[A-Z]{1,8}\d{2,4}[A-Z]?_", re.IGNORECASE)
 SMOKE_PROTOCOL_FILES = {
     "ASMLiteSmokeProtocolTests.cs",
-    "ASMLiteSmokeProtocolCompatibilityTests.cs",
     "ASMLiteSmokeCatalogTests.cs",
     "ASMLiteSmokeAtomicIoTests.cs",
     "ASMLiteSmokeArtifactPathsTests.cs",

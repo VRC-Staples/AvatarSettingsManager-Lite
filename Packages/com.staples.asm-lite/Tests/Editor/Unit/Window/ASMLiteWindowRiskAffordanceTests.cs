@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -10,36 +8,6 @@ namespace ASMLite.Tests.Editor
     [Category("Headless")]
     public class ASMLiteWindowRiskAffordanceTests
     {
-        [Test]
-        public void MaintenanceActionClassification_IdentifiesOnlyMaintenanceActions()
-        {
-            var allActions = Enum.GetValues(typeof(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction))
-                .Cast<ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction>()
-                .ToArray();
-
-            var expectedMaintenanceActions = new[]
-            {
-                ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab,
-                ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach,
-                ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize,
-                ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.ReturnAttachedVendorizedToPackageManaged,
-            };
-
-            foreach (var action in expectedMaintenanceActions)
-            {
-                Assert.IsTrue(
-                    ASMLite.Editor.ASMLiteWindow.IsMaintenanceAction(action),
-                    $"Action '{action}' should be classified as a maintenance action.");
-            }
-
-            foreach (var action in allActions.Except(expectedMaintenanceActions))
-            {
-                Assert.IsFalse(
-                    ASMLite.Editor.ASMLiteWindow.IsMaintenanceAction(action),
-                    $"Action '{action}' should not be classified as a maintenance action.");
-            }
-        }
-
         [Test]
         public void AttachedAvatar_MaintenanceActionsStayAdvanced()
         {

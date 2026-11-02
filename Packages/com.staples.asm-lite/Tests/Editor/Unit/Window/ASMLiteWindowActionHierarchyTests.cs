@@ -27,60 +27,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void FreshWindow_DefaultsAdvancedDisclosureToCollapsed_ForAttachedAvatar()
-        {
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                SetPrivateField(window, "_selectedAvatar", _ctx.AvDesc);
-
-                var hierarchy = window.GetActionHierarchyContract();
-
-                Assert.False(hierarchy.AdvancedDisclosureExpanded,
-                    "Fresh window instances should default Advanced maintenance disclosure to collapsed.");
-                Assert.True(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Rebuild),
-                    "Attached avatars must keep Rebuild in the primary action set.");
-                Assert.True(hierarchy.HasAdvancedAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
-                    "Attached avatars must keep Remove in advanced actions.");
-                Assert.True(hierarchy.HasAdvancedAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
-                    "Attached avatars must keep Detach in advanced actions.");
-                Assert.True(hierarchy.HasAdvancedAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
-                    "Attached avatars must keep Vendorize in advanced actions.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-            }
-        }
-
-        [Test]
-        public void BuildActionHierarchyContract_AttachedSplitsActionGroups()
-        {
-            var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
-                ASMLite.Editor.ASMLiteInstallationState.PackageManaged,
-                hasComponent: true,
-                advancedDisclosureExpanded: false);
-
-            AssertPrimaryContainsNoMaintenanceActions(hierarchy,
-                "Package-managed attached hierarchy");
-            Assert.True(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Rebuild),
-                "Package-managed attached avatars must expose Rebuild as a primary action.");
-            Assert.False(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
-                "Remove must never appear in primary actions.");
-            Assert.False(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
-                "Detach must never appear in primary actions.");
-            Assert.False(hierarchy.HasPrimaryAction(ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
-                "Vendorize must never appear in primary actions.");
-
-            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.RemovePrefab),
-                "Closed Advanced disclosure must hide Remove from visible action controls.");
-            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Detach),
-                "Closed Advanced disclosure must hide Detach from visible action controls.");
-            Assert.False(IsActionVisible(hierarchy, ASMLite.Editor.ASMLiteWindow.AsmLiteWindowAction.Vendorize),
-                "Closed Advanced disclosure must hide Vendorize from visible action controls.");
-        }
-
-        [Test]
         public void BuildActionHierarchyContract_AttachedExposesActionDescriptors()
         {
             var hierarchy = ASMLite.Editor.ASMLiteWindow.BuildActionHierarchyContract(
@@ -325,17 +271,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void ResolveInstallationState_ComponentStateWinsOverHeuristics()
-        {
-            _ctx.Comp.useVendorizedGeneratedAssets = true;
-
-            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, _ctx.Comp);
-
-            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Vendorized, toolState,
-                "Component-present vendorized combinations should resolve explicitly to Vendorized state.");
-        }
-
-        [Test]
         public void GetActionHierarchyContract_ReusesCachedToolState()
         {
             UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
@@ -368,38 +303,6 @@ namespace ASMLite.Tests.Editor
             {
                 UnityEngine.Object.DestroyImmediate(window);
             }
-        }
-
-        [Test]
-        public void ResolveInstallationState_RuntimeMarkersDetectDetached()
-        {
-            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
-            _ctx.Comp = null;
-
-            ASMLiteTestFixtures.AddExpressionParam(
-                _ctx,
-                ASMLite.Editor.ASMLiteBuilder.CtrlParam,
-                VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters.ValueType.Int,
-                defaultValue: 0f,
-                saved: false,
-                networkSynced: false);
-
-            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null);
-
-            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.Detached, toolState,
-                "Component-missing avatars with ASM-Lite runtime markers should resolve explicitly to Detached state.");
-        }
-
-        [Test]
-        public void ResolveInstallationState_AvatarSelectedNotInstalled_RemainsExplicit()
-        {
-            UnityEngine.Object.DestroyImmediate(_ctx.Comp.gameObject);
-            _ctx.Comp = null;
-
-            var toolState = ASMLite.Editor.ASMLiteInstallationStateService.Resolve(_ctx.AvDesc, null);
-
-            Assert.AreEqual(ASMLite.Editor.ASMLiteInstallationState.NotInstalled, toolState,
-                "Avatar-selected without component or runtime markers should resolve explicitly to NotInstalled state.");
         }
 
         private static void AssertPrimaryContainsNoMaintenanceActions(

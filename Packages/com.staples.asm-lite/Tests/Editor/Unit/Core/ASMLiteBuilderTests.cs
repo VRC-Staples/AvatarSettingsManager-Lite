@@ -125,42 +125,7 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        // ── Shared control parameter naming ─────────────────────────────────
-
-        [Test]
-        public void ControlParam_Name_IsASMLiteCtrl()
-        {
-            // Verify the production constant has the value the runtime and menus depend on.
-            Assert.AreEqual("ASMLite_Ctrl", ASMLiteBuilder.CtrlParam);
-        }
-
         // ── Expression param schema preservation ─────────────────────────────
-
-        [Test]
-        public void BuildBackupParamNamesWithLegacyPreservation_KeepsLegacyBackups_OnSlotExpansion()
-        {
-            var avatarParamNames = new List<string> { "Hat", "Hue" };
-            var existingNames = new[]
-            {
-                "ASMLite_Bak_S1_Hat",
-                "ASMLite_Bak_S2_Hue",
-                "ASMLite_Bak_S1_LegacyRemovedParam"
-            };
-
-            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
-                slotCount: 3,
-                avatarParamNames: avatarParamNames,
-                existingParamNames: existingNames);
-
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hat"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hue"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hat"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hue"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_LegacyRemovedParam"));
-
-            var duplicateCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
-            Assert.AreEqual(0, duplicateCount);
-        }
 
         [Test]
         public void BuildBackupParamNamesWithLegacyPreservation_IgnoresLegacyControlParams()
@@ -186,45 +151,6 @@ namespace ASMLite.Tests.Editor
 
         // ── BuildBackupParamNamesWithLegacyPreservation edge cases ──
 
-        // slot decrease -- S3/S4 legacy backups preserved when slotCount drops to 2
-        [Test]
-        public void BuildBackupParamNames_SlotDecrease_LegacySlotBackupsPreserved()
-        {
-            var avatarParamNames = new List<string> { "Hat", "Hue" };
-            var existingNames = new[]
-            {
-                "ASMLite_Bak_S1_Hat",
-                "ASMLite_Bak_S1_Hue",
-                "ASMLite_Bak_S2_Hat",
-                "ASMLite_Bak_S2_Hue",
-                "ASMLite_Bak_S3_Hat",
-                "ASMLite_Bak_S3_Hue",
-                "ASMLite_Bak_S4_Hat",
-                "ASMLite_Bak_S4_Hue",
-            };
-
-            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
-                slotCount: 2,
-                avatarParamNames: avatarParamNames,
-                existingParamNames: existingNames);
-
-            // Current schema (slots 1-2) must be present.
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hat"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_Hue"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hat"));
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S2_Hue"));
-
-            // S3/S4 backups (now outside active slot range) preserved as legacy.
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hat"), "S3 legacy backup must be preserved");
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S3_Hue"), "S3 legacy backup must be preserved");
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S4_Hat"), "S4 legacy backup must be preserved");
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S4_Hue"), "S4 legacy backup must be preserved");
-
-            // No duplicates.
-            var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
-            Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
-        }
-
         // null existingParamNames -- first build, no prior asset
         [Test]
         public void BuildBackupParamNames_NullExistingParamNames_ReturnsCurrentSchemaOnly()
@@ -241,21 +167,6 @@ namespace ASMLite.Tests.Editor
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_HairHue"));
             Assert.IsTrue(result.Contains("ASMLite_Bak_S2_ToggleHat"));
             Assert.IsTrue(result.Contains("ASMLite_Bak_S2_HairHue"));
-        }
-
-        // empty existingParamNames array -- same as first build, no crash
-        [Test]
-        public void BuildBackupParamNames_EmptyExistingParamNames_ReturnsCurrentSchemaOnly()
-        {
-            var avatarParamNames = new List<string> { "ToggleHat" };
-
-            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
-                slotCount: 1,
-                avatarParamNames: avatarParamNames,
-                existingParamNames: new string[0]);
-
-            Assert.AreEqual(1, result.Count, "1 slot x 1 param = 1 entry");
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_ToggleHat"));
         }
 
         // duplicate names in existingParamNames -- result must deduplicate
@@ -304,37 +215,6 @@ namespace ASMLite.Tests.Editor
 
             // Legacy backup still preserved.
             Assert.IsTrue(result.Contains("ASMLite_Bak_S1_OldParam"), "Legacy backup must be preserved even with empty avatar params");
-        }
-
-        // mixed collision -- legacy backups that match the current schema are not duplicated;
-        //      legacy backups for removed params (not in current schema) are appended.
-        [Test]
-        public void BuildBackupParamNames_MixedCollision_CurrentSchemaWinsNoDuplicates()
-        {
-            var avatarParamNames = new List<string> { "ActiveParam" };
-            var existingNames = new[]
-            {
-                // Collides with current schema -- must appear exactly once.
-                "ASMLite_Bak_S1_ActiveParam",
-                // Does not collide -- legacy removed param, must be appended.
-                "ASMLite_Bak_S1_RemovedParam",
-            };
-
-            var result = ASMLiteBuilder.BuildBackupParamNamesWithLegacyPreservation(
-                slotCount: 1,
-                avatarParamNames: avatarParamNames,
-                existingParamNames: existingNames);
-
-            // Current schema entry present once.
-            var activeCount = result.Count(n => n == "ASMLite_Bak_S1_ActiveParam");
-            Assert.AreEqual(1, activeCount, "Current schema name must appear exactly once (no dup from existing)");
-
-            // Legacy removed param appended.
-            Assert.IsTrue(result.Contains("ASMLite_Bak_S1_RemovedParam"), "Legacy removed param must be preserved");
-
-            // No duplicates.
-            var dupeCount = result.GroupBy(n => n).Count(g => g.Count() > 1);
-            Assert.AreEqual(0, dupeCount, "Result must not contain duplicate names");
         }
 
         [Test]

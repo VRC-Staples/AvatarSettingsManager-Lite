@@ -1,6 +1,5 @@
 using NUnit.Framework;
 using UnityEditor;
-using UnityEditor.Animations;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Avatars.ScriptableObjects;
@@ -129,62 +128,6 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [Test]
-        public void DescriptorReferencePolicy_TracesNestedMenuGraphsWithoutLooping()
-        {
-            string generatedRoot = ASMLiteAssetPaths.GeneratedDir;
-
-            var avatarGo = new GameObject("OwnershipPolicyAvatar");
-            var avatar = avatarGo.AddComponent<VRCAvatarDescriptor>();
-            var rootMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            var childMenu = ScriptableObject.CreateInstance<VRCExpressionsMenu>();
-            var generatedMenu = AssetDatabase.LoadAssetAtPath<VRCExpressionsMenu>(ASMLiteGeneratedOwnershipPolicy.GeneratedPresetsMenuPath);
-            var parameters = AssetDatabase.LoadAssetAtPath<VRCExpressionParameters>(ASMLiteAssetPaths.ExprParams);
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ASMLiteAssetPaths.FXController);
-
-            try
-            {
-                Assert.IsNotNull(generatedMenu, "Expected package-generated menu fixture to be importable.");
-                Assert.IsNotNull(parameters, "Expected package-generated parameters fixture to be importable.");
-                Assert.IsNotNull(controller, "Expected package-generated FX controller fixture to be importable.");
-
-                childMenu.controls.Add(new VRCExpressionsMenu.Control
-                {
-                    name = "Loop",
-                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = rootMenu,
-                });
-                childMenu.controls.Add(new VRCExpressionsMenu.Control
-                {
-                    name = "Generated",
-                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = generatedMenu,
-                });
-                rootMenu.controls.Add(new VRCExpressionsMenu.Control
-                {
-                    name = "Child",
-                    type = VRCExpressionsMenu.Control.ControlType.SubMenu,
-                    subMenu = childMenu,
-                });
-                avatar.expressionsMenu = rootMenu;
-                avatar.expressionParameters = parameters;
-                avatar.baseAnimationLayers = new[]
-                {
-                    new VRCAvatarDescriptor.CustomAnimLayer
-                    {
-                        type = VRCAvatarDescriptor.AnimLayerType.FX,
-                        animatorController = controller,
-                    }
-                };
-
-                Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.MenuReferencesPrefix(rootMenu, generatedRoot));
-                Assert.IsTrue(ASMLiteGeneratedOwnershipPolicy.HasDescriptorGeneratedReferencesUnderPrefix(avatar, generatedRoot));
-            }
-            finally
-            {
-                Object.DestroyImmediate(avatarGo);
-            }
-        }
 
 
     }

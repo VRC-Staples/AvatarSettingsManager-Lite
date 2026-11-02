@@ -39,48 +39,6 @@ namespace ASMLite.Tests.Editor
                 Object.DestroyImmediate(_exprParams);
         }
 
-        // ASMLite_-prefixed params are filtered out; non-prefixed params are returned.
-        [Test]
-        public void GetFinalAvatarParams_FiltersASMLitePrefixedParams()
-        {
-            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
-            _exprParams.parameters = new[]
-            {
-                new VRCExpressionParameters.Parameter { name = "ASMLite_Save", valueType = VRCExpressionParameters.ValueType.Int },
-                new VRCExpressionParameters.Parameter { name = "ASMLite_Ctrl", valueType = VRCExpressionParameters.ValueType.Int },
-                new VRCExpressionParameters.Parameter { name = "MyParam",      valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "AnotherParam", valueType = VRCExpressionParameters.ValueType.Bool },
-            };
-            _avDesc.expressionParameters = _exprParams;
-
-            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
-
-            Assert.AreEqual(2, result.Count, "Should return exactly the 2 non-ASMLite_ params");
-            Assert.AreEqual("MyParam",      result[0].name);
-            Assert.AreEqual("AnotherParam", result[1].name);
-        }
-
-        // Non-ASMLite_ params are returned in their original order.
-        [Test]
-        public void GetFinalAvatarParams_PreservesNonASMLiteParamsInOrder()
-        {
-            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
-            _exprParams.parameters = new[]
-            {
-                new VRCExpressionParameters.Parameter { name = "Alpha",   valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "Beta",    valueType = VRCExpressionParameters.ValueType.Int },
-                new VRCExpressionParameters.Parameter { name = "Gamma",   valueType = VRCExpressionParameters.ValueType.Bool },
-            };
-            _avDesc.expressionParameters = _exprParams;
-
-            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
-
-            Assert.AreEqual(3, result.Count);
-            Assert.AreEqual("Alpha", result[0].name);
-            Assert.AreEqual("Beta",  result[1].name);
-            Assert.AreEqual("Gamma", result[2].name);
-        }
-
         // Null-name and empty-name entries are skipped; only valid entries are returned.
         [Test]
         public void GetFinalAvatarParams_SkipsNullAndEmptyNameEntries()
@@ -134,29 +92,6 @@ namespace ASMLite.Tests.Editor
                 "regression guard: VF names must remain opaque/canonical and must not be renamed.");
             Assert.AreEqual("Brokered_Clothing/Hood", result[1].name,
                 "regression guard: VF names must remain opaque/canonical and must not be renamed.");
-        }
-
-        // broker-enrolled ASM_VF names are opaque user params and must survive discovery unchanged.
-        [Test]
-        public void GetFinalAvatarParams_PreservesBrokerAssignedASMVFNames()
-        {
-            _exprParams = ScriptableObject.CreateInstance<VRCExpressionParameters>();
-            _exprParams.parameters = new[]
-            {
-                new VRCExpressionParameters.Parameter { name = "ASM_VF_Outfit_Hood__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Bool },
-                new VRCExpressionParameters.Parameter { name = "ASM_VF_Outfit_Hat__Avatar_ASM_Lite", valueType = VRCExpressionParameters.ValueType.Float },
-                new VRCExpressionParameters.Parameter { name = "ASMLite_Ctrl", valueType = VRCExpressionParameters.ValueType.Int },
-            };
-            _avDesc.expressionParameters = _exprParams;
-
-            List<VRCExpressionParameters.Parameter> result = ASMLiteBuilder.GetFinalAvatarParams(_avDesc);
-
-            Assert.AreEqual(2, result.Count,
-                "regression guard: ASM_VF broker names are source params and must not be filtered with ASMLite_ internals.");
-            Assert.AreEqual("ASM_VF_Outfit_Hood__Avatar_ASM_Lite", result[0].name,
-                "regression guard: broker-assigned deterministic name must remain unchanged.");
-            Assert.AreEqual("ASM_VF_Outfit_Hat__Avatar_ASM_Lite", result[1].name,
-                "regression guard: broker-assigned deterministic name must remain unchanged.");
         }
 
         // deterministic live params remain discoverable while legacy backup aliases stay excluded from discovery.

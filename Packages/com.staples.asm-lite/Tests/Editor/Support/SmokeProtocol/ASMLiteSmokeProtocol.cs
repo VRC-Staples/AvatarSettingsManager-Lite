@@ -123,18 +123,6 @@ namespace ASMLite.Tests.Editor
         public string[] supportedCapabilities = Array.Empty<string>();
     }
 
-    internal sealed class ASMLiteSmokeProtocolCompatibilityResult
-    {
-        internal ASMLiteSmokeProtocolCompatibilityResult(bool isCompatible, string message)
-        {
-            this.isCompatible = isCompatible;
-            this.message = string.IsNullOrWhiteSpace(message) ? string.Empty : message.Trim();
-        }
-
-        public bool isCompatible;
-        public string message;
-    }
-
     internal static class ASMLiteSmokeProtocol
     {
         internal const string SupportedProtocolVersion = "1.0.0";
@@ -189,12 +177,6 @@ namespace ASMLite.Tests.Editor
         {
             NormalizeAndValidateCommand(command ?? throw new InvalidOperationException("Smoke protocol command is required."));
             return JsonUtility.ToJson(command, prettyPrint);
-        }
-
-        internal static ASMLiteSmokeSessionDocument LoadSessionFixture(string fileName)
-        {
-            string rawJson = LoadFixtureText(fileName);
-            return LoadSessionFromJson(rawJson);
         }
 
         internal static ASMLiteSmokeSessionDocument LoadSessionFromJson(string rawJson)
@@ -259,28 +241,6 @@ namespace ASMLite.Tests.Editor
             ASMLiteSmokeAtomicFileIo.WriteJsonAtomically(hostStatePath, json);
         }
 
-        internal static ASMLiteSmokeProtocolCompatibilityResult EvaluateCompatibility(
-            string hostSupportedProtocolVersion,
-            ASMLiteSmokeSessionDocument session,
-            string catalogProtocolVersion)
-        {
-            string hostToken = RequireNonBlank(hostSupportedProtocolVersion, "hostSupportedProtocolVersion");
-            NormalizeAndValidateSession(session ?? throw new InvalidOperationException("Smoke session document is required for compatibility checks."));
-            string catalogToken = RequireNonBlank(catalogProtocolVersion, "catalogProtocolVersion");
-
-            if (!string.Equals(hostToken, session.protocolVersion, StringComparison.Ordinal)
-                || !string.Equals(hostToken, catalogToken, StringComparison.Ordinal)
-                || !string.Equals(session.protocolVersion, catalogToken, StringComparison.Ordinal))
-            {
-                string mismatchMessage =
-                    $"Protocol version mismatch: host '{hostToken}', session '{session.protocolVersion}', catalog '{catalogToken}'. "
-                    + "Update overlay and host to the same protocolVersion before accepting run-suite commands.";
-                return new ASMLiteSmokeProtocolCompatibilityResult(false, mismatchMessage);
-            }
-
-            return new ASMLiteSmokeProtocolCompatibilityResult(true, "Protocol versions match exactly.");
-        }
-
         internal static ASMLiteSmokeHostStateDocument BuildProtocolErrorHostState(
             ASMLiteSmokeSessionDocument session,
             string message,
@@ -340,42 +300,6 @@ namespace ASMLite.Tests.Editor
             int previousSeq = 0;
             NormalizeAndValidateEvent(protocolEvent, 1, eventIds, ref previousSeq);
             return protocolEvent;
-        }
-
-        internal static bool CanAcceptRunSuite(ASMLiteSmokeHostStateDocument hostState, out string reason)
-        {
-            reason = string.Empty;
-            if (hostState == null)
-            {
-                reason = "Host state is required.";
-                return false;
-            }
-
-            try
-            {
-                NormalizeAndValidateHostState(hostState);
-            }
-            catch (Exception ex)
-            {
-                reason = ex.Message;
-                return false;
-            }
-
-            if (string.Equals(hostState.state, HostStateProtocolError, StringComparison.Ordinal))
-            {
-                reason = string.IsNullOrWhiteSpace(hostState.message)
-                    ? "run-suite rejected while host remains in protocol-error state."
-                    : hostState.message;
-                return false;
-            }
-
-            if (string.Equals(hostState.state, HostStateExiting, StringComparison.Ordinal))
-            {
-                reason = "run-suite rejected while host is exiting.";
-                return false;
-            }
-
-            return true;
         }
 
         internal static ASMLiteSmokeProtocolEvent[] LoadEventFixture(string fileName)

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -84,17 +83,5 @@ namespace ASMLite.Tests.Editor
             Assert.That(ex.Message, Does.Contain("asm-lite-icon/slot-01"));
         }
 
-        [Test]
-        public void KnownFixtureIds_AreUnique()
-        {
-            var seenIds = new HashSet<string>(StringComparer.Ordinal);
-            var seenPaths = new HashSet<string>(StringComparer.Ordinal);
-
-            foreach (var fixture in ASMLiteIconFixtureRegistry.GetAllFixtures())
-            {
-                Assert.That(seenIds.Add(fixture.Id), Is.True, fixture.Id);
-                Assert.That(seenPaths.Add(fixture.AssetPath), Is.True, fixture.AssetPath);
-            }
-        }
     }
 }

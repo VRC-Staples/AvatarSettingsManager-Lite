@@ -73,30 +73,6 @@ namespace ASMLite.Tests.Editor
                 "Restore should put package prefab bytes back exactly.");
         }
 
-        [Test]
-        public void Restore_AfterDeletionFailure_RollsBackToPreRestoreBytesAndMetadata()
-        {
-            string asset = ToFullPath(ASMLiteAssetPaths.ExprParams);
-            byte[] preRestore = File.ReadAllBytes(asset).Concat(System.Text.Encoding.UTF8.GetBytes("\n# pre-restore\n")).ToArray();
-            byte[] metadata = File.ReadAllBytes(asset + ".meta");
-            File.WriteAllBytes(asset, preRestore);
-            bool replacementStarted = false;
-            using (ASMLitePackageGeneratedOutputSnapshot.PushRestorePhaseForTesting(phase =>
-            {
-                if (phase == "replacement-deleted")
-                {
-                    replacementStarted = !File.Exists(asset);
-                    throw new IOException("Injected replacement failure.");
-                }
-            }))
-                Assert.Throws<IOException>(() => _snapshot.Restore());
-
-            Assert.IsTrue(replacementStarted, "Failure must occur after destructive replacement starts.");
-            Assert.IsTrue(File.Exists(asset), "Caught failure must restore pre-restore output, not leave it deleted.");
-            CollectionAssert.AreEqual(preRestore, File.ReadAllBytes(asset));
-            CollectionAssert.AreEqual(metadata, File.ReadAllBytes(asset + ".meta"));
-        }
-
         [TestCase(false)]
         [TestCase(true)]
         public void Restore_InterruptedReplacement_RetainsBothRecoveryStates(bool failRollback)

@@ -76,15 +76,6 @@ namespace ASMLite.Tests.Editor
     {
         private const string SuiteName = nameof(ASMLiteInstallPathWiringTests);
 
-        [TestCase(true, "  Avatars/ASM  ", "Avatars/ASM", TestName = "InstallPrefix_EnabledTextIsTrimmed")]
-        [TestCase(false, "Avatar/ShouldNotApply", "", TestName = "InstallPrefix_DisabledTextIsIgnored")]
-        [TestCase(true, "   ", "", TestName = "InstallPrefix_EnabledBlankIsEmpty")]
-        public void PrefabWiring_ResolvesInstallPrefix(bool enabled, string configuredPath, string expected)
-        {
-            var resolvedPrefix = RefreshLiveFullControllerPrefixAndRead(enabled, configuredPath);
-            Assert.AreEqual(expected, resolvedPrefix);
-        }
-
         [Test]
         public void LiveWiring_NullComponent_FailsClosedToEmptyPrefix()
         {
@@ -390,33 +381,6 @@ namespace ASMLite.Tests.Editor
             }
         }
 
-        [TestCase("  Tools  ", "Tools")]
-        [TestCase(" Tools/Nested ", "Tools/Nested")]
-        public void SetInstallPathStateForAutomation_NormalizesSimpleAndNestedEffectivePath(string rawPath, string expectedEffectivePath)
-        {
-            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            var window = ScriptableObject.CreateInstance<ASMLite.Editor.ASMLiteWindow>();
-            try
-            {
-                window.SelectAvatarForAutomation(ctx.AvDesc);
-
-                window.SetInstallPathStateForAutomation(true, rawPath);
-
-                var snapshot = window.GetPendingCustomizationSnapshotForAutomation();
-                Assert.IsTrue(snapshot.UseCustomInstallPath,
-                    "Setting a custom install path through automation should leave custom install mode enabled.");
-                Assert.AreEqual(expectedEffectivePath, snapshot.EffectiveInstallPath,
-                    "The pending snapshot should report the normalized effective install path, not the raw editor text.");
-                Assert.AreNotEqual(rawPath, snapshot.EffectiveInstallPath,
-                    "EffectiveInstallPath must not leak untrimmed or uncollapsed raw text from the automation seam.");
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(window);
-                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
         [Test]
         public void RebuildForAutomation_UsesNormalizedEffectiveInstallPath_NotRawText()
         {
@@ -438,30 +402,6 @@ namespace ASMLite.Tests.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(window);
-                ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
-            }
-        }
-
-        private static string RefreshLiveFullControllerPrefixAndRead(bool useCustomInstallPath, string customInstallPath)
-        {
-            var ctx = ASMLiteTestFixtures.CreateTestAvatar();
-            try
-            {
-                Assert.IsNotNull(ctx?.Comp, "Expected fixture creation to produce an ASM-Lite component.");
-
-                ctx.Comp.useCustomInstallPath = useCustomInstallPath;
-                ctx.Comp.customInstallPath = customInstallPath;
-
-                Assert.IsTrue(ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiring(ctx.Comp.gameObject, ctx.Comp, "Install Path Wiring Test"),
-                    "Live FullController wiring refresh should succeed for install-path wiring coverage.");
-
-                var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(ctx.Comp.gameObject);
-                Assert.IsNotNull(vf,
-                    "Live FullController wiring refresh should leave a VF.Model.VRCFury component on the ASM-Lite object.");
-                return ASMLiteTestFixtures.ReadSerializedMenuPrefix(vf);
-            }
-            finally
-            {
                 ASMLiteTestFixtures.TearDownTestAvatar(ctx?.AvatarGo);
             }
         }

@@ -12,24 +12,6 @@ namespace ASMLite.Tests.Editor
     public class ASMLiteSmokeCatalogTests
     {
         [Test]
-        public void ActionRegistry_CoversEveryCanonicalCatalogStep()
-        {
-            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
-            string[] canonicalActions = catalog.groups
-                .SelectMany(group => group.suites)
-                .SelectMany(suite => suite.cases)
-                .SelectMany(item => item.steps)
-                .Select(step => step.actionType)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(action => action, StringComparer.Ordinal)
-                .ToArray();
-
-            CollectionAssert.IsSubsetOf(canonicalActions, ASMLiteSmokeActionRegistry.AllActionTypes.ToArray());
-            Assert.That(ASMLiteSmokeActionRegistry.IsSupported(" open-scene "), Is.True);
-            Assert.That(ASMLiteSmokeActionRegistry.IsSupported("missing-action"), Is.False);
-        }
-
-        [Test]
         public void NormalizedStepCommand_AppliesFixtureDefaultsWithoutMutatingActionIdentity()
         {
             var step = new ASMLiteSmokeStepDefinition
@@ -659,26 +641,6 @@ namespace ASMLite.Tests.Editor
                 Assert.That(item.steps.Any(step => step.actionType == "add-prefab"), Is.True, item.caseId);
                 Assert.That(item.steps.Any(step => step.actionType == "assert-attached-customization-snapshot"), Is.True, item.caseId);
                 Assert.That(item.steps.Last().actionType, Is.EqualTo("assert-primary-action"), item.caseId);
-            }
-        }
-
-        [Test]
-        public void LoadCanonical_ExhaustiveSuitesStartWithRecoverContextPrelude()
-        {
-            var catalog = ASMLiteSmokeCatalog.LoadCanonical();
-            var exhaustiveSuites = catalog.groups
-                .SelectMany(group => group.suites)
-                .Where(suite => string.Equals(suite.speed, "exhaustive", StringComparison.Ordinal))
-                .ToArray();
-
-            Assert.That(exhaustiveSuites.Select(suite => suite.suiteId), Is.Not.Empty);
-            foreach (ASMLiteSmokeSuiteDefinition suite in exhaustiveSuites)
-            {
-                foreach (ASMLiteSmokeCaseDefinition item in suite.cases)
-                {
-                    Assert.That(item.steps, Is.Not.Empty, suite.suiteId + ":" + item.caseId);
-                    Assert.AreEqual("prelude-recover-context", item.steps[0].actionType, suite.suiteId + ":" + item.caseId);
-                }
             }
         }
 

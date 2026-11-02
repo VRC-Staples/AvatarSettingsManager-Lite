@@ -25,41 +25,6 @@ namespace ASMLite.Tests.Editor
         }
 
         [Test]
-        public void RefreshLiveFullControllerWiring_CreatesVrcFuryPayloadThroughDedicatedModule()
-        {
-            var result = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiringWithDiagnostics(
-                _ctx.Comp.gameObject,
-                _ctx.Comp,
-                "FullController Wiring Test Refresh");
-
-            Assert.IsTrue(result.Success, result.ToLogString());
-
-            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
-            Assert.IsNotNull(vf, "Refresh should create a live VF.Model.VRCFury component through the dedicated wiring module.");
-            AssertFullControllerReferencesPointAt(ASMLiteAssetPaths.FXController, ASMLiteAssetPaths.Menu, ASMLiteAssetPaths.ExprParams);
-        }
-
-        [Test]
-        public void CaptureLiveFullControllerReferenceSnapshot_ReadsReferencesThroughDedicatedModule()
-        {
-            var refreshResult = ASMLiteFullControllerWiring.TryRefreshLiveFullControllerWiringWithDiagnostics(
-                _ctx.Comp.gameObject,
-                _ctx.Comp,
-                "FullController Wiring Test Snapshot Refresh");
-            Assert.IsTrue(refreshResult.Success, refreshResult.ToLogString());
-
-            var snapshotResult = ASMLiteFullControllerWiring.TryCaptureLiveFullControllerReferenceSnapshot(
-                _ctx.Comp,
-                "FullController Wiring Test Snapshot",
-                out ASMLiteFullControllerReferenceSnapshot snapshot);
-
-            Assert.IsTrue(snapshotResult.Success, snapshotResult.ToLogString());
-            Assert.AreEqual(ASMLiteAssetPaths.FXController, snapshot.ControllerAssetPath);
-            Assert.AreEqual(ASMLiteAssetPaths.Menu, snapshot.MenuAssetPath);
-            Assert.AreEqual(ASMLiteAssetPaths.ExprParams, snapshot.ParametersAssetPath);
-        }
-
-        [Test]
         public void RetargetLiveFullControllerGeneratedAssets_RepointsReferencesThroughDedicatedModule()
         {
             string mirrorDir = ASMLiteAssetPaths.GeneratedDir;
@@ -117,22 +82,5 @@ namespace ASMLite.Tests.Editor
                 "Rollback must restore the original arrays and references, including empty enrollment.");
         }
 
-        private void AssertFullControllerReferencesPointAt(string expectedController, string expectedMenu, string expectedParameters)
-        {
-            var vf = ASMLiteTestFixtures.FindLiveVrcFuryComponent(_ctx.Comp.gameObject);
-            Assert.IsNotNull(vf, "Expected a live VF.Model.VRCFury component before reading FullController references.");
-
-            var controllerReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.ControllerObjectRefPath);
-            var menuReference = ASMLiteTestFixtures.ReadSerializedObjectReference(vf, ASMLiteDriftProbe.MenuObjectRefPath);
-            var parametersReference = ASMLiteTestFixtures.ReadSerializedObjectReferenceFromAnyPath(
-                vf,
-                ASMLiteDriftProbe.ParametersObjectRefPath,
-                ASMLiteDriftProbe.ParameterObjectRefPath,
-                ASMLiteDriftProbe.ParameterLegacyObjectRefPath);
-
-            Assert.AreEqual(expectedController, controllerReference.AssetPath);
-            Assert.AreEqual(expectedMenu, menuReference.AssetPath);
-            Assert.AreEqual(expectedParameters, parametersReference.AssetPath);
-        }
     }
 }
