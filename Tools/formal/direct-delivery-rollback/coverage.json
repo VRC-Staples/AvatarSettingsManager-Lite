@@ -1,0 +1,12 @@
+{
+  "sync_commit": "677b96c98b9a551632040770bece3fb0629653ab",
+  "source_sha256": {
+    "Packages/com.staples.asm-lite/Editor/ASMLiteDirectDeliveryTransaction.cs": "347cdae3a408a243a61ecc4b2ffa7284f981cdc5ce69ca304d47ca402953e581",
+    "Packages/com.staples.asm-lite/Editor/ASMLiteDirectDeliveryRollbackSnapshot.cs": "b8b7f3a185b3abd52dfd84b58520e8df6f3cbc44f15d95e8fec9780af29d2365",
+    "Packages/com.staples.asm-lite/Editor/ASMLiteBuilder.cs": "5831c457847a615adaaa95a7177ad1a2963c3821d0bc7e1cd94b2ac70f5f2fb2",
+    "Packages/com.staples.asm-lite/Editor/ASMLiteLifecycleVerification.cs": "03bf9e9bc86a2faa59319043a323005b6d747aa9fe8b004c21747b86892ee346",
+    "Packages/com.staples.asm-lite/Editor/ASMLiteLifecycleTransactionService.cs": "0e8878e1094ee5be5979c17f254078d1f47f6fd5e154fedc7695a85478224d83",
+    "Packages/com.staples.asm-lite/Editor/ASMLiteGeneratedAssetMirrorService.cs": "4778becb5f6ead61dc38f787fdd13be0db11d927804eded12a27dc24a37727db"
+  },
+  "source_hash_mode": "crlf-to-lf"
+}

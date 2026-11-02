@@ -1,0 +1,236 @@
+#!/usr/bin/env python
+"""Repo lookups. Historical recipes are data, never executable shell input."""
+import argparse
+import hashlib
+import json
+import pathlib
+import re
+import runpy
+import subprocess
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+CATALOG = ROOT / '.planning/agent-cli-audit/catalog.json'
+PACKAGE = 'Packages/com.staples.asm-lite'
+SUITES = 'Tools/ci/test-suites/suites.json'
+LEDGER = 'Tools/ci/test-suites/validate-suite-ledger.py'
+SOURCES = {
+    'builder': PACKAGE + '/Editor/ASMLiteBuilder.cs',
+    'lifecycle': PACKAGE + '/Editor/ASMLiteLifecycleTransactionService.cs',
+    'wiring': PACKAGE + '/Editor/ASMLiteFullControllerWiring.cs',
+    'ownership': PACKAGE + '/Editor/ASMLiteGeneratedAssetMirrorService.cs',
+    'window': PACKAGE + '/Editor/ASMLiteWindow.cs',
+    'shared-reset': PACKAGE + '/Editor/ASMLiteSharedResetBuildCallback.cs',
+    'budget': PACKAGE + '/Editor/ASMLiteBuilder.ParameterBudget.cs',
+}
+CHECKS = {
+    'check-suites': ['Tools/ci/test-suites/validate-suites.py'],
+    'check-ledger': [LEDGER],
+    'check-mirror': [LEDGER, '--check-mirror'],
+}
+RECIPES = {
+    'editmode': ['bash', 'Tools/ci/bin/run-editmode-local.sh'],
+    'smoke-editor': ['bash', 'Tools/ci/bin/run-visible-smoke-local.sh', '--editor-smoke'],
+    'smoke-playmode': ['bash', 'Tools/ci/bin/run-visible-smoke-local.sh', '--playmode-smoke'],
+}
+CORE = {
+    'status': 'Branch, HEAD, dirty paths. Local Git only.',
+    'paths': 'Canonical package, installed copy, Unity project, generated assets.',
+    'suites': 'Current suite selectors and default CI groups. Not test results.',
+    'tests': 'Current C# method inventory from the existing source parser. Not execution.',
+    'find': 'Literal search over Git-visible text files. No ignored avatar assets.',
+    'read': 'Read a repo file. Default is a short index; --full returns text.',
+    'source': 'Source entry points by topic. No query lists topics; --match finds text.',
+    'repeats': 'Audited repeats. --kind and --match filter the complete local catalog.',
+    'coverage': 'Transcript sources, counting rules, and evidence limits.',
+    **{name: 'Run the read-only validator. Preserve its exit code.' for name in CHECKS},
+    **{name: 'Return the Unity command and its authorization gate. Never launch.' for name in RECIPES},
+}
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        raise ValueError(message)
+
+
+def load_catalog():
+    if not CATALOG.is_file():
+        return {'items': [], 'coverage': [], 'limitations': ['Local transcript audit is absent. Core live commands remain available.']}
+    return json.loads(CATALOG.read_text(encoding='utf-8'))
+
+
+def run(argv):
+    proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    return {'argv': argv, 'exit_code': proc.returncode, 'stdout': proc.stdout.rstrip(), 'stderr': proc.stderr.rstrip()}
+
+
+def git(*args):
+    result = run(['git', '--no-optional-locks', *args])
+    if result['exit_code']:
+        raise ValueError(result['stderr'] or 'git failed')
+    return result['stdout']
+
+
+def repo_file(value):
+    path = (ROOT / value).resolve()
+    if not path.is_relative_to(ROOT):
+        raise ValueError('path outside repo; use the original approved tool')
+    if not path.is_file():
+        raise ValueError('missing file: ' + value)
+    return path
+
+
+def read_file(value, args):
+    path = repo_file(value)
+    raw = path.read_bytes()
+    text = raw.decode('utf-8-sig')
+    lines = text.splitlines()
+    if args.full:
+        selected = list(enumerate(lines, 1))
+    elif args.match:
+        selected = [(i, s) for i, s in enumerate(lines, 1) if args.match.casefold() in s.casefold()]
+    else:
+        pattern = r'^#{1,6} |\b(?:class|struct|interface|enum)\s+\w+|^\s*(?:def |(?:public|internal) (?:static )?[^=;]+\()'
+        selected = [(i, s) for i, s in enumerate(lines, 1) if re.search(pattern, s)]
+        if not selected:
+            selected = list(enumerate(lines, 1))
+    total = len(selected)
+    if not args.full:
+        selected = selected[:args.limit]
+    return {'path': path.relative_to(ROOT).as_posix(), 'sha256': hashlib.sha256(raw).hexdigest(), 'line_count': len(lines), 'matches': total, 'truncated': len(selected) < total, 'lines': [{'line': i, 'text': s} for i, s in selected]}
+
+
+def answer(name, args, catalog, dynamic):
+    if name == 'status':
+        return {'branch': git('branch', '--show-current'), 'head': git('rev-parse', 'HEAD'), 'dirty': git('status', '--short').splitlines()}, 0
+    if name == 'paths':
+        paths = {'source': PACKAGE, 'installed': 'KikiASM/' + PACKAGE, 'unity': 'Tools/ci/unity-project', 'tests': PACKAGE + '/Tests', 'suite_map': SUITES, 'ledger': 'Tools/ci/test-suites/test-suite-ledger.json', 'planning': '.planning'}
+        return {'paths': {k: {'path': v, 'exists': (ROOT / v).exists()} for k, v in paths.items()}, 'attached_output': 'Assets/ASM-Lite/<owner>/WorkingAssets', 'delivery_output': 'Assets/ASM-Lite/<owner>/GeneratedAssets'}, 0
+    if name == 'suites':
+        data = json.loads((ROOT / SUITES).read_text(encoding='utf-8'))
+        groups = [g for g in data['groups'] if not args.match or args.match.casefold() in g['id'].casefold()]
+        rows = [{k: g[k] for k in ('id', 'defaultCi', 'headless')} for g in groups]
+        return {'source': SUITES, 'default': data['defaultCiGroups'], 'groups': rows, 'execution': 'not-run'}, 0
+    if name == 'tests':
+        inventory = runpy.run_path(str(ROOT / LEDGER))['inventory_tests'](ROOT)
+        rows = [{'file': i.file, 'class': i.class_name, 'method': i.method, 'line': i.line, 'categories': i.categories} for i in inventory]
+        selected = [r for r in rows if not args.match or args.match.casefold() in json.dumps(r).casefold()]
+        return {'source': 'C# sources via ' + LEDGER, 'total_methods': len(rows), 'matched_methods': len(selected), 'returned': min(len(selected), args.limit), 'methods': selected[:args.limit], 'execution': 'not-run'}, 0
+    if name == 'source':
+        if not args.query:
+            return SOURCES, 0
+        if args.query not in SOURCES:
+            raise ValueError('unknown source topic; use source to list topics')
+        return read_file(SOURCES[args.query], args), 0
+    if name == 'read':
+        if not args.query:
+            raise ValueError('read requires a repo-relative path')
+        return read_file(args.query, args), 0
+    if name == 'find':
+        if not args.query:
+            raise ValueError('find requires literal text')
+        hits = []
+        files = git('ls-files', '--cached', '--others', '--exclude-standard', '-z').split('\0')
+        for value in sorted(set(files)):
+            if pathlib.Path(value).suffix.lower() not in {'.cs', '.py', '.md', '.json', '.sh', '.ps1', '.yml', '.yaml'}:
+                continue
+            if args.match and args.match.casefold() not in value.casefold():
+                continue
+            try:
+                text = repo_file(value).read_text(encoding='utf-8-sig')
+            except (OSError, UnicodeError, ValueError):
+                continue
+            for i, line in enumerate(text.splitlines(), 1):
+                if args.query.casefold() in line.casefold():
+                    hits.append({'file': value, 'line': i, 'text': line.strip()})
+                    if len(hits) >= args.limit:
+                        return {'hits': hits, 'limit_reached': True}, 0
+        return {'hits': hits, 'limit_reached': False}, 0
+    if name == 'repeats':
+        rows = [i for i in catalog['items'] if (not args.kind or args.kind == i['kind']) and (not args.match or args.match.casefold() in json.dumps(i).casefold())]
+        return {'total': len(catalog['items']), 'matched': len(rows), 'items': [{'command': i['command'], 'kind': i['kind'], 'count': i['count'], 'sessions': i['sessions'], 'before': i['key'], 'mode': i['mode']} for i in rows[:args.limit]], 'truncated': len(rows) > args.limit}, 0
+    if name == 'coverage':
+        return {k: catalog.get(k) for k in ('scope', 'coverage', 'limitations', 'counts')}, 0
+    if name in CHECKS:
+        result = run([sys.executable, *CHECKS[name]])
+        return result, result['exit_code']
+    if name in RECIPES:
+        return {'mode': 'recipe', 'argv': RECIPES[name], 'gate': 'Obtain task-specific Unity authorization and read runner prerequisites. CLI does not launch Unity.', 'execution': 'not-run'}, 0
+    item = dynamic[name]
+    if 'answer' in item:
+        return answer(item['answer'], args, catalog, dynamic)
+    if item['mode'] == 'read':
+        result = read_file(item['key'], args)
+        result['history'] = {k: item[k] for k in ('count', 'sessions', 'refs')}
+        return result, 0
+    return {**item, 'execution': 'not-run', 'gate': 'Historical data only. Use the named tool with current prerequisites and authorization. No shell replay.'}, 0
+
+
+def emit(value, as_json):
+    if as_json:
+        print(json.dumps(value, ensure_ascii=True, separators=(',', ':')))
+    elif 'lines' in value:
+        print(f"{value['path']} lines={value['line_count']} sha256={value['sha256']}")
+        for row in value['lines']:
+            print(f"{row['line']}:{row['text']}")
+        if value['truncated']:
+            print('truncated=true')
+    elif 'items' in value:
+        print(f"matched={value['matched']} total={value['total']} truncated={str(value['truncated']).lower()}")
+        for row in value['items']:
+            preview = row['before'].replace('\n', '\\n')[:160]
+            print(f"{row['command']} n={row['count']} sessions={row['sessions']} {row['mode']} {preview}")
+    elif value.get('mode') == 'recipe' and 'command' in value:
+        print(f"{value['command']} kind={value['kind']} n={value['count']} sessions={value['sessions']} execution=not-run")
+        print('key=' + value['key'].replace('\n', '\\n')[:240])
+        print('note=' + value.get('note', value['gate']))
+    elif 'exit_code' in value:
+        print('exit_code=' + str(value['exit_code']))
+        for key in ('stdout', 'stderr'):
+            if value[key]:
+                print(key + '=' + value[key])
+    else:
+        for key, val in value.items():
+            print(key + '=' + (json.dumps(val, ensure_ascii=True, separators=(',', ':')) if isinstance(val, (dict, list)) else str(val)))
+
+
+def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    as_json = '--json' in argv
+    argv = [a for a in argv if a != '--json']
+    try:
+        catalog = load_catalog()
+        dynamic = {i['command']: i for i in catalog['items']}
+        name = argv[0] if argv and not argv[0].startswith('-') else None
+        if name is None:
+            if argv not in ([], ['--help'], ['-h']):
+                raise ValueError('expected a subcommand; use --help')
+            emit({'usage': './bin/agent-cli <command> [--json] [--help]', 'commands': CORE, 'historical_subcommands': len(dynamic), 'discover': './bin/agent-cli repeats --match TEXT --limit 20', 'runtime': 'Python 3.10+ standard library; repository-root paths are automatic.'}, as_json)
+            return 0
+        if name not in CORE and name not in dynamic:
+            raise ValueError('unknown command: ' + name + '; use repeats --match TEXT or --help')
+        description = CORE.get(name) or f"{dynamic[name]['kind']} n={dynamic[name]['count']} sessions={dynamic[name]['sessions']} mode={dynamic[name]['mode']}. {dynamic[name]['key'][:240]}"
+        parser = Parser(prog='./bin/agent-cli ' + name, description=description, epilog='--json works before or after the command. Historical recipes never execute.')
+        parser.add_argument('--json', action='store_true', help='Machine-readable result or error.')
+        if name in ('read', 'find', 'source'):
+            parser.add_argument('query', nargs='?', help='Repo-relative path for read; literal text for find; topic for source.')
+        if name in ('read', 'find', 'source', 'tests', 'suites', 'repeats') or name in dynamic:
+            parser.add_argument('--match', default='', help='Literal filter for paths, text, or catalog records.')
+            parser.add_argument('--limit', type=int, default=20, help='Maximum rows, default 20; 1..100000.')
+        if name in ('read', 'source') or (name in dynamic and dynamic[name]['mode'] == 'read'):
+            parser.add_argument('--full', action='store_true', help='Return the whole file instead of a short index.')
+        if name == 'repeats':
+            parser.add_argument('--kind', choices=['file', 'command', 'script', 'tool', 'lookup', 'question'], help='Repeat category.')
+        args = parser.parse_args(argv[1:])
+        if not 1 <= getattr(args, 'limit', 20) <= 100000:
+            raise ValueError('--limit must be 1..100000')
+        value, code = answer(name, args, catalog, dynamic)
+        emit(value, as_json)
+        return code
+    except (OSError, ValueError, KeyError, UnicodeError) as exc:
+        emit({'error': str(exc)}, as_json)
+        return 2
+
+
+if __name__ == '__main__':
+    sys.exit(main())
