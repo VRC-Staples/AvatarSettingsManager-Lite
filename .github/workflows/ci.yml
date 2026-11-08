@@ -127,6 +127,9 @@ jobs:
       - name: Run required-check status helper tests
         run: python3 Tools/ci/tests/validators/test_check_required_statuses.py
 
+      - name: Verify package manifest identity
+        run: python3 Tools/ci/tests/validators/test_package_manifest_identity.py
+
       - name: Validate test suite map parity
         run: python3 Tools/ci/test-suites/validate-suites.py
 
