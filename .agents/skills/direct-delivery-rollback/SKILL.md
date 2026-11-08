@@ -68,7 +68,7 @@ The other five files define the reviewed dependency contracts and callers.
 All paths in this table start at `Packages/com.staples.asm-lite/Editor/`.
 
 | File | Functions | Coverage |
-|---|---|---|
+| --- | --- | --- |
 | `ASMLiteDirectDeliveryTransaction.cs` | `Execute`, `VerificationFailureContext`, plan and result constructors | Actual C# control flow under finite dependency contracts. |
 | `ASMLiteDirectDeliveryRollbackSnapshot.cs` | `Capture`, `TryRestore`, `Dispose` | Assumed dependency behavior, not compiled or proved. |
 | `ASMLiteBuilder.cs` | `TryDetachToDirectDelivery` | Success, false, and exception outcomes with partial payload changes. |
